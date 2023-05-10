@@ -1,0 +1,187 @@
+﻿#Check to see if lifetime events need to be reset.
+spn_check_lifetime_flags_for_spn = {
+	trigger = {
+		spn_has_supernatural_trait = yes
+		is_ai = no
+		NOT = { has_game_rule = no_spn_lifetime_events_reset }
+		spn_has_lifetime_flags = yes
+	}
+	effect = {
+		spn_add_years_since_lifetime_reset = yes
+		if = { 
+			limit = { 
+				has_game_rule = 1_spn_lifetime_events_reset
+				var:spn_years_since_lifetime_reset >= 1
+			} 
+			spn_reset_years_since_lifetime_reset = yes
+			spn_remove_lifetime_flags = yes
+		}
+		else_if = { 
+			limit = { 
+				has_game_rule = 10_spn_lifetime_events_reset
+				var:spn_years_since_lifetime_reset >= 10
+			} 
+			spn_reset_years_since_lifetime_reset = yes
+			spn_remove_lifetime_flags = yes
+		}
+		else_if = { 
+			limit = { 
+				has_game_rule = 25_spn_lifetime_events_reset
+				var:spn_years_since_lifetime_reset >= 25
+			} 
+			spn_reset_years_since_lifetime_reset = yes
+			spn_remove_lifetime_flags = yes
+		}
+		else_if = { 
+			limit = { 
+				has_game_rule = 50_spn_lifetime_events_reset
+				var:spn_years_since_lifetime_reset >= 50
+			} 
+			spn_reset_years_since_lifetime_reset = yes
+			spn_remove_lifetime_flags = yes
+		}
+		else_if = { 
+			limit = { 
+				has_game_rule = 75_spn_lifetime_events_reset
+				var:spn_years_since_lifetime_reset >= 75
+			} 
+			spn_reset_years_since_lifetime_reset = yes
+			spn_remove_lifetime_flags = yes
+		}
+		else_if = { 
+			limit = { 
+				has_game_rule = 100_spn_lifetime_events_reset
+				var:spn_years_since_lifetime_reset >= 100
+			} 
+			spn_reset_years_since_lifetime_reset = yes
+			spn_remove_lifetime_flags = yes
+		}
+	}
+}
+
+#Recover wounds for disease immune traits
+spn_recover_immortal_wounds = {
+	trigger = {
+		spn_has_supernatural_trait = yes
+		OR = {
+			has_trait = wounded
+			spn_char_has_physical_injury = yes
+		}
+	}
+	effect = {
+		spn_remove_wounds = yes
+	}
+}
+
+spn_check_for_random_embrace = {
+	trigger = {
+		is_ai = no
+		spn_has_supernatural_trait = no
+		spn_has_hunter_trait = no
+		OR = { 
+			has_game_rule = spn_yes_embrace_events 
+			has_game_rule = spn_only_embrace_events
+		}
+	}
+	effect = {
+		random_list = {
+			3 = {
+				trigger_event = {
+					id = spn_random_embrace.0001 #Random Embrace
+					days = { 1 80 }
+				}
+			}
+			97 = { }
+		}
+	}
+}
+
+#Check for Confrontations
+spn_confrontations = {
+	trigger = {
+		is_ai = no
+		spn_has_supernatural_trait = yes
+		NOT = { has_character_flag = spn_had_confrontation }
+		OR = { 
+			has_game_rule = spn_yes_embrace_events 
+			has_game_rule = spn_only_super_events
+		}
+	}
+	effect = {
+		random_list = {
+			10 = {
+				modifier = {
+					add = {
+						value = {
+							value = intrigue
+							max = 40
+						}
+						multiply = { value = -0.2 }
+					}
+				}
+				random_list = {
+					0 = {
+						modifier = {
+							add = {
+								if = {
+									limit = { NOT = { has_character_flag = spn_had_confrontation_1 } }
+									value = 50
+								}
+							}
+						}
+						trigger_event = {
+							id = spn_confrontation.0001
+							days = { 1 80 }
+						}
+						add_character_flag = spn_had_confrontation_1
+					}
+					0 = {
+						modifier = {
+							add = {
+								if = {
+									limit = { NOT = { has_character_flag = spn_had_confrontation_2 } }
+									value = 50
+								}
+							}
+						}
+						trigger_event = {
+							id = spn_confrontation.0011
+							days = { 1 80 }
+						}
+						add_character_flag = spn_had_confrontation_2
+					}
+					0 = {
+						modifier = {
+							add = {
+								if = {
+									limit = { NOT = { has_character_flag = spn_had_confrontation_3 } }
+									value = 50
+								}
+							}
+						}
+						trigger_event = {
+							id = spn_confrontation.0021
+							days = { 1 80 }
+						}
+						add_character_flag = spn_had_confrontation_3
+					}
+				}
+			}
+			90 = {
+				modifier = {
+					add = {
+						value = {
+							value = intrigue
+							max = 40
+						}
+						multiply = { value = 0.2 }
+					}
+				}
+			}
+		}
+		add_character_flag = { 
+			flag = spn_had_confrontation  
+			years = 5
+		}
+	}
+}

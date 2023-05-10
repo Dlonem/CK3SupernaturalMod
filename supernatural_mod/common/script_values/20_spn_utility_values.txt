@@ -1,0 +1,152 @@
+﻿#Calculates the total skill values of a character
+spn_total_skill = {
+	value = diplomacy
+	add = martial
+	add = stewardship
+	add = intrigue
+	add = learning
+}
+
+#Calc chance for immortal Pregnancy
+spn_immortal_pregnancy_chance = {
+	value = fertility
+	multiply = 40
+}
+
+spn_human_pregnancy_chance = {
+	value = fertility
+	multiply = 50
+}
+
+#Calculate pregnancy chance for Supernatural
+spn_pregnancy_chance = {
+	value = 0
+
+	if = { #Mother is the immortal
+		limit = { 
+			spn_has_supernatural_trait = yes
+		}
+		add = spn_immortal_pregnancy_chance
+	}
+	else = {
+		add = spn_human_pregnancy_chance
+	}
+
+	if = { #Father is the immortal
+		limit = { 
+			scope:real_father = { spn_has_supernatural_trait = yes }
+		}
+		scope:real_father = {
+			add = spn_immortal_pregnancy_chance
+		}
+	}
+	else = {
+		scope:real_father = {
+			add = spn_human_pregnancy_chance
+		}
+	}
+
+	if = { #If mother has had immortal children already
+		limit = {
+			has_character_flag = spn_has_immortal_children
+			spn_has_supernatural_trait = yes
+		}
+		add = var:spn_num_immortal_children
+		multiply = -5
+	}
+
+	if = { #If father has had immortal children already
+		limit = {
+			scope:real_father = { 
+				has_character_flag = spn_has_immortal_children 
+				spn_has_supernatural_trait = yes
+			}
+		}
+		scope:real_father = {
+			add = var:spn_num_immortal_children
+		}
+		multiply = -5
+	}
+	
+	if = { #If Mother and/or Father are Vampire
+		limit = {
+			OR = {
+				scope:real_father = { has_trait = spn_vampire }
+				scope:mother = { has_trait = spn_vampire }
+			}
+		}
+		multiply = 0			
+	}
+		
+	if = { #Mother and father are not the same type of immortal
+		limit = {
+			OR = { 
+				AND = {
+					has_trait = spn_hybrid
+					scope:real_father = { has_trait = spn_werewolf }
+				}
+				AND = {
+					has_trait = spn_werewolf
+					scope:real_father = { has_trait = spn_hybrid }
+				}
+			}
+		}
+		multiply = 0.20
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					has_trait = spn_hybrid
+					scope:real_father = { 
+						OR = {
+							has_trait = spn_werewolf 
+						}
+					}
+				}
+				AND = {
+					OR = {
+						has_trait = spn_werewolf 
+					}
+					scope:real_father = { has_trait = spn_hybrid }
+				}
+			}
+		}
+		multiply = 0.5
+	}
+
+	min = 0
+	max = 75
+}
+
+#Calc how many years the character has been immortal
+spn_years_as_immortal = {
+    value = age
+    if = {
+        limit = { exists = var:spn_age_aquired_immortality }
+        subtract = var:spn_age_aquired_immortality
+    }
+}
+
+spn_calc_gradual_visual_age = {
+	value = 0
+	add = age
+
+	if = {
+		limit = { var:spn_age_aquired_immortality > 16 }
+		subtract = var:spn_age_aquired_immortality
+	}
+	else = {
+		subtract = 16
+	}
+
+	divide = 5
+	
+	if = {
+		limit = { var:spn_age_aquired_immortality > 16 }
+		add = var:spn_age_aquired_immortality
+	}
+	else = {
+		add = 16
+	}
+}

@@ -1,0 +1,261 @@
+﻿spn_has_supernatural_trait = {
+	OR = {
+		has_trait = spn_vampire
+		has_trait = spn_vampire_1
+		has_trait = spn_vampire_2
+		has_trait = spn_vampire_3
+		has_trait = spn_werewolf
+		has_trait = spn_werewolf_1
+		has_trait = spn_werewolf_2
+		has_trait = spn_werewolf_3
+		has_trait = spn_hybrid
+		has_trait = spn_hybrid_1
+		has_trait = spn_hybrid_2
+		has_trait = spn_hybrid_3
+	}
+}
+
+has_POD_shapeshifted_form_trigger = {
+	has_POD_werewolf_form_trigger = yes
+}
+
+spn_has_hunter_trait = {
+	OR = {
+		has_trait = spn_hunter
+		has_trait = spn_hunter_1
+		has_trait = spn_hunter_2
+		has_trait = spn_hunter_3
+	}
+}
+
+spn_has_supernatural_trait_1 = {
+	OR = {
+		has_trait = spn_vampire_1
+		has_trait = spn_werewolf_1
+		has_trait = spn_hybrid_1
+	}
+}
+
+spn_has_supernatural_trait_2 = {
+	OR = {
+		has_trait = spn_vampire_2
+		has_trait = spn_werewolf_2
+		has_trait = spn_hybrid_2
+	}
+}
+
+spn_has_supernatural_trait_3 = {
+	OR = {
+		has_trait = spn_vampire_3
+		has_trait = spn_werewolf_3
+		has_trait = spn_hybrid_3
+	}
+}
+
+is_mikaelson_trigger = {
+	dynasty = dynasty:5000001 # Mikaelson
+}
+
+is_shapeshifted_trigger = {
+	OR = {
+		has_character_flag = lupus
+		has_character_flag = POD_bald_look_flag
+		has_character_modifier = POD_werewolf_form_lupus_modifier
+	}
+}
+
+magic_user = {
+	has_character_flag = magic_user
+}
+
+killed_real_witch_flag = {
+	has_character_flag = killed_real_witch_flag
+}
+
+magic_exists = {
+	has_character_flag = magic_exists
+}
+
+spn_former_werewolf_effect = {
+	OR = {
+		has_trait = spn_hybrid_1
+		has_trait = spn_hybrid_2
+		has_trait = spn_hybrid_3
+	}
+}
+
+#Trait distribution criteria in one place
+spn_meets_dist_criteria = {
+	is_ai = yes
+	is_adult = yes
+	spn_has_supernatural_trait = no
+	NOT = { has_trait = spn_hunter }
+	highest_held_title_tier <= $TIER$
+	health >= 3.5
+	spn_total_skill >= 40
+}
+
+spn_char_has_physical_injury = {
+	OR = {
+		has_trait = wounded
+		has_trait = wounded_1
+		has_trait = wounded_2
+		has_trait = wounded_3
+		has_infected_or_gangrenous_wound_trigger = yes
+		has_trait = maimed
+	}
+}
+
+spn_has_lifetime_flags = {
+	OR = {
+		has_character_flag = has_refunded_perks
+		has_character_flag = declared_major_religious_war_flag
+		has_character_flag = has_created_a_faith
+		has_character_flag = converted_culture_this_lifetime
+		has_character_flag = used_lifetime_invasion
+		has_character_flag = used_lifetime_subjugation
+	}
+}
+
+spn_possible_pregnancy = {
+	NOT = { #Inheritance is off and one of the characters has a spn trait
+		has_game_rule = spn_no_trait_inheritance
+	}
+	OR = {
+		AND = { #Inheritance is on or Supernaturals Create Humans
+			OR = {
+				has_game_rule = spn_yes_trait_inheritance
+				has_game_rule = spn_human_no_immortal_trait_inheritance
+			}
+			OR = {
+				spn_has_supernatural_trait = yes
+				$FATHER$ = { spn_has_supernatural_trait = yes }
+			}
+		}
+		AND = { #Inheritance is Supernaturals Only
+			has_game_rule = spn_immortal_only_trait_inheritance
+			AND = {
+				spn_has_supernatural_trait = yes
+				$FATHER$ = { spn_has_supernatural_trait = yes }
+			}
+		}
+		AND = { #Inheritance is Only Via Humans
+			has_game_rule = spn_human_only_trait_inheritance
+			OR = {
+				AND = {
+					spn_has_supernatural_trait = yes
+					$FATHER$ = { spn_has_supernatural_trait = no }
+				}
+				AND = {
+					spn_has_supernatural_trait = no
+					$FATHER$ = { spn_has_supernatural_trait = yes }
+				}
+			}
+		}
+		AND = { #If no hybrids setting, and characters of same species
+			#has_game_rule = spn_no_hybrid_trait_inheritance
+			OR = {
+				AND = {
+					has_trait = spn_vampire
+					$FATHER$ = { has_trait = spn_vampire }
+				}
+				AND = {
+					has_trait = spn_werewolf
+					$FATHER$ = { has_trait = spn_werewolf }
+				}
+				AND = {
+					has_trait = spn_vampire
+					$FATHER$ = { spn_has_supernatural_trait = no }
+				}
+				AND = {
+					spn_has_supernatural_trait = no
+					$FATHER$ = { has_trait = spn_vampire }
+				}
+				AND = {
+					has_trait = spn_werewolf
+					$FATHER$ = { spn_has_supernatural_trait = no }
+				}
+				AND = {
+					spn_has_supernatural_trait = no
+					$FATHER$ = { has_trait = spn_werewolf }
+				}
+			}
+		}
+		AND = { #If Vampire Procreate setting
+			has_game_rule = spn_vampire_trait_inheritance
+			OR = {
+				AND = {
+					has_trait = spn_vampire
+					$FATHER$ = { has_trait = spn_vampire }
+				}
+				AND = {
+					has_trait = spn_vampire
+					$FATHER$ = { spn_has_supernatural_trait = no }
+				}
+				AND = {
+					spn_has_supernatural_trait = no
+					$FATHER$ = { has_trait = spn_vampire }
+				}
+				AND = { #Added this line and below for Werewolves in this game rule
+					has_trait = spn_werewolf
+					$FATHER$ = { has_trait = spn_werewolf }
+				}
+				AND = {
+					has_trait = spn_werewolf
+					$FATHER$ = { spn_has_supernatural_trait = no }
+				}
+				AND = {
+					spn_has_supernatural_trait = no
+					$FATHER$ = { has_trait = spn_werewolf }
+				}
+			}
+		}
+		AND = { #If Werewolf / Hybrid only setting (Normal Setting)
+			has_game_rule = spn_werewolf_trait_inheritance
+			OR = {
+				AND = {
+					has_trait = spn_werewolf
+					$FATHER$ = { has_trait = spn_werewolf }
+				}
+				AND = {
+					has_trait = spn_werewolf
+					$FATHER$ = { spn_has_supernatural_trait = no }
+				}
+				AND = {
+					spn_has_supernatural_trait = no
+					$FATHER$ = { has_trait = spn_werewolf }
+				}
+				AND = {
+					spn_has_supernatural_trait = no
+					$FATHER$ = { has_trait = spn_hybrid }
+				}
+				AND = {
+					has_trait = spn_werewolf
+					$FATHER$ = { has_trait = spn_hybrid }
+				}
+				AND = {
+					has_trait = spn_hybrid
+					$FATHER$ = { has_trait = spn_werewolf }
+				}
+				AND = {
+					has_trait = spn_hybrid
+					$FATHER$ = { spn_has_supernatural_trait = no }
+				}				
+			}
+		}
+	}
+}
+
+spn_gfx_not_pale_culture_group = {
+	NOR = {
+		culture = { has_cultural_pillar = heritage_akan }
+		culture = { has_cultural_pillar = heritage_central_african }
+		culture = { has_cultural_pillar = heritage_dravidian }
+		culture = { has_cultural_pillar = heritage_east_african }
+		#culture = { has_cultural_pillar = heritage_west_african_group }
+		#culture = { has_cultural_pillar = heritage_somalian_group }
+		#culture = { has_cultural_pillar = heritage_niger_delta }
+		culture = { has_cultural_pillar = heritage_sahelian }
+		culture = { has_cultural_pillar = heritage_senegambian }
+	}
+}

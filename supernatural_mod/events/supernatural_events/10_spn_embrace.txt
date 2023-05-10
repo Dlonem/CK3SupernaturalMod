@@ -1,0 +1,1853 @@
+﻿namespace = spn_embrace
+#########################################################################################################
+#
+# Peddler Event 
+#
+#########################################################################################################
+
+#Market Day
+spn_embrace.0001 = { 
+	type = character_event
+	title = spn_embrace.0001.t
+	desc = spn_embrace.0001.desc
+	theme = intrigue
+
+	trigger = {
+		AND = {
+			spn_has_supernatural_trait = no
+			spn_has_hunter_trait = no
+			#is_witch_trigger = no
+		}
+	}
+
+	override_background = {
+		event_background = market
+	}
+
+	right_portrait = {
+		character = root
+		animation = idle
+	}
+
+	left_portrait = {
+		character = scope:spn_new_created_witch
+		animation = idle
+	}
+
+	immediate = {
+		spn_create_peddler_effect = { WHO = root }
+		scope:spn_created_witch = { save_scope_as = spn_new_created_witch }
+	}
+
+	option = {
+		name = spn_embrace.0001.a
+		custom_tooltip = spn_embrace.0001.a.tt
+		if = {
+			limit = { has_character_flag = spn_embrace_lycan_dec }
+			random_list = {
+				75 = {
+					custom_tooltip = spn_embrace.0002.t
+					modifier = {
+						add = {
+							value = health
+							subtract = {
+								value = 4
+							}
+							multiply = {
+								value = 2
+							}
+						}
+					}
+					trigger_event = spn_embrace.0002
+				}
+				25 = {
+					modifier = {
+						add = {
+							value = health
+							subtract = {
+								value = 4
+							}
+							multiply = {
+								value = -2
+							}
+						}
+					}
+					death = {
+						death_reason = death_poison
+					}
+				} 
+			}
+		}
+		else_if = {
+			limit = { has_character_flag = spn_embrace_vampire_dec }
+			random_list = {
+				75 = {
+					custom_tooltip = spn_embrace.0003.t
+					modifier = {
+						add = {
+							value = health
+							subtract = {
+								value = 4
+							}
+							multiply = {
+								value = 2
+							}
+						}
+					}
+					trigger_event = spn_embrace.0003
+				}
+				25 = {
+					modifier = {
+						add = {
+							value = health
+							subtract = {
+								value = 4
+							}
+							multiply = {
+								value = -2
+							}
+						}
+					}
+					death = {
+						death_reason = death_poison
+					}
+				} 
+			}
+		}
+		else = {
+			random_list = {
+				50 = {
+					custom_tooltip = spn_embrace.0002.t
+					modifier = {
+						add = {
+							value = health
+							subtract = {
+								value = 4
+							}
+							multiply = {
+								value = 2
+							}
+						}
+					}
+					trigger_event = spn_embrace.0002
+				}
+				50 = {
+					custom_tooltip = spn_embrace.0003.t
+					modifier = {
+						add = {
+							value = health
+							subtract = {
+								value = 4
+							}
+							multiply = {
+								value = 2
+							}
+						}
+					}
+					trigger_event = spn_embrace.0003
+				}
+				25 = {
+					modifier = {
+						add = {
+							value = health
+							subtract = {
+								value = 4
+							}
+							multiply = {
+								value = -2
+							}
+						}
+					}
+					death = {
+						death_reason = death_poison
+					}
+				} 
+			}
+		}
+		if = {
+			limit = {
+				is_alive = yes
+			}
+			remove_short_term_gold = 25
+			add_character_flag = {
+				flag = spn_dissappear_spn_new_created_witch
+			}
+		}
+	}
+
+	option = {
+		name = spn_embrace.0001.b
+		custom_tooltip = spn_embrace.0001.b.tt
+		add_character_flag = {
+			flag = spn_dissappear_spn_new_created_witch
+		}
+	}
+
+	after = { 
+		trigger_event = spn_embrace.0004 #Vanish Peddler
+	}
+}
+
+#Pale Moon
+spn_embrace.0002 = { 
+	type = character_event
+	title = spn_embrace.0002.t
+	desc = spn_embrace.0002.desc
+	theme = intrigue
+
+	override_background = {
+		event_background = wilderness_forest
+	}
+
+	right_portrait = {
+		character = root
+		animation = shock
+	}
+
+	immediate = {
+		add_character_flag = {
+			flag = is_naked
+			days = 1
+		}
+	}
+
+	option = {
+		name = spn_embrace.0002.a
+		custom_tooltip = spn_embrace.0002.a.tt
+
+		add_character_flag = {
+			flag = spn_embrace_lycan_1
+		}
+
+		trigger_event = spn_init.1001 #Init Lycan
+	}
+}
+
+#Crimson Night
+spn_embrace.0003 = { 
+	type = character_event
+	title = spn_embrace.0003.t
+	desc = spn_embrace.0003.desc
+	theme = intrigue
+
+	override_background = {
+		event_background = bedchamber
+	}
+
+	right_portrait = {
+		character = root
+		animation = shock
+	}
+
+	option = {
+		name = spn_embrace.0003.a
+		custom_tooltip = spn_embrace.0003.a.tt
+
+		add_character_flag = {
+			flag = spn_embrace_vampire_1
+		}
+
+		trigger_event = spn_init.0001 #Init Vampire
+	}
+}
+
+#Vanish Peddler
+spn_embrace.0004 = {
+	hidden = yes
+	immediate = {
+		if = { 
+			limit = { has_character_flag = spn_dissappear_spn_new_created_witch }
+			scope:spn_new_created_witch = {
+				death = {
+					death_reason = death_vanished
+				}
+			}
+			remove_character_flag = spn_dissappear_spn_new_created_witch
+		}
+	}
+}
+
+#########################################################################################################
+#
+# Vampire Event 1, A Night With Nobility
+#
+#########################################################################################################
+
+#A Night With Nobility
+spn_embrace.1001 = { 
+	type = character_event
+	title = spn_embrace.1001.t
+	desc = spn_embrace.1001.desc
+	theme = realm
+
+	trigger = {
+		AND = {
+			spn_has_supernatural_trait = no
+			spn_has_hunter_trait = no
+			#is_witch_trigger = no
+		}
+	}
+
+	right_portrait = {
+		character = root
+		animation = boredom
+	}
+
+	immediate = {
+		spn_create_local_vampire_effect = { FROMCHAR = root }
+		scope:spn_created_vampire = { 
+			add_character_flag = {
+				flag = spn_embrace_vampire_1
+			}
+			trigger_event = spn_init.0001 #Init Vampire
+			set_variable = {
+				name = spn_age_aquired_immortality
+				value = 20
+			}
+			save_scope_as = spn_new_created_vampire 
+		}
+	}
+
+	option = {
+		name = spn_embrace.1001.a
+		custom_tooltip = spn_embrace.1001.a.tt
+		trigger_event = spn_embrace.1002
+	}
+
+	option = {
+		name = spn_embrace.1001.b
+		custom_tooltip = spn_embrace.1001.b.tt
+	}
+
+	#after = { }
+}
+
+#The Horror
+spn_embrace.1002 = {
+	type = character_event
+	title = spn_embrace.1002.t
+	desc = spn_embrace.1002.desc
+	theme = intrigue
+
+	right_portrait = {
+		character = root
+		triggered_animation = {
+			trigger = { has_trait = craven }
+			animation = fear
+		}
+		triggered_animation = {
+			trigger = { has_trait = wrathful }
+			animation = rage
+		}
+		triggered_animation = {
+			trigger = { has_trait = calm }
+			animation = idle
+		}
+		triggered_animation = {
+			trigger = {
+				NOR = {
+					has_trait = craven
+					has_trait = wrathful
+					has_trait = calm
+				}
+			}
+			animation = shock
+		}
+	}
+
+	left_portrait = {
+		character = scope:spn_new_created_vampire
+		animation = anger
+	}
+
+	option = { #Attack
+		name = spn_embrace.1002.a
+		custom_tooltip = spn_embrace.1002.a.tt
+		stress_impact = {
+			craven = major_stress_impact_gain
+			brave = minor_stress_impact_loss
+		}
+
+		random_list = {
+			75 = { #Survive the battle
+			    custom_tooltip = spn_embrace.1002.surv.tt
+				trigger_event = spn_embrace.1003 #Survived Battle
+				modifier = {
+					add = {
+						value = prowess
+					}
+				}
+				modifier = { add = 15 has_trait = brave }
+				modifier = { add = 15 has_trait = giant }
+				modifier = { add = 5 has_trait = strong }
+				modifier = { add = 10 has_trait = athletic }
+				modifier = { add = 10 has_trait = wrathful }
+
+				modifier = { add = -15 has_trait = craven }
+			}
+			25 = { #Die
+				death = { death_reason = spn_death_throat_ripped_out }
+				modifier = { add = -15 has_trait = brave }
+				modifier = { add = -15 has_trait = giant }
+				modifier = { add = -5 has_trait = strong }
+				modifier = { add = -10 has_trait = athletic }
+				modifier = { add = -10 has_trait = wrathful }
+
+				modifier = { add = 15 has_trait = craven }
+			}
+		}
+	}
+
+	option = { #Negotiate
+		name = spn_embrace.1002.b
+		custom_tooltip = spn_embrace.1002.b.tt
+		stress_impact = {
+			wrathful = major_stress_impact_gain
+			calm = minor_stress_impact_loss
+		}
+
+		random_list = {
+			75 = { #Convince
+				custom_tooltip = spn_embrace.1002.surv.tt
+				trigger_event = spn_embrace.1004 #Convinced
+				modifier = {
+					add = {
+						value = diplomacy
+					}
+				}
+				modifier = { add = 15 has_trait = calm }
+				modifier = { add = 5 has_trait = patient }
+				modifier = { add = 10 has_trait = shrewd }
+				modifier = { add = 15 has_trait = diplomat }
+
+				modifier = { add = -15 has_trait = wrathful }
+				modifier = { add = -10 has_trait = impatient }
+			}
+			25 = { #Die
+				death = { death_reason = spn_death_throat_ripped_out }
+				modifier = { add = -15 has_trait = calm }
+				modifier = { add = -5 has_trait = patient }
+				modifier = { add = -10 has_trait = shrewd }
+				modifier = { add = -15 has_trait = diplomat }
+
+				modifier = { add = 15 has_trait = wrathful }
+				modifier = { add = 10 has_trait = impatient }
+			}
+		}
+	}
+
+	option = { #Run away
+		name = spn_embrace.1002.c
+		custom_tooltip = spn_embrace.1002.c.tt
+		stress_impact = {
+			brave = major_stress_impact_gain
+			craven = minor_stress_impact_loss
+		}
+
+		random_list = {
+			75 = { #Run away!
+			    custom_tooltip = spn_embrace.1002.surv.tt
+				trigger_event = spn_embrace.1005 #Got away
+				modifier = { add = 15 has_trait = craven }
+				modifier = { add = 15 has_trait = athletic }
+
+				modifier = { add = -15 has_trait = brave }
+
+			}
+			25 = { #Die
+				death = { death_reason = spn_death_throat_ripped_out }
+				modifier = { add = -15 has_trait = craven }
+				modifier = { add = -15 has_trait = athletic }
+
+				modifier = { add = 15 has_trait = brave }
+			}
+		}
+	}
+
+	option = { #Shocked
+		name = spn_embrace.1002.d
+		custom_tooltip = spn_embrace.1002.d.tt
+
+		random_list = {
+			75 = { #Barely survive
+				custom_tooltip = spn_embrace.1002.surv.tt
+				trigger_event = spn_embrace.1006 #Barely Survive
+
+				modifier = {
+					add = {
+						value = health
+						subtract = {
+							value = 4
+						}
+						multiply = {
+							value = 2
+						}
+					}
+				}
+			}
+			25 = { #Die
+				death = { death_reason = spn_death_throat_ripped_out }
+				modifier = {
+					add = {
+						value = health
+						subtract = {
+							value = 4
+						}
+						multiply = {
+							value = -2
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+#Survived Fight
+spn_embrace.1003 = { 
+	type = character_event
+	title = spn_embrace.1003.t
+	desc = spn_embrace.1003.desc
+	theme = intrigue
+	override_background = {
+		event_background = bedchamber
+	}
+
+	right_portrait = {
+		character = root
+		animation = pain
+	}
+
+	immediate = {
+		scope:spn_new_created_vampire = {
+			death = {
+				death_reason = spn_death_attacking
+				killer = root
+			}
+		}
+	}
+
+	option = {
+		name = spn_embrace.1003.a
+		custom_tooltip = spn_embrace.1003.a.tt
+
+		add_character_flag = {
+			flag = spn_embrace_vampire_1
+		}
+
+		trigger_event = spn_init.0001 #Init Vampire
+		spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_vampire }
+	}
+}
+
+#Negotiate
+spn_embrace.1004 = { 
+	type = character_event
+	title = spn_embrace.1004.t
+	desc = spn_embrace.1004.desc
+	theme = intrigue
+	override_background = {
+		event_background = bedchamber
+	}
+
+	right_portrait = {
+		character = root
+		animation = stress
+	}
+
+	immediate = { 
+		set_relation_rival = scope:spn_new_created_vampire
+	}
+
+	option = {
+		name = spn_embrace.1003.a
+		custom_tooltip = spn_embrace.1003.a.tt
+		trigger_event = spn_init.0001 #Init Vampire
+		spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_vampire }
+		spn_give_knowledge_of_vampire_secret = {
+			CHARACTER = scope:spn_new_created_vampire
+		}
+		scope:spn_new_created_vampire = {
+			spn_give_knowledge_of_vampire_secret = {
+				CHARACTER = root
+			}
+		}
+	}
+}
+
+#Run Away!
+spn_embrace.1005 = { 
+	type = character_event
+	title = spn_embrace.1005.t
+	desc = spn_embrace.1005.desc
+	theme = intrigue
+	override_background = {
+		event_background = bedchamber
+	}
+
+	right_portrait = {
+		character = root
+		animation = fear
+	}
+
+	immediate = {
+		random_list = {
+			50 = {
+				add_trait = paranoid
+			}
+			50 = { }
+		}
+	}
+
+	option = {
+		name = spn_embrace.1003.a
+		custom_tooltip = spn_embrace.1003.a.tt
+		trigger_event = spn_init.0001 #Init Vampire
+		spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_vampire }
+		spn_give_knowledge_of_vampire_secret = {
+			CHARACTER = scope:spn_new_created_vampire
+		}
+		scope:spn_new_created_vampire = {
+			spn_give_knowledge_of_vampire_secret = {
+				CHARACTER = root
+			}
+		}
+	}
+}
+
+#Shock
+spn_embrace.1006 = { 
+	type = character_event
+	title = spn_embrace.1006.t
+	desc = spn_embrace.1006.desc
+	theme = intrigue
+	override_background = {
+		event_background = bedchamber
+	}
+
+	right_portrait = {
+		character = root
+		animation = severelywounded
+	}
+
+	immediate = {
+		random_list = {
+			20 = {
+				add_trait = paranoid
+			}
+			20 = {
+				add_trait = craven
+			}
+			60 = { }
+		}
+	}
+
+	option = {
+		name = spn_embrace.1003.a
+		custom_tooltip = spn_embrace.1003.a.tt
+		trigger_event = spn_init.0001 #Init Vampire
+		spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_vampire }
+		spn_give_knowledge_of_vampire_secret = {
+			CHARACTER = scope:spn_new_created_vampire
+		}
+		scope:spn_new_created_vampire = {
+			spn_give_knowledge_of_vampire_secret = {
+				CHARACTER = root
+			}
+		}
+	}
+}
+
+#########################################################################################################
+#
+# Vampire Event 2, A Breathtaking Visit
+#
+#########################################################################################################
+#A Breathtaking Visit
+spn_embrace.1011 = { 
+	type = character_event
+	title = spn_embrace.1011.t
+	desc = spn_embrace.1011.desc
+	theme = realm
+
+	trigger = {
+		AND = {
+			spn_has_supernatural_trait = no
+			spn_has_hunter_trait = no
+			#is_witch_trigger = no
+		}
+	}
+
+	right_portrait = {
+		character = root
+		animation = flirtation
+	}
+
+	left_portrait = {
+		character = scope:spn_new_created_vampire
+		animation = personality_callous
+	}
+
+	immediate = {
+		spn_create_elder_skilled_attractive_vampire_effect = { WHO = root }
+		scope:spn_created_vampire = { 
+			add_character_flag = {
+				flag = spn_embrace_vampire_2
+			}
+
+			trigger_event = spn_init.0001 #Init Vampire
+			set_immortal_age = { 20 32 }
+			set_variable = {
+				name = spn_age_aquired_immortality
+				value = 20
+			}
+			save_scope_as = spn_new_created_vampire 
+		}
+	}
+
+	option = {
+		name = spn_embrace.1011.a
+		custom_tooltip = spn_embrace.1011.a.tt
+		trigger_event = spn_embrace.1012
+	}
+
+	option = {
+		name = spn_embrace.1011.b
+		custom_tooltip = spn_embrace.1011.b.tt
+
+		add_character_flag = {
+			flag = dissappear_spn_new_created_vampire
+		}
+	}
+
+	after = {
+		if = { 
+			limit = { has_character_flag = dissappear_spn_new_created_vampire }
+			scope:spn_new_created_vampire = {
+				death = {
+					death_reason = death_vanished
+				}
+			}
+			remove_character_flag = dissappear_spn_new_created_vampire
+		}
+	}
+}
+
+#A Revelation
+spn_embrace.1012 = {
+	type = character_event
+	title = spn_embrace.1012.t
+	desc = spn_embrace.1012.desc
+	theme = realm
+
+	right_portrait = {
+		character = root
+		animation = disbelief
+	}
+
+	left_portrait = {
+		character = scope:spn_new_created_vampire
+		animation = personality_callous
+	}
+
+	option = { #Accept
+		name = spn_embrace.1012.a
+		custom_tooltip = spn_embrace.1012.a.tt
+		stress_impact = {
+			paranoid = major_stress_impact_gain
+			trusting = minor_stress_impact_loss
+		}
+
+		trigger_event = spn_embrace.1014 #The Thirst
+		
+		if = {
+			limit = {
+				exists = cp:councillor_spymaster
+			}
+			fire_councillor = cp:councillor_spymaster
+		}
+		add_courtier = scope:spn_new_created_vampire
+		assign_councillor_type = {
+			type = councillor_spymaster
+			target = scope:spn_new_created_vampire
+		}
+		
+	}
+
+	option = { #Dismiss
+		name = spn_embrace.1012.b
+		custom_tooltip = spn_embrace.1012.b.tt
+		add_character_flag = {
+			flag = dissappear_spn_new_created_vampire
+		}
+	}
+
+	option = { #Attempt to apprehend
+		name = spn_embrace.1012.c
+		custom_tooltip = spn_embrace.1012.c.tt
+		stress_impact = {
+			brave = major_stress_impact_gain
+			craven = minor_stress_impact_loss
+		}
+		trigger_event = spn_embrace.1013 #A Wrong Turn
+	}
+
+	after = {
+		if = { 
+			limit = { has_character_flag = dissappear_spn_new_created_vampire }
+			scope:spn_new_created_vampire = {
+				death = {
+					death_reason = death_vanished
+				}
+			}
+			remove_character_flag = dissappear_spn_new_created_vampire
+		}
+	}
+}
+
+#A Wrong Turn
+spn_embrace.1013 = { 
+	type = character_event
+	title = spn_embrace.1013.t
+	desc = spn_embrace.1013.desc
+	theme = realm
+
+	right_portrait = {
+		character = root
+		animation = pain
+	}
+
+	left_portrait = {
+		character = scope:spn_new_created_vampire
+		animation = anger
+	}
+
+	option = {
+		name = spn_embrace.1013.a
+		custom_tooltip = spn_embrace.1013.a.tt
+		death = {
+			death_reason = spn_death_throat_ripped_out
+			killer = scope:spn_new_created_vampire
+		}
+	}
+
+	after = {
+		scope:spn_new_created_vampire = {
+			death = {
+				death_reason = death_vanished
+			}
+		}
+	}
+}
+
+#The Thirst
+spn_embrace.1014 = { 
+	type = character_event
+	title = spn_embrace.1014.t
+	desc = spn_embrace.1014.desc
+	theme = realm
+
+	right_portrait = {
+		character = root
+		animation = shock
+	}
+
+	option = {
+		name = spn_embrace.1014.a
+		custom_tooltip = spn_embrace.1014.a.tt
+
+		trigger_event = spn_init.0001 #Init Vampire
+		spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_vampire }
+		spn_give_knowledge_of_vampire_secret = {
+			CHARACTER = scope:spn_new_created_vampire
+		}
+		scope:spn_new_created_vampire = {
+			spn_give_knowledge_of_vampire_secret = {
+				CHARACTER = root
+			}
+		}
+	}
+}
+
+#########################################################################################################
+#
+# Lycan Event 1, The Hunt
+#
+#########################################################################################################
+#The Hunt
+spn_embrace.2001 = { 
+	type = character_event
+	title = spn_embrace.2001.t
+	desc = spn_embrace.2001.desc
+	theme = intrigue
+
+	trigger = {
+		AND = {
+			spn_has_supernatural_trait = no
+			spn_has_hunter_trait = no
+			#is_witch_trigger = no
+		}
+	}
+
+	override_background = {
+		event_background = wilderness_forest
+	}
+
+	right_portrait = {
+		character = root
+		animation = worry
+	}
+
+	option = { #Run
+		name = spn_embrace.2001.a
+		custom_tooltip = spn_embrace.2001.a.tt
+		stress_impact = {
+			craven = minor_stress_impact_loss
+			brave = major_stress_impact_gain
+		}
+
+		random_list = {
+			25 = {
+				custom_tooltip = spn_embrace.2001.a.surv.tt #Chance of Death
+				modifier = { add = -10 has_trait = strong }
+				modifier = { add = -10 has_trait = athletic }
+				modifier = { add = -15 has_trait = craven }
+
+				modifier = { add = 15 has_trait = brave }
+
+				modifier = {
+					add = {
+						value = health
+						subtract = {
+							value = 4
+						}
+						multiply = {
+							value = -2
+						}
+					}
+				}
+				trigger_event = spn_embrace.2002 #Die
+			}
+			75 = {
+				custom_tooltip = spn_embrace.1002.surv.tt #Chance of Survival
+				modifier = { add = 10 has_trait = strong }
+				modifier = { add = 10 has_trait = athletic }
+				modifier = { add = 15 has_trait = craven }
+
+				modifier = { add = -15 has_trait = brave }
+
+				modifier = {
+					add = {
+						value = health
+						subtract = {
+							value = 4
+						}
+						multiply = {
+							value = 2
+						}
+					}
+				}
+				trigger_event = spn_embrace.2003 #Survive, but Lunatic
+			}
+		}
+	}
+
+	option = { #Be Quiet
+		name = spn_embrace.2001.b
+		custom_tooltip = spn_embrace.2001.b.tt
+		stress_impact = {
+			craven = major_stress_impact_gain
+			wrathful = medium_stress_impact_gain
+			impatient = minor_stress_impact_gain
+			patient = minor_stress_impact_loss
+			calm = minor_stress_impact_loss
+			brave = minor_stress_impact_loss
+		}
+
+		random_list = {
+			25 = {
+				custom_tooltip = spn_embrace.2001.a.surv.tt #Chance of Death
+				modifier = { add = -10 has_trait = calm }
+				modifier = { add = -5 has_trait = patient }
+				modifier = { add = -15 has_trait = brave }
+
+				modifier = { add = 10 has_trait = wrathful }
+				modifier = { add = 5 has_trait = impatient }
+				modifier = { add = 20 has_trait = craven }
+
+				modifier = {
+					add = {
+						value = health
+						subtract = {
+							value = 4
+						}
+						multiply = {
+							value = -2
+						}
+					}
+				}
+				trigger_event = spn_embrace.2004 #Die
+			}
+			75 = {
+				custom_tooltip = spn_embrace.1002.surv.tt #Chance of Survival
+				modifier = { add = 10 has_trait = calm }
+				modifier = { add = 5 has_trait = patient }
+				modifier = { add = 15 has_trait = brave }
+
+				modifier = { add = -10 has_trait = wrathful }
+				modifier = { add = -5 has_trait = impatient }
+				modifier = { add = -15 has_trait = craven }
+
+				modifier = {
+					add = {
+						value = health
+						subtract = {
+							value = 4
+						}
+						multiply = {
+							value = 2
+						}
+					}
+				}
+				trigger_event = spn_embrace.2005 #Survive, but turned
+			}
+		}
+	}
+}
+
+#The hunted, Die
+spn_embrace.2002 = {
+	type = character_event
+	title = spn_embrace.2002.t
+	desc = spn_embrace.2002.desc.a
+	theme = intrigue
+
+	override_background = {
+		event_background = wilderness_forest
+	}
+
+	right_portrait = {
+		character = root
+		animation = fear
+	}
+
+	option = { 
+		name = spn_embrace.2002.a
+		custom_tooltip = spn_embrace.2002.a.tt
+		death = { death_reason = spn_death_intestines_spilled }
+	}
+}
+
+#The hunted, Lunatic
+spn_embrace.2003 = {
+	type = character_event
+	title = spn_embrace.2003.t
+	desc = spn_embrace.2003.desc.a
+	theme = intrigue
+
+	override_background = {
+		event_background = wilderness_forest
+	}
+
+	right_portrait = {
+		character = root
+		animation = lunatic
+	}
+
+	option = { 
+		name = spn_embrace.2003.a
+		custom_tooltip = spn_embrace.2003.a.tt
+		add_trait = lunatic_1
+	}
+}
+
+#The hunted, 2nd Die
+spn_embrace.2004 = {
+	type = character_event
+	title = spn_embrace.2004.t
+	desc = spn_embrace.2004.desc.a
+	theme = intrigue
+
+	override_background = {
+		event_background = wilderness_forest
+	}
+
+	right_portrait = {
+		character = root
+		animation = fear
+	}
+
+	option = { 
+		name = spn_embrace.2004.a
+		custom_tooltip = spn_embrace.2004.a.tt
+		death = { death_reason = spn_death_skull_crushed }
+	}
+}
+
+#The hunted, Turn
+spn_embrace.2005 = {
+	type = character_event
+	title = spn_embrace.2005.t
+	desc = spn_embrace.2005.desc.a
+	theme = intrigue
+
+	override_background = {
+		event_background = wilderness_forest
+	}
+
+	right_portrait = {
+		character = root
+		animation = disbelief
+	}
+
+	option = { 
+		name = spn_embrace.2005.a
+		custom_tooltip = spn_embrace.2005.a.tt
+		trigger_event = spn_init.1001 #Init Lycan
+	}
+}
+
+#########################################################################################################
+#
+# Lycan Event 2, Ambush
+#
+#########################################################################################################
+#Ambush
+spn_embrace.2011 = { 
+	type = character_event
+	title = spn_embrace.2011.t
+	desc = spn_embrace.2011.desc
+	theme = intrigue
+
+	override_background = {
+		event_background = farmland
+	}
+
+	right_portrait = {
+		character = root
+		animation = anger
+	}
+
+	option = { #Charge
+		name = spn_embrace.2011.a
+		custom_tooltip = spn_embrace.2011.a.tt
+		stress_impact = {
+			craven = major_stress_impact_gain
+			wrathful = minor_stress_impact_loss
+			brave = minor_stress_impact_loss
+		}
+
+		random_list = {
+			75 = {
+				custom_tooltip = spn_embrace.1002.surv.tt #Chance of Survival
+				modifier = { add = 10 has_trait = brave }
+				modifier = { add = 5 has_trait = wrathful }
+				modifier = { add = -15 has_trait = craven }
+
+				modifier = {
+					add = {
+						value = prowess
+						divide = {
+							value = 2
+						}
+					}
+				}
+
+				modifier = {
+					add = {
+						value = health
+						subtract = {
+							value = 4
+						}
+						multiply = {
+							value = 2
+						}
+					}
+				}
+				trigger_event = spn_embrace.2012 #Live
+			}
+			25 = {
+				custom_tooltip = spn_embrace.2001.a.surv.tt #Chance of Death
+				modifier = { add = -10 has_trait = brave }
+				modifier = { add = -5 has_trait = wrathful }
+				modifier = { add = 15 has_trait = craven }
+
+				modifier = {
+					add = {
+						value = health
+						subtract = {
+							value = 4
+						}
+						multiply = {
+							value = -2
+						}
+					}
+				}
+				trigger_event = spn_embrace.2014 #Die
+			}
+		}
+	}
+
+	option = { #Run
+		name = spn_embrace.2011.b
+		custom_tooltip = spn_embrace.2011.b.tt
+		stress_impact = {
+			craven = minor_stress_impact_loss
+			brave = major_stress_impact_gain
+		}
+
+		random_list = {
+			75 = {
+				custom_tooltip = spn_embrace.1002.surv.tt #Chance of Survival
+				modifier = { add = 10 has_trait = strong }
+				modifier = { add = 5 has_trait = athletic }
+				modifier = { add = 15 has_trait = craven }
+
+				modifier = { add = -15 has_trait = brave }
+
+
+
+				modifier = {
+					add = {
+						value = health
+						subtract = {
+							value = 4
+						}
+						multiply = {
+							value = 2
+						}
+					}
+				}
+				trigger_event = spn_embrace.2015 #Survive
+			}
+			25 = {
+				custom_tooltip = spn_embrace.2001.a.surv.tt #Chance of Death
+				modifier = { add = -10 has_trait = strong }
+				modifier = { add = -5 has_trait = athletic }
+				modifier = { add = -15 has_trait = craven }
+
+				modifier = { add = 15 has_trait = brave }
+
+				modifier = {
+					add = {
+						value = prowess
+						divide = {
+							value = 2
+						}
+						multiply = {
+							value = -1
+						}
+					}
+				}
+
+				modifier = {
+					add = {
+						value = health
+						subtract = {
+							value = 4
+						}
+						multiply = {
+							value = -2
+						}
+					}
+				}
+				trigger_event = spn_embrace.2016 #Die
+			}
+		}
+	}
+
+}
+
+#For Honor
+spn_embrace.2012 = {
+	type = character_event
+	title = spn_embrace.2012.t
+	desc = spn_embrace.2012.desc.a
+	theme = intrigue
+
+	override_background = {
+		event_background = wilderness_forest_pine
+	}
+
+	right_portrait = {
+		character = root
+		animation = war_defender
+	}
+
+	
+	left_portrait = {
+		character = scope:spn_created_lycan
+		animation = war_defender
+	}
+
+	immediate = {
+		spn_create_skilled_warrior_lycan_effect = { WHO = root }
+		scope:spn_created_lycan = {
+			add_character_flag = {
+				flag = spn_embrace_lycan_2
+			}
+			
+			trigger_event = spn_init.1001 #Init Lycan
+			set_immortal_age = { 20 32 }
+			set_variable = {
+				name = spn_age_aquired_immortality
+				value = 17
+			}
+			save_scope_as = spn_new_created_lycan
+		}
+	}
+
+	option = { 
+		name = spn_embrace.2012.a
+		custom_tooltip = spn_embrace.2012.a.tt
+		trigger_event = spn_embrace.2013
+	}
+
+	after = {
+	}
+}
+
+#More Valuable Than Gold
+spn_embrace.2013 = {
+	type = character_event
+	title = spn_embrace.2013.t
+	desc = spn_embrace.2013.desc.a
+	theme = intrigue
+
+	override_background = {
+		event_background = wilderness_forest_pine
+	}
+
+	right_portrait = {
+		character = root
+		animation = severelywounded
+	}
+
+	left_portrait = {
+		character = scope:spn_new_created_lycan
+		animation = severelywounded
+	}
+
+	option = { 
+		name = spn_embrace.2013.a
+		custom_tooltip = spn_embrace.2013.a.tt
+		trigger_event = spn_init.1001 #Init Lycan
+		spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_lycan }
+	}
+
+	after = {
+		scope:spn_new_created_lycan = {
+			death = {
+				death_reason = death_battle
+			}
+		}
+	}
+}
+
+#Slaughter
+spn_embrace.2014 = {
+	type = character_event
+	title = spn_embrace.2014.t
+	desc = spn_embrace.2014.desc.a
+	theme = intrigue
+
+	override_background = {
+		event_background = wilderness_forest_pine
+	}
+
+	right_portrait = {
+		character = root
+		animation = severelywounded
+	}
+
+	option = { 
+		name = spn_embrace.2014.a
+		death = { death_reason = death_battle }
+	}
+}
+
+#Flee
+spn_embrace.2015 = {
+	type = character_event
+	title = spn_embrace.2015.t
+	desc = spn_embrace.2015.desc.a
+	theme = intrigue
+
+	override_background = {
+		event_background = wilderness_forest
+	}
+
+	right_portrait = {
+		character = root
+		animation = paranoia
+	}
+
+	option = { 
+		name = spn_embrace.2015.a
+		custom_tooltip = spn_embrace.2015.a.tt
+		add_trait = paranoid
+	}
+}
+
+#Flee Death
+spn_embrace.2016 = {
+	type = character_event
+	title = spn_embrace.2016.t
+	desc = spn_embrace.2016.desc.a
+	theme = intrigue
+
+	override_background = {
+		event_background = wilderness_forest_pine
+	}
+
+	right_portrait = {
+		character = root
+		animation = severelywounded
+	}
+
+	option = { 
+		name = spn_embrace.2016.a
+		death = { death_reason = death_battle }
+	}
+}
+
+#########################################################################################################
+#
+# Hunter Event 1, A Bump In The Night
+#
+#########################################################################################################
+#A Bump In The Night
+spn_embrace.3001 = {
+	type = character_event
+	title = spn_embrace.3001.t
+	desc = spn_embrace.3001.desc
+	theme = intrigue
+
+	trigger = {
+		AND = {
+			spn_has_supernatural_trait = no
+			spn_has_hunter_trait = no
+			#is_witch_trigger = no
+		}
+	}
+
+	override_background = {
+		event_background = bedchamber	
+	}
+
+	right_portrait = {
+		character = root
+		triggered_animation = {
+			trigger = { has_trait = craven }
+			animation = fear
+		}
+		triggered_animation = {
+			trigger = { has_trait = brave }
+			animation = disbelief
+		}
+		triggered_animation = {
+			trigger = { has_trait = calm }
+			animation = idle
+		}
+		triggered_animation = {
+			trigger = {
+				NOR = {
+					has_trait = craven
+					has_trait = wrathful
+					has_trait = calm
+				}
+			}
+			animation = shock
+		}
+	}
+
+	option = { #Quickly shut the door and hide under your bed.
+		name = spn_embrace.3001.a
+		custom_tooltip = spn_embrace.3001.a.tt
+		stress_impact = {
+			craven = minor_stress_impact_loss
+			brave = major_stress_impact_gain
+		}
+
+		random_list = {
+			75 = { #Survive
+			    custom_tooltip = spn_embrace.1002.surv.tt
+				trigger_event = spn_embrace.3002 #Survived 
+				modifier = {
+					add = {
+						value = intrigue
+					}
+				}
+				modifier = { add = -10 has_trait = brave }
+				modifier = { add = 10 has_trait = craven }
+			}
+			25 = { #Die
+				death = { death_reason = spn_death_dragged_out_from_hiding }
+				modifier = { add = 10 has_trait = brave }
+				modifier = { add = -10 has_trait = craven }
+			}
+		}
+	}
+
+	option = { #Run down the opposite hallway and try to find help.
+		name = spn_embrace.3001.b
+		custom_tooltip = spn_embrace.3001.b.tt
+		stress_impact = {
+			shrewd = minor_stress_impact_loss
+			intellect_good_1 = minor_stress_impact_loss
+			intellect_good_2 = minor_stress_impact_loss
+			intellect_good_3 = minor_stress_impact_loss
+			athletic = major_stress_impact_loss
+			craven = major_stress_impact_gain
+		}
+
+		random_list = {
+			75 = { #Success
+				custom_tooltip = spn_embrace.1002.surv.tt
+				trigger_event = spn_embrace.3003 #Found help
+
+				modifier = { add = 5 has_trait = shrewd }
+				modifier = { add = 5 has_trait = intellect_good_1 }
+				modifier = { add = 5 has_trait = intellect_good_2 }
+				modifier = { add = 10 has_trait = intellect_good_3 }
+				modifier = { add = 15 has_trait = athletic }
+
+				modifier = { add = -10 has_trait = craven }
+			}
+			25 = { #Die
+				death = { death_reason = spn_death_chased_down_and_devoured }
+				modifier = { add = -5 has_trait = shrewd }
+				modifier = { add = -5 has_trait = intellect_good_1 }
+				modifier = { add = -5 has_trait = intellect_good_2 }
+				modifier = { add = -10 has_trait = intellect_good_3 }
+				modifier = { add = -15 has_trait = athletic }
+
+				modifier = { add = 10 has_trait = craven }
+			}
+		}
+	}
+
+	option = { #Quietly shut the door and go back to bed.
+		name = spn_embrace.3001.c
+		custom_tooltip = spn_embrace.3001.c.tt
+		stress_impact = {
+			brave = major_stress_impact_gain
+			intellect_good_3 = major_stress_impact_gain
+			intellect_good_1 = minor_stress_impact_loss
+			intellect_good_2 = minor_stress_impact_loss
+			shrewd = major_stress_impact_gain
+			craven = minor_stress_impact_loss
+		}
+
+		random_list = {
+			75 = { #Creature ignores you
+			    custom_tooltip = spn_embrace.1002.surv.tt
+				trigger_event = spn_embrace.3005 #The creature left you alone
+				modifier = { add = 10 has_trait = craven }
+				modifier = { add = 5 has_trait = lunatic }
+				modifier = { add = -5 has_trait = intellect_good_3 }
+				modifier = { add = -5 has_trait = intellect_good_2 }
+				modifier = { add = -5 has_trait = intellect_good_1 }
+				modifier = { add = -5 has_trait = shrewd }
+				modifier = { add = -10 has_trait = brave }
+			}
+			25 = { #Die
+				death = { death_reason = spn_death_devoured_in_bed }
+				modifier = { add = -10 has_trait = craven }
+				modifier = { add = -5 has_trait = lunatic }
+				modifier = { add = 5 has_trait = intellect_good_3 }
+				modifier = { add = 5 has_trait = intellect_good_2 }
+				modifier = { add = 5 has_trait = intellect_good_1 }
+				modifier = { add = 5 has_trait = shrewd }
+				modifier = { add = 10 has_trait = brave }
+			}
+		}
+	}
+
+	option = { #Let out a battle cry and charge the beast!
+		name = spn_embrace.3001.d
+		custom_tooltip = spn_embrace.3001.d.tt
+
+		random_list = {
+			75 = { #Survive, only to be put to deth by the Hunter
+				custom_tooltip = spn_embrace.1002.surv.tt
+				trigger_event = spn_embrace.3006 #Survive only to potentially die by Hunter's hand
+
+				stress_impact = {
+					brave = minor_stress_impact_loss
+					craven = major_stress_impact_gain
+				}
+
+				modifier = {
+					add = {
+						value = prowess
+						multiply = 0.5
+					}
+				}
+
+				modifier = {
+					add = {
+						value = health
+						subtract = {
+							value = 4
+						}
+						multiply = {
+							value = 2
+						}
+					}
+				}
+			}
+			25 = { #Die
+				death = { death_reason = spn_death_attacking_raging_beast }
+				modifier = {
+					add = {
+						value = health
+						subtract = {
+							value = 4
+						}
+						multiply = {
+							value = -2
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+#Hide
+spn_embrace.3002 = {
+	type = character_event
+	title = spn_embrace.3002.t
+	desc = spn_embrace.3002.desc
+	theme = intrigue
+
+	override_background = {
+		event_background = bedchamber	
+	}
+
+	right_portrait = {
+		character = root
+		animation = disbelief
+	}
+
+	option = { 
+		name = spn_embrace.3002.a
+	}
+}
+
+#Time of Need
+spn_embrace.3003 = { 
+	type = character_event
+	title = spn_embrace.3003.t
+	desc = spn_embrace.3003.desc
+	theme = intrigue
+
+	right_portrait = {
+		character = root
+		animation = worry
+	}
+
+	left_portrait = {
+		character = scope:spn_new_created_hunter
+		animation = personality_bold
+	}
+
+	immediate = {
+		spn_create_skilled_hunter_effect = { WHO = root }
+		scope:spn_created_hunter = { 
+			add_character_flag = {
+				flag = spn_embrace_hunter_2
+			}
+			trigger_event = spn_init.3001 #Init Hunter
+			save_scope_as = spn_new_created_hunter
+		}
+	}
+
+	option = {
+		name = spn_embrace.3003.a
+		custom_tooltip = spn_embrace.3003.a.tt
+		trigger_event = {
+			id = spn_embrace.3004 #Train as Hunter
+			days = 28
+		}
+	}
+
+	option = {
+		name = spn_embrace.3003.b
+		custom_tooltip = spn_embrace.3003.b.tt
+
+		add_character_flag = {
+			flag = dissappear_spn_new_created_hunter
+		}
+	}
+
+	after = {
+		if = {
+			limit = { has_character_flag = dissappear_spn_new_created_hunter }
+			scope:spn_new_created_hunter = {
+				death = {
+					death_reason = death_vanished
+				}
+			}
+			remove_character_flag = dissappear_spn_new_created_hunter
+		}
+	}
+}
+
+#Train as a Hunter
+spn_embrace.3004 = {
+	type = character_event
+	title = spn_embrace.3004.t
+	desc = spn_embrace.3004.desc
+	theme = intrigue
+
+	left_portrait = {
+		character = scope:spn_new_created_hunter
+		animation = idle
+	}
+
+	right_portrait = {
+		character = root
+		animation = happiness
+	}
+
+	option = { 
+		name = spn_embrace.3004.a
+
+		trigger_event = spn_init.3001 #Init Hunter
+		spn_assign_hunter_trainer = { CHARACTER = scope:spn_new_created_hunter }
+		spn_give_knowledge_of_hunter_secret = {
+			CHARACTER = scope:spn_new_created_hunter
+		}
+		scope:spn_new_created_hunter = {
+			spn_give_knowledge_of_hunter_secret = {
+				CHARACTER = root
+			}
+		}
+	}
+}
+
+#Creature left you alone
+spn_embrace.3005 = {
+	type = character_event
+	title = spn_embrace.3005.t
+	desc = spn_embrace.3005.desc
+	theme = intrigue
+
+	override_background = {
+		event_background = bedchamber	
+	}
+
+	right_portrait = {
+		character = root
+		animation = worry
+	}
+
+	option = { 
+		name = spn_embrace.3005.a
+	}
+}
+
+#Attack the Creature
+spn_embrace.3006 = {
+	type = character_event
+	title = spn_embrace.3006.t
+	desc = spn_embrace.3006.desc
+	theme = intrigue
+
+	right_portrait = {
+		character = root
+		animation = pain
+	}
+
+	left_portrait = {
+		character = scope:spn_new_created_hunter
+		animation = idle
+	}
+
+	immediate = {
+		spn_create_skilled_hunter_effect = { WHO = root }
+		scope:spn_created_hunter = { 
+			add_character_flag = {
+				flag = spn_embrace_hunter_2
+			}
+			trigger_event = spn_init.3001 #Init Hunter
+			save_scope_as = spn_new_created_hunter
+		}
+	}
+
+	option = { 
+		name = spn_embrace.3006.a
+		custom_tooltip = spn_embrace.3006.a.tt
+
+		random_list = {
+			75 = { #Survive, only to be put to death by the hunter
+				custom_tooltip = spn_embrace.1002.surv.tt
+				trigger_event = spn_embrace.3007 #Survive only to potentially die by Hunter's hand
+
+				modifier = {
+					add = {
+						value = diplomacy
+					}
+				}
+			}
+			25 = { #Die
+				add_character_flag = {
+					flag = dissappear_spn_new_created_hunter
+				}
+	
+				death = { death_reason = spn_death_killed_by_hunter }
+			}
+		}
+
+		
+	}
+
+	after = {
+		if = { 
+			limit = { has_character_flag = dissappear_spn_new_created_hunter }
+			scope:spn_new_created_hunter = {
+				death = {
+					death_reason = death_vanished
+				}
+			}
+			remove_character_flag = dissappear_spn_new_created_hunter
+		}
+	}
+}
+
+#Training Complete And Transformation
+spn_embrace.3007 = {
+	type = character_event
+	title = spn_embrace.3007.t
+	desc = spn_embrace.3004.desc
+	theme = intrigue
+
+	left_portrait = {
+		character = scope:spn_new_created_hunter
+		animation = idle
+	}
+
+	right_portrait = {
+		character = root
+		animation = happiness
+	}
+
+	option = { 
+		name = spn_embrace.3007.a
+
+		trigger_event = spn_init.3001 #Init Hunter
+		spn_assign_hunter_trainer = { CHARACTER = scope:spn_new_created_hunter }
+		spn_give_knowledge_of_hunter_secret = {
+			CHARACTER = scope:spn_new_created_hunter
+		}
+		scope:spn_new_created_hunter = {
+			spn_give_knowledge_of_hunter_secret = {
+				CHARACTER = root
+			}
+		}
+
+		set_relation_mentor = scope:spn_new_created_hunter
+	}
+}

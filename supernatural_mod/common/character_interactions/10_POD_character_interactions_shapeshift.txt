@@ -1,0 +1,174 @@
+﻿# POD Personal Character Interactions
+# Werewolf Shapeshift
+
+POD_wereshapeshift_interaction = {
+	category = interaction_category_werewolf 
+	interface_priority = 92
+	common_interaction = yes
+	icon = werewolf_interaction
+	desc = POD_wereshapeshift_interaction_desc
+	
+	is_shown = {
+		scope:actor = scope:recipient 
+		scope:recipient = { is_adult = yes }
+		scope:actor = { is_ai = no }
+		scope:actor = {
+			OR = {
+				has_trait = spn_werewolf_1
+				has_trait = spn_werewolf_3
+				has_trait = spn_werewolf_2
+				has_trait = spn_hybrid_1
+				has_trait = spn_hybrid_2
+				has_trait = spn_hybrid_3
+			}
+		}
+	}
+
+	options_heading = POD_wereshapeshift_interaction_options_heading
+
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				has_POD_shapeshifted_form_trigger = yes
+			}
+		}
+		flag = homid
+		localization = POD_wereshapeshift_interaction_homid	
+	}
+
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				OR = {
+					has_trait = spn_werewolf_1
+					has_trait = spn_werewolf_3
+					has_trait = spn_werewolf_2
+					has_trait = spn_hybrid_1
+					has_trait = spn_hybrid_2
+					has_trait = spn_hybrid_3
+				}
+				NOT = { has_character_modifier = POD_werewolf_form_glabro_modifier  }
+			}
+		}	
+		flag = glabro
+		localization = POD_wereshapeshift_interaction_glabro
+	}
+
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				OR = {
+					has_trait = spn_werewolf_1
+					has_trait = spn_werewolf_3
+					has_trait = spn_werewolf_2
+					has_trait = spn_hybrid_1
+					has_trait = spn_hybrid_2
+					has_trait = spn_hybrid_3
+				}
+				NOT = { has_character_modifier = POD_werewolf_form_lupus_modifier  }
+			}
+		}
+		flag = lupus
+		localization = POD_wereshapeshift_interaction_lupus
+	}
+
+	
+	send_options_exclusive = yes
+	
+	auto_accept = yes
+
+	on_accept = {
+		scope:actor = {
+			#POD_shapeshift_revert_effect = yes
+			POD_shapeshift_remove_werewolf_form_effect = yes
+			if = {
+				limit = {
+					OR = {
+						scope:homid = yes
+						scope:glabro = yes
+						scope:lupus = yes
+					}
+				}
+				#POD_rage_loss_check_effect = yes	
+			}
+			else = {
+				#POD_gnosis_loss_check_effect = yes	
+			}
+		}
+		
+		if = {
+			limit = {
+				scope:homid = yes
+			}
+		}
+		
+		if = {
+			limit = {
+				scope:glabro = yes
+			}
+			scope:actor = {
+				add_character_modifier = {
+					modifier = POD_werewolf_form_glabro_modifier
+				}
+			}
+		}
+
+		if = {
+			limit = {
+				scope:lupus = yes
+			}
+			scope:actor = {
+				add_character_modifier = {
+					modifier = POD_werewolf_form_lupus_modifier
+				}
+				add_character_flag = {
+					flag = POD_bald_look_flag
+					#flag = POD_portrait_no_hair_flag
+				}
+			}
+		}
+	}
+
+	ai_frequency = 24
+	
+	ai_targets = {
+		ai_recipients = self
+	}
+	
+	ai_will_do = {
+		base = 0
+		
+		modifier = {
+			add = 20	
+			scope:glabro = yes
+			OR = {
+				is_commanding_army = yes
+				has_council_position = councillor_marshal
+			}
+		}
+		
+		modifier = {
+			add = 40
+			scope:lupus = yes
+			is_in_army = yes		
+			has_trait = spn_werewolf_3
+		}
+		
+		modifier = {
+			add = 35
+			OR = {
+				is_ruler = yes
+				has_council_position = councillor_steward
+			}
+		}
+		
+		modifier = {
+			add = 30
+			scope:homid = yes
+			NOT = { any_scheme = { exists = yes } }
+			NOT = { any_targeting_scheme = { hostile_scheme_trigger = yes } }
+			is_at_war = no
+		}
+	}
+}
+

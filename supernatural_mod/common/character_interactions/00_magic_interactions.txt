@@ -1,0 +1,2748 @@
+﻿cast_curse = {
+	
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+				has_perk = evil_eye_perk
+				is_imprisoned = no
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = is_incapable_custom
+				NOT = { has_trait = incapable }
+			}
+		}
+		scope:recipient = {
+			#custom_description = {
+			#	text = "cast_curse_custom_desc"
+			#	}
+			custom_description = {
+			text = magic_protection_custom
+				OR = {
+					AND = {
+						scope:actor = {
+							any_character_artifact = { has_variable = catalyst }
+						}
+						NOR = {
+							any_character_artifact = { has_variable = magic_ring }
+							has_character_modifier = amp_modifier
+						}
+					}
+					NOR = {
+						has_perk = protective_runes_perk
+						has_trait = demon
+						#has_character_modifier = cursed_modifier
+						any_character_artifact = { has_variable = magic_ring }
+						has_character_modifier = amp_modifier
+						AND = {
+							any_parent = { has_perk = protective_runes_perk }
+							NOT = { is_child_of = scope:actor }
+						}
+						AND = {
+							exists = scope:recipient.liege
+							scope:recipient.liege = { has_perk = protective_runes_perk }
+							is_councillor = yes
+							NOT = { is_councillor_of = scope:actor }
+						}
+						AND = {
+							any_consort = { has_perk = protective_runes_perk }
+							NOT = { is_consort_of = scope:actor }
+						}
+						AND = {
+							employs_court_position = mage_court_position
+							any_court_position_holder = {
+				        		type = mage_court_position
+								has_perk = protective_runes_perk
+								NOT = { scope:actor = this }
+							}
+						}
+					}
+				}
+				
+			}
+		}
+	}
+	icon = icon_magic
+	common_interaction = yes
+	interface_priority = 90
+	category = interaction_category_magic
+	desc = "cast_curse_desc"
+	#prompt = "cast_curse_prompt_text"
+	#custom_description="cast_curse_custom_desc"
+	#notification_text = cast_curse_notification_text
+
+	cooldown_against_recipient = { years = 7 } 
+	cooldown = { years = 1 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = no
+	#hidden = yes
+	
+	on_accept = {
+		scope:actor = {
+			save_scope_as = magic_user
+			add_character_flag = {
+				flag = magic_user
+				years = 5
+			}
+			every_courtier_or_guest = {
+						limit = { has_perk = magical_senses_perk }
+				trigger_event = magic_ev.4
+			}
+			
+			location = {
+				duchy = {
+					every_de_jure_county_holder = {
+						limit = { 
+							AND = {
+								NOT = { this = scope:actor }
+								has_perk = magical_senses_perk
+							}
+						}
+							trigger_event = magic_ev.4
+					}
+			
+				}
+			}
+			send_message_4_magic_sense_effect = yes
+			send_interface_message = {
+				type = event_generic_neutral
+				title = cast_curse
+				desc = "send_interface_message_text"
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				custom_tooltip = use_magic_custom_tooltip
+				#tooltip="tooltip0"
+				stress_impact = {
+					compassionate = medium_stress_impact_gain
+					honest = medium_stress_impact_gain
+					just = medium_stress_impact_gain
+				}
+				scope:recipient = {
+					trigger_event = magic_ev.3
+					if = {
+						limit = {
+							scope:actor = {
+								dynasty = {
+									has_dynasty_perk = witchcraft_legacy_4
+								}
+							}
+						}
+						custom_tooltip = chance_to_cursed2_custom_tooltip
+					}
+					else = {
+						custom_tooltip = chance_to_cursed_custom_tooltip
+					}
+					
+				}
+			}
+		}
+	}
+	
+	auto_accept = yes
+	ai_potential = {
+		NOT = {
+			has_trait = compassionate
+		}
+	}
+	
+	ai_targets = {
+		ai_recipients = neighboring_rulers
+		ai_recipients = peer_vassals
+		ai_recipients = vassals
+		ai_recipients = liege
+		ai_recipients = dynasty
+		ai_recipients = spouses
+		ai_recipients = war_enemies
+		ai_recipients = scripted_relations
+	}
+
+	ai_frequency = 24
+
+	ai_will_do = {
+		base = 0
+		
+		modifier = {
+			add = 100
+			scope:recipient = {
+				OR = {
+					has_relation_rival = scope:actor
+					has_relation_nemesis = scope:actor
+					#has_relation_potential_rival = scope:actor
+					is_at_war_with = scope:actor
+				}
+			}
+		}
+	}
+}
+
+magic_domination = {
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			is_imprisoned = no
+			OR = {
+				has_perk = mind_control_p6_perk
+				has_trait = demon
+			}
+		}
+		scope:recipient = {
+			NOR = {
+				has_relation_mminion = scope:actor
+				has_relation_mmaster = scope:actor
+				
+			}
+		}	
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = is_incapable_custom
+				NOT = { has_trait = incapable }
+			}
+		}
+		scope:recipient = {
+			custom_description = {
+				text = magic_protection_custom
+				OR = {
+					NOR = {
+						has_perk = protective_runes_perk
+						has_trait = demon
+						has_trait = possessed_1
+						has_trait = possessed_genetic
+						any_character_artifact = { has_variable = magic_ring }
+						has_character_modifier = amp_modifier
+						AND = {
+							any_parent = { has_perk = protective_runes_perk }
+							NOT = { is_child_of = scope:actor }
+						}
+						AND = {
+							#scope:recipient.liege = { has_perk = protective_runes_perk }
+							exists = liege
+							liege = { has_perk = protective_runes_perk }
+							is_councillor = yes
+							NOT = { is_councillor_of = scope:actor }
+						}
+						AND = {
+							any_consort = { has_perk = protective_runes_perk }
+							NOT = { is_consort_of = scope:actor }
+						}
+						AND = {
+							employs_court_position = mage_court_position
+							any_court_position_holder = {
+				        		type = mage_court_position
+								has_perk = protective_runes_perk
+								NOT = { scope:actor = this }
+							}
+						}
+					}
+					AND = {
+						scope:actor = {
+							any_character_artifact = { has_variable = catalyst }
+						}
+						NOR = {
+							any_character_artifact = { has_variable = magic_ring }
+							has_character_modifier = amp_modifier
+						}
+					}
+				}
+			}
+		}
+		scope:actor = {
+			custom_description = {
+				text = power_needed_custom
+				OR = {
+					has_character_modifier = power_saturated1
+					has_character_modifier = power_saturated2
+				}
+			}
+			
+			custom_description = {
+				text = not_war_against
+				NOT = { is_at_war_with = scope:recipient }
+			}
+		}
+	}
+	icon = icon_magic
+	common_interaction = yes
+	interface_priority = 90
+	category = interaction_category_magic
+
+	cooldown_against_recipient = { years = 5 } 
+	cooldown = { months = 1 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = no
+	#hidden = yes
+	
+	on_accept = {
+		scope:actor = {
+			save_scope_as = magic_user
+			hidden_effect = {
+				if = {
+					limit = {
+						any_character_artifact = {
+							has_variable = magic1
+						}
+						is_ai = no
+						any_living_character = {
+							has_trait = true_witch
+							count < 4
+						}
+					}
+					random = {
+						chance = 40
+						create_true_witch_effect = yes
+					}
+				}
+			}
+			#add_character_flag = {
+			#	flag = magic_user
+			#	years = 5
+			#}
+			send_message_4_magic_sense_effect = yes
+			#add_gold=-10
+			scope:recipient = {
+				every_relation = {
+					type = mmaster
+					remove_relation_mminion = scope:recipient
+				}
+			}
+			set_relation_mminion = scope:recipient
+			if = { limit = { has_character_modifier = power_saturated1 }
+				remove_character_modifier = power_saturated1
+			}
+			if = { limit = { has_character_modifier = power_saturated2 }
+				remove_character_modifier = power_saturated2
+			}
+			#doesnt work?-->#remove_magic_sat_effect = yes
+			send_interface_message = {
+				type = event_generic_neutral
+				title = magic_domination
+				desc = "send_interface_message_text"
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				custom_tooltip = use_magic_custom_tooltip
+
+				stress_impact = {
+					compassionate = medium_stress_impact_gain
+					honest = medium_stress_impact_gain
+					just = medium_stress_impact_gain
+				}
+				hidden_effect = {
+					if = {
+						limit = {
+							has_hook = scope:recipient
+						}
+						remove_hook = {
+							target = scope:recipient
+						}
+					}
+				}
+				add_hook = {
+						type = magic_domination_hook
+						target = scope:recipient
+				}
+				metamagic_effect = yes
+				if = {
+					limit = {
+						has_character_flag = better_domination_spell
+					}
+					scope:recipient = {
+						custom_tooltip = mind_control_custom_tooltip
+						set_culture_same_as = scope:actor
+						set_character_faith = scope:actor.faith
+					}
+				}
+				else = {
+					scope:recipient = {
+						custom_tooltip = mind_control_custom_tooltip
+					}
+				}
+				
+			}
+		}
+	}
+	
+	auto_accept = yes
+	ai_potential = {
+		NOT = {
+			has_trait = compassionate
+		}
+	}
+	
+	ai_targets = {
+		ai_recipients = neighboring_rulers
+		ai_recipients = vassals
+		ai_recipients = liege
+		ai_recipients = courtiers
+		ai_recipients = spouses
+	}
+
+	ai_frequency = 24
+
+	ai_will_do = {
+		base = 0
+		
+		modifier = {
+			add = 40
+			scope:recipient = {
+				OR = {
+					has_relation_rival = scope:actor
+					has_relation_nemesis = scope:actor
+					has_relation_potential_rival = scope:actor
+				}
+			}
+		}
+		modifier = {
+			add = 20
+			scope:recipient = {
+				is_powerful_vassal = yes
+			}
+		}
+		modifier = {
+			add = 20
+			scope:recipient = {
+				opinion = {
+					target = scope:actor
+					value < -70
+				}
+			}
+		}
+		modifier = {
+			add = 50
+			scope:recipient = {
+				is_spouse_of = scope:actor
+				NOR = {
+					has_relation_lover = scope:actor
+					has_relation_soulmate = scope:actor
+					has_relation_friend = scope:actor
+					has_relation_best_friend = scope:actor
+				}
+			}
+		}
+		modifier = {
+			add = -100
+			scope:recipient = {
+				is_ai = no
+			}
+		}
+	}
+}
+
+magic_healing = {
+	
+	is_shown = {
+		#NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			OR = {
+				has_perk = healer_p9_perk
+				has_trait = demon
+			}
+			is_imprisoned = no
+		}
+		scope:recipient = {
+			OR = {
+				has_trait = ill
+				has_trait = pneumonic
+				has_trait = great_pox
+				has_trait = early_great_pox
+				has_trait = lovers_pox
+				has_trait = leper
+				has_trait = wounded_1
+				has_trait = wounded_2
+				has_trait = wounded_3
+				has_trait = maimed
+				has_trait = infirm
+				has_trait = incapable
+				has_trait = gout_ridden
+				has_trait = consumption
+				has_trait = cancer
+				has_trait = typhus
+				has_trait = bubonic_plague
+				has_trait = smallpox
+				has_trait = sickly
+				has_trait = blind
+			}
+		}	
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = power_needed_custom
+				OR = {
+					has_character_modifier = power_saturated1
+					has_character_modifier = power_saturated2
+				}
+			}
+			custom_description = {
+				text = is_incapable_custom
+				NOT = { has_trait = incapable }
+			}
+		}
+	}
+	icon = icon_magic
+	common_interaction = yes
+	interface_priority = 90
+	category = interaction_category_magic
+
+	cooldown_against_recipient = { years = 1 } 
+	cooldown = { months = 1 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = no
+	#hidden = yes
+	
+	on_accept = {
+		scope:actor = {
+			save_scope_as = magic_user
+			#add_character_flag = {
+			#	flag = magic_user
+			#	years = 5
+			#}
+			send_message_4_magic_sense_effect = yes
+			#add_gold=-10
+			if = { limit = { has_character_modifier = power_saturated1 }
+				remove_character_modifier = power_saturated1
+			}
+			if = { limit = { has_character_modifier = power_saturated2 }
+				remove_character_modifier = power_saturated2
+			}
+
+			send_interface_message = {
+				type = event_generic_neutral
+				title = magic_healing
+				desc = magic_healing_text
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				custom_tooltip = use_magic_custom_tooltip
+				metamagic_effect = yes
+				stress_impact = {
+					compassionate = medium_stress_impact_loss
+				}
+				#scope:recipient = {
+				#	custom_tooltip = magic_healing_custom_tooltip
+				#
+				#}
+			}
+		}
+		scope:recipient = {
+					
+					if = { limit = { has_trait = ill }
+						remove_trait = ill
+					}
+					if = { limit = { has_trait = pneumonic }
+						remove_trait = pneumonic
+					}
+					if = { limit = { has_trait = great_pox }
+						remove_trait = great_pox
+					}
+					if = { limit = { has_trait = early_great_pox }
+						remove_trait = early_great_pox
+					}
+					if = { limit = { has_trait = lovers_pox }
+						remove_trait = lovers_pox
+					}
+					if = { limit = { has_trait = leper }
+						remove_trait = leper
+					}
+					if = { limit = { has_trait = wounded_1 }
+						remove_trait = wounded_1
+					}
+					if = { limit = { has_trait = wounded_2 }
+						remove_trait = wounded_2
+					}
+					if = { limit = { has_trait = wounded_3 }
+						remove_trait = wounded_3
+					}
+					if = { limit = { has_trait = maimed }
+						remove_trait = maimed
+					}
+					if = { limit = { has_trait = infirm }
+						remove_trait = infirm
+					}
+					if = { limit = { has_trait = incapable }
+						remove_trait = incapable
+					}
+					if = { limit = { has_trait = gout_ridden }
+						remove_trait = gout_ridden
+					}
+					if = { limit = { has_trait = consumption }
+						remove_trait = consumption
+					}
+					if = { limit = { has_trait = cancer }
+						remove_trait = cancer
+					}
+					if = { limit = { has_trait = typhus }
+						remove_trait = typhus
+					}
+					if = { limit = { has_trait = bubonic_plague }
+						remove_trait = bubonic_plague
+					}
+					if = { limit = { has_trait = smallpox }
+						remove_trait = smallpox
+					}
+					if = { limit = { has_trait = sickly }
+						remove_trait = sickly
+					}
+					if = { limit = { has_trait = blind }
+						remove_trait = blind
+					}
+		}
+	}
+	
+	auto_accept = yes
+	ai_targets = {
+		ai_recipients = self
+	}
+
+	ai_frequency = 12
+
+	ai_will_do = {
+		base = 100
+		modifier = {
+			add = -100
+			scope:actor = {
+				has_trait = demon
+			}
+		}
+	}
+}
+
+
+cast_powerfull_curse = {
+	
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			OR = {
+				has_perk = fate_weaver_p10_perk
+				has_trait = demon
+			}
+				is_imprisoned = no
+		}
+		scope:recipient = {
+			NOR = {
+				has_relation_mminion = scope:actor
+				#has_relation_mmaster = scope:actor
+			}
+		}	
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = is_incapable_custom
+				NOT = { has_trait = incapable }
+			}
+		}
+		scope:recipient = {
+			custom_description = {
+				text = magic_protection_custom
+				OR = {
+					NOR = {
+						has_perk = protective_runes_perk
+						has_trait = demon
+						#has_character_modifier = cursed_modifier
+						any_character_artifact = { has_variable = magic_ring }
+						has_character_modifier = amp_modifier
+						AND = {
+							any_parent = { has_perk = protective_runes_perk }
+							NOT = { is_child_of = scope:actor }
+						}
+						AND = {
+							exists = liege
+							liege = { has_perk = protective_runes_perk }
+							is_councillor = yes
+							NOT = { is_councillor_of = scope:actor }
+						}
+						AND = {
+							any_consort = { has_perk = protective_runes_perk }
+							NOT = { is_consort_of = scope:actor }
+						}
+						AND = {
+							employs_court_position = mage_court_position
+							any_court_position_holder = {
+				        		type = mage_court_position
+								has_perk = protective_runes_perk
+								NOT = { scope:actor = this }
+							}
+						}
+					}
+					AND = {
+						scope:actor = {
+							any_character_artifact = { has_variable = catalyst }
+						}
+						#NOT = { has_character_modifier = cursed_modifier }
+						NOR = {
+							any_character_artifact = { has_variable = magic_ring }
+							has_character_modifier = amp_modifier
+						}
+					}
+				}
+			}
+		}
+		scope:actor = {
+			custom_description = {
+				text = power_needed_custom
+				OR = {
+					has_character_modifier = power_saturated1
+					has_character_modifier = power_saturated2
+				}
+			}
+		}
+	}
+	icon = icon_magic
+	common_interaction = yes
+	interface_priority = 90
+	category = interaction_category_magic
+
+	cooldown_against_recipient = { years = 5 } 
+	cooldown = { months = 1 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = no
+	#hidden = yes
+	
+	on_accept = {
+		scope:actor = {
+			save_scope_as = magic_user
+			#add_character_flag = {
+			#	flag = magic_user
+			#	years = 5
+			#}
+			send_message_4_magic_sense_effect = yes
+			scope:recipient = {
+				save_scope_as = reci
+			}
+			hidden_effect = {
+				random = {
+					chance = 3
+					if = {
+						limit = {
+							NOT = {
+								any_courtier_or_guest = {
+									has_trait = witch_hunter
+								}
+							}
+						}
+						create_character = {
+							employer = scope:actor
+							template = witch_hunter_character
+							save_scope_as = whunter
+						}
+						scope:whunter = {
+							add_perk = protective_runes_perk
+							add_perk = magical_senses_perk
+						}
+					}
+				}
+			}
+			
+			trigger_event = magic_ev.10
+			send_interface_message = {
+				type = event_generic_neutral
+				title = cast_powerfull_curse
+				#desc = "send_interface_message_text"
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				custom_tooltip = use_magic_custom_tooltip
+				show_as_tooltip = {
+					if = { limit = { has_character_modifier = power_saturated1 }
+						remove_character_modifier = power_saturated1
+					}
+					if = { limit = { has_character_modifier = power_saturated2 }
+						remove_character_modifier = power_saturated2
+					}
+				}
+				stress_impact = {
+					compassionate = medium_stress_impact_gain
+					honest = medium_stress_impact_gain
+					just = medium_stress_impact_gain
+				}
+
+				scope:recipient = {
+					custom_tooltip = cast_powerfull_curse_ct
+				}
+			}
+		}
+	}
+	
+	auto_accept = yes
+	ai_potential = {
+		NOT = {
+			has_trait = compassionate
+		}
+	}
+	
+	ai_targets = {
+		ai_recipients = neighboring_rulers
+		ai_recipients = vassals
+		ai_recipients = liege
+		ai_recipients = courtiers
+		ai_recipients = spouses
+		ai_recipients = war_enemies
+		ai_recipients = scripted_relations
+	}
+
+	ai_frequency = 24
+
+	ai_will_do = {
+		base = 0
+		
+		modifier = {
+			add = 90
+			scope:recipient = {
+				OR = {
+					has_relation_rival = scope:actor
+					has_relation_nemesis = scope:actor
+					has_relation_potential_rival = scope:actor
+					is_at_war_with = scope:actor
+				}
+			}
+		}
+		modifier = {
+			add = 50
+			scope:recipient = {
+				opinion = {
+					target = scope:actor
+					value < -70
+				}
+			}
+		}
+	}
+}
+
+banish_demon = {
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			any_character_artifact = { has_variable = blackgrimoire }
+			is_imprisoned = no
+			has_trait = archmage
+		}
+		scope:recipient = {
+			has_trait = demon
+			NOT = { has_relation_mminion = scope:actor }
+		}	
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = power_needed_custom
+				OR = {
+					has_character_modifier = power_saturated1
+					has_character_modifier = power_saturated2
+				}
+			}
+			custom_description = {
+				text = is_incapable_custom
+				NOT = { has_trait = incapable }
+			}
+		}
+		scope:recipient = {
+			custom_description = {
+				text = magic_protection_custom
+				NOR = {
+					any_character_artifact = { has_variable = magic_ring }
+					has_character_modifier = amp_modifier
+				}
+			}
+		}
+	}
+	icon = icon_magic
+	common_interaction = yes
+	interface_priority = 90
+	category = interaction_category_magic
+
+	cooldown_against_recipient = { years = 5 } 
+	cooldown = { months = 1 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = no
+	#hidden = yes
+	
+	on_accept = {
+		scope:actor = {
+			save_scope_as = magic_user
+			#add_character_flag = {
+			#	flag = magic_user
+			#	years = 5
+			#}
+			send_message_4_magic_sense_effect = yes
+			scope:recipient = {
+				save_scope_as = reci
+			}
+			
+			send_interface_message = {
+				type = event_generic_neutral
+				title = banish_demon
+				#desc = "send_interface_message_text"
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				custom_tooltip = use_magic2_custom_tooltip
+				if = { limit = { has_character_modifier = power_saturated1 }
+					remove_character_modifier = power_saturated1
+				}
+				if = { limit = { has_character_modifier = power_saturated2 }
+					remove_character_modifier = power_saturated2
+				}
+
+				metamagic_effect = yes
+				scope:recipient = {
+					custom_tooltip = banish_demon_ct
+					hidden_effect = {
+						death = natural
+					}
+				}
+			}
+		}
+	}
+	
+	auto_accept = yes
+	ai_potential = {
+		NOT = {
+			has_trait = compassionate
+		}
+	}
+	
+	ai_targets = {
+		ai_recipients = neighboring_rulers
+		ai_recipients = vassals
+		ai_recipients = liege
+		ai_recipients = courtiers
+		ai_recipients = war_enemies
+		ai_recipients = scripted_relations
+	}
+
+	ai_frequency = 24
+
+	ai_will_do = {
+		base = 0
+		
+		modifier = {
+			add = 100
+			scope:recipient = {
+				OR = {
+					has_relation_rival = scope:actor
+					has_relation_nemesis = scope:actor
+					#has_relation_potential_rival = scope:actor
+					is_at_war_with = scope:actor
+				}
+			}
+		}
+	}
+}
+
+consume_child = {
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			is_imprisoned = no
+			OR = {
+				has_trait = cannibal
+				any_secret = {
+					secret_type = secret_cannibal
+				}
+			}
+			OR = {
+				has_trait = witch
+				any_secret = {
+					secret_type = secret_witch
+				}
+			}
+			
+		}
+		scope:recipient = {
+			age < 16
+		}	
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = is_incapable_custom
+				NOT = { has_trait = incapable }
+			}
+		}
+		scope:recipient = {
+			custom_description = {
+				text = only_specified_child
+				OR = {
+					is_courtier_of = scope:actor
+					has_relation_guardian = scope:actor
+					is_imprisoned_by = scope:actor
+					is_foreign_court_or_pool_guest_of = scope:actor
+				}
+			}
+			custom_description = {
+				text = only_specified_child2
+				OR = {
+					NOT = {
+						is_child_of = scope:actor
+					}
+					scope:actor = {
+						has_trait = sadistic
+					}
+				}
+				
+			}
+		}
+	}
+	icon = icon_cann
+	common_interaction = yes
+	interface_priority = 90
+	category = interaction_category_magic
+
+	cooldown_against_recipient = { years = 1 } 
+	cooldown = { months = 1 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = yes
+	#hidden = yes
+	
+	on_accept = {
+		scope:actor = {
+			hidden_effect = {
+				if = {
+					limit = {
+						NOT = {
+							any_courtier_or_guest = {
+								has_trait = witch_hunter
+							}
+						}
+					}
+					if = {
+						limit = {
+							is_ai = no
+						}
+						random = {
+							chance = 5
+							create_character = {
+								employer = scope:actor
+								template = witch_hunter_character
+								save_scope_as = whunter
+							}
+							scope:whunter = {
+								add_perk = protective_runes_perk
+								add_perk = magical_senses_perk
+							}
+						}
+					}
+					else = {
+						random = {
+							chance = 1
+							create_character = {
+								employer = scope:actor
+								template = witch_hunter_character
+								save_scope_as = whunter
+							}
+							scope:whunter = {
+								add_perk = protective_runes_perk
+								add_perk = magical_senses_perk
+							}
+						}
+					}
+				}
+				random = {
+					chance = 40
+					send_message_4_child_missing_effect = yes
+				}
+			}
+			
+			send_interface_message = {
+				type = event_generic_neutral
+				title = consume_child
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				custom_tooltip = absorb_good_traits_ct
+				#hidden_effect = {
+				#	add_secret = {
+				#		type = secret_murder
+				#		target = scope:recipient
+				#	}
+				#}
+				if = {
+					limit = {
+						NOR = {
+							has_trait = compassionate
+							has_trait = honest
+							has_trait = just
+						}
+					}
+					add_stress = -40
+				}
+				
+				stress_impact = {
+					compassionate = major_stress_impact_gain
+					honest = minor_stress_impact_gain
+					just = minor_stress_impact_gain
+				}
+				if = {
+					limit = {
+						OR = {
+							has_relation_guardian = scope:recipient
+							has_relation_ward = scope:recipient
+						}
+					}
+					if = {
+						limit = { NOT = { has_character_flag = dubious_guardian } }
+						add_character_flag = dubious_guardian
+					}
+					else_if = {
+						limit = {
+							NOT = { has_character_modifier = dubious_guardian_modifier }
+						}
+						random = {
+							chance = 50
+							add_character_modifier = {
+								modifier = dubious_guardian_modifier
+								years = 10
+							}
+						}
+					}
+				}
+				
+				scope:recipient = {
+					custom_tooltip = consume_child_ct
+					if = {
+						limit = {
+							num_of_bad_genetic_traits = 0
+						}
+						scope:actor = {
+							add_character_modifier = {
+								modifier = ate_good_meal
+								years = 3
+							}
+						}
+					}
+					hidden_effect = {
+						
+						random = {
+							chance = 50
+							#physique
+							if = {
+								limit = {
+									OR = {
+										has_trait = physique_good_3
+										has_trait = physique_good_2
+										has_trait = physique_good_1
+									}
+									scope:actor = {
+										NOT = {
+											has_trait = physique_good_3
+										}
+									}
+								}
+								scope:actor = {
+									if = {
+										limit = {
+											has_trait = physique_bad_3
+										}
+										remove_trait = physique_bad_3
+										add_trait = physique_bad_2
+									}
+									else_if = {
+										limit = {
+											has_trait = physique_bad_2
+										}
+										remove_trait = physique_bad_2
+										add_trait = physique_bad_1
+									}
+									else_if = {
+										limit = {
+											has_trait = physique_bad_1
+										}
+										remove_trait = physique_bad_1
+									}
+									else_if = {
+										limit = {
+											has_trait = physique_good_1
+											scope:recipient = {
+												OR = {
+													has_trait = physique_good_3
+													has_trait = physique_good_2
+												}
+												
+											}
+										}
+										remove_trait = physique_good_1
+										add_trait = physique_good_2
+									}
+									else_if = {
+										limit = {
+											has_trait = physique_good_2
+											scope:recipient = {
+												has_trait = physique_good_3
+											}
+										}
+										remove_trait = physique_good_2
+										add_trait = physique_good_3
+									}
+									else = {
+										add_trait = physique_good_1
+									}
+								}	
+							}
+						}
+						random = {
+							chance = 50
+							#beuty
+							if = {
+								limit = {
+									OR = {
+										has_trait = beauty_good_3
+										has_trait = beauty_good_2
+										has_trait = beauty_good_1
+									}
+									scope:actor = {
+										NOT = {
+											has_trait = beauty_good_3
+										}
+									}
+								}
+								scope:actor = {
+									if = {
+										limit = {
+											has_trait = beauty_bad_3
+										}
+										remove_trait = beauty_bad_3
+										add_trait = beauty_bad_2
+									}
+									else_if = {
+										limit = {
+											has_trait = beauty_bad_2
+										}
+										remove_trait = beauty_bad_2
+										add_trait = beauty_bad_1
+									}
+									else_if = {
+										limit = {
+											has_trait = beauty_bad_1
+										}
+										remove_trait = beauty_bad_1
+									}
+									else_if = {
+										limit = {
+											has_trait = beauty_good_1
+											scope:recipient = {
+												OR = {
+													has_trait = beauty_good_3
+													has_trait = beauty_good_2
+												}
+												
+											}
+										}
+										remove_trait = beauty_good_1
+										add_trait = beauty_good_2
+									}
+									else_if = {
+										limit = {
+											has_trait = beauty_good_2
+											scope:recipient = {
+												has_trait = beauty_good_3
+											}
+										}
+										remove_trait = beauty_good_2
+										add_trait = beauty_good_3
+									}
+									else = {
+										add_trait = beauty_good_1
+									}
+								}	
+							}
+						}
+						random = {
+							chance = 50
+							#intellect
+							if = {
+								limit = {
+									OR = {
+										has_trait = intellect_good_3
+										has_trait = intellect_good_2
+										has_trait = intellect_good_1
+									}
+									scope:actor = {
+										NOT = {
+											has_trait = intellect_good_3
+										}
+									}
+								}
+								scope:actor = {
+									if = {
+										limit = {
+											has_trait = intellect_bad_3
+										}
+										remove_trait = intellect_bad_3
+										add_trait = intellect_bad_2
+									}
+									else_if = {
+										limit = {
+											has_trait = intellect_bad_2
+										}
+										remove_trait = intellect_bad_2
+										add_trait = intellect_bad_1
+									}
+									else_if = {
+										limit = {
+											has_trait = intellect_bad_1
+										}
+										remove_trait = intellect_bad_1
+									}
+									else_if = {
+										limit = {
+											has_trait = intellect_good_1
+											scope:recipient = {
+												OR = {
+													has_trait = intellect_good_3
+													has_trait = intellect_good_2
+												}
+												
+											}
+										}
+										remove_trait = intellect_good_1
+										add_trait = intellect_good_2
+									}
+									else_if = {
+										limit = {
+											has_trait = intellect_good_2
+											scope:recipient = {
+												has_trait = intellect_good_3
+											}
+										}
+										remove_trait = intellect_good_2
+										add_trait = intellect_good_3
+									}
+									else = {
+										add_trait = intellect_good_1
+									}
+								}	
+							}
+						}
+							
+							
+						if = {
+							limit = {
+								has_trait = pure_blooded
+							}
+							scope:actor = {
+								random = {
+									chance = 75
+									random_list = {
+										10 = {
+											trigger = {
+												NOT = {
+													has_trait = pure_blooded
+												}
+											}
+											add_trait = pure_blooded
+										}
+										10 = {
+											random_list = {
+												10 = {
+													send_interface_toast = {
+														title = ic_pure_meal
+														add_diplomacy_skill = 1
+													}
+												}
+												10 = {
+													send_interface_toast = {
+														title = ic_pure_meal
+														add_martial_skill = 1
+													}
+												}
+												10 = {
+													send_interface_toast = {
+														title = ic_pure_meal
+														add_stewardship_skill = 1
+													}
+												}
+												10 = {
+													send_interface_toast = {
+														title = ic_pure_meal
+														add_intrigue_skill = 1
+													}
+												}
+												10 = {
+													send_interface_toast = {
+														title = ic_pure_meal
+														add_learning_skill = 1
+													}
+												}
+											}
+										}
+									}
+								}
+								
+							}
+						}
+						if = {
+							limit = {
+								has_trait = source
+								scope:actor = {
+									NOT = {
+										has_trait = source
+									}
+								}
+							}
+							scope:actor = {
+								random = {
+									chance = 50
+									add_trait = source
+								}
+							}
+						}
+	
+						if = {
+							limit = {
+								has_trait = strong
+								scope:actor = {
+									NOT = {
+										has_trait = strong
+									}
+								}
+							}
+							scope:actor = {
+								random = {
+									chance = 50
+									if = {
+										limit = {
+											has_trait = weak
+										}
+										remove_trait = weak
+									}
+									else = {
+										add_trait = strong
+									}
+									
+								}
+							}
+						}
+
+						if = {
+							limit = {
+								has_trait = fecund
+								scope:actor = {
+									NOT = {
+										has_trait = fecund
+									}
+								}
+							}
+							scope:actor = {
+								random = {
+									chance = 50
+									if = {
+										limit = {
+											has_trait = infertile
+										}
+										remove_trait = infertile
+									}
+									else = {
+										add_trait = fecund
+									}
+								}
+							}
+						}
+
+						if = {
+							limit = {
+								has_trait = shrewd
+								scope:actor = {
+									NOT = {
+										has_trait = shrewd
+									}
+								}
+							}
+							scope:actor = {
+								random = {
+									chance = 50
+									if = {
+										limit = {
+											has_trait = dull
+										}
+										remove_trait = dull
+									}
+									else = {
+										add_trait = shrewd
+									}
+								}
+							}
+						}
+					}
+					
+					if = {
+						limit = {
+							has_trait = source
+							scope:actor = {
+								NOR = {
+									has_character_modifier = power_saturated1
+									has_character_modifier = power_saturated2
+								}
+							}
+						}
+						scope:actor = {
+							if = { limit = { has_perk = combat_spells_p3_perk }
+								add_character_modifier = power_saturated2
+							}
+							else = {
+								add_character_modifier = power_saturated1
+							}
+						}
+					}
+
+					
+					
+					hidden_effect = {
+						death = {
+							killer = scope:actor
+							#death_reason = death_eaten
+							death_reason = death_murder
+						}
+					}
+					
+					
+				}
+				hidden_effect = {
+					add_secret = {
+						type = secret_murder
+						target = scope:recipient
+					}
+				}
+			}
+		}
+	}
+	
+	auto_accept = yes
+	ai_potential = {
+		NOT = {
+			has_trait = compassionate
+		}
+	}
+	
+	ai_targets = {
+		ai_recipients = courtiers
+		ai_recipients = prisoners
+		ai_recipients = guests
+	}
+
+	ai_frequency = 24
+
+	ai_will_do = {
+		base = 50
+		modifier = {
+			add = -50
+			scope:recipient = {
+				is_primary_heir_of = scope:actor
+			}
+		}
+	}
+}
+
+
+use_singularity = {
+	target_type = title
+	target_filter = recipient_domain_titles
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			any_character_artifact = {
+				has_variable = singularity
+				NOT = {
+					has_variable = singularity_sleeping
+				}
+			}
+			is_imprisoned = no
+			has_character_flag = singularity_solved2
+		}
+		scope:recipient = {
+			is_landed = yes
+		}	
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = power_needed_custom
+				OR = {
+					has_character_modifier = power_saturated1
+					has_character_modifier = power_saturated2
+				}
+			}
+			custom_description = {
+				text = is_incapable_custom
+				NOT = { has_trait = incapable }
+			}
+		}
+	}
+	icon = icon_magic
+	common_interaction = yes
+	interface_priority = 90
+	category = interaction_category_magic
+
+	cooldown_against_recipient = { months = 6 } 
+	cooldown = { months = 6 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = no
+	#hidden = yes
+	can_be_picked_title = {
+		scope:target = {
+			is_leased_out = no
+			tier = tier_county
+		}
+	}
+	on_accept = {
+		scope:target = {
+			save_scope_as = ttile
+		}
+		scope:actor = {
+			add_dread = 50
+		}
+		
+		custom_tooltip = use_singularity_ct
+		scope:target.title_province = {
+			add_province_modifier = {
+				modifier = magical_radiation_modifier
+				years = 50
+			}
+		}
+		custom_tooltip = use_singularity_ct2
+		hidden_effect = {
+			scope:actor = {
+				save_scope_as = magic_user
+				send_message_4all_magic_sense_effect = yes
+				if = { limit = { has_character_modifier = power_saturated1 }
+					remove_character_modifier = power_saturated1
+				}
+				if = { limit = { has_character_modifier = power_saturated2 }
+					remove_character_modifier = power_saturated2
+				}
+			}
+			every_living_character = {
+				limit = {
+					exists = location
+					location = scope:target.title_province
+					NOR = {
+						any_character_artifact = { has_variable = magic_ring }
+						has_character_modifier = amp_modifier
+					}
+				}
+				random_list = {
+					80 = {
+						death = natural
+					}
+					5 = {
+						add_trait = incapable
+					}
+					5 = {
+						add_trait = cancer
+						add_trait = wounded_2
+						add_trait = infertile
+					}
+					3 = {
+						add_trait = cancer
+						add_trait = wounded_1
+						add_trait = disfigured
+						add_trait = infertile
+					}
+					2 = {
+						add_trait = cancer
+						add_trait = wounded_1
+						add_trait = lunatic_1
+						add_trait = infertile
+					}
+					5 = {
+						add_trait = cancer
+						add_trait = wounded_1
+						add_trait = blind
+						add_trait = infertile
+					}
+				}
+				
+			}
+			every_living_character = {
+				limit = {
+					is_ai = no
+				}
+				trigger_event = {
+					id = magic_ev2.74
+					days = { 2 6 }
+				}
+			}
+			
+			scope:actor = {
+				random = {
+					chance = 8
+					if = {
+						limit = {
+							NOT = {
+								any_courtier_or_guest = {
+									has_trait = witch_hunter
+								}
+							}
+						}
+						create_character = {
+							employer = scope:actor
+							template = witch_hunter_character
+							save_scope_as = whunter
+						}
+						scope:whunter = {
+							add_perk = protective_runes_perk
+							add_perk = magical_senses_perk
+						}
+					}
+				}
+				metamagic_effect = yes
+			}
+			trigger_event = {
+				id = magic_ev2.77
+				days = { 6 12 }
+			}
+			random = {
+				chance = 40
+				trigger_event = {
+					id = magic_ev2.79
+					days = { 21 24 }
+				}
+			}
+		}
+		
+	}
+	
+	auto_accept = yes
+	ai_potential = {
+		NOT = {
+			has_trait = compassionate
+		}
+	}
+	
+	ai_targets = {
+		ai_recipients = neighboring_rulers
+		ai_recipients = war_enemies
+		ai_recipients = scripted_relations
+	}
+
+	ai_frequency = 60
+
+	ai_will_do = {
+		base = 0
+		
+		modifier = {
+			add = 50
+			scope:recipient = {
+				OR = {
+					has_relation_rival = scope:actor
+					has_relation_nemesis = scope:actor
+					#has_relation_potential_rival = scope:actor
+					is_at_war_with = scope:actor
+				}
+			}
+		}
+	}
+}
+
+death_wish = {
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			has_character_flag = death_wish
+			is_imprisoned = no
+		}
+		scope:recipient = {
+			NOT = { has_relation_mminion = scope:actor }
+		}	
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = is_incapable_custom
+				NOT = { has_trait = incapable }
+			}
+		}
+		scope:recipient = {
+			custom_description = {
+				text = magic_protection_custom
+				NOR = {
+					any_character_artifact = { has_variable = magic_ring }
+					is_immortal = yes
+					has_character_modifier = samael_blessing
+					has_character_modifier = amp_modifier
+				}
+			}
+		}
+	}
+	icon = icon_magic
+	common_interaction = yes
+	interface_priority = 90
+	category = interaction_category_magic
+
+	cooldown_against_recipient = { years = 1 } 
+	cooldown = { months = 1 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = no
+	#hidden = yes
+	
+	on_accept = {
+		scope:actor = {
+			save_scope_as = magic_user
+			#add_character_flag = {
+			#	flag = magic_user
+			#	years = 5
+			#}
+			send_message_4_magic_sense_effect = yes
+			scope:recipient = {
+				save_scope_as = reci
+			}
+			
+			send_interface_message = {
+				type = event_generic_neutral
+				title = death_wish_title
+				#desc = "send_interface_message_text"
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				custom_tooltip = use_magic_custom_tooltip
+				custom_tooltip = death_wish_ct
+				remove_character_flag = death_wish
+				scope:recipient = {
+					death = natural
+				}
+			}
+		}
+	}
+	
+	auto_accept = yes
+	ai_potential = {
+		NOT = {
+			has_trait = compassionate
+		}
+	}
+	
+	ai_targets = {
+		ai_recipients = neighboring_rulers
+		ai_recipients = vassals
+		ai_recipients = liege
+		ai_recipients = courtiers
+		ai_recipients = war_enemies
+		ai_recipients = scripted_relations
+	}
+
+	ai_frequency = 24
+
+	ai_will_do = {
+		base = 0
+		
+		modifier = {
+			add = 80
+			scope:recipient = {
+				OR = {
+					has_relation_rival = scope:actor
+					has_relation_nemesis = scope:actor
+					#has_relation_potential_rival = scope:actor
+					is_at_war_with = scope:actor
+				}
+			}
+		}
+	}
+}
+
+disinherit_children_interaction = {
+	icon = icon_dynasty
+	category = interaction_category_hostile
+	interface_priority = 60
+
+	desc = disinherit_children_interaction_desc
+	use_diplomatic_range = no
+
+	is_shown = {
+		# DLC checking
+		has_fp2_dlc_trigger = yes
+		# Standard check
+		NOT = { scope:recipient = scope:actor }
+
+		scope:actor.dynasty = {
+			this = scope:recipient.dynasty
+			has_dynasty_perk = fp2_coterie_legacy_5
+		}
+		scope:recipient = {
+			NOT = {
+				has_trait = disinherited
+			}
+		}
+	}
+
+	is_valid = {
+		scope:actor = { is_parent_of = scope:recipient }
+
+
+		custom_description = {
+			scope:actor.culture = {
+				NOT = { has_cultural_parameter = cannot_disherit }
+			}
+			text = "mystical_ancestors_disinherit"
+		}
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			prestige >= major_prestige_value
+		}
+		scope:recipient = { is_busy_in_events_localised = yes }
+		scope:recipient = { NOT = { has_strong_hook = scope:actor } }
+		trigger_if = {
+			limit = {
+				scope:recipient = {
+					NOR = {
+						is_child_of = scope:actor
+						is_grandchild_of = scope:actor
+						is_great_grandchild_of = scope:actor
+					}
+				}
+			}
+			custom_description = {
+				scope:recipient.top_liege = scope:actor.top_liege
+				text = "same_realm_as"
+			}
+		}
+	}
+
+	on_auto_accept = {
+		scope:recipient = {
+			trigger_event = char_interaction.0020
+		}
+	}
+
+	on_accept = {
+		scope:actor = {
+			stress_impact = {
+				forgiving = minor_stress_impact_gain
+				compassionate = minor_stress_impact_gain
+			}
+			add_tyranny = massive_tyranny_value
+			hidden_effect = {
+				send_interface_toast = {
+					title = disinherit_interaction_notification
+
+					left_icon = scope:actor
+					right_icon = scope:recipient
+
+					scope:recipient = {
+						show_as_tooltip = {
+							disinherit_effect = { DISINHERITOR = scope:actor }
+						}
+					}
+				}
+			}
+		}
+
+		scope:recipient = {
+			disinherit_effect = { DISINHERITOR = scope:actor }
+		}
+	}
+
+	cost = {
+		prestige = {
+			value = {
+				add = medium_prestige_value
+				if = {
+					limit = {
+						scope:recipient = {
+							is_landed = yes
+						}
+					}
+					add = massive_prestige_value
+				}
+				if = {
+					limit = {
+						scope:recipient = {
+							is_landed = no
+							any_heir_title = {
+								exists = holder
+							}
+						}
+					}
+					add = medium_prestige_value
+				}
+				if = {
+					limit = {
+						scope:actor = {
+							culture = {
+								has_cultural_parameter = coven_rule
+							}
+							exists = house
+							house = {
+								has_house_modifier = witch_coven
+							}
+							OR = {
+								has_trait = witch
+								any_secret = { secret_type = secret_witch }
+							}
+						}
+						scope:recipient = {
+							NOR = {
+								has_trait = witch
+								any_secret = { secret_type = secret_witch }
+							}
+							is_adult = yes
+						}
+					}
+					multiply = 0
+				}
+			}
+		}
+	}
+
+	auto_accept = yes
+
+	ai_potential = {
+		is_at_war = no
+		NOT = {
+			has_trait = forgiving
+		}
+	}
+
+	ai_targets = {
+		ai_recipients = dynasty
+		max = 20
+	}
+
+	ai_frequency = 96
+
+	ai_will_do = {
+		base = 0
+
+		modifier = {
+			add = 100
+			scope:recipient = {
+				OR = {
+					has_relation_rival = scope:actor
+					has_relation_nemesis = scope:actor
+				}
+			}
+		}
+
+		modifier = {
+			add = 100
+			scope:recipient = {
+				is_primary_heir_of = scope:actor
+				OR = {
+					has_trait = inbred
+					has_trait = intellect_bad_3
+					has_trait = incapable
+				}
+			}
+		}
+
+		modifier = {
+			add = 5
+			ai_vengefulness >= medium_positive_ai_value
+			scope:recipient = {
+				is_heir_of = scope:actor
+			}
+			OR = {
+				AND = {
+					scope:recipient = {
+						has_trait = incestuous
+					}
+					NOT = { is_incestuous_trigger = yes }
+					trait_is_criminal_in_faith_trigger = { TRAIT = incestuous FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+				}
+				AND = {
+					scope:recipient = {
+						has_trait = kinslayer
+					}
+					NOT = { has_trait = kinslayer }
+				}
+				AND = {
+					scope:recipient = {
+						has_trait = adulterer
+					}
+					NOR = {
+						has_trait = adulterer
+						has_trait = fornicator
+					}
+					trait_is_criminal_in_faith_trigger = { TRAIT = adulterer FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+				}
+				AND = {
+					scope:recipient = {
+						has_trait = fornicator
+					}
+					NOR = {
+						has_trait = adulterer
+						has_trait = fornicator
+					}
+					trait_is_criminal_in_faith_trigger = { TRAIT = fornicator FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+				}
+				AND = {
+					scope:recipient = {
+						has_trait = deviant
+					}
+					NOT = {
+						is_deviant_trigger = yes
+					}
+					trait_is_criminal_in_faith_trigger = { TRAIT = deviant FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+				}
+				AND = {
+					scope:recipient = {
+						has_trait = witch
+					}
+					NOT = {
+						is_witch_trigger = yes
+					}
+					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+				}
+				AND = {
+					scope:recipient = {
+						has_trait = sodomite
+					}
+					NOR = {
+						has_trait = sodomite
+						any_secret = {
+							secret_type = secret_homosexual
+						}
+					}
+					trait_is_criminal_in_faith_trigger = { TRAIT = sodomite FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+				}
+				AND = {
+					scope:recipient = {
+						has_trait = cannibal
+					}
+					NOT = {
+						is_cannibal_trigger = yes
+					}
+					trait_is_criminal_in_faith_trigger = { TRAIT = cannibal FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+				}
+			}
+		}
+
+		modifier = {
+			factor = 0
+			scope:recipient = {
+				OR = {
+					has_relation_friend = scope:actor
+					has_relation_best_friend = scope:actor
+				}
+			}
+		}
+
+		modifier = {
+			factor = 0
+			scope:recipient = {
+				is_ai = no
+			}
+		}
+	}
+}
+
+disinherit_interaction = {
+	icon = icon_dynasty
+	category = interaction_category_hostile
+	interface_priority = 60
+
+	desc = disinherit_interaction_desc
+	use_diplomatic_range = no
+	
+	is_shown = {
+		NOT = { 
+			scope:recipient = scope:actor 
+
+			AND = { # Explicit AND to ensure no funny business
+				scope:recipient = { is_child_of = scope:actor }
+				scope:actor.dynasty = {
+					this = scope:recipient.dynasty
+					has_dynasty_perk = fp2_coterie_legacy_5
+				}
+			}
+		}
+
+		scope:actor = {
+			is_dynast = yes
+			dynasty = scope:recipient.dynasty
+
+		}
+		scope:recipient = {
+			NOT = {
+				has_trait = disinherited
+			}
+		}
+	}
+
+	is_valid = {
+		custom_description = {
+			scope:actor.culture = {
+				NOT = { has_cultural_parameter = cannot_disherit }
+			}
+			text = "mystical_ancestors_disinherit"
+		}
+	}
+
+	is_valid_showing_failures_only = {
+		trigger_if = {
+			limit = {
+				NOT = { # in such cases, it will be free so no need to check for Renown
+					scope:recipient = {
+						OR = {
+							has_trait = disputed_heritage
+							any_secret = {
+								secret_type = secret_disputed_heritage
+								is_known_by = scope:actor
+							}
+							has_trait = bastard
+						}
+					}
+				}
+			}
+			scope:actor.dynasty = {
+				dynasty_prestige >= medium_dynasty_prestige_value
+			}
+		}
+		scope:recipient = { is_busy_in_events_localised = yes }
+		scope:recipient = { NOT = { has_strong_hook = scope:actor } }
+		trigger_if = {
+			limit = {
+				scope:recipient = {
+					NOR = {
+						is_child_of = scope:actor
+						is_grandchild_of = scope:actor
+						is_great_grandchild_of = scope:actor
+					}
+				}
+			}
+			custom_description = {
+				scope:recipient.top_liege = scope:actor.top_liege
+				text = "same_realm_as"
+			}
+		}
+	}
+
+	on_auto_accept = {
+		scope:recipient = {
+			trigger_event = char_interaction.0020
+		}
+	}
+	
+	on_accept = {
+		scope:actor = {
+			stress_impact = {
+				forgiving = minor_stress_impact_gain
+				compassionate = minor_stress_impact_gain
+			}
+
+			add_character_modifier = {
+				modifier = parent_disinherited_child_modifier
+				years = 5
+			}
+
+			hidden_effect = {
+				send_interface_toast = {
+					title = disinherit_interaction_notification
+
+					left_icon = scope:actor					
+					right_icon = scope:recipient
+
+					scope:recipient = {
+						show_as_tooltip = {
+							disinherit_effect = { DISINHERITOR = scope:actor }
+						}
+					}
+				}
+			}
+		}
+
+		scope:recipient = {
+			disinherit_effect = { DISINHERITOR = scope:actor }
+		}
+
+		if = {
+			limit = {
+				scope:recipient = {
+					any_secret = {
+						secret_type = secret_disputed_heritage
+						is_known_by = scope:actor
+						save_temporary_scope_as = secret_to_reveal
+					}
+				}
+			}
+
+			scope:secret_to_reveal = {
+				expose_secret = scope:recipient.mother
+			}
+
+			scope:recipient = {
+				add_trait = disputed_heritage
+			}
+		}
+	}
+	
+	cost = {
+		renown = {
+			value = {
+				add = medium_dynasty_prestige_value
+				if = {
+					limit = {
+						scope:recipient = {
+							is_landed = yes
+						}
+					}
+					add = major_dynasty_prestige_value
+				}
+				if = {
+					limit = {
+						scope:recipient = {
+							is_landed = no
+							any_heir_title = {
+								exists = holder
+							}
+						}
+					}
+					add = medium_dynasty_prestige_value
+				}
+				if = {
+					limit = {
+						scope:recipient = {
+							OR = {
+								has_trait = disputed_heritage
+								any_secret = {
+									secret_type = secret_disputed_heritage
+									is_known_by = scope:actor
+								}
+								has_trait = bastard
+							}
+						}
+					}
+					multiply = 0
+				}
+				if = {
+					limit = {
+						scope:actor = {
+							culture = {
+								has_cultural_parameter = coven_rule
+							}
+							exists = house
+							house = {
+								has_house_modifier = witch_coven
+							}
+							OR = {
+								has_trait = witch
+								any_secret = { secret_type = secret_witch }
+							}
+						}
+						scope:recipient = {
+							NOR = {
+								has_trait = witch
+								any_secret = { secret_type = secret_witch }
+							}
+							is_adult = yes
+						}
+					}
+					multiply = 0
+				}
+			}
+		}
+		prestige = {
+			value = {
+				add = medium_prestige_value
+				if = {
+					limit = {
+						scope:recipient = {
+							is_landed = yes
+						}
+					}
+					add = massive_prestige_value
+				}
+				if = {
+					limit = {
+						scope:recipient = {
+							is_landed = no
+							any_heir_title = {
+								exists = holder
+							}
+						}
+					}
+					add = medium_prestige_value
+				}
+				if = {
+					limit = {
+						scope:recipient = {
+							OR = {
+								has_trait = disputed_heritage
+								any_secret = {
+									secret_type = secret_disputed_heritage
+									is_known_by = scope:actor
+								}
+								has_trait = bastard
+							}
+						}
+					}
+					multiply = 0
+				}
+				if = {
+					limit = {
+						scope:actor = {
+							culture = {
+								has_cultural_parameter = coven_rule
+							}
+							exists = house
+							house = {
+								has_house_modifier = witch_coven
+							}
+							OR = {
+								has_trait = witch
+								any_secret = { secret_type = secret_witch }
+							}
+						}
+						scope:recipient = {
+							NOR = {
+								has_trait = witch
+								any_secret = { secret_type = secret_witch }
+							}
+							is_adult = yes
+						}
+					}
+					multiply = 0
+				}
+			}
+		}
+	}
+	
+	auto_accept = yes
+
+	ai_potential = {
+		is_at_war = no
+		NOT = {
+			has_trait = forgiving
+		}
+	}
+	
+	ai_targets = {
+		ai_recipients = dynasty
+		max = 20
+	}
+	
+	ai_frequency = 96
+	
+	ai_will_do = {
+		base = 0
+		
+		modifier = {
+			add = 100
+			scope:recipient = {
+				OR = {
+					has_relation_rival = scope:actor
+					has_relation_nemesis = scope:actor
+				}
+			}
+		}
+		
+		modifier = {
+			add = 100
+			scope:recipient = {
+				is_primary_heir_of = scope:actor
+				OR = {
+					has_trait = inbred
+					has_trait = intellect_bad_3
+					has_trait = incapable
+				}
+			}
+		}
+		
+		modifier = {
+			add = 5
+			ai_vengefulness >= medium_positive_ai_value
+			scope:recipient = {
+				is_heir_of = scope:actor
+			}
+			OR = {
+				AND = {
+					scope:recipient = {
+						has_trait = incestuous
+					}
+					NOT = { is_incestuous_trigger = yes }
+					trait_is_criminal_in_faith_trigger = { TRAIT = incestuous FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+				}
+				AND = {
+					scope:recipient = {
+						has_trait = kinslayer
+					}
+					NOT = { has_trait = kinslayer }
+				}
+				AND = {
+					scope:recipient = {
+						has_trait = adulterer
+					}
+					NOR = {
+						has_trait = adulterer
+						has_trait = fornicator
+					}
+					trait_is_criminal_in_faith_trigger = { TRAIT = adulterer FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+				}
+				AND = {
+					scope:recipient = {
+						has_trait = fornicator
+					}
+					NOR = {
+						has_trait = adulterer
+						has_trait = fornicator
+					}
+					trait_is_criminal_in_faith_trigger = { TRAIT = fornicator FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+				}
+				AND = {
+					scope:recipient = {
+						has_trait = deviant
+					}
+					NOT = {
+						is_deviant_trigger = yes
+					}
+					trait_is_criminal_in_faith_trigger = { TRAIT = deviant FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+				}
+				AND = {
+					scope:recipient = {
+						has_trait = witch
+					}
+					NOT = {
+						is_witch_trigger = yes
+					}
+					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+				}
+				AND = {
+					scope:recipient = {
+						has_trait = sodomite
+					}
+					NOR = {
+						has_trait = sodomite
+						any_secret = {
+							secret_type = secret_homosexual
+						}
+					}
+					trait_is_criminal_in_faith_trigger = { TRAIT = sodomite FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+				}
+				AND = {
+					scope:recipient = {
+						has_trait = cannibal
+					}
+					NOT = {
+						is_cannibal_trigger = yes
+					}
+					trait_is_criminal_in_faith_trigger = { TRAIT = cannibal FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+				}
+			}
+		}
+		
+		modifier = {
+			factor = 0
+			scope:recipient = {
+				OR = {
+					has_relation_friend = scope:actor
+					has_relation_best_friend = scope:actor
+				}
+			}
+		}
+		
+		modifier = {
+			factor = 0
+			scope:recipient = {
+				is_ai = no
+			}
+		}
+	}
+}
+
+
+teach_sorcery = {
+	
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			OR = {
+				has_trait = archmage
+				has_trait = archmage2
+			}
+			is_imprisoned = no
+		}
+		scope:recipient = {
+			is_adult = yes
+			NOR = {
+				has_trait = demon
+				has_trait = witch_hunter
+			}
+		}	
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = is_incapable_custom
+				NOT = { has_trait = incapable }
+			}
+		}
+		scope:recipient = {
+			#custom_description = {
+			#	text = "cast_curse_custom_desc"
+			#	}
+			custom_description = {
+				text = must_be_witch_custom
+				OR = {
+					has_trait = witch
+					has_trait = true_witch
+					any_secret = { secret_type = secret_witch }
+				}
+			}
+			custom_description = {
+				text = is_sorcer_custom
+				NOR = {
+					has_focus = arcane_focus
+					has_trait = archmage
+					has_character_flag = start_sorcery_training
+					has_perk = magical_experiments_p1_perk
+				}
+			}
+		}
+	}
+	icon = icon_learning
+	common_interaction = yes
+	interface_priority = 90
+	category = interaction_category_magic
+	desc = teach_sorcery_desc
+	#prompt = "cast_curse_prompt_text"
+	#custom_description="cast_curse_custom_desc"
+	#notification_text = cast_curse_notification_text
+
+	cooldown_against_recipient = { years = 20 } 
+	cooldown = { years = 20 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = yes
+	#hidden = yes
+	
+	on_accept = {
+		scope:actor = {
+			
+			send_interface_message = {
+				type = event_generic_neutral
+				title = teach_sorcery
+				desc = "send_interface_message_text"
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				custom_tooltip = teach_sorcery_custom_tooltip
+				custom_tooltip =  teach_sorcery_custom_tooltip3
+				#tooltip="tooltip0"
+				stress_impact = {
+					arrogant = minor_stress_impact_gain
+					paranoid = major_stress_impact_gain
+					lazy = medium_stress_impact_gain
+					trusting = minor_stress_impact_loss
+				}
+				scope:recipient = {
+					trigger_event = magic_ev3.10
+					custom_tooltip = teach_sorcery_custom_tooltip2
+				}
+			}
+		}
+	}
+	
+	auto_accept = yes
+	ai_potential = {
+		NOT = {
+			has_trait = paranoid
+			has_trait = lazy
+		}
+	}
+	
+	ai_targets = {
+		ai_recipients = children
+		ai_recipients = scripted_relations
+	}
+
+	ai_frequency = 24
+
+	ai_will_do = {
+		base = -30
+		
+		modifier = {
+			add = 80
+			scope:recipient = {
+				OR = {
+					has_relation_friend = scope:actor
+					has_relation_best_friend = scope:actor
+					has_relation_soulmate = scope:actor
+					is_heir_of = scope:actor
+				}
+			}
+		}
+		modifier = {
+			add = 10
+			scope:recipient = {
+				OR = {
+					has_trait = mystic_1
+					has_trait = mystic_2
+					has_trait = mystic_3
+				}
+			}
+		}
+		modifier = {
+			add = 20
+			scope:recipient = {
+				OR = {
+					has_trait = shrewd
+					has_trait = intellect_good_1
+					has_trait = intellect_good_2
+					has_trait = intellect_good_3
+				}
+			}
+		}
+		modifier = {
+			add = -50
+			scope:actor = {
+				OR = {
+					has_trait = paranoid
+					has_trait = lazy
+				}
+			}
+		}
+	}
+}
+
+witch_trial = {
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+				has_trait = witch_hunter
+				is_imprisoned = no
+		}
+		scope:recipient = {
+			is_adult = yes
+			is_imprisoned_by = scope:actor
+		}	
+	}
+	#is_valid_showing_failures_only = {
+	#	
+	#}
+	icon = torture_interaction
+	common_interaction = yes
+	interface_priority = 90
+	category = interaction_category_prison
+	desc = witch_trial_desc
+	#prompt = "cast_curse_prompt_text"
+	#custom_description="cast_curse_custom_desc"
+	#notification_text = cast_curse_notification_text
+
+	cooldown_against_recipient = { days = 7 } 
+	cooldown = { days = 7 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = yes
+	#hidden = yes
+	
+	on_accept = {
+		scope:actor = {
+			
+			send_interface_message = {
+				type = event_generic_neutral
+				title = witch_trial
+				desc = "send_interface_message_text"
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				custom_tooltip = witch_trial_ct
+				custom_tooltip = witch_trial_ct3
+				#tooltip="tooltip0"
+				stress_impact = {
+					compassionate = minor_stress_impact_gain
+				}
+				scope:recipient = {
+					custom_tooltip = witch_trial_ct2
+				}
+				trigger_event = magic_ev3.54
+			}
+		}
+	}
+	
+	auto_accept = yes
+}
