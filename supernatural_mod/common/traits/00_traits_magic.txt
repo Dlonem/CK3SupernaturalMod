@@ -84,7 +84,8 @@ demon = {
 }
 
 true_witch = {
-	lifestyle = yes
+	#lifestyle = yes
+	category = lifestyle
 	opposite_opinion = -50
 	intrigue = 3
 	same_opinion = 20
@@ -107,9 +108,9 @@ true_witch = {
 
 	compatibility = {
 		witch = 10
-		mystic_1 = 5
-		mystic_2 = 10
-		mystic_3 = 15
+		lifestyle_mystic = 5
+		lifestyle_mystic = 10
+		lifestyle_mystic = 15
 		possessed_genetic = 30
 		possessed_1 = 30
 		demon = 10
@@ -121,7 +122,8 @@ true_witch = {
 }
 
 archmage = {
-	lifestyle = yes
+	#lifestyle = yes
+	category = lifestyle
 	opposite_opinion = -50
 	learning = 5
 	intrigue = 4
@@ -137,9 +139,9 @@ archmage = {
 
 	compatibility = {
 
-		mystic_1 = 5
-		mystic_2 = 10
-		mystic_3 = 15
+		lifestyle_mystic = 5
+		lifestyle_mystic = 10
+		lifestyle_mystic = 15
 		possessed_genetic = 30
 	}
 	opposites = {
@@ -148,8 +150,9 @@ archmage = {
 }
 
 archmage2 = {
-	lifestyle = yes
+	#lifestyle = yes	#commented out because of errors.log in update 1.9
 	#opposite_opinion = -50
+	category = lifestyle
 	learning = 6
 	intrigue = 3
 	diplomacy = 3
@@ -173,9 +176,7 @@ archmage2 = {
 
 	compatibility = {
 
-		mystic_1 = 5
-		mystic_2 = 10
-		mystic_3 = 15
+		lifestyle_mystic=10
 		possessed_genetic = 30
 	}
 }
@@ -198,9 +199,7 @@ witch_hunter = {
 
 	compatibility = {
 		witch = -30
-		mystic_1 = -5
-		mystic_2 = -10
-		mystic_3 = -15
+		lifestyle_mystic=10
 		demon = -30
 	}
 	opposites = {
@@ -210,39 +209,100 @@ witch_hunter = {
 	}
 }
 
-mystic_1 = {
-	lifestyle = yes
+lifestyle_mystic = {
+	category = lifestyle
+	icon = mystic.dds
+	
+	# Modifiers
 	learning = 1
 	monthly_magic_lifestyle_xp_gain_mult = 0.1
-	group = lifestyle_mystic
-	level = 1
 	
 	culture_modifier = {
 		parameter = prowess_from_religious_traits
 		prowess = 1
 	}
-
 	culture_modifier = {
 		parameter = build_bonuses_on_religious_traits
 		church_holding_build_gold_cost = -0.05
 		church_holding_holding_build_gold_cost = -0.05
 	}
-	
 	culture_modifier = {
 		parameter = mystic_trait_gives_bonuses
 		monthly_income_mult = 0.02
 	}
 	
+	track = {
+		50 = {
+			learning = 1
+			monthly_magic_lifestyle_xp_gain_mult = 0.1
+			culture_modifier = {
+				parameter = prowess_from_religious_traits
+				prowess = 1
+			}
+
+			culture_modifier = {
+				parameter = build_bonuses_on_religious_traits
+				church_holding_build_gold_cost = -0.05
+				church_holding_holding_build_gold_cost = -0.05
+			}
+			
+			culture_modifier = {
+				parameter = mystic_trait_gives_bonuses
+				monthly_income_mult = 0.02
+			}			
+		}
+		100 = {
+			learning = 2	
+			monthly_magic_lifestyle_xp_gain_mult = 0.2
+			culture_modifier = {
+				parameter = prowess_from_religious_traits
+				prowess = 1
+			}
+			culture_modifier = {
+				parameter = build_bonuses_on_religious_traits
+				church_holding_build_gold_cost = -0.05
+				church_holding_holding_build_gold_cost = -0.05
+			}				
+			culture_modifier = {
+				parameter = mystic_trait_gives_bonuses
+				monthly_income_mult = 0.04
+			}
+		}
+	}
+	
 	ruler_designer_cost = 20
 
+	# Loc
 	name = {
 		first_valid = {
+			#Miracle Worker
 			triggered_desc = {
-				trigger = { NOT = { exists = this } }
-				desc = trait_mystic_male_1
+				trigger = {
+					exists = this
+					has_trait_xp = {
+						trait = lifestyle_mystic
+						value >= 100
+					}
+				}
+				desc = trait_lifestyle_mystic
 			}
+			#Mystic
 			triggered_desc = {
-				trigger = { is_female = yes }
+				trigger = { 
+					exists = this
+					has_trait_xp = {
+						trait = lifestyle_mystic
+						value >= 50
+					}
+				}
+				desc = trait_lifestyle_mystic
+			}
+			#Wise Woman/Man
+			triggered_desc = {
+				trigger = {
+					exists = this
+					is_female = yes 
+				}
 				desc = trait_mystic_female_1
 			}
 			desc = trait_mystic_male_1
@@ -251,119 +311,43 @@ mystic_1 = {
 
 	desc = {
 		first_valid = {
+			#The trait can never go higher than the first level if it's not assigned to a character
 			triggered_desc = {
-				trigger = {
-					NOT = { exists = this }
+				trigger = { 
+					NOT = { exists = this } 
 				}
-				desc = trait_mystic_1_desc
+				#desc = trait_lifestyle_mystic_desc
 			}
-			desc = trait_mystic_1_character_desc
+			triggered_desc = {
+				trigger = { 
+					has_trait_xp = {
+						trait = lifestyle_mystic
+						value >= 100
+					}
+				}
+				#desc = trait_lifestyle_mystic_character_desc
+			}
+			triggered_desc = {
+				trigger = { 
+					has_trait_xp = {
+						trait = lifestyle_mystic
+						value >= 50
+					}
+				}
+				#desc = trait_lifestyle_mystic_character_desc
+			}
+			#desc = trait_lifestyle_mystic_character_desc
 		}
 	}
 
-	ai_rationality = -10
-
-	compatibility = {
-		mystic_1 = @pos_compat_medium
-		mystic_2 = @pos_compat_medium
-		mystic_3 = @pos_compat_medium
-	}
-}
-mystic_2 = {
-	lifestyle = yes
-	learning = 2
-	monthly_magic_lifestyle_xp_gain_mult = 0.3
-	group = lifestyle_mystic
-	level = 2
-	
-	culture_modifier = {
-		parameter = prowess_from_religious_traits
-		prowess = 2
-	}
-
-	culture_modifier = {
-		parameter = build_bonuses_on_religious_traits
-		church_holding_build_gold_cost = -0.1
-		church_holding_holding_build_gold_cost = -0.1
-	}
-	
-	culture_modifier = {
-		parameter = mystic_trait_gives_bonuses
-		monthly_income_mult = 0.04
-	}
-	
-	ruler_designer_cost = 40
-
-	desc = {
-		first_valid = {
-			triggered_desc = {
-				trigger = {
-					NOT = { exists = this }
-				}
-				desc = trait_mystic_2_desc
-			}
-			desc = trait_mystic_2_character_desc
-		}
-	}
-
+	# AI Values
 	ai_rationality = -10
 	ai_zeal = -10
 
-	compatibility = {
-		mystic_1 = @pos_compat_medium
-		mystic_2 = @pos_compat_medium
-		mystic_3 = @pos_compat_medium
-	}
-}
-mystic_3 = {
-	lifestyle = yes
-	learning = 4
-	monthly_magic_lifestyle_xp_gain_mult = 0.4
-	culture_modifier = {
-		parameter = prowess_from_religious_traits
-		prowess = 3
-	}
-
-	culture_modifier = {
-		parameter = build_bonuses_on_religious_traits
-		church_holding_build_gold_cost = -0.15
-		church_holding_holding_build_gold_cost = -0.15
-	}
-	
-	culture_modifier = {
-		parameter = mystic_trait_gives_bonuses
-		monthly_income_mult = 0.08
-	}
-	
-	group = lifestyle_mystic
-	level = 3
-	
-	ruler_designer_cost = 60
-
-	desc = {
-		first_valid = {
-			triggered_desc = {
-				trigger = {
-					NOT = { exists = this }
-				}
-				desc = trait_mystic_3_desc
-			}
-			desc = trait_mystic_3_character_desc
-		}
-	}
-
-	ai_rationality = -10
-	ai_zeal = -20
-
-	compatibility = {
-		mystic_1 = @pos_compat_medium
-		mystic_2 = @pos_compat_medium
-		mystic_3 = @pos_compat_medium
-	}
 }
 
 scholar = {
-	lifestyle = yes
+	category = lifestyle
 
 	learning = 5
 	owned_personal_scheme_success_chance_add = 10
@@ -411,8 +395,8 @@ scholar = {
 }
 
 witch = {
-	fame = yes
-
+	#fame = yes
+	category = fame
 	diplomacy = -1
 	intrigue = 1
 	learning = 1
@@ -460,7 +444,7 @@ witch = {
 }
 
 necromancer = {
-	fame = yes
+	category = fame
 	shown_in_ruler_designer = no
 	opposite_opinion = -50
 	desc = trait_necromancer_desc
@@ -512,7 +496,8 @@ possessed_1 = { # Highly event driven, Temporal lobe epilepsy
 	group_equivalence = possessed
 	level = 1
 
-	health_trait = yes
+	#health_trait = yes
+	category = health
 
 	monthly_learning_lifestyle_xp_gain_mult = 0.1
 	monthly_magic_lifestyle_xp_gain_mult = 0.1
@@ -544,7 +529,8 @@ possessed_genetic = { # Highly event driven, Temporal lobe epilepsy
 	birth = 0.5
 	random_creation = 0.5
 	genetic = yes
-	health_trait = yes
+	#health_trait = yes
+	category = health
 
 	group_equivalence = possessed
 	level = 2
