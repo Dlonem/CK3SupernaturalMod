@@ -1,0 +1,1399 @@
+﻿namespace = spn_initiate
+spn_initiate.0001 { #Initialize Vampire
+	hidden = yes
+
+	trigger = {
+		AND = {
+			spn_has_supernatural_trait = no
+			spn_has_hunter_trait = no
+			#is_witch_trigger = no
+		}
+	}
+
+	immediate = {
+		#Apply Genetic Trait from Decision
+		if = {
+			limit = { has_character_flag = spn_embrace_vampire_1 }
+			add_trait = spn_vampire_1
+			add_character_flag = immune_to_disease
+			remove_character_flag = spn_embrace_vampire_1
+		}
+		else_if = {
+			limit = { has_character_flag = spn_embrace_vampire_2 }
+			add_trait = spn_vampire_2
+			add_character_flag = immune_to_disease
+			remove_character_flag = spn_embrace_vampire_2
+		}
+		else_if = {
+			limit = { has_character_flag = spn_embrace_vampire_3 }
+			add_trait = spn_vampire_3
+			add_character_flag = immune_to_disease
+			remove_character_flag = spn_embrace_vampire_3
+		}
+		else = {
+			add_trait = spn_vampire_1
+		}
+		
+		set_variable = {
+			name = spn_age_aquired_immortality
+			value = age
+		}
+		set_variable = {
+			name = spn_yearly_pulses_since_trait_upgrade
+			value = 0
+		}
+		if = {
+			limit = { has_treatable_disease_trigger = yes }
+			spn_remove_treatable_disease = yes
+		}
+		add_character_flag = {
+			flag = immune_to_disease
+		}
+
+		spn_give_vampire_secret_or_trait_effect = yes
+
+		add_character_flag = {
+			flag = spn_recently_became_vampire
+			days = 1
+		}
+
+		spn_track_current_visual_age = { VISUALAGE = age }
+	}
+}
+
+spn_initiate.0002 { #Remove Vampire
+	hidden = yes
+
+	trigger = {
+		has_trait = spn_vampire
+		has_variable = spn_age_aquired_immortality
+	}
+
+	immediate = { 
+		remove_trait = spn_vampire_1
+		remove_trait = spn_vampire_2
+		remove_trait = spn_vampire_3
+		remove_trait = spn_known_vampire
+		remove_variable = spn_age_aquired_immortality
+		remove_variable = spn_yearly_pulses_since_trait_upgrade
+		remove_character_flag = immune_to_disease
+		remove_character_flag = spn_has_conferred_sire
+		remove_character_flag = spn_has_mother_sire
+		remove_character_flag = spn_has_father_sire
+		#spn_remove_immortal_quarry_flags = yes
+		#spn_remove_immortal_modifiers = yes
+
+		if = {
+			limit = { any_secret = { secret_type = spn_secret_vampire } }
+			random_secret = { #Remove the secret
+				limit = {
+					secret_type = spn_secret_vampire
+				}
+				remove_secret = yes
+			}
+		}
+	}
+}
+
+spn_initiate.0003 { #Select which Genetic Vampire Trait to add
+	type = character_event
+	title = spn_initiate.0003.t
+	desc = spn_initiate.0003.desc
+	theme = default
+
+	right_portrait = {
+		character = root
+		animation = idle
+	}
+
+	option = {
+		name = spn_initiate.0003.a
+		custom_tooltip = spn_initiate.0003.a.tt
+		add_character_flag = {
+			flag = spn_embrace_vampire_1
+		}
+	}
+
+	option = {
+		name = spn_initiate.0003.b
+		custom_tooltip = spn_initiate.0003.b.tt
+		add_character_flag = {
+			flag = spn_embrace_vampire_2
+		}
+	}
+
+	option = {
+		name = spn_initiate.0003.c
+		custom_tooltip = spn_initiate.0003.c.tt
+		add_character_flag = {
+			flag = spn_embrace_vampire_3
+		}
+	}
+
+	after = {
+		remove_character_flag = spn_embrace_vampire_dec
+	}
+}
+
+spn_initiate.0005 { #Initialize Vampire from ruler designer
+	hidden = yes
+
+	trigger = {
+		has_trait = spn_vampire
+	}
+
+	immediate = {
+		#Apply Genetic Trait from Decision
+		if = {
+			limit = { has_trait = spn_vampire_1 }
+			remove_trait = spn_vampire_1
+			add_character_flag = spn_embrace_vampire_1
+		}
+		else_if = {
+			limit = { has_trait = spn_vampire_2 }
+			remove_trait = spn_vampire_2
+			add_character_flag = spn_embrace_vampire_2
+		}
+		else_if = {
+			limit = { has_trait = spn_vampire_3 }
+			remove_trait = spn_vampire_3
+			add_character_flag = spn_embrace_vampire_3
+		}
+		else = {
+			add_character_flag = spn_embrace_vampire_1
+		}
+
+		trigger_event = spn_initiate.0001 #Initialize Vampire
+	}
+}
+
+spn_initiate.0006 { #Initiate Random Vampire Traits
+	hidden = yes
+
+	immediate = {
+		#Apply Genetic Trait
+		random_list = {
+			75 = { add_character_flag = spn_embrace_vampire_1 }
+			20 = { add_character_flag = spn_embrace_vampire_2 }
+			5 = { add_character_flag = spn_embrace_vampire_3 }
+		}
+
+		trigger_event = spn_initiate.0001 #Initialize Vampire
+	}
+}
+
+spn_initiate.1001 { #Initiate Werewolf
+	hidden = yes
+
+	trigger = {
+		AND = {
+			spn_has_supernatural_trait = no
+			spn_has_hunter_trait = no
+			#is_witch_trigger = no
+		}
+	}
+
+	immediate = { 
+		#Apply Genetic Trait from Decision
+		if = {
+			limit = { has_character_flag = spn_embrace_lycan_1 }
+			add_trait = spn_werewolf_1
+			remove_character_flag = spn_embrace_lycan_1
+		}
+		else_if = {
+			limit = { has_character_flag = spn_embrace_lycan_2 }
+			add_trait = spn_werewolf_2
+			remove_character_flag = spn_embrace_lycan_2
+		}
+		else_if = {
+			limit = { has_character_flag = spn_embrace_lycan_3 }
+			add_trait = spn_werewolf_3
+			remove_character_flag = spn_embrace_lycan_3
+		}
+		else = {
+			add_trait = spn_werewolf_1
+		}
+
+		set_variable = {
+			name = spn_age_aquired_immortality
+			value = age
+		}
+
+		if = {
+			limit = { has_treatable_disease_trigger = yes }
+			spn_remove_treatable_disease = yes
+		}
+		add_character_flag = {
+			flag = immune_to_disease
+		}
+
+		spn_give_lycan_secret_or_trait_effect = yes
+
+		add_character_flag = {
+			flag = spn_recently_became_lycan
+			days = 1
+		}
+
+		#spn_track_current_visual_age = { VISUALAGE = age }
+	}
+}
+
+spn_initiate.1002 { #Remove Werewolf
+	hidden = yes
+
+	trigger = {
+		has_trait = spn_werewolf
+		has_variable = spn_age_aquired_immortality
+	}
+
+	immediate = { 
+		remove_trait = spn_werewolf_1
+		remove_trait = spn_werewolf_2
+		remove_trait = spn_werewolf_3
+		remove_trait = spn_known_werewolf
+		remove_variable = spn_age_aquired_immortality
+		remove_variable = spn_yearly_pulses_since_trait_upgrade
+		remove_character_flag = immune_to_disease
+		remove_character_flag = spn_has_conferred_sire
+		remove_character_flag = spn_has_mother_sire
+		remove_character_flag = spn_has_father_sire
+		#spn_remove_immortal_quarry_flags = yes
+		#spn_remove_immortal_modifiers = yes
+
+		if = {
+			limit = { any_secret = { secret_type = spn_secret_werewolf } }
+			random_secret = { #Remove the secret
+				limit = {
+					secret_type = spn_secret_werewolf
+				}
+				remove_secret = yes
+			}
+		}
+
+		#trigger_event = vampandlycan.0018 #Remove Fertility modifier
+	}
+}
+
+spn_initiate.1003 { #Select which Genetic Lycan Trait to add
+	type = character_event
+	title = spn_initiate.1003.t
+	desc = spn_initiate.1003.desc
+	theme = default
+
+	right_portrait = {
+		character = root
+		animation = idle
+	}
+
+	option = {
+		name = spn_initiate.1003.a
+		custom_tooltip = spn_initiate.1003.a.tt
+		add_character_flag = {
+			flag = spn_embrace_lycan_1
+		}
+	}
+
+	option = {
+		name = spn_initiate.1003.b
+		custom_tooltip = spn_initiate.1003.b.tt
+		add_character_flag = {
+			flag = spn_embrace_lycan_2
+		}
+	}
+
+	option = {
+		name = spn_initiate.1003.c
+		custom_tooltip = spn_initiate.1003.c.tt
+		add_character_flag = {
+			flag = spn_embrace_lycan_3
+		}
+	}
+}
+
+spn_initiate.1005 { #Initialize Werewolf from ruler designer
+	hidden = yes
+
+	trigger = {
+		has_trait = spn_werewolf
+	}
+
+	immediate = {
+		#Apply Genetic Trait from Decision
+		if = {
+			limit = { has_trait = spn_werewolf_1 }
+			remove_trait = spn_werewolf_1
+			add_character_flag = spn_embrace_lycan_1
+		}
+		else_if = {
+			limit = { has_trait = spn_werewolf_2 }
+			remove_trait = spn_werewolf_2
+			add_character_flag = spn_embrace_lycan_2
+		}
+		else_if = {
+			limit = { has_trait = spn_werewolf_3 }
+			remove_trait = spn_werewolf_3
+			add_character_flag = spn_embrace_lycan_3
+		}
+		else = {
+			add_character_flag = spn_embrace_lycan_1
+		}
+
+		trigger_event = spn_initiate.1001 #Initiate lycan
+	}
+}
+
+spn_initiate.1006 { #Initiate Random Lycan Traits
+	hidden = yes
+
+	immediate = {
+		#Apply Genetic Trait
+		random_list = {
+			75 = { add_character_flag = spn_embrace_lycan_1 }
+			20 = { add_character_flag = spn_embrace_lycan_2 }
+			5 = { add_character_flag = spn_embrace_lycan_3 }
+		}
+
+		trigger_event = spn_initiate.1001 #Initialize Werewolf
+	}
+}
+
+spn_initiate.2001 { #Initiate Hybrid
+	hidden = yes
+
+	trigger = {
+		AND = {
+			OR = {
+				has_trait = spn_werewolf
+				spn_has_supernatural_trait = no
+			}
+			spn_has_hunter_trait = no
+			#is_witch_trigger = no
+		}	
+	}
+
+	immediate = { 
+		#Removes Lycanthropy from New Hybrid
+		remove_trait = spn_werewolf_1
+		remove_trait = spn_werewolf_2
+		remove_trait = spn_werewolf_3
+		remove_trait = spn_known_werewolf
+		spn_former_werewolf_effect = yes
+		#remove_variable = spn_age_aquired_immortality
+		remove_character_flag = immune_to_disease
+		remove_character_flag = spn_has_conferred_sire
+		remove_character_flag = spn_has_mother_sire
+		remove_character_flag = spn_has_father_sire
+		#spn_remove_immortal_quarry_flags = yes
+		#spn_remove_immortal_modifiers = yes
+
+		if = {
+			limit = { any_secret = { secret_type = spn_secret_werewolf } }
+			random_secret = { #Remove the secret
+				limit = {
+					secret_type = spn_secret_werewolf
+				}
+				remove_secret = yes
+			}
+		}
+		
+		#Apply Genetic Trait from Decision
+		if = {
+			limit = { has_character_flag = spn_embrace_hybrid_1 }
+			add_trait = spn_hybrid_1
+			remove_character_flag = spn_embrace_hybrid_1
+		}
+		else_if = {
+			limit = { has_character_flag = spn_embrace_hybrid_2 }
+			add_trait = spn_hybrid_2
+			remove_character_flag = spn_embrace_hybrid_2
+		}
+		else_if = {
+			limit = { has_character_flag = spn_embrace_hybrid_3 }
+			add_trait = spn_hybrid_3
+			remove_character_flag = spn_embrace_hybrid_3
+		}
+		else = {
+			add_trait = spn_hybrid_1
+		}
+
+		set_variable = {
+			name = spn_age_aquired_immortality
+			value = age
+		}
+
+		if = {
+			limit = { has_treatable_disease_trigger = yes }
+			spn_remove_treatable_disease = yes
+		}
+		add_character_flag = {
+			flag = immune_to_disease
+		}
+
+		#trigger_event = vampandlycan.0017 #Add Fertility modifier
+		spn_give_hybrid_secret_or_trait_effect = yes
+
+		add_character_flag = {
+			flag = spn_recently_became_hybrid
+			days = 1
+		}
+
+		spn_track_current_visual_age = { VISUALAGE = age }
+	}
+}
+
+spn_initiate.2002 { #Remove Hybrid
+	hidden = yes
+
+	trigger = {
+		has_trait = spn_hybrid
+		has_variable = spn_age_aquired_immortality
+	}
+
+	immediate = { 
+		remove_trait = spn_hybrid_1
+		remove_trait = spn_hybrid_2
+		remove_trait = spn_hybrid_3
+		remove_trait = spn_known_hybrid
+		remove_variable = spn_age_aquired_immortality
+		remove_variable = spn_yearly_pulses_since_trait_upgrade
+		remove_character_flag = immune_to_disease
+		remove_character_flag = spn_has_conferred_sire
+		remove_character_flag = spn_has_mother_sire
+		remove_character_flag = spn_has_father_sire
+		#spn_remove_immortal_quarry_flags = yes
+		#spn_remove_immortal_modifiers = yes
+
+		if = {
+			limit = { any_secret = { secret_type = spn_secret_hybrid } }
+			random_secret = { #Remove the secret
+				limit = {
+					secret_type = spn_secret_hybrid
+				}
+				remove_secret = yes
+			}
+		}
+
+		#trigger_event = vampandlycan.0018 #Remove Fertility modifier
+	}
+}
+
+spn_initiate.2005 { #Initiate Hybrid from ruler designer
+	hidden = yes
+
+	trigger = {
+		has_trait = spn_hybrid
+	}
+
+	immediate = {
+		#Apply Genetic Trait from Decision
+		if = {
+			limit = { has_trait = spn_hybrid_1 }
+			remove_trait = spn_hybrid_1
+			add_character_flag = spn_embrace_hybrid_1
+		}
+		else_if = {
+			limit = { has_trait = spn_hybrid_2 }
+			remove_trait = spn_hybrid_2
+			add_character_flag = spn_embrace_hybrid_2
+		}
+		else_if = {
+			limit = { has_trait = spn_hybrid_3 }
+			remove_trait = spn_hybrid_3
+			add_character_flag = spn_embrace_hybrid_3
+		}
+		else = {
+			add_character_flag = spn_embrace_hybrid_1
+		}
+
+		trigger_event = spn_initiate.2001 #Initiate hybrid
+	}
+}
+
+spn_initiate.2006 { #Initiate Random Hybrid Traits
+	hidden = yes
+	orphan = yes
+
+	immediate = {
+		#Apply Genetic Trait
+		random_list = {
+			75 = { add_character_flag = spn_embrace_hybrid_1 }
+			20 = { add_character_flag = spn_embrace_hybrid_2 }
+			5 = { add_character_flag = spn_embrace_hybrid_3 }
+		}
+
+		trigger_event = spn_initiate.2001 #Initiate Hybrid
+	}
+}
+
+spn_initiate.3001 { #Initiate Monster Hunter
+	hidden = yes
+
+	trigger = {
+		NOT = { has_trait = spn_hunter }
+		spn_has_supernatural_trait = no
+		is_witch_trigger = no
+	}
+
+	immediate = { 
+		if = {
+			limit = { has_character_flag = spn_embrace_hunter_1 }
+			add_trait = spn_hunter_1
+			remove_character_flag = spn_embrace_hunter_1
+		}
+		else_if = {
+			limit = { has_character_flag = spn_embrace_hunter_2 }
+			add_trait = spn_hunter_2
+			remove_character_flag = spn_embrace_hunter_2
+		}
+		else_if = {
+			limit = { has_character_flag = spn_embrace_hunter_3 }
+			add_trait = spn_hunter_3
+			remove_character_flag = spn_embrace_hunter_3
+		}
+		else = {
+			add_trait = spn_hunter_1
+		}
+
+		set_variable = {
+			name = spn_yearly_pulses_since_trait_upgrade
+			value = 0
+		}
+
+		spn_give_hunter_secret_or_trait_effect = yes
+
+		add_character_flag = {
+			flag = spn_recently_became_hunter
+			days = 1
+		}
+	}
+}
+
+spn_initiate.3002 { #Remove Hunter
+	hidden = yes
+
+	trigger = {
+		has_trait = spn_hunter
+	}
+
+	immediate = { 
+		remove_trait = spn_hunter_1
+		remove_trait = spn_hunter_2
+		remove_trait = spn_hunter_3
+		remove_trait = spn_known_hunter
+		remove_variable = spn_yearly_pulses_since_trait_upgrade
+		#spn_remove_hunter_quarry_flags = yes
+		#spn_remove_hunter_modifiers = yes
+
+		if = {
+			limit = { any_secret = { secret_type = spn_secret_hunter } }
+			random_secret = { #Remove the secret
+				limit = {
+					secret_type = spn_secret_hunter
+				}
+				remove_secret = yes
+			}
+		}
+	}
+}
+
+spn_initiate.3003 { #Select which Hunter Trait to add
+	type = character_event
+	title = spn_initiate.3003.t
+	desc = spn_initiate.3003.desc
+	theme = default
+
+	right_portrait = {
+		character = root
+		animation = idle
+	}
+
+	option = {
+		name = spn_initiate.3003.a
+		custom_tooltip = spn_initiate.3003.a.tt
+		add_character_flag = {
+			flag = spn_embrace_hunter_1
+		}
+	}
+
+	option = {
+		name = spn_initiate.3003.b
+		custom_tooltip = spn_initiate.3003.b.tt
+		add_character_flag = {
+			flag = spn_embrace_hunter_2
+		}
+	}
+
+	option = {
+		name = spn_initiate.3003.c
+		custom_tooltip = spn_initiate.3003.c.tt
+		add_character_flag = {
+			flag = spn_embrace_hunter_3
+		}
+	}
+
+	after = {
+		remove_character_flag = spn_embrace_hunter_dec
+		trigger_event = spn_initiate.3001
+	}
+}
+
+spn_initiate.3005 { #Initiate Hunter from ruler designer
+	hidden = yes
+
+	trigger = {
+		has_trait = spn_hunter
+	}
+
+	immediate = {
+		#Apply Slayer Trait from Decision
+		if = {
+			limit = { has_trait = spn_hunter_1 }
+			remove_trait = spn_hunter_1
+			add_character_flag = spn_embrace_hunter_1
+		}
+		else_if = {
+			limit = { has_trait = spn_hunter_2 }
+			remove_trait = spn_hunter_2
+			add_character_flag = spn_embrace_hunter_2
+		}
+		else_if = {
+			limit = { has_trait = spn_hunter_3 }
+			remove_trait = spn_hunter_3
+			add_character_flag = spn_embrace_hunter_3
+		}
+		else = {
+			add_character_flag = spn_embrace_hunter_1
+		}
+
+		trigger_event = spn_initiate.3001 #Initiate Hunter
+	}
+}
+
+spn_initiate.3006 { #Initiate Random Hunter Traits
+	hidden = yes
+
+	immediate = {
+		#Apply Genetic Trait
+		random_list = {
+			75 = { add_character_flag = spn_embrace_hunter_1 }
+			20 = { add_character_flag = spn_embrace_hunter_2 }
+			5 = { add_character_flag = spn_embrace_hunter_3 }
+		}
+
+		trigger_event = spn_initiate.3001 #Initiate Hunter
+	}
+}
+
+spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
+	hidden = yes
+
+	immediate = {
+		random_list = {
+			0 = { #Genetic Trait 1
+				modifier = { #Human Mother
+					scope:mother = { spn_has_supernatural_trait = no }
+					add = 90
+				}
+
+				modifier = { #Human Father
+					scope:real_father = { spn_has_supernatural_trait = no }
+					add = 90
+				}
+
+				modifier = { #Human Maternal Grandfather
+					scope:mother = {
+						scope:real_father = {
+							spn_has_supernatural_trait = no
+						}
+					}
+					add = 45
+				}
+
+				modifier = { #Human Maternal Grandmother
+					scope:mother = {
+						scope:mother = {
+							spn_has_supernatural_trait = no
+						}
+					}
+					add = 45
+				}
+
+				modifier = { #Human Paternal Grandfather
+					scope:real_father = {
+						scope:real_father = {
+							spn_has_supernatural_trait = no
+						}
+					}
+					add = 45
+				}
+
+				modifier = { #Human Paternal Grandmother
+					scope:real_father = {
+						scope:mother = {
+							spn_has_supernatural_trait = no
+						}
+					}
+					add = 45
+				}
+
+				modifier = { #Genetic 1 Mother
+					scope:mother = { spn_has_supernatural_trait_1 = yes }
+					add = 85
+				}
+
+				modifier = { #Genetic 1 Father
+					scope:real_father = { spn_has_supernatural_trait_1 = yes }
+					add = 85
+				}
+
+				modifier = { #Genetic 1 Maternal Grandfather
+					scope:mother = {
+						scope:real_father = {
+							spn_has_supernatural_trait_1 = yes
+						}
+					}
+					add = 40
+				}
+
+				modifier = { #Genetic 1 Maternal Grandmother
+					scope:mother = {
+						scope:mother = {
+							spn_has_supernatural_trait_1 = yes
+						}
+					}
+					add = 40
+				}
+
+				modifier = { #Genetic 1 Paternal Grandfather
+					scope:real_father = {
+						scope:real_father = {
+							spn_has_supernatural_trait_1 = yes
+						}
+					}
+					add = 40
+				}
+
+				modifier = { #Genetic 1 Paternal Grandmother
+					scope:real_father = {
+						scope:mother = {
+							spn_has_supernatural_trait_1 = yes
+						}
+					}
+					add = 40
+				}
+
+				modifier = { #Genetic 2 Mother
+					scope:mother = { spn_has_supernatural_trait_2 = yes }
+					add = 25
+				}
+
+				modifier = { #Genetic 2 Father
+					scope:real_father = { spn_has_supernatural_trait_2 = yes }
+					add = 25
+				}
+
+				modifier = { #Genetic 2 Maternal Grandfather
+					scope:mother = {
+						scope:real_father = {
+							spn_has_supernatural_trait_2 = yes
+						}
+					}
+					add = 12
+				}
+
+				modifier = { #Genetic 2 Maternal Grandmother
+					scope:mother = {
+						scope:mother = {
+							spn_has_supernatural_trait_2 = yes
+						}
+					}
+					add = 12
+				}
+
+				modifier = { #Genetic 2 Paternal Grandfather
+					scope:real_father = {
+						scope:real_father = {
+							spn_has_supernatural_trait_2 = yes
+						}
+					}
+					add = 12
+				}
+
+				modifier = { #Genetic 2 Paternal Grandmother
+					scope:real_father = {
+						scope:mother = {
+							spn_has_supernatural_trait_2 = yes
+						}
+					}
+					add = 12
+				}
+
+				modifier = { #Genetic 3 Mother
+					scope:mother = { spn_has_supernatural_trait_3 = yes }
+					add = 5
+				}
+
+				modifier = { #Genetic 3 Father
+					scope:real_father = { spn_has_supernatural_trait_3 = yes }
+					add = 5
+				}
+
+				modifier = { #Genetic 3 Maternal Grandfather
+					scope:mother = {
+						scope:real_father = {
+							spn_has_supernatural_trait_3 = yes
+						}
+					}
+					add = 3
+				}
+
+				modifier = { #Genetic 3 Maternal Grandmother
+					scope:mother = {
+						scope:mother = {
+							spn_has_supernatural_trait_3 = yes
+						}
+					}
+					add = 3
+				}
+
+				modifier = { #Genetic 3 Paternal Grandfather
+					scope:real_father = {
+						scope:real_father = {
+							spn_has_supernatural_trait_3 = yes
+						}
+					}
+					add = 3
+				}
+
+				modifier = { #Genetic 3 Paternal Grandmother
+					scope:real_father = {
+						scope:mother = {
+							spn_has_supernatural_trait_3 = yes
+						}
+					}
+					add = 3
+				}
+
+				if = {
+					limit = { #Initialize Vampire
+						has_character_flag = spn_baby_vampire
+					}
+
+					remove_character_flag = spn_baby_vampire
+					add_character_flag = spn_embrace_vampire_1
+
+					trigger_event = spn_initiate.0001 #Initialize Vampire
+				}
+				else_if = {
+					limit = { #Initialize Werewolf
+						has_character_flag = spn_baby_werewolf
+					}
+
+					remove_character_flag = spn_baby_werewolf
+					add_character_flag = spn_embrace_lycan_1
+
+					trigger_event = spn_initiate.1001 #Initialize Werewolf
+				}
+			}
+			0 = { #Genetic Trait 2
+				modifier = { #Human Mother
+					scope:mother = { spn_has_supernatural_trait = no }
+					add = 8
+				}
+
+				modifier = { #Human Father
+					scope:real_father = { spn_has_supernatural_trait = no }
+					add = 8
+				}
+
+				modifier = { #Human Maternal Grandfather
+					scope:mother = {
+						scope:real_father = {
+							spn_has_supernatural_trait = no
+						}
+					}
+					add = 4
+				}
+
+				modifier = { #Human Maternal Grandmother
+					scope:mother = {
+						scope:mother = {
+							spn_has_supernatural_trait = no
+						}
+					}
+					add = 4
+				}
+
+				modifier = { #Human Paternal Grandfather
+					scope:real_father = {
+						scope:real_father = {
+							spn_has_supernatural_trait = no
+						}
+					}
+					add = 4
+				}
+
+				modifier = { #Human Paternal Grandmother
+					scope:real_father = {
+						scope:mother = {
+							spn_has_supernatural_trait = no
+						}
+					}
+					add = 4
+				}
+
+				modifier = { #Genetic 1 Mother
+					scope:mother = { spn_has_supernatural_trait_1 = yes }
+					add = 10
+				}
+
+				modifier = { #Genetic 1 Father
+					scope:real_father = { spn_has_supernatural_trait_1 = yes }
+					add = 10
+				}
+
+				modifier = { #Genetic 1 Maternal Grandfather
+					scope:mother = {
+						scope:real_father = {
+							spn_has_supernatural_trait_1 = yes
+						}
+					}
+					add = 7
+				}
+
+				modifier = { #Genetic 1 Maternal Grandmother
+					scope:mother = {
+						scope:mother = {
+							spn_has_supernatural_trait_1 = yes
+						}
+					}
+					add = 7
+				}
+
+				modifier = { #Genetic 1 Paternal Grandfather
+					scope:real_father = {
+						scope:real_father = {
+							spn_has_supernatural_trait_1 = yes
+						}
+					}
+					add = 7
+				}
+
+				modifier = { #Genetic 1 Paternal Grandmother
+					scope:real_father = {
+						scope:mother = {
+							spn_has_supernatural_trait_1 = yes
+						}
+					}
+					add = 7
+				}
+
+				modifier = { #Genetic 2 Mother
+					scope:mother = { spn_has_supernatural_trait_2 = yes }
+					add = 50
+				}
+
+				modifier = { #Genetic 2 Father
+					scope:real_father = { spn_has_supernatural_trait_2 = yes }
+					add = 50
+				}
+
+				modifier = { #Genetic 2 Maternal Grandfather
+					scope:mother = {
+						scope:real_father = {
+							spn_has_supernatural_trait_2 = yes
+						}
+					}
+					add = 26
+				}
+
+				modifier = { #Genetic 2 Maternal Grandmother
+					scope:mother = {
+						scope:mother = {
+							spn_has_supernatural_trait_2 = yes
+						}
+					}
+					add = 26
+				}
+
+				modifier = { #Genetic 2 Paternal Grandfather
+					scope:real_father = {
+						scope:real_father = {
+							spn_has_supernatural_trait_2 = yes
+						}
+					}
+					add = 26
+				}
+
+				modifier = { #Genetic 2 Paternal Grandmother
+					scope:real_father = {
+						scope:mother = {
+							spn_has_supernatural_trait_2 = yes
+						}
+					}
+					add = 26
+				}
+
+				modifier = { #Genetic 3 Mother
+					scope:mother = { spn_has_supernatural_trait_3 = yes }
+					add = 10
+				}
+
+				modifier = { #Genetic 3 Father
+					scope:real_father = { spn_has_supernatural_trait_3 = yes }
+					add = 10
+				}
+
+				modifier = { #Genetic 3 Maternal Grandfather
+					scope:mother = {
+						scope:real_father = {
+							spn_has_supernatural_trait_3 = yes
+						}
+					}
+					add = 7
+				}
+
+				modifier = { #Genetic 3 Maternal Grandmother
+					scope:mother = {
+						scope:mother = {
+							spn_has_supernatural_trait_3 = yes
+						}
+					}
+					add = 7
+				}
+
+				modifier = { #Genetic 3 Paternal Grandfather
+					scope:real_father = {
+						scope:real_father = {
+							spn_has_supernatural_trait_3 = yes
+						}
+					}
+					add = 7
+				}
+
+				modifier = { #Genetic 3 Paternal Grandmother
+					scope:real_father = {
+						scope:mother = {
+							spn_has_supernatural_trait_3 = yes
+						}
+					}
+					add = 7
+				}
+
+				if = {
+					limit = { #Initialize Vampire
+						has_character_flag = spn_baby_vampire
+					}
+
+					remove_character_flag = spn_baby_vampire
+					add_character_flag = spn_embrace_vampire_2
+
+					trigger_event = spn_initiate.0001 #Initialize Vampire
+				}
+				else_if = {
+					limit = { #Initialize Werewolf
+						has_character_flag = spn_baby_werewolf
+					}
+
+					remove_character_flag = spn_baby_werewolf
+					add_character_flag = spn_embrace_lycan_2
+
+					trigger_event = spn_initiate.1001 #Initialize Werewolf
+				}
+			}
+			0 = { #Genetic Trait 3
+				modifier = { #Human Mother
+					scope:mother = { spn_has_supernatural_trait = no }
+					add = 2
+				}
+
+				modifier = { #Human Father
+					scope:real_father = { spn_has_supernatural_trait = no }
+					add = 2
+				}
+
+				modifier = { #Human Maternal Grandfather
+					scope:mother = {
+						scope:real_father = {
+							spn_has_supernatural_trait = no
+						}
+					}
+					add = 1
+				}
+
+				modifier = { #Human Maternal Grandmother
+					scope:mother = {
+						scope:mother = {
+							spn_has_supernatural_trait = no
+						}
+					}
+					add = 1
+				}
+
+				modifier = { #Human Paternal Grandfather
+					scope:real_father = {
+						scope:real_father = {
+							spn_has_supernatural_trait = no
+						}
+					}
+					add = 1
+				}
+
+				modifier = { #Human Paternal Grandmother
+					scope:real_father = {
+						scope:mother = {
+							spn_has_supernatural_trait = no
+						}
+					}
+					add = 1
+				}
+
+				modifier = { #Genetic 1 Mother
+					scope:mother = { spn_has_supernatural_trait_1 = yes }
+					add = 5
+				}
+
+				modifier = { #Genetic 1 Father
+					scope:real_father = { spn_has_supernatural_trait_1 = yes }
+					add = 5
+				}
+
+				modifier = { #Genetic 1 Maternal Grandfather
+					scope:mother = {
+						scope:real_father = {
+							spn_has_supernatural_trait_1 = yes
+						}
+					}
+					add = 3
+				}
+
+				modifier = { #Genetic 1 Maternal Grandmother
+					scope:mother = {
+						scope:mother = {
+							spn_has_supernatural_trait_1 = yes
+						}
+					}
+					add = 3
+				}
+
+				modifier = { #Genetic 1 Paternal Grandfather
+					scope:real_father = {
+						scope:real_father = {
+							spn_has_supernatural_trait_1 = yes
+						}
+					}
+					add = 3
+				}
+
+				modifier = { #Genetic 1 Paternal Grandmother
+					scope:real_father = {
+						scope:mother = {
+							spn_has_supernatural_trait_1 = yes
+						}
+					}
+					add = 3
+				}
+
+				modifier = { #Genetic 2 Mother
+					scope:mother = { spn_has_supernatural_trait_2 = yes }
+					add = 25
+				}
+
+				modifier = { #Genetic 2 Father
+					scope:real_father = { spn_has_supernatural_trait_2 = yes }
+					add = 25
+				}
+
+				modifier = { #Genetic 2 Maternal Grandfather
+					scope:mother = {
+						scope:real_father = {
+							spn_has_supernatural_trait_2 = yes
+						}
+					}
+					add = 12
+				}
+
+				modifier = { #Genetic 2 Maternal Grandmother
+					scope:mother = {
+						scope:mother = {
+							spn_has_supernatural_trait_2 = yes
+						}
+					}
+					add = 12
+				}
+
+				modifier = { #Genetic 2 Paternal Grandfather
+					scope:real_father = {
+						scope:real_father = {
+							spn_has_supernatural_trait_2 = yes
+						}
+					}
+					add = 12
+				}
+
+				modifier = { #Genetic 2 Paternal Grandmother
+					scope:real_father = {
+						scope:mother = {
+							spn_has_supernatural_trait_2 = yes
+						}
+					}
+					add = 12
+				}
+
+				modifier = { #Genetic 3 Mother
+					scope:mother = { spn_has_supernatural_trait_3 = yes }
+					add = 85
+				}
+
+				modifier = { #Genetic 3 Father
+					scope:real_father = { spn_has_supernatural_trait_3 = yes }
+					add = 85
+				}
+
+				modifier = { #Genetic 3 Maternal Grandfather
+					scope:mother = {
+						scope:real_father = {
+							spn_has_supernatural_trait_3 = yes
+						}
+					}
+					add = 40
+				}
+
+				modifier = { #Genetic 3 Maternal Grandmother
+					scope:mother = {
+						scope:mother = {
+							spn_has_supernatural_trait_3 = yes
+						}
+					}
+					add = 40
+				}
+
+				modifier = { #Genetic 3 Paternal Grandfather
+					scope:real_father = {
+						scope:real_father = {
+							spn_has_supernatural_trait_3 = yes
+						}
+					}
+					add = 40
+				}
+
+				modifier = { #Genetic 3 Paternal Grandmother
+					scope:real_father = {
+						scope:mother = {
+							spn_has_supernatural_trait_3 = yes
+						}
+					}
+					add = 40
+				}
+
+				if = {
+					limit = { #Initialize Vampire
+						has_character_flag = spn_baby_vampire
+					}
+
+					remove_character_flag = spn_baby_vampire
+					add_character_flag = spn_embrace_vampire_3
+
+					trigger_event = spn_initiate.0001 #Initialize Vampire
+				}
+				else_if = {
+					limit = { #Initialize Werewolf
+						has_character_flag = spn_baby_werewolf
+					}
+
+					remove_character_flag = spn_baby_werewolf
+					add_character_flag = spn_embrace_lycan_3
+
+					trigger_event = spn_initiate.1001 #Initialize Werewolf
+				}
+
+				#else_if = {
+				#	limit = { #Initiate Half-Fae
+				#		has_character_flag = spn_baby_fae
+				#	}
+				#	
+				#	remove_character_flag = spn_baby_fae
+				#	add_character_flag = spn_embrace_halffae
+				#
+				#	trigger_event = spn_initiate.2001 #Initiate Half-Fae
+				#}
+				#else_if = {
+				#	limit = { #Initiate Shapeshifter
+				#		has_character_flag = spn_baby_shifter
+				#	}
+				#	
+				#	remove_character_flag = spn_baby_shifter
+				#	add_character_flag = spn_embrace_shapeshifter
+				#
+				#	trigger_event = spn_initiate.2001 #Initiate Shapeshifter
+				#}			
+			}
+		}
+	}
+}
+
+spn_initiate.9001 { #Hand out Secrets Knowledge for confers
+	hidden = yes
+
+	immediate = {
+		scope:recipient = {
+			if = {
+				limit = { has_trait = spn_vampire }
+				spn_give_knowledge_of_vampire_secret = {
+					CHARACTER = scope:actor
+				}
+			}
+			else_if = {
+				limit = { has_trait = spn_werewolf }
+				spn_give_knowledge_of_lycan_secret = {
+					CHARACTER = scope:actor
+				}
+			}
+			else_if = {
+				limit = { has_trait = spn_hybrid }
+				spn_give_knowledge_of_hybrid_secret = {
+					CHARACTER = scope:actor
+				}
+			}
+			else_if = {
+				limit = { has_trait = spn_hunter }
+				spn_give_knowledge_of_hunter_secret = {
+					CHARACTER = scope:actor
+				}
+			}
+		}
+	}
+}
+
+spn_initiate.9002 { #Hand out Secrets Knowledge when asking for confer
+	hidden = yes
+
+	immediate = {
+		scope:actor = {
+			if = {
+				limit = { has_trait = spn_vampire }
+				spn_give_knowledge_of_vampire_secret = {
+					CHARACTER = scope:recipient
+				}
+			}
+			else_if = {
+				limit = { has_trait = spn_werewolf }
+				spn_give_knowledge_of_lycan_secret = {
+					CHARACTER = scope:recipient
+				}
+			}
+			else_if = {
+				limit = { has_trait = spn_hybrid }
+				spn_give_knowledge_of_hybrid_secret = {
+					CHARACTER = scope:recipient
+				}
+			}
+			else_if = {
+				limit = { has_trait = spn_hunter }
+				spn_give_knowledge_of_hunter_secret = {
+					CHARACTER = scope:recipient
+				}
+			}
+		}
+	}
+}
