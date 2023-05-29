@@ -80,7 +80,7 @@ spn_initiate.0002 { #Remove Vampire
 	}
 }
 
-spn_initiate.0003 { #Select which Genetic Vampire Trait to add
+spn_initiate.0003 { #Select what level Vampire Trait to add
 	type = character_event
 	title = spn_initiate.0003.t
 	desc = spn_initiate.0003.desc
@@ -147,9 +147,30 @@ spn_initiate.0006 { #Initiate Random Vampire Traits
 	immediate = {
 		#Apply Genetic Trait
 		random_list = {
-			75 = { add_character_flag = spn_embrace_vampire_1 }
-			20 = { add_character_flag = spn_embrace_vampire_2 }
-			5 = { add_character_flag = spn_embrace_vampire_3 }
+			75 = {
+				trigger_event = spn_initiate.0001 #Initialize Vampire
+				add_trait_xp = {
+					trait = supernatural_vampire
+					track = vampirism
+					value = { 0 25 }
+				}
+			}
+			20 = {
+				trigger_event = spn_initiate.0001 #Initialize Vampire
+				add_trait_xp = {
+					trait = supernatural_vampire
+					track = vampirism
+					value = { 25 50 }
+				}
+			}
+			5 = {
+				trigger_event = spn_initiate.0001 #Initialize Vampire
+				add_trait_xp = {
+					trait = supernatural_vampire
+					track = vampirism
+					value = { 50 75 }
+				}
+			}
 		}
 
 		trigger_event = spn_initiate.0001 #Initialize Vampire
@@ -236,7 +257,7 @@ spn_initiate.1002 { #Remove Werewolf
 	}
 }
 
-spn_initiate.1003 { #Select which Genetic Lycan Trait to add
+spn_initiate.1003 { #Select what level Werewolf Trait to add
 	type = character_event
 	title = spn_initiate.1003.t
 	desc = spn_initiate.1003.desc
@@ -261,7 +282,7 @@ spn_initiate.1003 { #Select which Genetic Lycan Trait to add
 	option = {
 		name = spn_initiate.1003.b
 		custom_tooltip = spn_initiate.1003.b.tt
-		trigger_event = spn_initiate.0001
+		trigger_event = spn_initiate.1001
 		add_trait_xp = {
 			trait = supernatural_werewolf
 			track = lycanthropy
@@ -272,7 +293,7 @@ spn_initiate.1003 { #Select which Genetic Lycan Trait to add
 	option = {
 		name = spn_initiate.1003.c
 		custom_tooltip = spn_initiate.1003.c.tt
-		trigger_event = spn_initiate.0001
+		trigger_event = spn_initiate.1001
 		add_trait_xp = {
 			trait = supernatural_werewolf
 			track = lycanthropy
@@ -290,41 +311,44 @@ spn_initiate.1005 { #Initialize Werewolf from ruler designer
 
 	immediate = {
 		#Apply Genetic Trait from Decision
-		if = {
-			limit = { has_trait = spn_werewolf_1 }
-			remove_trait = spn_werewolf_1
-			add_character_flag = spn_embrace_lycan_1
-		}
-		else_if = {
-			limit = { has_trait = spn_werewolf_2 }
-			remove_trait = spn_werewolf_2
-			add_character_flag = spn_embrace_lycan_2
-		}
-		else_if = {
-			limit = { has_trait = spn_werewolf_3 }
-			remove_trait = spn_werewolf_3
-			add_character_flag = spn_embrace_lycan_3
-		}
-		else = {
-			add_character_flag = spn_embrace_lycan_1
-		}
+		add_character_flag = supernatural_embrace_werewolf
+		remove_trait = supernatural_werewolf
 
-		trigger_event = spn_initiate.1001 #Initiate lycan
-	}
+		trigger_event = spn_initiate.1001 #Initiate Werewolf
+	}	
 }
 
-spn_initiate.1006 { #Initiate Random Lycan Traits
+spn_initiate.1006 { #Initiate Random Werewolf Levels
 	hidden = yes
 
 	immediate = {
 		#Apply Genetic Trait
 		random_list = {
-			75 = { add_character_flag = spn_embrace_lycan_1 }
-			20 = { add_character_flag = spn_embrace_lycan_2 }
-			5 = { add_character_flag = spn_embrace_lycan_3 }
+			75 = {
+				trigger_event = spn_initiate.0001 #Initialize Werewolf
+				add_trait_xp = {
+					trait = supernatural_werewolf
+					track = lycanthropy
+					value = { 0 25 }
+				}
+			}
+			20 = {
+				trigger_event = spn_initiate.0001 #Initialize Werewolf
+				add_trait_xp = {
+					trait = supernatural_werewolf
+					track = lycanthropy
+					value = { 25 50 }
+				}
+			}
+			5 = {
+				trigger_event = spn_initiate.0001 #Initialize Werewolf
+				add_trait_xp = {
+					trait = supernatural_werewolf
+					track = lycanthropy
+					value = { 50 75 }
+				}
+			}
 		}
-
-		trigger_event = spn_initiate.1001 #Initialize Werewolf
 	}
 }
 
@@ -347,13 +371,10 @@ spn_initiate.2001 { #Initiate Hybrid
 		remove_trait = supernatural_werewolf
 		remove_trait = spn_known_werewolf
 		spn_former_werewolf_effect = yes
-		#remove_variable = spn_age_aquired_immortality
 		remove_character_flag = immune_to_disease
 		remove_character_flag = spn_has_conferred_sire
 		remove_character_flag = spn_has_mother_sire
 		remove_character_flag = spn_has_father_sire
-		#spn_remove_immortal_quarry_flags = yes
-		#spn_remove_immortal_modifiers = yes
 
 		if = {
 			limit = { any_secret = { secret_type = spn_secret_werewolf } }
@@ -365,9 +386,15 @@ spn_initiate.2001 { #Initiate Hybrid
 			}
 		}
 		
-		#Apply Genetic Trait from Decision
-		
-		add_trait = supernatural_hybrid
+		if = {
+			limit = { has_character_flag = supernatural_embrace_hybrid }
+			add_trait = supernatural_hybrid
+			add_character_flag = immune_to_disease
+			remove_character_flag = supernatural_embrace_hybrid
+		}
+		else = {
+			add_trait = supernatural_hybrid
+		}
 
 		set_variable = {
 			name = spn_age_aquired_immortality
@@ -411,8 +438,6 @@ spn_initiate.2002 { #Remove Hybrid
 		remove_character_flag = spn_has_conferred_sire
 		remove_character_flag = spn_has_mother_sire
 		remove_character_flag = spn_has_father_sire
-		#spn_remove_immortal_quarry_flags = yes
-		#spn_remove_immortal_modifiers = yes
 
 		if = {
 			limit = { any_secret = { secret_type = spn_secret_hybrid } }
@@ -428,23 +453,83 @@ spn_initiate.2002 { #Remove Hybrid
 	}
 }
 
-#spn_initiate.2006 { #Initiate Random Hybrid Traits
-#	hidden = yes
-#	orphan = yes
-#
-#	immediate = {
-#		#Apply Genetic Trait
-#		random_list = {
-#			75 = { add_character_flag = spn_embrace_hybrid_1 }
-#			20 = { add_character_flag = spn_embrace_hybrid_2 }
-#			5 = { add_character_flag = spn_embrace_hybrid_3 }
-#		}
-#
-#		trigger_event = spn_initiate.2001 #Initiate Hybrid
-#	}
-#}
+spn_initiate.2003 { #Select what level Hybrid Trait to add
+	type = character_event
+	title = spn_initiate.2003.t
+	desc = spn_initiate.2003.desc
+	theme = default
 
-spn_initiate.3001 { #Initiate Monster Hunter
+	right_portrait = {
+		character = root
+		animation = idle
+	}
+
+	option = {
+		name = spn_initiate.2003.a
+		custom_tooltip = spn_initiate.2003.a.tt
+		trigger_event = spn_initiate.2001
+		add_trait_xp = {
+			trait = supernatural_hybrid
+			track = hybrid_vampirism
+			value = 0
+		}
+		add_trait_xp = {
+			trait = supernatural_hybrid
+			track = hybrid_lycanthropy
+			value = 0
+		}
+	}
+
+	option = {
+		name = spn_initiate.2003.b
+		custom_tooltip = spn_initiate.2003.b.tt
+		trigger_event = spn_initiate.2001
+		add_trait_xp = {
+			trait = supernatural_hybrid
+			track = hybrid_vampirism
+			value = 50
+		}
+		add_trait_xp = {
+			trait = supernatural_hybrid
+			track = hybrid_lycanthropy
+			value = 50
+		}
+	}
+
+	option = {
+		name = spn_initiate.2003.c
+		custom_tooltip = spn_initiate.2003.c.tt
+		trigger_event = spn_initiate.2001
+		add_trait_xp = {
+			trait = supernatural_hybrid
+			track = hybrid_vampirism
+			value = 100
+		}
+		add_trait_xp = {
+			trait = supernatural_hybrid
+			track = hybrid_lycanthropy
+			value = 100
+		}
+	}
+}
+
+spn_initiate.2005 { #Initialize Hybrid from Ruler Designer
+	hidden = yes
+
+	trigger = {
+		has_trait = supernatural_hybrid
+	}
+
+	immediate = {
+		#Apply Genetic Trait from Decision
+		add_character_flag = supernatural_embrace_hybrid
+		remove_trait = supernatural_hybrid
+
+		trigger_event = spn_initiate.2001 #Initiate Hybrid
+	}	
+}
+
+spn_initiate.3001 { #Initiate Hunter
 	hidden = yes
 
 	trigger = {
@@ -454,8 +539,14 @@ spn_initiate.3001 { #Initiate Monster Hunter
 	}
 
 	immediate = { 
-	
-		add_trait = supernatural_hunter
+		if = {
+			limit = { has_character_flag = supernatural_embrace_hunter }
+			add_trait = supernatural_hunter
+			remove_character_flag = supernatural_embrace_hunter
+		}
+		else = {
+			add_trait = supernatural_hunter
+		}
 
 		set_variable = {
 			name = spn_yearly_pulses_since_trait_upgrade
@@ -482,8 +573,6 @@ spn_initiate.3002 { #Remove Hunter
 		remove_trait = supernatural_hunter
 		remove_trait = spn_known_hunter
 		remove_variable = spn_yearly_pulses_since_trait_upgrade
-		#spn_remove_hunter_quarry_flags = yes
-		#spn_remove_hunter_modifiers = yes
 
 		if = {
 			limit = { any_secret = { secret_type = spn_secret_hunter } }
@@ -497,7 +586,7 @@ spn_initiate.3002 { #Remove Hunter
 	}
 }
 
-spn_initiate.3003 { #Select which Hunter Trait to add
+spn_initiate.3003 { #Select what level Hunter Trait to add
 	type = character_event
 	title = spn_initiate.3003.t
 	desc = spn_initiate.3003.desc
@@ -510,34 +599,36 @@ spn_initiate.3003 { #Select which Hunter Trait to add
 
 	option = {
 		name = spn_initiate.3003.a
-		add_trait = supernatural_hunter
+		trigger_event = spn_initiate.3001 #Initiate Hunter
 		add_trait_xp = {
 			trait = supernatural_hunter
-			track = monster_hunter
+			track = monster_hunting
 			value = 50
 		}
 	}
 
 	option = {
 		name = spn_initiate.3003.b
+		trigger_event = spn_initiate.3001 #Initiate Hunter
 		add_trait_xp = {
 			trait = supernatural_hunter
-			track = monster_hunter
+			track = monster_hunting
 			value = 75
 		}
 	}
 
 	option = {
 		name = spn_initiate.3003.c
+		trigger_event = spn_initiate.3001 #Initiate Hunter
 		add_trait_xp = {
 			trait = supernatural_hunter
-			track = monster_hunter
+			track = monster_hunting
 			value = 100
 		}
 	}
 }
 
-spn_initiate.3005 { #Initiate Hunter from ruler designer
+spn_initiate.3005 { #Initiate Hunter from Ruler Designer
 	hidden = yes
 
 	trigger = {
@@ -546,24 +637,8 @@ spn_initiate.3005 { #Initiate Hunter from ruler designer
 
 	immediate = {
 		#Apply Hunter Trait from Decision
-		if = {
-			limit = { has_trait = spn_hunter_1 }
-			remove_trait = spn_hunter_1
-			add_character_flag = spn_embrace_hunter_1
-		}
-		else_if = {
-			limit = { has_trait = spn_hunter_2 }
-			remove_trait = spn_hunter_2
-			add_character_flag = spn_embrace_hunter_2
-		}
-		else_if = {
-			limit = { has_trait = spn_hunter_3 }
-			remove_trait = spn_hunter_3
-			add_character_flag = spn_embrace_hunter_3
-		}
-		else = {
-			add_character_flag = spn_embrace_hunter_1
-		}
+		add_character_flag = supernatural_embrace_hunter
+		remove_trait = supernatural_hunter
 
 		trigger_event = spn_initiate.3001 #Initiate Hunter
 	}
@@ -575,12 +650,64 @@ spn_initiate.3006 { #Initiate Random Hunter Traits
 	immediate = {
 		#Apply Genetic Trait
 		random_list = {
-			75 = { add_character_flag = spn_embrace_hunter_1 }
-			20 = { add_character_flag = spn_embrace_hunter_2 }
-			5 = { add_character_flag = spn_embrace_hunter_3 }
+			75 = {
+				trigger_event = spn_initiate.3001 #Initialize Hunter
+				random_list = {
+					50 = {
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = monster_hunting
+							value = { 0 25 }
+						}				
+					}
+					50 = {
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = { 0 25 }
+						}					
+					}
+				}
+			}
+			20 = {
+				trigger_event = spn_initiate.3001 #Initialize Hunter
+				random_list = {
+					50 = {
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = monster_hunting
+							value = { 25 50 }
+						}				
+					}
+					50 = {
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = { 25 50 }
+						}					
+					}
+				}
+			}
+			5 = {
+				trigger_event = spn_initiate.3001 #Initialize Hunter
+				random_list = {
+					50 = {
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = monster_hunting
+							value = { 50 75 }
+						}				
+					}
+					50 = {
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = { 50 75 }
+						}					
+					}
+				}
+			}
 		}
-
-		trigger_event = spn_initiate.3001 #Initiate Hunter
 	}
 }
 
@@ -782,7 +909,7 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 					}
 
 					remove_character_flag = spn_baby_vampire
-					add_character_flag = spn_embrace_vampire_1
+					add_character_flag = supernatural_vampire
 
 					trigger_event = spn_initiate.0001 #Initialize Vampire
 				}
@@ -792,7 +919,7 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 					}
 
 					remove_character_flag = spn_baby_werewolf
-					add_character_flag = spn_embrace_lycan_1
+					add_character_flag = supernatural_embrace_werewolf
 
 					trigger_event = spn_initiate.1001 #Initialize Werewolf
 				}
