@@ -2,18 +2,18 @@
 	#########
 	# HOOKS #
 	#########
-	#modifier = { #Weak hook	#Commented out because there was TONS of errors in the log 5/22/23
-	#	scope:marriage_hook = yes
-	#	add = 100
-	#	scope:actor ?= { NOT = { has_strong_hook = scope:recipient } }
-	#	desc = SCHEME_WEAK_HOOK_USED
-	#}
-	#modifier = { #Strong Hook (in some cases it's not auto accept)
-	#	scope:marriage_hook = yes
-	#	add = 200
-	#	scope:actor ?= { has_strong_hook = scope:recipient }
-	#	desc = SCHEME_STRONG_HOOK_USED
-	#}
+	modifier = { #Weak hook
+		scope:hook = yes
+		add = 100
+		scope:actor = { NOT = { has_strong_hook = scope:recipient } }
+		desc = SCHEME_WEAK_HOOK_USED
+	}
+	modifier = { #Strong Hook (in some cases it's not auto accept)
+		scope:hook = yes
+		add = 200
+		scope:actor = { has_strong_hook = scope:recipient }
+		desc = SCHEME_STRONG_HOOK_USED
+	}
 	
 	#########
 	# PERKS #
@@ -475,7 +475,7 @@
 		who = scope:recipient
 		opinion_target = scope:secondary_actor
 		multiplier = 0.25
-		desc = AI_OPINION_REASON
+		desc = AI_OPINION_REASON_SPOUSE
 	}
 	opinion_modifier = { # A lot more likely if Recipient likes Actor
 		trigger = {
@@ -484,7 +484,7 @@
 		who = scope:recipient
 		opinion_target = scope:actor
 		multiplier = 0.75
-		desc = AI_OPINION_REASON
+		desc = AI_OPINION_REASON_ACTOR
 	}
 	modifier = { # Likely to want two candidates who like each other to marry if Recipient likes them both
 		add = 15
@@ -582,6 +582,16 @@
 			}
 		}
 		desc = ARE_SOULMATES_REASON
+	}
+	
+	modifier = { # Less likely to marry someone whose spouse misteriously died in the Wedding Night
+		add = -50
+		desc = just_widowed_interaction_reason
+		trigger = {
+			scope:actor = {
+				has_variable = just_widowed_var
+			}
+		}
 	}
 	
 	modifier = { # Same language
@@ -1053,7 +1063,6 @@
 			}
 		}
 	}
-
 	###############
 	# PROCREATION #
 	###############
@@ -1773,19 +1782,115 @@
 		}
 	}
 
+	################
+	#  DIARCHIES   #
+	################
+	# Temporary or designated regents.
+	modifier = {
+		add = 10
+		scope:recipient = {
+			OR = {
+				AND = {
+					designated_diarch ?= scope:actor
+					# Otherwise designated diarchs that become entrenched regents'll still this bonus.
+					NOT = { exists = diarch }
+				}
+				AND = {
+					diarch ?= scope:actor
+					has_diarchy_active_parameter = diarchy_type_is_temporary_regency
+				}
+			}
+		}
+		desc = DIARCHY_TEMPORARY_OR_DESIGNATED_REGENT_WEDDING_ACCEPTANCE
+	}
+	# Entrenched regents.
+	modifier = {
+		add = {
+			value = scope:recipient.diarchy_swing
+			multiply = 0.5
+		}
+		scope:recipient = {
+			diarch ?= scope:actor
+			has_diarchy_active_parameter = diarchy_type_is_entrenched_regency
+		}
+		desc = DIARCHY_ENTRENCHED_REGENT_WEDDING_ACCEPTANCE
+	}
+
 	###########
 	#  FEUD   #
 	###########
 	modifier = {
 		add = -25
 		scope:recipient = {
-			exists = house
-			house.house_head = {
-				house_feud_target_house_trigger = { HOUSE = scope:actor.house }
-			}
+			existing_feud_against_target_trigger = { TARGET = scope:actor }
 		}
 		desc = MARRY_FAMILY_FEUD_REASON
 	}
+
+	#################
+	# GRAND WEDDING #
+	#################
+	modifier = {
+		# Being offered a Grand Wedding increases acceptance
+		add = 40
+		scope:grand_wedding_promise = yes
+
+		desc = GRAND_WEDDING_PROMISE_REASON_1
+	}
+	# Having already organized a good Grand Wedding increases acceptance
+	modifier = {
+		has_character_modifier = gwedding_magnificent_host_modifier
+		add = 25
+		desc = GRAND_WEDDING_MAGNIFICENT_HOST_REASON
+	}
+	# Don't offer the same (or parallel) Grand Wedding when a betrothal is already ongoing
+	modifier = {
+		add = -5000
+		OR = {
+			scope:secondary_actor = { has_been_promised_grand_wedding = yes }
+			scope:secondary_recipient = { has_been_promised_grand_wedding = yes }
+		}
+	}
+	# 
+	modifier = {
+		add = ep2_activities_legacy_2_grand_weddings_acceptance_boost_value
+		scope:actor.dynasty ?= { has_dynasty_perk = ep2_activities_legacy_2  }
+		desc = GRAND_WEDDING_DYNASTY_LEGACY_BONUS
+	}
+
+	###########################
+	# PLAYER IS THE RECIPIENT #
+	###########################
+
+	# Secondary actor has already been refused by the player
+	modifier = {
+		add = -5000
+		scope:recipient = { is_ai = no }
+		scope:secondary_actor = { has_character_flag = player_declined_marriage }
+	}
+
+	# Don't spam the player with courtiers' marriages
+	modifier = {
+		add = -5000
+		scope:recipient = { is_ai = no }
+		scope:secondary_recipient = {
+			NOR = {
+				is_close_or_extended_family_of = scope:recipient
+				dynasty ?= scope:recipient.dynasty
+			}
+		}
+	}
+
+	# Don't spam the player with weaker offers
+	modifier = {
+		add = -5000
+		scope:recipient = { is_ai = no }
+		scope:recipient.eighty_percent_of_max_military_strength > scope:actor.current_military_strength 
+		exists = scope:recipient.primary_title
+		exists = scope:actor.primary_title
+		NOT = { scope:actor.primary_title.tier >= scope:recipient.primary_title.tier }
+	}
+
 
 	#############
 	#  HAROLD   #
@@ -1810,6 +1915,473 @@
 		}
 		scope:secondary_recipient = {
 			is_ai = yes
+		}
+	}
+}
+
+elopment_ai_accept_modifier = { #Should copy marriage_ai_accept_modifier on relevant points, note: there are no secondary targets
+	############
+	# ELOPMENT #
+	############
+
+	modifier = {
+		NOT = { has_relation_soulmate = scope:actor }
+		add = {
+			value = -25
+			if = {
+				limit = {
+					is_married = yes
+				}
+				add = -25
+			}
+		}
+		desc = AI_ELOPE_CONSEQUENCES
+	}
+
+
+	#########
+	# PERKS #
+	#########
+	modifier = { # A lot of acceptance for yourself - you are likely already married, thus you need motivation to get rid of your spouse to marry someone better
+		scope:actor = { has_perk = promising_prospects_perk }
+		add = promising_prospects_self_value
+		desc = PROMISING_PROSPECTS_PERK_MODIFIER
+	}
+	modifier = { # Dynasty Glory Perk acceptance,
+		exists = scope:actor.dynasty
+		scope:actor.dynasty = { has_dynasty_perk = glory_legacy_1 }
+		add = glory_legacy_1_marriage_acceptance
+		desc = DYNASTY_LEGACY_GLORY_MARRIAGE_ACCEPTANCE_PERK_MODIFIER
+	}
+
+	############
+	# OPINIONS #
+	############
+	opinion_modifier = { # More likely to accept if Recipient likes the person the Actor offers for marriage
+		who = scope:recipient
+		opinion_target = scope:actor
+		multiplier = 1
+		desc = AI_OPINION_REASON
+	}
+
+	opinion_modifier = {
+		trigger = { exists = scope:recipient.primary_spouse }
+		who = scope:recipient
+		opinion_target = scope:recipient.primary_spouse
+		multiplier = -1
+		desc = AI_SPOUSE_OPINION
+	}
+
+
+	####################
+	# TIER DIFFERENCES #
+	####################
+	modifier = {
+		exists = scope:recipient.liege.dynasty
+		scope:recipient = {
+			OR = {
+				AND = {
+					is_lowborn = no
+					exists = dynasty
+					dynasty = scope:recipient.liege.dynasty
+				}
+				is_close_or_extended_family_of = scope:recipient.liege
+				is_spouse_of = scope:recipient.liege
+			}
+		}
+		scope:actor.primary_title.tier > scope:recipient.liege.primary_title.tier
+		add = {
+			value = scope:actor.highest_held_title_tier
+			subtract = scope:recipient.liege.highest_held_title_tier
+			multiply = 30
+		}
+		desc = MARRYING_UP_REASON
+	}
+	
+	modifier = {
+		exists = scope:recipient.liege.dynasty
+		scope:recipient = {
+			OR = {
+				AND = {
+					is_lowborn = no
+					exists = dynasty
+					dynasty = scope:recipient.liege.dynasty
+				}
+				is_close_or_extended_family_of = scope:recipient.liege
+				is_spouse_of = scope:recipient.liege
+			}
+		}
+		scope:actor.primary_title.tier < scope:recipient.liege.primary_title.tier
+		add = {
+			value = scope:actor.highest_held_title_tier
+			subtract = scope:recipient.liege.highest_held_title_tier
+			if = {
+				limit = { scope:actor.highest_held_title_tier = tier_kingdom }
+				multiply = 25
+			}
+			else = {
+				multiply = 35
+			}
+		}
+		desc = MARRYING_DOWN_REASON
+	}
+
+	
+
+	
+	###########################
+	# DYNASTY PRESTIGE LEVELS #
+	###########################
+	modifier = {
+		scope:actor = {
+			OR = {
+				has_dynasty = no
+				scope:actor = {
+					has_dynasty = yes
+					dynasty.dynasty_prestige_level = 0
+				}
+			}
+		}
+		add = -5
+		desc = AI_DYNASTY_PRESTIGE_REASON
+	}
+	modifier = {
+		scope:actor = {
+			has_dynasty = yes
+			dynasty.dynasty_prestige_level >= 2
+		}
+		add = {
+			value = scope:actor.dynasty.dynasty_prestige_level
+			multiply = 5
+			subtract = 5 #At 0 dynasty prestige level, there should be a penalty
+		}
+		desc = AI_DYNASTY_PRESTIGE_REASON
+	}
+
+
+	#########
+	# FAITH #
+	#########
+	modifier = { # A recipient will be reluctant (to differing degrees) to agree to marriages sent from an actor of a different faith
+		scope:recipient.faith = {
+			faith_hostility_level = {
+				target = scope:actor.faith
+				value > faith_fully_accepted_level
+			}
+		}
+		add = {
+			value = -10
+			if = {
+				limit = {
+					NOR = {
+						# Exempt certain struggle phases.
+						is_struggle_parameter_active_interfaith_marriages_available_between_involved_characters_trigger = yes
+						# Exempt Conciliation struggle resolution
+						AND = {
+							has_global_variable = fp2_struggle_conciliation_ending
+							fp2_struggle_conciliation_special_cultural_rules_trigger = { C1 = scope:recipient C2 = scope:actor }
+						}
+					}
+				}
+				if = {
+					limit = {
+						scope:recipient.faith = {
+							faith_hostility_level = {
+								target = scope:actor.faith
+								value > faith_astray_level
+							}
+						}
+					}
+					subtract = 15
+				}
+				if = {
+					limit = {
+						scope:recipient.faith = {
+							faith_hostility_level = {
+								target = scope:actor.faith
+								value >= faith_hostility_prevents_marriage_level
+							}
+						}
+					}
+					subtract = 975
+				}
+			}
+		}
+		
+		desc = MARRY_DIFFERENT_FAITH_REASON
+	}
+	
+	##################
+	# MISC PENALTIES #
+	##################
+	modifier = {
+		scope:recipient.liege = { has_weak_hook = scope:recipient }
+		desc = AI_ELOPE_WEAK_HOOK
+		add = -15
+	}
+
+	modifier = {
+		scope:recipient.liege = { has_strong_hook = scope:recipient }
+		desc = AI_ELOPE_STRONG_HOOK
+		add = -100
+	}
+
+	modifier = {
+		scope:recipient = {
+			any_heir_title = {
+				place_in_line_of_succession = {
+					target = scope:recipient
+					value <= 1
+				}
+			}
+		}
+		desc = AI_ELOPE_INHERITANCE
+		add = -75
+	}
+
+	modifier = {
+		scope:recipient = {
+			NOT = {
+				any_heir_title = {
+					place_in_line_of_succession = {
+						target = scope:recipient
+						value <= 1
+					}
+				}
+			}
+			any_heir_title = {
+				place_in_line_of_succession = {
+					target = scope:recipient
+					value <= 3
+				}
+			}
+		}
+		desc = AI_ELOPE_POSSIBLE_INHERITANCE
+		add = -30
+	}
+
+	#########################
+	# FAMILY CONSIDERATIONS #
+	#########################
+
+	modifier = {
+		add = -1000
+		scope:recipient.faith = {
+			NOT = {
+				faith_allows_marriage_consanguinity_trigger = { CHARACTER_1 = scope:recipient CHARACTER_2 = scope:actor }
+			}
+		}
+		desc = MARRY_CONSANGUINITY_REASON
+	}
+}
+
+divorce_character_ai_accept_modifier = {
+	modifier = {
+		add = -50
+		desc = BASE_RELUCTANCE
+	}
+	
+	modifier = { # Less likely if it's the recipient him/herself
+		add = -100
+		desc = MY_OWN_MARRIAGE_REASON
+		scope:recipient = scope:secondary_recipient
+	}
+	
+	opinion_modifier = { # A lot more likely if Recipient likes Actor
+		trigger = { NOT = { scope:recipient = scope:secondary_recipient } }
+		who = scope:recipient
+		opinion_target = scope:actor
+		multiplier = 1
+		desc = AI_OPINION_REASON
+	}
+	
+	opinion_modifier = { # Unlikely if Recipient likes Secondary Recipient
+		trigger = { NOT = { scope:recipient = scope:secondary_recipient } }
+		who = scope:recipient
+		opinion_target = scope:secondary_recipient
+		multiplier = -1
+		desc = AI_OPINION_REASON
+	}
+
+	modifier = { # Very unlikely if the marriage is between kin and the religion has Divine Marriages
+		add = -100
+		desc = DIVORCE_HOLY
+		scope:actor = {
+			faith = {
+				has_doctrine = tenet_divine_marriage
+			}
+		}
+		scope:actor = {
+			OR = {
+				is_cousin_of = scope:secondary_recipient
+				is_close_or_extended_family_of = scope:secondary_recipient
+			}
+		}
+	}
+		
+	modifier = { # More likely if the spouse is openly incestuous
+		add = 150
+		desc = DIVORCE_OPENLY_INCESTUOUS_SPOUSE
+
+		scope:secondary_recipient = {
+			any_relation = {
+				type = lover
+				NOR = {
+					this = scope:actor
+					this = scope:recipient
+				}
+				relation_with_character_is_incestuous_in_my_faith_trigger = { CHARACTER = scope:secondary_recipient	}
+			}
+		}
+	}
+
+	modifier = { # More likely if the spouse has been unfaithful (lover relation or std)
+		trigger = { NOT = { scope:recipient = scope:secondary_recipient } }
+		desc = DIVORCE_INFIDELITY
+		add = {
+			# Cheating isn't awful
+			if = {
+				limit = {
+					trigger_if = {
+						limit = {
+							scope:secondary_recipient = { is_male = yes }
+						}
+						faith = { has_doctrine = doctrine_adultery_men_accepted }
+					}
+					trigger_else_if = {
+						limit = {
+							scope:secondary_recipient = { is_female = yes }
+						}
+						faith = { has_doctrine = doctrine_adultery_women_accepted }
+					}
+					# making the default behavior explicit if no other trigger_(else_)ifs are valid
+					trigger_else = {
+						always = yes
+					}
+				}
+				value = 20
+			}
+			# Cheating is awful
+			else = {
+				value = 50
+			}
+		}
+		scope:secondary_recipient = {
+			exposed_cheating_on_spouse_trigger = { SPOUSE = scope:actor }
+		}
+	}
+
+	modifier = { # Eunuchs
+		trigger = { NOT = { scope:recipient = scope:secondary_recipient } }
+		add = 100
+		desc = DIVORCE_IMPOTENT_EUNUCH
+		scope:secondary_recipient = {
+			is_female = no
+			has_trait = eunuch
+		}
+	}
+
+	modifier = { # Very likely if the marriage has turned Polygamous and their faith doesn't support it
+		trigger = { NOT = { scope:recipient = scope:secondary_recipient } }
+		add = 100
+		desc = DIVORCE_POLYGAMY
+		scope:actor = {
+			any_consort = { 
+				is_alive = yes
+				NOT = { this = scope:secondary_recipient } 
+			}
+			any_consort = { 
+				this = scope:secondary_recipient  
+			}
+		}
+		AND = {
+			scope:secondary_recipient.culture = { NOT = { has_cultural_tradition = tradition_polygamous } }
+			scope:secondary_recipient.faith = { NOT = { has_doctrine = doctrine_polygamy } }
+		}
+	}
+	
+	
+	modifier = { # Heathens
+		trigger = { NOT = { scope:recipient = scope:secondary_recipient } }
+		add = 100
+		desc = DIVORCE_HEATHEN
+		NOT = {
+			scope:secondary_recipient.faith.religion = scope:actor.faith.religion
+		}
+	}
+	
+	modifier = { # Heretic
+		trigger = { NOT = { scope:recipient = scope:secondary_recipient } }
+		add = 10
+		desc = DIVORCE_HERETIC
+		scope:secondary_recipient.faith.religion = scope:actor.faith.religion
+		scope:secondary_recipient = {
+			NOT = {
+				faith = scope:actor.faith
+			}
+		}
+	}
+
+	modifier = { # I am a Kinslayer
+		add = -50
+		desc = I_AM_A_KINSLAYER
+		scope:actor = {
+			has_trait_rank = {
+				trait = kinslayer
+				rank >= 1
+			}
+		}
+	}
+	
+	modifier = { # They are a Kinslayer
+		trigger = { NOT = { scope:recipient = scope:secondary_recipient } }
+		add = 50
+		desc = THEY_ARE_A_KINSLAYER
+		scope:secondary_recipient = {
+			has_trait_rank = {
+				trait = kinslayer
+				rank >= 1
+			}
+		}
+	}
+
+	modifier = { # Friend of the Head of Faith
+		add = 50
+		desc = WE_ARE_FRIENDS
+		scope:recipient = {
+			has_relation_friend = scope:actor
+		}
+	}
+	
+	modifier = { # Best Friend of the Head of Faith
+		add = 150
+		desc = WE_ARE_BEST_FRIENDS
+		scope:recipient = {
+			has_relation_best_friend = scope:actor
+		}
+	}
+	
+	modifier = { # Lover of the Head of Faith
+		add = 25
+		desc = WE_ARE_LOVERS
+		scope:recipient = {
+			has_relation_lover = scope:actor
+		}
+	}
+	
+	modifier = { # Rival of the Head of Faith
+		add = -100
+		desc = WE_ARE_RIVALS
+		scope:recipient = {
+			has_relation_rival = scope:actor
+		}
+	}
+	
+	modifier = { # Nemesis of the Head of Faith
+		add = -500
+		desc = WE_ARE_NEMESES
+		scope:recipient = {
+			has_relation_nemesis = scope:actor
 		}
 	}
 }
