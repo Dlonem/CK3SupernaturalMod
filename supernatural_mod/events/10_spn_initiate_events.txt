@@ -13,27 +13,14 @@ spn_initiate.0001 { #Initialize Vampire
 	immediate = {
 		#Apply Genetic Trait from Decision
 		if = {
-			limit = { has_character_flag = spn_embrace_vampire_1 }
-			add_trait = spn_vampire_1
+			limit = { has_character_flag = supernatural_embrace_vampire }
+			add_trait = supernatural_vampire
 			add_character_flag = immune_to_disease
-			remove_character_flag = spn_embrace_vampire_1
-		}
-		else_if = {
-			limit = { has_character_flag = spn_embrace_vampire_2 }
-			add_trait = spn_vampire_2
-			add_character_flag = immune_to_disease
-			remove_character_flag = spn_embrace_vampire_2
-		}
-		else_if = {
-			limit = { has_character_flag = spn_embrace_vampire_3 }
-			add_trait = spn_vampire_3
-			add_character_flag = immune_to_disease
-			remove_character_flag = spn_embrace_vampire_3
+			remove_character_flag = supernatural_embrace_vampire
 		}
 		else = {
-			add_trait = spn_vampire_1
+			add_trait = supernatural_vampire
 		}
-		
 		set_variable = {
 			name = spn_age_aquired_immortality
 			value = age
@@ -65,14 +52,12 @@ spn_initiate.0002 { #Remove Vampire
 	hidden = yes
 
 	trigger = {
-		has_trait = spn_vampire
+		has_trait = supernatural_vampire
 		has_variable = spn_age_aquired_immortality
 	}
 
-	immediate = { 
-		remove_trait = spn_vampire_1
-		remove_trait = spn_vampire_2
-		remove_trait = spn_vampire_3
+	immediate = {
+		remove_trait = supernatural_vampire
 		remove_trait = spn_known_vampire
 		remove_variable = spn_age_aquired_immortality
 		remove_variable = spn_yearly_pulses_since_trait_upgrade
@@ -95,7 +80,7 @@ spn_initiate.0002 { #Remove Vampire
 	}
 }
 
-spn_initiate.0003 { #Select which Genetic Vampire Trait to add
+spn_initiate.0003 { #Select what level Vampire Trait to add
 	type = character_event
 	title = spn_initiate.0003.t
 	desc = spn_initiate.0003.desc
@@ -109,29 +94,34 @@ spn_initiate.0003 { #Select which Genetic Vampire Trait to add
 	option = {
 		name = spn_initiate.0003.a
 		custom_tooltip = spn_initiate.0003.a.tt
-		add_character_flag = {
-			flag = spn_embrace_vampire_1
+		trigger_event = spn_initiate.0001
+		add_trait_xp = {
+			trait = supernatural_vampire
+			track = vampirism
+			value = 0
 		}
 	}
 
 	option = {
 		name = spn_initiate.0003.b
 		custom_tooltip = spn_initiate.0003.b.tt
-		add_character_flag = {
-			flag = spn_embrace_vampire_2
+		trigger_event = spn_initiate.0001
+		add_trait_xp = {
+			trait = supernatural_vampire
+			track = vampirism
+			value = 50
 		}
 	}
 
 	option = {
 		name = spn_initiate.0003.c
 		custom_tooltip = spn_initiate.0003.c.tt
-		add_character_flag = {
-			flag = spn_embrace_vampire_3
+		trigger_event = spn_initiate.0001
+		add_trait_xp = {
+			trait = supernatural_vampire
+			track = vampirism
+			value = 100
 		}
-	}
-
-	after = {
-		remove_character_flag = spn_embrace_vampire_dec
 	}
 }
 
@@ -139,29 +129,13 @@ spn_initiate.0005 { #Initialize Vampire from ruler designer
 	hidden = yes
 
 	trigger = {
-		has_trait = spn_vampire
+		has_trait = supernatural_vampire
 	}
 
 	immediate = {
 		#Apply Genetic Trait from Decision
-		if = {
-			limit = { has_trait = spn_vampire_1 }
-			remove_trait = spn_vampire_1
-			add_character_flag = spn_embrace_vampire_1
-		}
-		else_if = {
-			limit = { has_trait = spn_vampire_2 }
-			remove_trait = spn_vampire_2
-			add_character_flag = spn_embrace_vampire_2
-		}
-		else_if = {
-			limit = { has_trait = spn_vampire_3 }
-			remove_trait = spn_vampire_3
-			add_character_flag = spn_embrace_vampire_3
-		}
-		else = {
-			add_character_flag = spn_embrace_vampire_1
-		}
+		add_character_flag = supernatural_embrace_vampire
+		remove_trait = supernatural_vampire
 
 		trigger_event = spn_initiate.0001 #Initialize Vampire
 	}
@@ -173,9 +147,30 @@ spn_initiate.0006 { #Initiate Random Vampire Traits
 	immediate = {
 		#Apply Genetic Trait
 		random_list = {
-			75 = { add_character_flag = spn_embrace_vampire_1 }
-			20 = { add_character_flag = spn_embrace_vampire_2 }
-			5 = { add_character_flag = spn_embrace_vampire_3 }
+			75 = {
+				trigger_event = spn_initiate.0001 #Initialize Vampire
+				add_trait_xp = {
+					trait = supernatural_vampire
+					track = vampirism
+					value = { 0 25 }
+				}
+			}
+			20 = {
+				trigger_event = spn_initiate.0001 #Initialize Vampire
+				add_trait_xp = {
+					trait = supernatural_vampire
+					track = vampirism
+					value = { 25 50 }
+				}
+			}
+			5 = {
+				trigger_event = spn_initiate.0001 #Initialize Vampire
+				add_trait_xp = {
+					trait = supernatural_vampire
+					track = vampirism
+					value = { 50 75 }
+				}
+			}
 		}
 
 		trigger_event = spn_initiate.0001 #Initialize Vampire
@@ -196,22 +191,12 @@ spn_initiate.1001 { #Initiate Werewolf
 	immediate = { 
 		#Apply Genetic Trait from Decision
 		if = {
-			limit = { has_character_flag = spn_embrace_lycan_1 }
-			add_trait = spn_werewolf_1
-			remove_character_flag = spn_embrace_lycan_1
-		}
-		else_if = {
-			limit = { has_character_flag = spn_embrace_lycan_2 }
-			add_trait = spn_werewolf_2
-			remove_character_flag = spn_embrace_lycan_2
-		}
-		else_if = {
-			limit = { has_character_flag = spn_embrace_lycan_3 }
-			add_trait = spn_werewolf_3
-			remove_character_flag = spn_embrace_lycan_3
+			limit = { has_character_flag = supernatural_embrace_werewolf }
+			add_trait = supernatural_werewolf
+			remove_character_flag = supernatural_embrace_werewolf
 		}
 		else = {
-			add_trait = spn_werewolf_1
+			add_trait = supernatural_werewolf
 		}
 
 		set_variable = {
@@ -242,14 +227,12 @@ spn_initiate.1002 { #Remove Werewolf
 	hidden = yes
 
 	trigger = {
-		has_trait = spn_werewolf
+		has_trait = supernatural_werewolf
 		has_variable = spn_age_aquired_immortality
 	}
 
 	immediate = { 
-		remove_trait = spn_werewolf_1
-		remove_trait = spn_werewolf_2
-		remove_trait = spn_werewolf_3
+		remove_trait = supernatural_werewolf
 		remove_trait = spn_known_werewolf
 		remove_variable = spn_age_aquired_immortality
 		remove_variable = spn_yearly_pulses_since_trait_upgrade
@@ -274,7 +257,7 @@ spn_initiate.1002 { #Remove Werewolf
 	}
 }
 
-spn_initiate.1003 { #Select which Genetic Lycan Trait to add
+spn_initiate.1003 { #Select what level Werewolf Trait to add
 	type = character_event
 	title = spn_initiate.1003.t
 	desc = spn_initiate.1003.desc
@@ -288,24 +271,33 @@ spn_initiate.1003 { #Select which Genetic Lycan Trait to add
 	option = {
 		name = spn_initiate.1003.a
 		custom_tooltip = spn_initiate.1003.a.tt
-		add_character_flag = {
-			flag = spn_embrace_lycan_1
+		trigger_event = spn_initiate.1001
+		add_trait_xp = {
+			trait = supernatural_werewolf
+			track = lycanthropy
+			value = 0
 		}
 	}
 
 	option = {
 		name = spn_initiate.1003.b
 		custom_tooltip = spn_initiate.1003.b.tt
-		add_character_flag = {
-			flag = spn_embrace_lycan_2
+		trigger_event = spn_initiate.1001
+		add_trait_xp = {
+			trait = supernatural_werewolf
+			track = lycanthropy
+			value = 50
 		}
 	}
 
 	option = {
 		name = spn_initiate.1003.c
 		custom_tooltip = spn_initiate.1003.c.tt
-		add_character_flag = {
-			flag = spn_embrace_lycan_3
+		trigger_event = spn_initiate.1001
+		add_trait_xp = {
+			trait = supernatural_werewolf
+			track = lycanthropy
+			value = 100
 		}
 	}
 }
@@ -314,46 +306,49 @@ spn_initiate.1005 { #Initialize Werewolf from ruler designer
 	hidden = yes
 
 	trigger = {
-		has_trait = spn_werewolf
+		has_trait = supernatural_werewolf
 	}
 
 	immediate = {
 		#Apply Genetic Trait from Decision
-		if = {
-			limit = { has_trait = spn_werewolf_1 }
-			remove_trait = spn_werewolf_1
-			add_character_flag = spn_embrace_lycan_1
-		}
-		else_if = {
-			limit = { has_trait = spn_werewolf_2 }
-			remove_trait = spn_werewolf_2
-			add_character_flag = spn_embrace_lycan_2
-		}
-		else_if = {
-			limit = { has_trait = spn_werewolf_3 }
-			remove_trait = spn_werewolf_3
-			add_character_flag = spn_embrace_lycan_3
-		}
-		else = {
-			add_character_flag = spn_embrace_lycan_1
-		}
+		add_character_flag = supernatural_embrace_werewolf
+		remove_trait = supernatural_werewolf
 
-		trigger_event = spn_initiate.1001 #Initiate lycan
-	}
+		trigger_event = spn_initiate.1001 #Initiate Werewolf
+	}	
 }
 
-spn_initiate.1006 { #Initiate Random Lycan Traits
+spn_initiate.1006 { #Initiate Random Werewolf Levels
 	hidden = yes
 
 	immediate = {
 		#Apply Genetic Trait
 		random_list = {
-			75 = { add_character_flag = spn_embrace_lycan_1 }
-			20 = { add_character_flag = spn_embrace_lycan_2 }
-			5 = { add_character_flag = spn_embrace_lycan_3 }
+			75 = {
+				trigger_event = spn_initiate.1001 #Initialize Werewolf
+				add_trait_xp = {
+					trait = supernatural_werewolf
+					track = lycanthropy
+					value = { 0 25 }
+				}
+			}
+			20 = {
+				trigger_event = spn_initiate.0001 #Initialize Werewolf
+				add_trait_xp = {
+					trait = supernatural_werewolf
+					track = lycanthropy
+					value = { 25 50 }
+				}
+			}
+			5 = {
+				trigger_event = spn_initiate.0001 #Initialize Werewolf
+				add_trait_xp = {
+					trait = supernatural_werewolf
+					track = lycanthropy
+					value = { 50 75 }
+				}
+			}
 		}
-
-		trigger_event = spn_initiate.1001 #Initialize Werewolf
 	}
 }
 
@@ -363,7 +358,7 @@ spn_initiate.2001 { #Initiate Hybrid
 	trigger = {
 		AND = {
 			OR = {
-				has_trait = spn_werewolf
+				has_trait = supernatural_werewolf
 				spn_has_supernatural_trait = no
 			}
 			spn_has_hunter_trait = no
@@ -373,18 +368,13 @@ spn_initiate.2001 { #Initiate Hybrid
 
 	immediate = { 
 		#Removes Lycanthropy from New Hybrid
-		remove_trait = spn_werewolf_1
-		remove_trait = spn_werewolf_2
-		remove_trait = spn_werewolf_3
+		remove_trait = supernatural_werewolf
 		remove_trait = spn_known_werewolf
 		spn_former_werewolf_effect = yes
-		#remove_variable = spn_age_aquired_immortality
 		remove_character_flag = immune_to_disease
 		remove_character_flag = spn_has_conferred_sire
 		remove_character_flag = spn_has_mother_sire
 		remove_character_flag = spn_has_father_sire
-		#spn_remove_immortal_quarry_flags = yes
-		#spn_remove_immortal_modifiers = yes
 
 		if = {
 			limit = { any_secret = { secret_type = spn_secret_werewolf } }
@@ -396,24 +386,14 @@ spn_initiate.2001 { #Initiate Hybrid
 			}
 		}
 		
-		#Apply Genetic Trait from Decision
 		if = {
-			limit = { has_character_flag = spn_embrace_hybrid_1 }
-			add_trait = spn_hybrid_1
-			remove_character_flag = spn_embrace_hybrid_1
-		}
-		else_if = {
-			limit = { has_character_flag = spn_embrace_hybrid_2 }
-			add_trait = spn_hybrid_2
-			remove_character_flag = spn_embrace_hybrid_2
-		}
-		else_if = {
-			limit = { has_character_flag = spn_embrace_hybrid_3 }
-			add_trait = spn_hybrid_3
-			remove_character_flag = spn_embrace_hybrid_3
+			limit = { has_character_flag = supernatural_embrace_hybrid }
+			add_trait = supernatural_hybrid
+			add_character_flag = immune_to_disease
+			remove_character_flag = supernatural_embrace_hybrid
 		}
 		else = {
-			add_trait = spn_hybrid_1
+			add_trait = supernatural_hybrid
 		}
 
 		set_variable = {
@@ -441,18 +421,16 @@ spn_initiate.2001 { #Initiate Hybrid
 	}
 }
 
-spn_initiate.2002 { #Remove Hybrid
+spn_initiate.2002 { #Remove the Hybrid Trait
 	hidden = yes
 
 	trigger = {
-		has_trait = spn_hybrid
+		has_trait = supernatural_hybrid
 		has_variable = spn_age_aquired_immortality
 	}
 
 	immediate = { 
-		remove_trait = spn_hybrid_1
-		remove_trait = spn_hybrid_2
-		remove_trait = spn_hybrid_3
+		remove_trait = supernatural_hybrid
 		remove_trait = spn_known_hybrid
 		remove_variable = spn_age_aquired_immortality
 		remove_variable = spn_yearly_pulses_since_trait_upgrade
@@ -460,8 +438,6 @@ spn_initiate.2002 { #Remove Hybrid
 		remove_character_flag = spn_has_conferred_sire
 		remove_character_flag = spn_has_mother_sire
 		remove_character_flag = spn_has_father_sire
-		#spn_remove_immortal_quarry_flags = yes
-		#spn_remove_immortal_modifiers = yes
 
 		if = {
 			limit = { any_secret = { secret_type = spn_secret_hybrid } }
@@ -477,81 +453,99 @@ spn_initiate.2002 { #Remove Hybrid
 	}
 }
 
-spn_initiate.2005 { #Initiate Hybrid from ruler designer
+spn_initiate.2003 { #Select what level Hybrid Trait to add
+	type = character_event
+	title = spn_initiate.2003.t
+	desc = spn_initiate.2003.desc
+	theme = default
+
+	right_portrait = {
+		character = root
+		animation = idle
+	}
+
+	option = {
+		name = spn_initiate.2003.a
+		custom_tooltip = spn_initiate.2003.a.tt
+		trigger_event = spn_initiate.2001
+		add_trait_xp = {
+			trait = supernatural_hybrid
+			track = hybrid_vampirism
+			value = 0
+		}
+		add_trait_xp = {
+			trait = supernatural_hybrid
+			track = hybrid_lycanthropy
+			value = 0
+		}
+	}
+
+	option = {
+		name = spn_initiate.2003.b
+		custom_tooltip = spn_initiate.2003.b.tt
+		trigger_event = spn_initiate.2001
+		add_trait_xp = {
+			trait = supernatural_hybrid
+			track = hybrid_vampirism
+			value = 50
+		}
+		add_trait_xp = {
+			trait = supernatural_hybrid
+			track = hybrid_lycanthropy
+			value = 50
+		}
+	}
+
+	option = {
+		name = spn_initiate.2003.c
+		custom_tooltip = spn_initiate.2003.c.tt
+		trigger_event = spn_initiate.2001
+		add_trait_xp = {
+			trait = supernatural_hybrid
+			track = hybrid_vampirism
+			value = 100
+		}
+		add_trait_xp = {
+			trait = supernatural_hybrid
+			track = hybrid_lycanthropy
+			value = 100
+		}
+	}
+}
+
+spn_initiate.2005 { #Initialize Hybrid from Ruler Designer
 	hidden = yes
 
 	trigger = {
-		has_trait = spn_hybrid
+		has_trait = supernatural_hybrid
 	}
 
 	immediate = {
 		#Apply Genetic Trait from Decision
-		if = {
-			limit = { has_trait = spn_hybrid_1 }
-			remove_trait = spn_hybrid_1
-			add_character_flag = spn_embrace_hybrid_1
-		}
-		else_if = {
-			limit = { has_trait = spn_hybrid_2 }
-			remove_trait = spn_hybrid_2
-			add_character_flag = spn_embrace_hybrid_2
-		}
-		else_if = {
-			limit = { has_trait = spn_hybrid_3 }
-			remove_trait = spn_hybrid_3
-			add_character_flag = spn_embrace_hybrid_3
-		}
-		else = {
-			add_character_flag = spn_embrace_hybrid_1
-		}
-
-		trigger_event = spn_initiate.2001 #Initiate hybrid
-	}
-}
-
-spn_initiate.2006 { #Initiate Random Hybrid Traits
-	hidden = yes
-	orphan = yes
-
-	immediate = {
-		#Apply Genetic Trait
-		random_list = {
-			75 = { add_character_flag = spn_embrace_hybrid_1 }
-			20 = { add_character_flag = spn_embrace_hybrid_2 }
-			5 = { add_character_flag = spn_embrace_hybrid_3 }
-		}
+		add_character_flag = supernatural_embrace_hybrid
+		remove_trait = supernatural_hybrid
 
 		trigger_event = spn_initiate.2001 #Initiate Hybrid
-	}
+	}	
 }
 
-spn_initiate.3001 { #Initiate Monster Hunter
+spn_initiate.3001 { #Initiate Hunter
 	hidden = yes
 
 	trigger = {
-		NOT = { has_trait = spn_hunter }
+		NOT = { has_trait = supernatural_hunter }
 		spn_has_supernatural_trait = no
 		is_witch_trigger = no
 	}
 
 	immediate = { 
 		if = {
-			limit = { has_character_flag = spn_embrace_hunter_1 }
-			add_trait = spn_hunter_1
-			remove_character_flag = spn_embrace_hunter_1
-		}
-		else_if = {
-			limit = { has_character_flag = spn_embrace_hunter_2 }
-			add_trait = spn_hunter_2
-			remove_character_flag = spn_embrace_hunter_2
-		}
-		else_if = {
-			limit = { has_character_flag = spn_embrace_hunter_3 }
-			add_trait = spn_hunter_3
-			remove_character_flag = spn_embrace_hunter_3
+			limit = { has_character_flag = supernatural_embrace_hunter }
+			add_trait = supernatural_hunter
+			remove_character_flag = supernatural_embrace_hunter
 		}
 		else = {
-			add_trait = spn_hunter_1
+			add_trait = supernatural_hunter
 		}
 
 		set_variable = {
@@ -572,17 +566,13 @@ spn_initiate.3002 { #Remove Hunter
 	hidden = yes
 
 	trigger = {
-		has_trait = spn_hunter
+		has_trait = supernatural_hunter
 	}
 
 	immediate = { 
-		remove_trait = spn_hunter_1
-		remove_trait = spn_hunter_2
-		remove_trait = spn_hunter_3
+		remove_trait = supernatural_hunter
 		remove_trait = spn_known_hunter
 		remove_variable = spn_yearly_pulses_since_trait_upgrade
-		#spn_remove_hunter_quarry_flags = yes
-		#spn_remove_hunter_modifiers = yes
 
 		if = {
 			limit = { any_secret = { secret_type = spn_secret_hunter } }
@@ -596,7 +586,7 @@ spn_initiate.3002 { #Remove Hunter
 	}
 }
 
-spn_initiate.3003 { #Select which Hunter Trait to add
+spn_initiate.3003 { #Select what level Hunter Trait to add
 	type = character_event
 	title = spn_initiate.3003.t
 	desc = spn_initiate.3003.desc
@@ -609,61 +599,46 @@ spn_initiate.3003 { #Select which Hunter Trait to add
 
 	option = {
 		name = spn_initiate.3003.a
-		custom_tooltip = spn_initiate.3003.a.tt
-		add_character_flag = {
-			flag = spn_embrace_hunter_1
+		trigger_event = spn_initiate.3001 #Initiate Hunter
+		add_trait_xp = {
+			trait = supernatural_hunter
+			track = monster_hunting
+			value = 50
 		}
 	}
 
 	option = {
 		name = spn_initiate.3003.b
-		custom_tooltip = spn_initiate.3003.b.tt
-		add_character_flag = {
-			flag = spn_embrace_hunter_2
+		trigger_event = spn_initiate.3001 #Initiate Hunter
+		add_trait_xp = {
+			trait = supernatural_hunter
+			track = monster_hunting
+			value = 75
 		}
 	}
 
 	option = {
 		name = spn_initiate.3003.c
-		custom_tooltip = spn_initiate.3003.c.tt
-		add_character_flag = {
-			flag = spn_embrace_hunter_3
+		trigger_event = spn_initiate.3001 #Initiate Hunter
+		add_trait_xp = {
+			trait = supernatural_hunter
+			track = monster_hunting
+			value = 100
 		}
-	}
-
-	after = {
-		remove_character_flag = spn_embrace_hunter_dec
-		trigger_event = spn_initiate.3001
 	}
 }
 
-spn_initiate.3005 { #Initiate Hunter from ruler designer
+spn_initiate.3005 { #Initiate Hunter from Ruler Designer
 	hidden = yes
 
 	trigger = {
-		has_trait = spn_hunter
+		has_trait = supernatural_hunter
 	}
 
 	immediate = {
 		#Apply Hunter Trait from Decision
-		if = {
-			limit = { has_trait = spn_hunter_1 }
-			remove_trait = spn_hunter_1
-			add_character_flag = spn_embrace_hunter_1
-		}
-		else_if = {
-			limit = { has_trait = spn_hunter_2 }
-			remove_trait = spn_hunter_2
-			add_character_flag = spn_embrace_hunter_2
-		}
-		else_if = {
-			limit = { has_trait = spn_hunter_3 }
-			remove_trait = spn_hunter_3
-			add_character_flag = spn_embrace_hunter_3
-		}
-		else = {
-			add_character_flag = spn_embrace_hunter_1
-		}
+		add_character_flag = supernatural_embrace_hunter
+		remove_trait = supernatural_hunter
 
 		trigger_event = spn_initiate.3001 #Initiate Hunter
 	}
@@ -675,12 +650,64 @@ spn_initiate.3006 { #Initiate Random Hunter Traits
 	immediate = {
 		#Apply Genetic Trait
 		random_list = {
-			75 = { add_character_flag = spn_embrace_hunter_1 }
-			20 = { add_character_flag = spn_embrace_hunter_2 }
-			5 = { add_character_flag = spn_embrace_hunter_3 }
+			75 = {
+				trigger_event = spn_initiate.3001 #Initialize Hunter
+				random_list = {
+					50 = {
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = monster_hunting
+							value = { 0 25 }
+						}				
+					}
+					50 = {
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = { 0 25 }
+						}					
+					}
+				}
+			}
+			20 = {
+				trigger_event = spn_initiate.3001 #Initialize Hunter
+				random_list = {
+					50 = {
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = monster_hunting
+							value = { 25 50 }
+						}				
+					}
+					50 = {
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = { 25 50 }
+						}					
+					}
+				}
+			}
+			5 = {
+				trigger_event = spn_initiate.3001 #Initialize Hunter
+				random_list = {
+					50 = {
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = monster_hunting
+							value = { 50 75 }
+						}				
+					}
+					50 = {
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = { 50 75 }
+						}					
+					}
+				}
+			}
 		}
-
-		trigger_event = spn_initiate.3001 #Initiate Hunter
 	}
 }
 
@@ -689,7 +716,7 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 
 	immediate = {
 		random_list = {
-			0 = { #Genetic Trait 1
+			0 = { #Low Skill for Supernatural Trait
 				modifier = { #Human Mother
 					scope:mother = { spn_has_supernatural_trait = no }
 					add = 90
@@ -736,139 +763,141 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 					add = 45
 				}
 
-				modifier = { #Genetic 1 Mother
-					scope:mother = { spn_has_supernatural_trait_1 = yes }
+				modifier = { #Low Skill Mother
+					scope:mother = {
+						has_supernatural_skill_low = yes
+					}
 					add = 85
 				}
 
-				modifier = { #Genetic 1 Father
-					scope:real_father = { spn_has_supernatural_trait_1 = yes }
+				modifier = { #Low Skill Father
+					scope:real_father = { has_supernatural_skill_low = yes }
 					add = 85
 				}
 
-				modifier = { #Genetic 1 Maternal Grandfather
+				modifier = { #Low Skill Maternal Grandfather
 					scope:mother = {
 						scope:real_father = {
-							spn_has_supernatural_trait_1 = yes
+							has_supernatural_skill_low = yes
 						}
 					}
 					add = 40
 				}
 
-				modifier = { #Genetic 1 Maternal Grandmother
+				modifier = { #Low Skill Maternal Grandmother
 					scope:mother = {
 						scope:mother = {
-							spn_has_supernatural_trait_1 = yes
+							has_supernatural_skill_low = yes
 						}
 					}
 					add = 40
 				}
 
-				modifier = { #Genetic 1 Paternal Grandfather
+				modifier = { #Low Skill Paternal Grandfather
 					scope:real_father = {
 						scope:real_father = {
-							spn_has_supernatural_trait_1 = yes
+							has_supernatural_skill_low = yes
 						}
 					}
 					add = 40
 				}
 
-				modifier = { #Genetic 1 Paternal Grandmother
+				modifier = { #Low Skill Paternal Grandmother
 					scope:real_father = {
 						scope:mother = {
-							spn_has_supernatural_trait_1 = yes
+							has_supernatural_skill_low = yes
 						}
 					}
 					add = 40
 				}
 
-				modifier = { #Genetic 2 Mother
-					scope:mother = { spn_has_supernatural_trait_2 = yes }
+				modifier = { #Medium Skill Mother
+					scope:mother = { has_supernatural_skill_medium = yes }
 					add = 25
 				}
 
-				modifier = { #Genetic 2 Father
-					scope:real_father = { spn_has_supernatural_trait_2 = yes }
+				modifier = { #Medium Skill Father
+					scope:real_father = { has_supernatural_skill_medium = yes }
 					add = 25
 				}
 
-				modifier = { #Genetic 2 Maternal Grandfather
+				modifier = { #Medium Skill Maternal Grandfather
 					scope:mother = {
 						scope:real_father = {
-							spn_has_supernatural_trait_2 = yes
+							has_supernatural_skill_medium = yes
 						}
 					}
 					add = 12
 				}
 
-				modifier = { #Genetic 2 Maternal Grandmother
+				modifier = { #Medium Skill Maternal Grandmother
 					scope:mother = {
 						scope:mother = {
-							spn_has_supernatural_trait_2 = yes
+							has_supernatural_skill_medium = yes
 						}
 					}
 					add = 12
 				}
 
-				modifier = { #Genetic 2 Paternal Grandfather
+				modifier = { #Medium Skill Paternal Grandfather
 					scope:real_father = {
 						scope:real_father = {
-							spn_has_supernatural_trait_2 = yes
+							has_supernatural_skill_medium = yes
 						}
 					}
 					add = 12
 				}
 
-				modifier = { #Genetic 2 Paternal Grandmother
+				modifier = { #Medium Skill Paternal Grandmother
 					scope:real_father = {
 						scope:mother = {
-							spn_has_supernatural_trait_2 = yes
+							has_supernatural_skill_medium = yes
 						}
 					}
 					add = 12
 				}
 
-				modifier = { #Genetic 3 Mother
-					scope:mother = { spn_has_supernatural_trait_3 = yes }
+				modifier = { #High Skill Mother
+					scope:mother = { has_supernatural_skill_high = yes }
 					add = 5
 				}
 
-				modifier = { #Genetic 3 Father
-					scope:real_father = { spn_has_supernatural_trait_3 = yes }
+				modifier = { #High Skill Father
+					scope:real_father = { has_supernatural_skill_high = yes }
 					add = 5
 				}
 
-				modifier = { #Genetic 3 Maternal Grandfather
+				modifier = { #High Skill Maternal Grandfather
 					scope:mother = {
 						scope:real_father = {
-							spn_has_supernatural_trait_3 = yes
+							has_supernatural_skill_high = yes
 						}
 					}
 					add = 3
 				}
 
-				modifier = { #Genetic 3 Maternal Grandmother
+				modifier = { #High Skill Maternal Grandmother
 					scope:mother = {
 						scope:mother = {
-							spn_has_supernatural_trait_3 = yes
+							has_supernatural_skill_high = yes
 						}
 					}
 					add = 3
 				}
 
-				modifier = { #Genetic 3 Paternal Grandfather
+				modifier = { #High Skill Paternal Grandfather
 					scope:real_father = {
 						scope:real_father = {
-							spn_has_supernatural_trait_3 = yes
+							has_supernatural_skill_high = yes
 						}
 					}
 					add = 3
 				}
 
-				modifier = { #Genetic 3 Paternal Grandmother
+				modifier = { #High Skill Paternal Grandmother
 					scope:real_father = {
 						scope:mother = {
-							spn_has_supernatural_trait_3 = yes
+							has_supernatural_skill_high = yes
 						}
 					}
 					add = 3
@@ -880,9 +909,14 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 					}
 
 					remove_character_flag = spn_baby_vampire
-					add_character_flag = spn_embrace_vampire_1
+					add_character_flag = supernatural_vampire
 
 					trigger_event = spn_initiate.0001 #Initialize Vampire
+					add_trait_xp = {
+						trait = supernatural_vampire
+						track = vampirism
+						value = { 0 15 }
+					}
 				}
 				else_if = {
 					limit = { #Initialize Werewolf
@@ -890,12 +924,17 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 					}
 
 					remove_character_flag = spn_baby_werewolf
-					add_character_flag = spn_embrace_lycan_1
+					add_character_flag = supernatural_embrace_werewolf
 
 					trigger_event = spn_initiate.1001 #Initialize Werewolf
+					add_trait_xp = {
+						trait = supernatural_werewolf
+						track = lycanthropy
+						value = { 0 15 }
+					}
 				}
 			}
-			0 = { #Genetic Trait 2
+			0 = { #Medium Skill for Supernatural Trait
 				modifier = { #Human Mother
 					scope:mother = { spn_has_supernatural_trait = no }
 					add = 8
@@ -942,139 +981,141 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 					add = 4
 				}
 
-				modifier = { #Genetic 1 Mother
-					scope:mother = { spn_has_supernatural_trait_1 = yes }
+				modifier = { #Low Skill Mother
+					scope:mother = {
+						has_supernatural_skill_low = yes
+					}
 					add = 10
 				}
 
-				modifier = { #Genetic 1 Father
-					scope:real_father = { spn_has_supernatural_trait_1 = yes }
+				modifier = { #Low Skill Father
+					scope:real_father = { has_supernatural_skill_low = yes }
 					add = 10
 				}
 
-				modifier = { #Genetic 1 Maternal Grandfather
+				modifier = { #Low Skill Maternal Grandfather
 					scope:mother = {
 						scope:real_father = {
-							spn_has_supernatural_trait_1 = yes
+							has_supernatural_skill_low = yes
 						}
 					}
 					add = 7
 				}
 
-				modifier = { #Genetic 1 Maternal Grandmother
+				modifier = { #Low Skill Maternal Grandmother
 					scope:mother = {
 						scope:mother = {
-							spn_has_supernatural_trait_1 = yes
+							has_supernatural_skill_low = yes
 						}
 					}
 					add = 7
 				}
 
-				modifier = { #Genetic 1 Paternal Grandfather
+				modifier = { #Low Skill Paternal Grandfather
 					scope:real_father = {
 						scope:real_father = {
-							spn_has_supernatural_trait_1 = yes
+							has_supernatural_skill_low = yes
 						}
 					}
 					add = 7
 				}
 
-				modifier = { #Genetic 1 Paternal Grandmother
+				modifier = { #Low Skill Paternal Grandmother
 					scope:real_father = {
 						scope:mother = {
-							spn_has_supernatural_trait_1 = yes
+							has_supernatural_skill_low = yes
 						}
 					}
 					add = 7
 				}
 
-				modifier = { #Genetic 2 Mother
-					scope:mother = { spn_has_supernatural_trait_2 = yes }
+				modifier = { #Medium Skill Mother
+					scope:mother = { has_supernatural_skill_medium = yes }
 					add = 50
 				}
 
-				modifier = { #Genetic 2 Father
-					scope:real_father = { spn_has_supernatural_trait_2 = yes }
+				modifier = { #Medium Skill Father
+					scope:real_father = { has_supernatural_skill_medium = yes }
 					add = 50
 				}
 
-				modifier = { #Genetic 2 Maternal Grandfather
+				modifier = { #Medium Skill Maternal Grandfather
 					scope:mother = {
 						scope:real_father = {
-							spn_has_supernatural_trait_2 = yes
+							has_supernatural_skill_medium = yes
 						}
 					}
 					add = 26
 				}
 
-				modifier = { #Genetic 2 Maternal Grandmother
+				modifier = { #Medium Skill Maternal Grandmother
 					scope:mother = {
 						scope:mother = {
-							spn_has_supernatural_trait_2 = yes
+							has_supernatural_skill_medium = yes
 						}
 					}
 					add = 26
 				}
 
-				modifier = { #Genetic 2 Paternal Grandfather
+				modifier = { #Medium Skill Paternal Grandfather
 					scope:real_father = {
 						scope:real_father = {
-							spn_has_supernatural_trait_2 = yes
+							has_supernatural_skill_medium = yes
 						}
 					}
 					add = 26
 				}
 
-				modifier = { #Genetic 2 Paternal Grandmother
+				modifier = { #Medium Skill Paternal Grandmother
 					scope:real_father = {
 						scope:mother = {
-							spn_has_supernatural_trait_2 = yes
+							has_supernatural_skill_medium = yes
 						}
 					}
 					add = 26
 				}
 
-				modifier = { #Genetic 3 Mother
-					scope:mother = { spn_has_supernatural_trait_3 = yes }
+				modifier = { #High Skill Mother
+					scope:mother = { has_supernatural_skill_high = yes }
 					add = 10
 				}
 
-				modifier = { #Genetic 3 Father
-					scope:real_father = { spn_has_supernatural_trait_3 = yes }
+				modifier = { #High Skill Father
+					scope:real_father = { has_supernatural_skill_high = yes }
 					add = 10
 				}
 
-				modifier = { #Genetic 3 Maternal Grandfather
+				modifier = { #High Skill Maternal Grandfather
 					scope:mother = {
 						scope:real_father = {
-							spn_has_supernatural_trait_3 = yes
+							has_supernatural_skill_high = yes
 						}
 					}
 					add = 7
 				}
 
-				modifier = { #Genetic 3 Maternal Grandmother
+				modifier = { #High Skill Maternal Grandmother
 					scope:mother = {
 						scope:mother = {
-							spn_has_supernatural_trait_3 = yes
+							has_supernatural_skill_high = yes
 						}
 					}
 					add = 7
 				}
 
-				modifier = { #Genetic 3 Paternal Grandfather
+				modifier = { #High Skill Paternal Grandfather
 					scope:real_father = {
 						scope:real_father = {
-							spn_has_supernatural_trait_3 = yes
+							has_supernatural_skill_high = yes
 						}
 					}
 					add = 7
 				}
 
-				modifier = { #Genetic 3 Paternal Grandmother
+				modifier = { #High Skill Paternal Grandmother
 					scope:real_father = {
 						scope:mother = {
-							spn_has_supernatural_trait_3 = yes
+							has_supernatural_skill_high = yes
 						}
 					}
 					add = 7
@@ -1086,9 +1127,14 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 					}
 
 					remove_character_flag = spn_baby_vampire
-					add_character_flag = spn_embrace_vampire_2
+					add_character_flag = supernatural_embrace_vampire
 
 					trigger_event = spn_initiate.0001 #Initialize Vampire
+					add_trait_xp = {
+						trait = supernatural_vampire
+						track = vampirism
+						value = { 10 25 }
+					}
 				}
 				else_if = {
 					limit = { #Initialize Werewolf
@@ -1096,12 +1142,17 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 					}
 
 					remove_character_flag = spn_baby_werewolf
-					add_character_flag = spn_embrace_lycan_2
+					add_character_flag = supernatural_embrace_werewolf
 
 					trigger_event = spn_initiate.1001 #Initialize Werewolf
+					add_trait_xp = {
+						trait = supernatural_werewolf
+						track = lycanthropy
+						value = { 10 25 }
+					}
 				}
 			}
-			0 = { #Genetic Trait 3
+			0 = { #High Skill for Supernatural Trait
 				modifier = { #Human Mother
 					scope:mother = { spn_has_supernatural_trait = no }
 					add = 2
@@ -1148,139 +1199,139 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 					add = 1
 				}
 
-				modifier = { #Genetic 1 Mother
-					scope:mother = { spn_has_supernatural_trait_1 = yes }
+				modifier = { #Low Skill Mother
+					scope:mother = { has_supernatural_skill_low = yes }
 					add = 5
 				}
 
-				modifier = { #Genetic 1 Father
-					scope:real_father = { spn_has_supernatural_trait_1 = yes }
+				modifier = { #Low Skill Father
+					scope:real_father = { has_supernatural_skill_low = yes }
 					add = 5
 				}
 
-				modifier = { #Genetic 1 Maternal Grandfather
+				modifier = { #Low Skill Maternal Grandfather
 					scope:mother = {
 						scope:real_father = {
-							spn_has_supernatural_trait_1 = yes
+							has_supernatural_skill_low = yes
 						}
 					}
 					add = 3
 				}
 
-				modifier = { #Genetic 1 Maternal Grandmother
+				modifier = { #Low Skill Maternal Grandmother
 					scope:mother = {
 						scope:mother = {
-							spn_has_supernatural_trait_1 = yes
+							has_supernatural_skill_low = yes
 						}
 					}
 					add = 3
 				}
 
-				modifier = { #Genetic 1 Paternal Grandfather
+				modifier = { #Low Skill Paternal Grandfather
 					scope:real_father = {
 						scope:real_father = {
-							spn_has_supernatural_trait_1 = yes
+							has_supernatural_skill_low = yes
 						}
 					}
 					add = 3
 				}
 
-				modifier = { #Genetic 1 Paternal Grandmother
+				modifier = { #Low Skill Paternal Grandmother
 					scope:real_father = {
 						scope:mother = {
-							spn_has_supernatural_trait_1 = yes
+							has_supernatural_skill_low = yes
 						}
 					}
 					add = 3
 				}
 
-				modifier = { #Genetic 2 Mother
-					scope:mother = { spn_has_supernatural_trait_2 = yes }
+				modifier = { #Medium Skill Mother
+					scope:mother = { has_supernatural_skill_medium = yes }
 					add = 25
 				}
 
-				modifier = { #Genetic 2 Father
-					scope:real_father = { spn_has_supernatural_trait_2 = yes }
+				modifier = { #Medium Skill Father
+					scope:real_father = { has_supernatural_skill_medium = yes }
 					add = 25
 				}
 
-				modifier = { #Genetic 2 Maternal Grandfather
+				modifier = { #Medium Skill Maternal Grandfather
 					scope:mother = {
 						scope:real_father = {
-							spn_has_supernatural_trait_2 = yes
+							has_supernatural_skill_medium = yes
 						}
 					}
 					add = 12
 				}
 
-				modifier = { #Genetic 2 Maternal Grandmother
+				modifier = { #Medium Skill Maternal Grandmother
 					scope:mother = {
 						scope:mother = {
-							spn_has_supernatural_trait_2 = yes
+							has_supernatural_skill_medium = yes
 						}
 					}
 					add = 12
 				}
 
-				modifier = { #Genetic 2 Paternal Grandfather
+				modifier = { #Medium Skill Paternal Grandfather
 					scope:real_father = {
 						scope:real_father = {
-							spn_has_supernatural_trait_2 = yes
+							has_supernatural_skill_medium = yes
 						}
 					}
 					add = 12
 				}
 
-				modifier = { #Genetic 2 Paternal Grandmother
+				modifier = { #Medium Skill Paternal Grandmother
 					scope:real_father = {
 						scope:mother = {
-							spn_has_supernatural_trait_2 = yes
+							has_supernatural_skill_medium = yes
 						}
 					}
 					add = 12
 				}
 
-				modifier = { #Genetic 3 Mother
-					scope:mother = { spn_has_supernatural_trait_3 = yes }
+				modifier = { #High Skill Mother
+					scope:mother = { has_supernatural_skill_high = yes }
 					add = 85
 				}
 
-				modifier = { #Genetic 3 Father
-					scope:real_father = { spn_has_supernatural_trait_3 = yes }
+				modifier = { #High Skill Father
+					scope:real_father = { has_supernatural_skill_high = yes }
 					add = 85
 				}
 
-				modifier = { #Genetic 3 Maternal Grandfather
+				modifier = { #High Skill Maternal Grandfather
 					scope:mother = {
 						scope:real_father = {
-							spn_has_supernatural_trait_3 = yes
+							has_supernatural_skill_high = yes
 						}
 					}
 					add = 40
 				}
 
-				modifier = { #Genetic 3 Maternal Grandmother
+				modifier = { #High Skill Maternal Grandmother
 					scope:mother = {
 						scope:mother = {
-							spn_has_supernatural_trait_3 = yes
+							has_supernatural_skill_high = yes
 						}
 					}
 					add = 40
 				}
 
-				modifier = { #Genetic 3 Paternal Grandfather
+				modifier = { #High Skill Paternal Grandfather
 					scope:real_father = {
 						scope:real_father = {
-							spn_has_supernatural_trait_3 = yes
+							has_supernatural_skill_high = yes
 						}
 					}
 					add = 40
 				}
 
-				modifier = { #Genetic 3 Paternal Grandmother
+				modifier = { #High Skill Paternal Grandmother
 					scope:real_father = {
 						scope:mother = {
-							spn_has_supernatural_trait_3 = yes
+							has_supernatural_skill_high = yes
 						}
 					}
 					add = 40
@@ -1292,9 +1343,14 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 					}
 
 					remove_character_flag = spn_baby_vampire
-					add_character_flag = spn_embrace_vampire_3
+					add_character_flag = supernatural_embrace_vampire
 
 					trigger_event = spn_initiate.0001 #Initialize Vampire
+					add_trait_xp = {
+						trait = supernatural_vampire
+						track = vampirism
+						value = { 20 35 }
+					}
 				}
 				else_if = {
 					limit = { #Initialize Werewolf
@@ -1302,9 +1358,14 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 					}
 
 					remove_character_flag = spn_baby_werewolf
-					add_character_flag = spn_embrace_lycan_3
+					add_character_flag = supernatural_embrace_werewolf
 
 					trigger_event = spn_initiate.1001 #Initialize Werewolf
+					add_trait_xp = {
+						trait = supernatural_werewolf
+						track = lycanthropy
+						value = { 20 35 }
+					}
 				}
 
 				#else_if = {
@@ -1338,25 +1399,25 @@ spn_initiate.9001 { #Hand out Secrets Knowledge for confers
 	immediate = {
 		scope:recipient = {
 			if = {
-				limit = { has_trait = spn_vampire }
+				limit = { has_trait = supernatural_vampire }
 				spn_give_knowledge_of_vampire_secret = {
 					CHARACTER = scope:actor
 				}
 			}
 			else_if = {
-				limit = { has_trait = spn_werewolf }
+				limit = { has_trait = supernatural_werewolf }
 				spn_give_knowledge_of_lycan_secret = {
 					CHARACTER = scope:actor
 				}
 			}
 			else_if = {
-				limit = { has_trait = spn_hybrid }
+				limit = { has_trait = supernatural_hybrid }
 				spn_give_knowledge_of_hybrid_secret = {
 					CHARACTER = scope:actor
 				}
 			}
 			else_if = {
-				limit = { has_trait = spn_hunter }
+				limit = { has_trait = supernatural_hunter }
 				spn_give_knowledge_of_hunter_secret = {
 					CHARACTER = scope:actor
 				}
@@ -1371,25 +1432,25 @@ spn_initiate.9002 { #Hand out Secrets Knowledge when asking for confer
 	immediate = {
 		scope:actor = {
 			if = {
-				limit = { has_trait = spn_vampire }
+				limit = { has_trait = supernatural_vampire }
 				spn_give_knowledge_of_vampire_secret = {
 					CHARACTER = scope:recipient
 				}
 			}
 			else_if = {
-				limit = { has_trait = spn_werewolf }
+				limit = { has_trait = supernatural_werewolf }
 				spn_give_knowledge_of_lycan_secret = {
 					CHARACTER = scope:recipient
 				}
 			}
 			else_if = {
-				limit = { has_trait = spn_hybrid }
+				limit = { has_trait = supernatural_hybrid }
 				spn_give_knowledge_of_hybrid_secret = {
 					CHARACTER = scope:recipient
 				}
 			}
 			else_if = {
-				limit = { has_trait = spn_hunter }
+				limit = { has_trait = supernatural_hunter }
 				spn_give_knowledge_of_hunter_secret = {
 					CHARACTER = scope:recipient
 				}
