@@ -40,6 +40,9 @@ magic_ev3.1 = {
 				any_living_character = {
 					has_character_flag = moloch
 				}
+				any_living_character = {
+					has_character_modifier = inq_modifier
+				}
 			}
 			
 		}
@@ -154,7 +157,19 @@ magic_ev3.3 = {
 			}
 			if = {
 				limit = {
-					NOT = { has_trait = source }
+					NOT = { has_character_modifier = amp_modifier }
+				}
+				add_character_modifier = {
+					modifier = amp_modifier
+					years = 50
+				}
+			}
+			if = {
+				limit = {
+					NOR = {
+						has_trait = source
+						has_trait = source2
+					}
 				}
 				random = {
 					chance = 25
@@ -327,15 +342,17 @@ magic_ev3.4 = {
 		#Give me amp
 		name = ev3.4.c
 		trigger = {
-			has_trait = craven
 			NOT = {
 				has_trait = paranoid
 			}
 		}
-		trait = craven
 		add_character_modifier = {
 			modifier = amp_modifier
-			years = 25
+			years = 20
+		}
+		stress_impact = {
+			craven = medium_stress_loss
+			paranoid = medium_stress_loss
 		}
 		trigger_event = magic_ev.18
 	}
@@ -348,7 +365,7 @@ magic_ev3.4 = {
 		trait = paranoid
 		add_character_modifier = {
 			modifier = amp_modifier
-			years = 25
+			years = 30
 		}
 		trigger_event = magic_ev.18
 	}
@@ -360,6 +377,7 @@ magic_ev3.4 = {
 			modifier = secret_knowledge_modifier
 			years = 15
 		}
+		gain_sc_xp2_effect = yes
 		trigger_event = magic_ev.18
 	}
 	option = {
@@ -450,7 +468,22 @@ magic_ev3.5 = {
 		is_alive = yes
 		is_imprisoned = no
 	}
-	
+	immediate = {
+		if = {
+			limit = {
+				any_living_character = {
+					has_character_modifier = inq_modifier
+				}
+			}
+			random_living_character = {
+				limit = {
+					has_character_modifier = inq_modifier
+				}
+				save_scope_as = main_inq
+			}
+		}
+		
+	}
 	option = {
 		#Kill Bael
 		name = ev3.5.a
@@ -552,6 +585,25 @@ magic_ev3.5 = {
 		}
 	}
 	option = {
+		#Kill inq
+		name = ev3.5.g
+		trigger = {
+			exists = scope:main_inq
+			scope:main_inq = {
+				is_alive = yes
+				is_imprisoned = no
+			}
+		}
+		trigger_event = {
+			id = magic_ev3.6
+			days = { 4 8 }
+		}
+		custom_tooltip = ev3.5_ct
+		scope:main_inq = {
+			death = natural
+		}
+	}
+	option = {
 		#I changed my mind
 		name = ev3.5.e
 		trigger_event = magic_ev3.3
@@ -612,6 +664,14 @@ magic_ev3.6 = {
 				}
 			}
 		}
+		hidden_effect = {
+			if = {
+				limit = {
+					has_personal_artifact_claim = scope:aart
+				}
+				remove_personal_artifact_claim = scope:aart
+			}
+		}
 		trigger_event = magic_ev3.9
 	}
 	option = {
@@ -634,21 +694,13 @@ magic_ev3.6 = {
 			any_character_artifact = {
 				has_variable = blackgrimoire
 			}
-			OR = {
-				has_character_modifier = power_saturated1
-				has_character_modifier = power_saturated2
-			}
+			can_spend_standard_ps_trigger = yes
 		}
 		trait = archmage
 		scope:demon = {
 			death = natural
 		}
-		if = { limit = { has_character_modifier = power_saturated1 }
-			remove_character_modifier = power_saturated1
-		}
-		if = { limit = { has_character_modifier = power_saturated2 }
-			remove_character_modifier = power_saturated2
-		}
+		spend_standard_ps_effect = yes
 		clear_saved_scope = demon
 		if = {
 			limit = {
@@ -689,9 +741,19 @@ magic_ev3.7 = {
 	option = {
 		#farewell
 		name = ev3.7.a
-		scope:demon = {
-			move_to_pool = yes
+		if = {
+			limit = {
+				any_courtier_or_guest = {
+					this = scope:demon
+				}
+			}
+			scope:demon = {
+				move_to_pool = yes
+			}
 		}
+		#scope:demon = {
+		#	move_to_pool = yes
+		#}
 	}
 	after = {
 		clear_saved_scope = demon
@@ -713,9 +775,19 @@ magic_ev3.8 = {
 	option = {
 		#May we never meet again
 		name = ev3.9.a
-		scope:demon = {
-			move_to_pool = yes
+		if = {
+			limit = {
+				any_courtier_or_guest = {
+					this = scope:demon
+				}
+			}
+			scope:demon = {
+				move_to_pool = yes
+			}
 		}
+		#scope:demon = {
+		#	move_to_pool = yes
+		#}
 	}
 	after = {
 		clear_saved_scope = demon
@@ -737,8 +809,15 @@ magic_ev3.9 = {
 	option = {
 		#May we never meet again
 		name = ev3.9.a
-		scope:demon = {
-			move_to_pool = yes
+		if = {
+			limit = {
+				any_courtier_or_guest = {
+					this = scope:demon
+				}
+			}
+			scope:demon = {
+				move_to_pool = yes
+			}
 		}
 	}
 	after = {
@@ -863,7 +942,7 @@ magic_ev3.11 = {
 			type = loyalty_hook
 			target = scope:disciple
 		}
-		scope:actor = {
+		scope:recipient = {
 			add_opinion = {
 				target = root
 				modifier = sorcery_training_modifier
@@ -1111,22 +1190,35 @@ magic_ev3.18 = {
 			id = magic_ev3.20
 			months = 8
 		}
+		hidden_effect = {
+			random_character_artifact = {
+				limit = {
+					has_variable = magic1
+				}
+				save_scope_as = artif
+			}
+			scope:disciple = {
+				if = {
+					limit = {
+						NOT = {
+							has_personal_artifact_claim = scope:artif
+						}
+					}
+					add_personal_artifact_claim = scope:artif
+				}
+			}
+		}
+		ai_chance = {
+			base = 100
+		}
 	}
 
 	option = {
 		name = ev3.18.b
 		trigger = {
-			OR = {
-				has_character_modifier = power_saturated1
-				has_character_modifier = power_saturated2
-			}
+			can_spend_standard_ps_trigger = yes
 		}
-		if = { limit = { has_character_modifier = power_saturated1 }
-			remove_character_modifier = power_saturated1
-		}
-		if = { limit = { has_character_modifier = power_saturated2 }
-			remove_character_modifier = power_saturated2
-		}
+		spend_standard_ps_effect = yes
 		custom_tooltip = ev3.13.b_ct
 		custom_tooltip = ev2.47.a_ct2
 		scope:disciple = {
@@ -1136,6 +1228,9 @@ magic_ev3.18 = {
 			id = magic_ev3.20
 			months = 8
 		}
+		ai_chance = {
+			base = 20
+		}
 	}
 	option = {
 		name = ev3.18.c
@@ -1144,6 +1239,9 @@ magic_ev3.18 = {
 		trigger_event = {
 			id = magic_ev3.20
 			months = 10
+		}
+		ai_chance = {
+			base = 10
 		}
 	}
 	after = {
@@ -1284,23 +1382,23 @@ magic_ev3.21 = {
 		}
 	}
 	after = {
-		hidden_effect = {
-			scope:mteacher = {
-				random_character_artifact = {
-					limit = {
-						has_variable = magic1
-					}
-					save_scope_as = artart
-				}
-			}
-			if = {
-				limit = {
-					exists = scope:artart
-				}
-				add_personal_artifact_claim = scope:artart
-			}
-		}
-		clear_saved_scope = artart
+		#hidden_effect = {
+		#	scope:mteacher = {
+		#		random_character_artifact = {
+		#			limit = {
+		#				has_variable = magic1
+		#			}
+		#			save_scope_as = artart
+		#		}
+		#	}
+		#	if = {
+		#		limit = {
+		#			exists = scope:artart
+		#		}
+		#		add_personal_artifact_claim = scope:artart
+		#	}
+		#}
+		#clear_saved_scope = artart
 		clear_saved_scope = disciple
 		clear_saved_scope = mteacher
 	}
@@ -1329,6 +1427,8 @@ magic_ev3.22 = {
 			days = { 10 20 }
 		}
 		add_character_flag = magic_epic_book
+		custom_tooltip = ev3.22.a1_ct
+		custom_tooltip = ev3.22.a2_ct
 	}
 	option = {
 		#spells
@@ -1338,6 +1438,8 @@ magic_ev3.22 = {
 			days = { 10 20 }
 		}
 		add_character_flag = magic_epic_magic
+		custom_tooltip = ev3.22.b1_ct
+		custom_tooltip = ev3.22.b2_ct
 	}
 }
 
@@ -1379,7 +1481,10 @@ magic_ev3.23 = {
 		#Power flows
 		name = ev3.23.d
 		trigger = {
-			has_trait = source
+			OR = {
+				has_trait = source
+				has_trait = source2
+			}
 		}
 		trait = source
 		add_character_flag = book_flows
@@ -1603,19 +1708,11 @@ magic_ev3.26 = {
 		#Ill use magic
 		name = ev3.26.b
 		trigger = {
-			OR = {
-				has_character_modifier = power_saturated1
-				has_character_modifier = power_saturated2
-			}
+			can_spend_standard_ps_trigger = yes
 			has_trait = archmage
 		}
 		trait = archmage
-		if = { limit = { has_character_modifier = power_saturated1 }
-			remove_character_modifier = power_saturated1
-		}
-		if = { limit = { has_character_modifier = power_saturated2 }
-			remove_character_modifier = power_saturated2
-		}
+		spend_standard_ps_effect = yes
 		custom_tooltip = ev3.25.a_ct
 		custom_tooltip = ev3.25.b_ct
 		#hidden_effect = {
@@ -1679,17 +1776,9 @@ magic_ev3.27 = {
 		}
 		if = {
 			limit = {
-				NOR = {
-					has_character_modifier = power_saturated1
-					has_character_modifier = power_saturated2
-				}
+				can_be_power_saturated_trigger = yes
 			}
-			if = { limit = { has_perk = combat_spells_p3_perk }
-				add_character_modifier = power_saturated2
-			}
-			else = {
-				add_character_modifier = power_saturated1
-			}
+			gain_standard_ps_effect = yes
 		}
 		add_stress = major_stress_loss
 		add_prestige = medium_prestige_gain
@@ -1881,11 +1970,16 @@ magic_ev3.28 = {
 	desc = ev3.28.desc
 	theme = witchcraft
 	left_portrait = root
+	artifact = {
+        target = scope:new_book
+        position = lower_right_portrait
+    }
 	trigger = {
 		is_alive = yes
 		is_imprisoned = no
 	}
 	immediate = {
+		gain_sc_xp30_effect = yes
 		hidden_effect = {
 			create_magic_book_artifact_effect = yes
 			scope:new_book = {
@@ -1897,6 +1991,8 @@ magic_ev3.28 = {
 					has_character_flag = book_rituals
 				}
 				scope:new_book = {
+					add_artifact_modifier = artifact_monthly_prestige_7_modifier
+					add_artifact_modifier = artifact_court_grandeur_baseline_add_5_modifier
 				random_list = {
 					1 = {
 						set_artifact_name = mbook1_name
@@ -2058,11 +2154,11 @@ magic_ev3.28 = {
 			}
 			add_trait = journaller
 		}
+		
 		add_stress = medium_stress_loss
 		hidden_effect = {
 			scope:new_book = {
-				add_artifact_modifier = artifact_monthly_prestige_7_modifier
-				add_artifact_modifier = artifact_court_grandeur_baseline_add_5_modifier
+				
 				if = {
 					limit = {
 						#OR = {
@@ -2841,9 +2937,15 @@ magic_ev3.34 = {
 			add_prowess_skill = 5
 			if = {
 				limit = {
-					NOT = { has_trait = source }
+					NOR = {
+						has_trait = source
+						has_trait = source2
+					}
 				}
-				add_trait = source
+				random = {
+					chance = 25
+					add_trait = source
+				}
 			}
 			add_character_modifier = upgraded_body_modifier
 		}
@@ -2860,12 +2962,18 @@ magic_ev3.34 = {
 			add_prowess_skill = 5
 			if = {
 				limit = {
-					NOT = { has_trait = source }
+					NOR = {
+						has_trait = source
+						has_trait = source2
+					}
 				}
 				add_trait = source
 			}
 			else = {
-				add_trait_force_tooltip = demon
+				random = {
+					chance = 25
+					add_trait_force_tooltip = demon
+				}
 			}
 			add_character_modifier = upgraded_body_modifier
 		}
@@ -2964,18 +3072,11 @@ magic_ev3.34 = {
 	after = {
 		if = {
 			limit = {
-				NOR = {
-					has_character_modifier = power_saturated1
-					has_character_modifier = power_saturated2
-				}
+				can_be_power_saturated_trigger = yes
 			}
-			if = { limit = { has_perk = combat_spells_p3_perk }
-				add_character_modifier = power_saturated2
-			}
-			else = {
-				add_character_modifier = power_saturated1
-			}
+			gain_standard_ps_effect = yes
 		}
+		gain_sc_xp10_effect = yes
 		custom_tooltip = ev3.28.a_ct
 		hidden_effect = {
 			remove_variable = magic_epic_q
@@ -3055,6 +3156,11 @@ magic_ev3.341 = {
 				add_perk = protective_runes_perk
 				add_perk = magical_senses_perk
 				set_character_faith = root
+				add_trait_xp = {
+					trait = supernatural_hunter
+					track = witch_hunting
+					value = 80
+				}
 				#start_scheme = {
 				#	type = murder
 				#	target = scope:witch
@@ -3143,14 +3249,22 @@ magic_ev3.36 = {
 			limit = {
 				exists = scope:htarget
 			}
+			#if = {
+			#	limit = {
+			#		exists = var:htargets
+			#	}
+			#	scope:htarget={
+			#		remove_from_list=htargets
+			#	}
+			#}
 			clear_saved_scope = htarget
 		}
-		if = {
-			limit = {
-				exists = var:htargets
-			}
-			clear_variable_list = htargets
-		}
+		#if = {
+		#	limit = {
+		#		exists = var:htargets
+		#	}
+		#	clear_variable_list = htargets
+		#}
 		random_vassal_or_below = {
 			limit = {
 				is_ai = yes
@@ -3226,6 +3340,11 @@ magic_ev3.36 = {
 			trigger_event = magic_ev3.37
 		}
 
+	}
+	after = {
+		scope:htarget={
+			remove_from_list=htargets
+		}
 	}
 }
 
@@ -3685,7 +3804,10 @@ magic_ev3.46 = {
 					NOT = { exists = scope:wwwitch }
 				}
 				create_common_witch_effect = yes
-				scope:created_witch = { save_scope_as = wwwitch }
+				scope:created_witch = {
+					give_witch_secret_or_trait_effect = yes
+					save_scope_as = wwwitch
+				}
 			}
 		}
 		scope:wwwitch = {
@@ -4082,7 +4204,10 @@ magic_ev3.53 = {
 	immediate = {
 		hidden_effect = {
 			create_common_witch_effect = yes
-			scope:created_witch = { save_scope_as = wwwitch }
+			scope:created_witch = {
+				give_witch_secret_or_trait_effect = yes
+				save_scope_as = wwwitch
+			}
 		}
 		imprison = {
 			target = scope:wwwitch
@@ -4097,6 +4222,15 @@ magic_ev3.53 = {
 	after = {
 		clear_saved_scope = created_witch
 		clear_saved_scope = wwwitch
+		trigger_event = {
+			id = magic_ev4.1
+			years = {	5	10	}
+		}
+		trigger_event = {
+			id = magic_ev2.58
+			years = {	5	10	}
+		}
+		create_true_witch_effect = yes
 	}
 }
 
@@ -5017,6 +5151,10 @@ magic_ev3.61 = {
 	theme = prison
 	left_portrait = root
 	right_portrait = scope:whunter
+
+	trigger = {
+		is_alive = yes
+	}
 	
 	immediate = {
 		save_scope_as = accused
@@ -5414,17 +5552,32 @@ magic_ev3.64 = {
 				}
 				clear_saved_scope = htarget
 			}
-			if = {
-				limit = {
-					exists = var:htargets
-				}
-				clear_variable_list = htargets
-			}
+			#if = {
+			#	limit = {
+			#		exists = scope:htarget
+			#	}
+			#	if = {
+			#		limit = {
+			#			exists = var:htargets
+			#		}
+			#		scope:htarget={
+			#			remove_from_list=htargets
+			#		}
+			#	}
+			#	clear_saved_scope = htarget
+			#}
+			#if = {
+			#	limit = {
+			#		exists = var:htargets
+			#	}
+			#	clear_variable_list = htargets
+			#}
 			random_vassal_or_below = {
 				limit = {
 					#is_ai = yes
 					is_alive = yes
 					is_imprisoned = no
+					NOT = {	has_trait = demon	}
 					OR = {
 						has_trait = witch
 						any_secret = { secret_type = secret_witch }
@@ -5437,6 +5590,7 @@ magic_ev3.64 = {
 					#is_ai = yes
 					is_alive = yes
 					is_imprisoned = no
+					NOT = {	has_trait = demon	}
 					OR = {
 						has_trait = witch
 						any_secret = { secret_type = secret_witch }
@@ -5449,6 +5603,7 @@ magic_ev3.64 = {
 					#is_ai = yes
 					is_alive = yes
 					is_imprisoned = no
+					NOT = {	has_trait = demon	}
 					OR = {
 						has_trait = witch
 						any_secret = { secret_type = secret_witch }
@@ -5475,6 +5630,7 @@ magic_ev3.64 = {
 						any_courtier_or_guest = {
 							is_alive = yes
 							is_imprisoned = no
+							NOT = {	has_trait = demon	}
 							OR = {
 								has_trait = witch
 								any_secret = { secret_type = secret_witch }
@@ -5488,6 +5644,7 @@ magic_ev3.64 = {
 							#is_ai = yes
 							is_alive = yes
 							is_imprisoned = no
+							NOT = {	has_trait = demon	}
 							OR = {
 								has_trait = witch
 								any_secret = { secret_type = secret_witch }
@@ -5506,25 +5663,37 @@ magic_ev3.64 = {
 					NOT = { exists = scope:htarget }
 				}
 				create_common_witch_effect = yes
-				scope:created_witch = { save_scope_as = htarget }
+				scope:created_witch = {
+					give_witch_secret_or_trait_effect = yes
+					save_scope_as = htarget
+				}
 			}
-			random = {
-				chance = 25
-				random_list = {
-					1 = {
-						random_courtier_or_guest = {
-							limit = { is_imprisoned = no is_alive = yes }
-							save_scope_as = htarget
-						}
-					}
-					1 = {
-						random_vassal = {
-							limit = { is_imprisoned = no is_alive = yes }
-							save_scope_as = htarget
-						}
+			if = {
+				limit = {
+					has_trait_xp = {
+						trait = supernatural_hunter
+						track = witch_hunting
+						value < 90
 					}
 				}
-				
+				random = {
+					chance = 10
+					random_list = {
+						1 = {
+							random_courtier_or_guest = {
+								limit = { is_imprisoned = no is_alive = yes }
+								save_scope_as = htarget
+							}
+						}
+						1 = {
+							random_vassal = {
+								limit = { is_imprisoned = no is_alive = yes is_ai = yes }
+								save_scope_as = htarget
+							}
+						}
+					}
+					
+				}
 			}
 		}
 	}
@@ -5532,14 +5701,26 @@ magic_ev3.64 = {
 	option = {
 		name = ev3.64.a
 		scope:htarget = {
-			add_character_modifier = {
-				modifier = tracked_by_witch_hunter_modifier
-				years = 3
+			if = {
+				limit = {
+					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = this.faith GENDER_CHARACTER = this }
+				}
+				add_character_modifier = {
+					modifier = tracked_by_witch_hunter_modifier
+					years = 3
+				}
 			}
 		}
 		start_scheme = {
 			type = abduct
 			target = scope:htarget
+		}
+		hidden_effect = {
+			add_trait_xp = {
+				trait = supernatural_hunter
+				track = witch_hunting
+				value = 5
+			}
 		}
 	}
 	option = {
@@ -5552,6 +5733,10 @@ magic_ev3.64 = {
 			modifier = witchhunter_weapons_modifier
 			days = 7
 		}
+		save_scope_as = actor
+		scope:htarget = {
+			save_scope_as = recipient
+		}
 		custom_tooltip = start_duel_ct
 		configure_start_single_combat_effect = {
 			SC_INITIATOR = root
@@ -5560,13 +5745,19 @@ magic_ev3.64 = {
 			FATALITY = always
 			FIXED = no
 			LOCALE = alley_night
-			OUTPUT_EVENT = fp1_tbc.0011
+			#OUTPUT_EVENT = fp1_tbc.0011
+			OUTPUT_EVENT = magic_ev.89
 			INVALIDATION_EVENT = fp1_tbc.0021
 		}
 	}
 	option = {
 		name = ev3.64.b
 		add_stress = minor_stress_gain
+	}
+	after = {
+		scope:htarget={
+			remove_from_list=htargets
+		}
 	}
 }
 
@@ -5684,7 +5875,11 @@ magic_ev3.68 = {
 	type = character_event
 	desc = ev3.68.desc
 	theme = witchcraft
-	left_portrait = root
+	#left_portrait = root
+	left_portrait = {
+		character = root
+		animation = fear
+	}
 	right_portrait = {
 		character = scope:demon
 		animation = anger
@@ -5702,7 +5897,10 @@ magic_ev3.69 = {
 	type = character_event
 	desc = ev3.69.desc
 	theme = witchcraft
-	left_portrait = root
+	left_portrait = {
+		character = root
+		animation = fear
+	}
 	right_portrait = {
 		character = scope:demon
 		animation = anger
@@ -5851,7 +6049,10 @@ magic_ev3.70 = {
 	type = character_event
 	desc = ev3.70.desc
 	theme = witchcraft
-	left_portrait = root
+	left_portrait = {
+		character = root
+		animation = grief
+	}
 	right_portrait = {
 		character = scope:demon
 		animation = anger
@@ -6021,10 +6222,7 @@ magic_ev3.72 = {
 				any_secret = { secret_type = secret_witch }
 			}
 		}
-		add_secret = {
-			type = secret_witch
-			target = root
-		}
+		give_witch_secret_or_trait_effect = yes
 		set_focus = witch_focus
 		ai_chance = {
 			base = 10
@@ -6067,6 +6265,7 @@ magic_ev3.72 = {
 			NOR = {
 				any_character_artifact = { has_variable = magic1 }
 				has_trait = source
+				has_trait = source2
 				has_perk = magical_experiments_p1_perk
 			}
 		}
@@ -6169,17 +6368,17 @@ magic_ev3.73 = {
 	}
 }
 
-magic_ev3.74 = {
-	hidden = yes
-	type = character_event
-	trigger = {
-		is_alive = yes
-		has_trait = archmage
-	}
-	immediate = {
-		add_trait = archmage2
-	}
-}
+#magic_ev3.74 = {
+#	hidden = yes
+#	type = character_event
+#	trigger = {
+#		is_alive = yes
+#		has_trait = archmage
+#	}
+#	immediate = {
+#		add_trait = archmage2
+#	}
+#}
 
 magic_ev3.75 = {
 	hidden = yes

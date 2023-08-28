@@ -36,13 +36,101 @@ on_imprison = {
 	events = {
 		magic_ev2.18
 	}
+	on_actions = {
+		on_action_magic_item_intercept
+	}
+}
 
+on_action_magic_item_intercept = {
+	trigger = {
+		scope:imprisoner = {
+			exists = dynasty
+			dynasty = {
+				has_dynasty_perk = witchcraft_legacy_1
+			}
+		}
+		#scope:prisoner = {
+		#	any_character_artifact = {
+		#		has_variable = magic1
+		#	}
+		#}
+		any_character_artifact = {
+			has_variable = magic1
+		}
+	}
+	effect = {
+		every_character_artifact = {
+			limit = {
+				has_variable = magic1
+			}
+			save_scope_as = smitem
+			set_owner = {
+				target = scope:imprisoner
+				history = {
+					type = stolen
+					actor = root
+					recipient = scope:imprisoner
+					location = scope:imprisoner.location
+				}
+			}
+			if = {
+				limit = {
+					NOT = {
+						root = {
+							has_personal_artifact_claim = prev
+						}
+					}
+				}
+				root = {
+					add_personal_artifact_claim = prev
+				}
+			}
+		}
+		scope:imprisoner = {
+			send_interface_toast = {
+				title=smitem_intercepted
+				show_as_tooltip = {
+					scope:smitem = {
+						set_owner = {
+							target = scope:imprisoner
+							history = {
+								type = stolen
+								actor = root
+								recipient = scope:imprisoner
+								location = scope:imprisoner.location
+							}
+						}
+					}
+				}
+			}
+		}
+		root = {
+			send_interface_toast = {
+				title=smitem_intercepted
+				show_as_tooltip = {
+					scope:smitem = {
+						set_owner = {
+							target = scope:imprisoner
+							history = {
+								type = stolen
+								actor = root
+								recipient = scope:imprisoner
+								location = scope:imprisoner.location
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 on_birth_child = {
 	on_actions = {
 		on_action_enchanted_blood
 		on_action_demon_inherited
+		on_action_unholy
+		on_action_yagas_blood
 	}
 }
 
@@ -53,6 +141,10 @@ on_action_enchanted_blood = {
 			dynasty = {
 				has_dynasty_perk = witchcraft_legacy_5
 			}
+			NOR = {
+				has_trait = source
+				has_trait = source2
+			}
 		}
 	}
 	effect = {
@@ -61,6 +153,28 @@ on_action_enchanted_blood = {
 			scope:child = {
 				add_trait = source
 			}
+		}
+	}
+}
+
+on_action_unholy = { 
+	trigger = {
+		scope:child.mother = {
+			has_character_modifier = touched_magic_modifier
+		}
+	}
+	effect = {
+		scope:child = {
+			add_trait = source
+			add_trait = beauty_bad_3
+			add_trait = scaly
+			#random = {
+			#	chance = 25
+			#	trigger_event = {
+			#		id = magic_ev3.75
+			#		years = { 20 21 }
+			#	}
+			#}
 		}
 	}
 }
@@ -84,5 +198,217 @@ on_action_demon_inherited = {
 				years = { 20 21 }
 			}
 		}
+	}
+}
+
+on_action_yagas_blood = { 
+	trigger = {
+		OR = {
+			scope:mother = {
+				has_trait = source2
+			}
+			scope:real_father = {
+				has_trait = source2
+			}
+		}
+	}
+	effect = {
+		scope:child = {
+			if = {
+				limit = {
+					OR = {
+						has_trait = source
+						AND = {
+							scope:mother = {
+								has_trait = source2
+							}
+							scope:real_father = {
+								has_trait = source2
+							}
+						}
+					}
+					
+				}
+				hidden_effect = {
+					if = {
+						limit = {
+							has_trait = source
+						}
+						remove_trait = source
+					}
+				}
+				if = {
+					limit = {
+						NOT = {
+							has_trait = source2
+						}
+					}
+					add_trait = source2
+				}
+			}
+		}
+	}
+}
+
+on_death = {
+	on_actions = {
+		on_action_death_witch
+		on_action_death_witch_hunter
+		#on_action_death_dark_blade
+	}
+	events = {
+		magic_ev4.47
+	}
+}
+
+on_action_death_witch = {
+	trigger = {
+		OR = {
+			has_trait = witch
+			any_secret = { secret_type = secret_witch }
+		}
+	}
+	effect = {
+		if = {
+			limit = {
+				exists = scope:killer
+				scope:killer = {
+					has_trait=witch_hunter
+				}
+			}
+			if = {
+				limit = {
+					OR = {
+						has_trait = archmage
+						has_trait = grandmaster_coven
+						has_trait = demon
+					}
+				}
+				scope:killer = {
+					send_interface_toast = {
+						title = one_less_witch_title
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = 60
+						}
+					}
+				}
+			}
+			else_if = {
+				limit = {
+					OR = {
+						has_trait = true_witch
+						has_trait = source
+					}
+				}
+				scope:killer = {
+					send_interface_toast = {
+						title = one_less_witch_title
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = 30
+						}
+					}
+				}
+			}
+			else_if = {
+				limit = {
+					is_ruler = yes
+				}
+				scope:killer = {
+					send_interface_toast = {
+						title = one_less_witch_title
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = 20
+						}
+					}
+				}
+			}
+			else = {
+				scope:killer = {
+					send_interface_toast = {
+						title = one_less_witch_title
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = 10
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+on_action_death_witch_hunter = {
+	trigger = {
+		has_trait = witch_hunter
+		has_trait_xp = {
+			trait = supernatural_hunter
+			track = witch_hunting
+			value > 99
+		}
+	}
+	effect = {
+		if = {
+			limit = {
+				exists = this.player_heir
+				this.player_heir = {
+					NOR = {
+						has_trait = witch
+						any_secret = { secret_type = secret_witch }
+					}
+				}
+			}
+			player_heir = {
+				add_trait = witch_hunter
+				if = {
+					limit = {
+						NOT = {
+							has_perk = protective_runes_perk
+						}
+					}
+					add_perk = protective_runes_perk
+				}
+				if = {
+					limit = {
+						NOT = {
+							has_perk = magical_senses_perk
+						}
+					}
+					add_perk = magical_senses_perk
+				}
+				#add_perk = protective_runes_perk
+				#add_perk = magical_senses_perk
+				hidden_effect = {
+					random = {
+						chance = 50
+						trigger_event = {
+							id = magic_ev4.1
+							years = {	6	12	}
+						}
+					}
+					random = {
+						chance = 20
+						create_true_witch_effect = yes
+					}
+					trigger_event = {
+						id = magic_ev2.58
+						years = {	10	15	}
+					}
+				}
+				
+			}
+		}
+	}
+}
+
+on_game_start_after_lobby = {
+	events = {
+		magic_ev4.50
 	}
 }
