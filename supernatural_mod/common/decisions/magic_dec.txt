@@ -35,10 +35,7 @@ forbidden_ritual_decision = {
 	is_shown = {
 		has_perk = forbidden_ritual_p7_perk
 		is_imprisoned = no
-		NOR = {
-			has_character_modifier = power_saturated1
-			has_character_modifier = power_saturated2
-		}
+		can_be_power_saturated_trigger = yes
 	}
 	is_valid_showing_failures_only = {
 		custom_description = {
@@ -47,14 +44,18 @@ forbidden_ritual_decision = {
 		}
 	}
 
-	cooldown = { months = 6 }
+	cooldown = { months = 5 }
 	ai_will_do = {
-                        base = 80
-                        modifier = {
-			    add = -70
-                            has_trait = source
-                        }
-                     }
+        base = 80
+            modifier = {
+			    add = -75
+                has_trait = source
+            }
+			modifier = {
+			    add = -75
+                has_trait = source2
+            }
+        }
 
 	effect = {
 		save_scope_as = this0
@@ -62,13 +63,8 @@ forbidden_ritual_decision = {
 		#trigger_event = magic_ev.200
 		#custom_tooltip = forbidden_ritual_ct
 		show_as_tooltip = {
-			if = {
-				limit = { has_character_modifier = power_saturated2 }
-				remove_character_modifier = power_saturated2
-			}
-			else_if = { limit = { has_character_modifier = power_saturated1 }
-				remove_character_modifier = power_saturated1
-			}
+			spend_standard_ps_effect = yes
+			#gain_sc_xp2_effect = yes
 		}
 		hidden_effect = {
 			if = {
@@ -93,7 +89,7 @@ forbidden_ritual_decision = {
 }
 
 magic_triangulation_decision = {
-	picture = "gfx/interface/illustrations/decisions/decision_study_book.dds"
+	picture = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 
 	desc = magic_triangulation_decision_desc
 
@@ -103,30 +99,45 @@ magic_triangulation_decision = {
 			has_perk = magic_triangulation_p5_perk
 		}
 		is_imprisoned = no
-		#any_living_character = {
-		#	limit = {
-		#		AND = {
+
+		#OR = {
+		#	any_living_character = {
+		#		NOT = { this = root }
+		#		any_character_artifact = { has_variable = magic1 }
+		#		#count > 0
+		#	}
+		#	AND = {
+		#		is_landed = yes
+		#		any_ruler = {
 		#			NOT = { this = root }
-		#			any_character_artifact = { has_variable = magic1 }
+		#			is_landed = yes
+		#			has_power_place_trigger = yes
 		#		}
 		#	}
-		#	count > 0
 		#}
-		any_living_character = {
-			NOT = { this = root }
-			any_character_artifact = { has_variable = magic1 }
-			count > 0
+		OR = {
+			any_character_artifact = {
+				has_variable = magic1
+				count<5
+			}
+			any_held_county = {
+				exists = title_province
+				title_province = {
+					OR = {
+						has_building_or_higher = witch_house
+						has_building_or_higher = horned_god_house
+						has_building_or_higher = mage_house
+					}
+				}
+				count<3
+			}
 		}
-		
 	}
 
 	is_valid_showing_failures_only = {
 		custom_description = {
 			text = power_needed_custom
-			OR = {
-				has_character_modifier = power_saturated1
-				has_character_modifier = power_saturated2
-			}
+			can_spend_standard_ps_trigger = yes
 		}
 		custom_description = {
 			text = is_incapable_custom
@@ -168,19 +179,14 @@ magic_triangulation_decision = {
 	}
 
 	effect = {
-		#save_scope_as = this0
-		trigger_event = magic_ev.9
+		#trigger_event = magic_ev.9
+		trigger_event = magic_ev4.82
 		
 		custom_tooltip = magic_triangulation_ct
 		random = {
 			chance = 50
-			if = {
-				limit = { has_character_modifier = power_saturated2 }
-				remove_character_modifier = power_saturated2
-			}
-			else_if = { limit = { has_character_modifier = power_saturated1 }
-				remove_character_modifier = power_saturated1
-			}
+			spend_standard_ps_effect = yes
+			metamagic_effect = yes
 		}
 	}
 	ai_check_interval = 36
@@ -194,15 +200,13 @@ summon_demon_decision = {
 	is_shown = {
 		has_perk = summoner_p8_perk
 		is_imprisoned = no
+		NOT = {	has_character_flag = merlin_dude	}
 	}
 
 	is_valid_showing_failures_only = {
 		custom_description = {
 			text = power_needed_custom
-			OR = {
-				has_character_modifier = power_saturated1
-				has_character_modifier = power_saturated2
-			}
+			can_spend_standard_ps_trigger = yes
 		}
 		custom_description = {
 			text = is_incapable_custom
@@ -210,7 +214,7 @@ summon_demon_decision = {
 		}
 	}
 	cooldown = { months = 1 }
-	ai_will_do = { base = 80 }
+	ai_will_do = { base = 70 }
 
 	effect = {
 		save_scope_as = this0
@@ -218,19 +222,23 @@ summon_demon_decision = {
 		
 		custom_tooltip = summon_demon_ct
 		if = {
-			limit = { has_character_modifier = power_saturated2 }
+			limit = {
+				has_trait = grandmaster_coven
+			}
 			show_as_tooltip = {
-				remove_character_modifier = power_saturated2
+				add_trait_xp = {
+					trait = grandmaster_coven
+					value = 10
+				}
 			}
 		}
-		else_if = { limit = { has_character_modifier = power_saturated1 }
-			show_as_tooltip = {
-				remove_character_modifier = power_saturated1
-			}
+		show_as_tooltip = {
+			spend_standard_ps_effect = yes
+			gain_sc_xp1_effect = yes
 		}
 
 	}
-	ai_check_interval = 24
+	ai_check_interval = 30
 }
 
 study_blackgrimoire_decision = {
@@ -240,17 +248,28 @@ study_blackgrimoire_decision = {
 		any_character_artifact = { has_variable = blackgrimoire }
 		is_imprisoned = no
 		is_adult = yes
-		NOR = {
-			has_trait = witch
-			any_secret = { secret_type = secret_witch }
-			#has_trait = true_witch
+		OR = {
+			NOR = {
+				has_trait = witch
+				any_secret = { secret_type = secret_witch }
+				has_trait = witch_hunter
+				has_trait = supernatural_hunter
+			}
+			AND = {
+				has_trait = archmage
+				has_trait_xp = {
+					trait = archmage
+					track = secret_knowledge
+					value < 100
+				}
+			}
 		}
 	}
 
 	#is_valid_showing_failures_only = {
 	#
 	#}
-	cooldown = { years = 1 }
+	cooldown = { years = 20 }
 	ai_will_do = {
 		base = 100
 		modifier = {
@@ -261,10 +280,24 @@ study_blackgrimoire_decision = {
 
 	effect = {
 		#save_scope_as = this0
-		add_secret = {
-			type = secret_witch
-			target = root
+		if = {
+			limit = {
+				NOR = {
+					has_trait = witch
+					any_secret = { secret_type = secret_witch }
+					has_trait = witch_hunter
+				}
+			}
+			#add_secret = {
+			#	type = secret_witch
+			#	target = root
+			#}
+			give_witch_secret_or_trait_effect = yes
 		}
+		else = {
+			gain_sc_xp10_effect = yes
+		}
+		
 		if = {
 			limit = {
 				is_ai = yes
@@ -284,10 +317,15 @@ create_potion_decision = {
 	picture = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	is_shown = {
 		OR = {
-			has_trait = witch
-			any_secret = { secret_type = secret_witch }
+			AND = {
+				OR = {
+					has_trait = witch
+					any_secret = { secret_type = secret_witch }
+				}
+				has_trait = lifestyle_herbalist
+			}
+			has_perk = combat_spells_p3_perk
 		}
-		has_trait = lifestyle_herbalist
 	}
 	is_valid_showing_failures_only = {
 		custom_description = {
@@ -464,10 +502,7 @@ drink_pot2_decision = {
 	is_valid_showing_failures_only = {
 		custom_description = {
 			text = you_are_saturated
-			NOR = {
-				has_character_modifier = power_saturated1
-				has_character_modifier = power_saturated2
-			}
+			can_be_power_saturated_trigger = yes
 		}
 		
 	}
@@ -485,18 +520,13 @@ drink_pot2_decision = {
 	}
 
 	effect = {
-					if = { limit = { has_perk = combat_spells_p3_perk }
-						add_character_modifier = power_saturated2
-					}
-					else = {
-						add_character_modifier = power_saturated1
-					}
-					random_character_artifact = {
-						limit = {
-							has_variable = pot2
-						}
-						destroy_artifact = this
-					}
+		gain_standard_ps_effect = yes
+		random_character_artifact = {
+			limit = {
+				has_variable = pot2
+			}
+			destroy_artifact = this
+		}
 	}
 	ai_check_interval = 12
 }
@@ -720,6 +750,38 @@ drink_pot4_decision = {
 	ai_check_interval = 12
 }
 
+drink_pot5_decision = {
+	desc = drink_pot5_decision_desc
+	picture = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
+	is_shown = {
+		any_character_artifact = { has_variable = pot5 }
+	}
+	is_valid_showing_failures_only = {
+		custom_description = {
+			text = you_are_too_young
+			age > 21
+		}
+	}
+	cooldown = { days = 1 }
+	ai_will_do = {
+		base = 80
+	}
+	effect = {
+		hidden_effect = {
+			set_age = new_young_age_value
+		}
+		
+		custom_tooltip = drink_pot5_decision_ct
+		random_character_artifact = {
+			limit = {
+				has_variable = pot5
+			}
+			destroy_artifact = this
+		}
+	}
+	ai_check_interval = 12
+}
+
 esoteric_training_decision = {
 	desc = esoteric_training_decision_desc
 	picture = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
@@ -752,12 +814,34 @@ esoteric_training_decision = {
 						title = esoteric_training_decision
 						add_trait_xp = {
 							trait = lifestyle_mystic
-							value = medium_lifestyle_random_xp_high
+							value = 50
 						}
 					}
 				}
 				else = {
 					add_trait_force_tooltip = lifestyle_mystic
+					add_trait_xp = {
+						trait = lifestyle_mystic
+						value = 10
+					}
+				}
+			}
+			10 = {
+				trigger = {
+					has_trait = archmage
+					has_trait_xp = {
+						trait = archmage
+						track = secret_knowledge
+						value < 100
+					}
+				}
+				send_interface_toast = {
+					title = esoteric_training_decision
+					add_trait_xp = {
+						trait = archmage
+						track = secret_knowledge
+						value = 2
+					}
 				}
 			}
 			10 = {
@@ -776,11 +860,13 @@ esoteric_training_decision = {
 					}
 					send_interface_toast = {
 						title = esoteric_training_decision
-						add_secret = {
-							type = secret_witch
-							target = root
-						}
+						#add_secret = {
+						#	type = secret_witch
+						#	target = root
+						#}
+						give_witch_secret_or_trait_effect = yes
 					}
+					
 					if = {
 						limit = {
 							is_ai = yes
@@ -864,7 +950,14 @@ study_singularity_decision = {
 		custom_description = {
 			text = is_scholar_mage_custom
 			OR = {
-				has_trait = lifestyle_mystic
+				AND = {
+					has_trait = lifestyle_mystic
+					has_trait_xp = {
+						trait = lifestyle_mystic
+						value > 49
+					}
+				}
+				
 				has_trait = scholar
 				has_trait = archmage
 				has_trait = archmage2
@@ -892,7 +985,7 @@ magic_epic_decision = {
 		has_trait = archmage
 		is_imprisoned = no
 		is_adult = yes
-		
+		NOT = {	has_character_flag = merlin_dude	}
 	}
 
 	is_valid_showing_failures_only = {
@@ -906,7 +999,7 @@ magic_epic_decision = {
 		gold = medium_gold_value
 	}
 
-	cooldown = { years = 50 }
+	cooldown = { years = 30 }
 	ai_will_do = {
 		base = 50
 	}
@@ -931,10 +1024,7 @@ magic_transmutation_decision = {
 	is_valid_showing_failures_only = {
 		custom_description = {
 			text = power_needed_custom
-			OR = {
-				has_character_modifier = power_saturated1
-				has_character_modifier = power_saturated2
-			}
+			can_spend_standard_ps_trigger = yes
 		}
 		custom_description = {
 			text = is_incapable_custom
@@ -952,12 +1042,7 @@ magic_transmutation_decision = {
 			send_message_4_magic_sense_effect = yes
 		}
 		custom_tooltip = use_magic_custom_tooltip
-		if = { limit = { has_character_modifier = power_saturated1 }
-			remove_character_modifier = power_saturated1
-		}
-		if = { limit = { has_character_modifier = power_saturated2 }
-			remove_character_modifier = power_saturated2
-		}
+		spend_standard_ps_effect = yes
 		add_gold = greedy_gold_value
 	}
 	ai_check_interval = 24
@@ -976,10 +1061,7 @@ magic_defence_decision = {
 	is_valid_showing_failures_only = {
 		custom_description = {
 			text = power_needed_custom
-			OR = {
-				has_character_modifier = power_saturated1
-				has_character_modifier = power_saturated2
-			}
+			can_spend_standard_ps_trigger = yes
 		}
 		custom_description = {
 			text = is_incapable_custom
@@ -997,12 +1079,7 @@ magic_defence_decision = {
 			send_message_4_magic_sense_effect = yes
 		}
 		custom_tooltip = use_magic_custom_tooltip
-		if = { limit = { has_character_modifier = power_saturated1 }
-			remove_character_modifier = power_saturated1
-		}
-		if = { limit = { has_character_modifier = power_saturated2 }
-			remove_character_modifier = power_saturated2
-		}
+		spend_standard_ps_effect = yes
 		add_character_modifier = {
 			modifier = amp_modifier
 			years = 10
@@ -1028,10 +1105,7 @@ travel_to_stars_decision = {
 	is_valid_showing_failures_only = {
 		custom_description = {
 			text = power_needed_custom
-			OR = {
-				has_character_modifier = power_saturated1
-				has_character_modifier = power_saturated2
-			}
+			can_spend_standard_ps_trigger = yes
 		}
 		custom_description = {
 			text = is_incapable_custom
@@ -1046,12 +1120,7 @@ travel_to_stars_decision = {
 
 	effect = {
 		custom_tooltip = use_magic_custom_tooltip
-		if = { limit = { has_character_modifier = power_saturated1 }
-			remove_character_modifier = power_saturated1
-		}
-		if = { limit = { has_character_modifier = power_saturated2 }
-			remove_character_modifier = power_saturated2
-		}
+		spend_standard_ps_effect = yes
 		depose = yes
 		custom_tooltip = travel_to_stars_decision_ct
 		hidden_effect = {
@@ -1199,44 +1268,86 @@ full_protection_decision = {
 	ai_check_interval = 0
 }
 
+prepare_scrying_decision = {
+	desc = prepare_scrying_decision_desc
+	picture = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
+	is_shown = {
+		has_perk = oneiromancy_perk
+		is_adult = yes
+		is_imprisoned = no
+	}
+
+
+	cost = {
+		gold = potion_gold_value
+	}
+
+	cooldown = { years = 5 }
+	#ai_will_do = {
+	#	base = 0
+	#}
+
+	effect = {
+		custom_tooltip = prepare_scrying_decision_ct
+		hidden_effect = {
+			random_list = {
+				21 = {
+					trigger_event = magic_ev4.45
+				}
+				9 = {
+					trigger_event = magic_ev4.44
+				}
+				5 = {
+					trigger_event = magic_ev4.46
+				}
+			}
+		}
+	}
+	ai_check_interval = 0
+}
+
 #test_test_decision = {
-#
 #	desc = test_test_decision_desc
 #	picture = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 #	is_shown = {
 #		is_ai = no
 #	}
-	
-	#is_valid_showing_failures_only = {
-	#
-	#}
-	#cooldown = { years = 1 }
+#	
+#	is_valid_showing_failures_only = {
+#	
+#	}
+#	cooldown = { years = 1 }
 #	ai_will_do = { base = 0 }
-#
 #	effect = {
 #		save_scope_as = this0
-		#add_perk = magical_experiments_p1_perk
-		#if = {
-		#	limit = {
-		#		NOT = { has_trait = source }
-		#	}
-		#	add_secret = {
-		#		type = secret_witch
-		#		target = root
-		#	}
+#		add_perk = magical_experiments_p1_perk
+#		#if = {
+#		#	limit = {
+#		#		NOT = { has_trait = source }
+#		#	}
+#		#	add_secret = {
+#		#		type = secret_witch
+#		#		target = root
+#		#	}
+#		#	add_magic_lifestyle_perk_points=10
+#		#	add_trait = source
+#		#}
+#		add_secret = {
+#				type = secret_witch
+#				target = root
+#		}
 #		add_trait = lifestyle_mystic
 #		add_trait_xp = {
 #			trait = lifestyle_mystic
 #			#track = foot
 #			value = medium_lifestyle_random_xp_high
 		#}
-#		add_trait = brave
-#		add_trait = scholar
-#		add_prowess_skill = 10
+#	#	add_trait = brave
+#	#	add_trait = scholar
+#	#	add_prowess_skill = 10
 #		create_blackgrimoire_artifact_effect = { OWNER = root }
 #		add_magic_lifestyle_perk_points=10
-#		add_trait = lifestyle_mystic
-#		random_vassal = {
+#has_trait = lifestyle_mystic
 #has_trait_xp = {
 #	trait = lifestyle_mystic
 #	value >= 100

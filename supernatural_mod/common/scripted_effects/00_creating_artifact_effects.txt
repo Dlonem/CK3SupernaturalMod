@@ -24,7 +24,7 @@
 			}
 			#clear_saved_scope = newly_created_artifact
 			#set_global_variable=adin1
-			set_global_variable=magic_exists	
+			#set_global_variable=magic_exists	
 }
 
 create_immortality_ring_artifact_effect = {
@@ -54,7 +54,7 @@ create_immortality_ring_artifact_effect = {
 			}
 			#clear_saved_scope = newly_created_artifact
 			#set_global_variable=adin1
-			set_global_variable=magic_exists	
+			#set_global_variable=magic_exists	
 }
 
 create_dead_ring_artifact_effect = {
@@ -111,8 +111,32 @@ create_blackgrimoire_artifact_effect = {
 			}
 			#clear_saved_scope = newly_created_artifact
 			#set_global_variable=adin2
-			set_global_variable=magic_exists	
+			#set_global_variable=magic_exists	
 }
+
+create_dark_blade_artifact_effect = {
+	$OWNER$ = { save_scope_as = owner }
+			create_artifact = {	
+				name = dark_blade
+				description = dark_blade_desc
+				template=general_unique_template
+				type = sword
+				visuals = darkblade
+				modifier = darkk_blade_base_modifier
+				rarity=illustrious
+				decaying = no
+				history = {
+					type = created_before_history
+				}
+				save_scope_as = newly_created_artifact
+			}
+			scope:newly_created_artifact={
+				set_variable=magic1
+				set_variable=dark_blade
+			}
+}
+
+
 
 create_magic_catalyst_artifact_effect = {
 	# Get the character the artifact is being made for.
@@ -141,7 +165,7 @@ create_magic_catalyst_artifact_effect = {
 			}
 			#clear_saved_scope = newly_created_artifact
 			#set_global_variable=adin3
-			set_global_variable=magic_exists	
+			#set_global_variable=magic_exists	
 }
 
 create_fake_magic_artifact_effect = {
@@ -179,323 +203,6 @@ create_magic_book_artifact_effect = {
 				save_scope_as = new_book
 			}
 	clear_saved_scope = owner
-}
-
-send_message_4_magic_sense_effect = {
-	hidden_effect = {
-		random = {
-			chance = 75
-			every_courtier_or_guest = {
-				limit = { has_perk = magical_senses_perk }
-				trigger_event = magic_ev.4
-			}
-			every_vassal = {
-				limit = { has_perk = magical_senses_perk }
-				trigger_event = magic_ev.4
-				every_courtier_or_guest = {
-					limit = { has_perk = magical_senses_perk }
-					trigger_event = magic_ev.4
-				}
-			}
-			if = {
-				limit = {
-					is_independent_ruler = no
-				}
-				liege = {
-					if = {
-						limit = { has_perk = magical_senses_perk }
-						trigger_event = magic_ev.4
-					}
-					
-					every_courtier_or_guest = {
-						limit = { has_perk = magical_senses_perk }
-						trigger_event = magic_ev.4
-					}
-				}
-			}
-			every_neighboring_realm_same_rank_owner = {
-				limit = { has_perk = magical_senses_perk }
-				trigger_event = magic_ev.4
-			}
-		}
-		
-	}
-	
-	#location = {
-	#	duchy = {
-	#		every_de_jure_county_holder = {
-	#			limit = { 
-	#				AND = {
-	#					NOT = { this = scope:actor }
-	#					has_perk = magical_senses_perk
-	#				}
-	#			}
-	#				trigger_event = magic_ev.4
-	#		}
-	#
-	#	}
-	#}
-}
-
-send_message_4all_magic_sense_effect = {
-	hidden_effect = {
-		every_living_character = {
-			limit = {
-				has_perk = magical_senses_perk
-				NOT = { this = scope:actor }
-			}
-			trigger_event = magic_ev.4
-		}
-	}
-}
-
-metamagic_effect = {
-	hidden_effect = {
-		if = {
-			limit = {
-				NOR = {
-					has_character_modifier = power_saturated1
-					has_character_modifier = power_saturated2
-				}
-				has_character_flag = master_metamagic
-			}
-			random = {
-				chance = 50
-				send_interface_toast = {
-					title=metamagic_title
-					if = { limit = { has_perk = combat_spells_p3_perk }
-						add_character_modifier = power_saturated2
-					}
-					else = {
-						add_character_modifier = power_saturated1
-					}
-				}
-			}
-		}
-	}
-}
-
-send_message_4_child_missing_effect = {
-	hidden_effect = {
-		if = {
-			limit = {
-				is_landed = yes
-			}
-			save_scope_as = sender
-			every_courtier_or_guest = {
-				trigger_event = magic_ev2.40
-			}
-			every_vassal = {
-				trigger_event = magic_ev2.40
-				every_courtier_or_guest = {
-					trigger_event = magic_ev2.40
-				}
-			}
-			random_neighboring_realm_same_rank_owner = {
-				trigger_event = magic_ev2.40
-				every_courtier_or_guest = {
-					trigger_event = magic_ev2.40
-				}
-			}
-		}
-		else = {
-			save_scope_as = actor
-			liege = {
-				save_scope_as = sender
-				every_courtier_or_guest = {
-					limit = {
-						NOT = { this = scope:actor }
-					}
-					trigger_event = magic_ev2.40
-				}
-				every_vassal = {
-					trigger_event = magic_ev2.40
-					every_courtier_or_guest = {
-						trigger_event = magic_ev2.40
-					}
-				}
-				random_neighboring_realm_same_rank_owner = {
-					trigger_event = magic_ev2.40
-					every_courtier_or_guest = {
-						trigger_event = magic_ev2.40
-					}
-				}
-			}
-		}
-		
-	}
-}
-create_common_witch_effect = {
-	create_character = {
-		name = merlins_name
-		employer = root
-		template = witchy_template
-		random_traits = no
-		save_temporary_scope_as = created_witch
-	}
-}
-
-create_merlin_effect = {
-	create_character = {
-		save_temporary_scope_as = merlin_dude
-		employer = root
-		template = merlin_character
-		name = merlins_name
-		dynasty = none
-	}
-	scope:merlin_dude = {
-		add_perk = protective_runes_perk
-		add_perk = magical_senses_perk
-		add_character_modifier = mind_reader_modifier
-		add_perk = magical_experiments_p1_perk
-		add_perk = mage_tower_p2_perk
-		add_perk = mind_control_p6_perk
-		add_perk = forbidden_ritual_p7_perk
-		add_perk = fate_weaver_p10_perk
-		add_perk = magic_triangulation_p5_perk
-		add_perk = combat_spells_p3_perk
-		add_perk = healer_p9_perk
-		add_perk = summoner_p8_perk
-		add_perk = pedagogy_perk
-		add_perk = open_minded_perk
-		add_perk = apostate_perk
-		add_perk = scientific_perk
-		add_perk = planned_cultivation_perk
-		add_perk = scholarly_circles_perk
-		add_perk = learn_on_the_job_perk
-		add_perk = sanctioned_loopholes_perk
-
-		add_character_modifier = amp_modifier
-		add_character_modifier = master_alteration_modifier
-		add_character_modifier = master_metamagic_modifier
-		add_character_modifier = master_defence_modifier
-		add_character_modifier = infertile_modifier
-		set_immortal_age = 81
-		add_secret = {
-			type = secret_witch
-			target = root
-		}
-	}
-	clear_saved_scope = merlin_dude
-}
-
-
-create_true_witch_effect = {
-	hidden_effect = {
-		#random_artifact = {
-		#	limit = {
-		#		has_variable = magic1
-		#	}
-		#	save_scope_as = art0
-		#}
-		random_living_character = {
-			limit = {
-				any_character_artifact = { has_variable = magic1 }
-			}
-			random_character_artifact = {
-				limit = {
-					has_variable = magic1
-				}
-				save_scope_as = art0
-			}
-		}
-		random_ruler = {
-			limit = {
-				NOR = {
-					any_character_artifact = { has_variable = magic1 }
-					has_trait = zealous
-					has_trait = source
-					has_trait = compassionate
-					has_trait = true_witch
-				}
-				is_male = no
-				is_landed = yes
-				is_ai = yes
-				is_adult = yes
-				capital_province = {
-					OR = {
-						geographical_region = world_asia_minor
-						geographical_region = world_europe
-					}	
-				}
-				is_imprisoned = no
-			}
-			add_secret = {
-				type = secret_witch
-				target = THIS
-			}
-			add_perk = protective_runes_perk
-			add_perk = witch_familiar_perk
-			add_perk = oneiromancy_perk
-			add_perk = wisdom_of_nature_perk
-			add_perk = love_potions_perk
-			add_perk = mistical_insight_perk
-			add_perk = evil_eye_perk
-			add_perk = magical_senses_perk
-			add_perk = lifestealer_perk
-			add_perk = true_witch_perk
-			
-			if = {
-				limit = {
-					exists = scope:art0
-				}
-				add_personal_artifact_claim = scope:art0
-				clear_saved_scope = art0
-			}
-			
-		}
-	}
-}
-
-create_mage_effect = {
-	hidden_effect = {
-		random_ruler = {
-			limit = {
-				is_landed = yes	
-				is_ruler = yes
-				is_independent_ruler = yes
-				primary_title = { is_mercenary_company = no }	
-				highest_held_title_tier > 2
-				exists = dynasty		
-				dynasty={
-					NOT={
-						has_variable=ev1used
-					}
-				}
-				capital_province = {
-					OR = {
-						geographical_region = world_asia_minor
-						geographical_region = world_europe
-					}	
-				}
-				is_ai = yes
-				NOT = { has_trait = zealous }
-				NOT = { has_trait = source }
-				OR = {
-					has_trait = education_learning_1
-					has_trait = education_learning_2
-					has_trait = education_learning_3
-					has_trait = education_learning_4
-				}
-			}
-			add_secret = {
-				type = secret_witch
-				target = root
-			}
-			add_trait = source
-			add_perk = protective_runes_perk
-			add_perk = magical_experiments_p1_perk
-			add_perk = mage_tower_p2_perk
-			add_perk = mind_control_p6_perk
-			add_perk = forbidden_ritual_p7_perk
-			add_perk = fate_weaver_p10_perk
-			add_perk = magic_triangulation_p5_perk
-			add_perk = combat_spells_p3_perk
-			add_perk = healer_p9_perk
-			add_perk = summoner_p8_perk
-			add_perk = mage_p4_perk
-		}
-	}
 }
 
 create_rare_potion_effect = {
@@ -602,153 +309,31 @@ create_rare_potion_effect = {
 				custom_tooltip = gain_pot4_ct
 			}
 		}
+		9 = {
+			create_artifact = {	
+				name = pot5
+				description = pot5_desc
+				template=general_unique_template
+				type = miscellaneous
+				#type = elixir
+				visuals = flask
+				#visuals = fp2_armillary_sphere
+				modifier = elixir_modifier
+				#wealth = scope:wealth
+				#quality = scope:quality
+				rarity=illustrious
+				decaying = no
+				save_scope_as = newly_created_artifact
+				#custom_tooltip = magic_catalyst_tooltip
+			}
+			scope:newly_created_artifact={
+				set_variable=pot5
+			}
+			send_interface_toast = {
+				title = ev2.41.dt
+				custom_tooltip = gain_pot5_ct
+			}
+		}
 	}
 			
 }
-
-burn_witch_effect = {
-	$RWITCH$ = { save_scope_as = rwitch }
-	
-	scope:rwitch = {
-		death = {
-			killer = root
-			death_reason = death_burned_witch
-		}
-	}
-	if = {
-		limit = {
-			scope:rwitch = {
-				OR = {
-					OR = {
-						has_trait = witch
-						any_secret = { secret_type = secret_witch }
-					}
-				}
-			}
-		}
-		add_character_flag = killed_real_witch_flag
-		if = {
-			limit = {
-				OR = {
-					AND = {
-						exists = scope:rwitch.house
-						scope:rwitch.house = {
-							has_house_modifier = witch_coven
-						}
-						scope:rwitch.house.house_head = scope:rwitch
-					}
-					AND = {
-						scope:rwitch = {
-							has_trait = archmage
-						}
-					}
-					AND = {
-						scope:rwitch = {
-							has_trait = demon
-						}
-					}
-				}
-			}
-			add_prestige = 1000
-			if = {
-				limit = {
-					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = scope:rwitch }
-				}
-				add_piety = 1000
-			}
-		}
-		else_if = {
-			limit = {
-				scope:rwitch = {
-					highest_held_title_tier >4
-				}
-			}
-			add_prestige = 800
-			if = {
-				limit = {
-					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = scope:rwitch }
-				}
-				add_piety = 800
-			}
-		}
-		else_if = {
-			limit = {
-				scope:rwitch = {
-					OR = {
-						highest_held_title_tier >3
-						has_trait = true_witch
-					}
-				}
-			}
-			add_prestige = 500
-			if = {
-				limit = {
-					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = scope:rwitch }
-				}
-				add_piety = 500
-			}
-		}
-		else_if = {
-			limit = {
-				scope:rwitch = {
-					highest_held_title_tier >2
-				}
-			}
-			add_prestige = 300
-			if = {
-				limit = {
-					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = scope:rwitch }
-				}
-				add_piety = 300
-			}
-		}
-		else = {
-			add_prestige = 100
-			if = {
-				limit = {
-					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = scope:rwitch }
-				}
-				add_piety = 100
-			}
-		}
-		add_stress = medium_stress_loss
-		
-	}
-	else = {
-		add_stress = medium_stress_gain
-		add_prestige = -100
-		add_piety = -100
-	}
-	add_dread = 5
-	clear_saved_scope = rwitch
-}
-#give_magic_sat_effect = {
-#	if = {
-#		limit = { has_perk = combat_spells_p3_perk }
-#		add_character_modifier = {
-#			modifier = power_saturated2
-#		}
-#	}
-#	else = {
-#			add_character_modifier = {
-#				modifier = power_saturated1
-#			}
-#		
-#	}
-#}
-
-#remove_magic_sat_effect = {
-#	if = {
-#		limit = { has_character_modifier = power_saturated2 }
-#		remove_character_modifier = {
-#			modifier = power_saturated2
-#		}
-#		
-#	}
-#	if = { limit = { has_character_modifier = power_saturated1 }
-#		remove_character_modifier = {
-#			modifier = power_saturated1
-#		}
-#		
-#	}
-#}

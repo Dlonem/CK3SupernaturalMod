@@ -2,11 +2,12 @@
 	physical = yes
 	good = yes
 	genetic = yes
-	shown_in_ruler_designer = no
-	#ruler_designer_cost = 10
+	shown_in_ruler_designer = yes
+	ruler_designer_cost = 250
 	same_opinion = 5	
-	
-	birth = 0.05 #Changed as of 1.20 from 0.01 -> 0.05 for balancing
+	arcane_terrain_cancel_negative_supply = yes
+	monthly_magic_lifestyle_xp_gain_mult = 0.1
+	birth = 0.01
 	random_creation = 0
 
 	triggered_opinion = {
@@ -21,11 +22,54 @@
 	}
 	triggered_opinion = {
 		parameter = witchcraft_accepted
-		opinion_modifier = perk_negotiated_alliance_opinion
+		#opinion_modifier = perk_negotiated_alliance_opinion
+		opinion_modifier = became_vassal
 		ignore_opinion_value_if_same_trait = yes
 	}
 
 	desc = trait_source_desc
+}
+
+source2 = {
+	name = yagas_blood_modifier
+	desc = trait_source_desc
+	icon = source2.dds
+	physical = yes
+	good = yes
+	inherit_chance = 50
+	parent_inheritance_sex = female
+	child_inheritance_sex = female
+
+	shown_in_ruler_designer = no
+
+	life_expectancy = 20
+	years_of_fertility = 20
+	attraction_opinion = 20
+	
+	#same_opinion = 5	
+	arcane_terrain_cancel_negative_supply = yes
+	monthly_magic_lifestyle_xp_gain_mult = 0.1
+
+	birth = 0
+	random_creation = 0
+	#group = source
+	#level = 2
+
+	#triggered_opinion = {
+	#	parameter = witchcraft_illegal
+	#	opinion_modifier = kinslayer_intolerant
+	#	ignore_opinion_value_if_same_trait = yes
+	#}
+	#triggered_opinion = {
+	#	parameter = witchcraft_shunned
+	#	opinion_modifier = kinslayer_intolerant
+	#	ignore_opinion_value_if_same_trait = yes
+	#}
+	#triggered_opinion = {
+	#	parameter = witchcraft_accepted
+	#	opinion_modifier = perk_negotiated_alliance_opinion
+	#	ignore_opinion_value_if_same_trait = yes
+	#}
 }
 
 demon = {
@@ -35,9 +79,10 @@ demon = {
 	immortal = yes
 	shown_in_ruler_designer = yes
 	ruler_designer_cost = 300
-	#same_opinion = -10	
+	same_opinion = -10	
 	#general_opinion = -20
 	#attraction_opinion = 20
+	stress_gain_mult = -0.15
 	triggered_opinion = {
 		parameter = excommunication_active
 		opinion_modifier = tenet_excommunicated_crime
@@ -69,8 +114,8 @@ demon = {
 	ai_boldness = 50
 	#ai_zeal = 50
 	compatibility = {
-		witch = 20
-		true_witch = 20
+		witch = 10
+		true_witch = 10
 		witch_hunter = -30
 	}
 	opposites = {
@@ -92,6 +137,7 @@ true_witch = {
 	convert_to_witchcraft_scheme_power_mult = 0.2
 	monthly_magic_lifestyle_xp_gain_mult = 0.1
 	dread_baseline_add = 10
+	diplomatic_range_mult = 0.5
 	shown_in_ruler_designer = no
 	#ruler_designer_cost = 50
 	culture_modifier = {
@@ -108,9 +154,7 @@ true_witch = {
 
 	compatibility = {
 		witch = 10
-		lifestyle_mystic = 5
 		lifestyle_mystic = 10
-		lifestyle_mystic = 15
 		possessed_genetic = 30
 		possessed_1 = 30
 		demon = 10
@@ -123,25 +167,99 @@ true_witch = {
 
 archmage = {
 	#lifestyle = yes
+	name = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { NOT = { exists = this } }
+				desc = archmage
+			}
+			triggered_desc = {
+				trigger = {
+					has_trait_xp = {
+						trait = archmage
+						track = secret_knowledge
+						value < 100
+					}
+				}
+				desc = archmage
+			}
+			desc = archmage2
+		}
+	}
+	icon = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { NOT = { exists = this } }
+				desc = archmage.dds
+			}
+			triggered_desc = {
+				trigger = {
+					has_trait_xp = {
+						trait = archmage
+						track = secret_knowledge
+						value < 100
+					}
+				}
+				desc = archmage.dds
+			}
+			desc = archmage2.dds
+		}
+	}
 	category = lifestyle
 	opposite_opinion = -50
-	learning = 5
-	intrigue = 4
-	monthly_prestige = 1.25
-
-	dread_baseline_add = 30
-	#diplomatic_range_mult = 1
+	learning = 1
+	intrigue = 1
+	monthly_prestige = 1
+	teach_sorcery_terrain_cancel_negative_supply = yes
 
 	#ruler_designer_cost = 50
 	shown_in_ruler_designer = no
 	ai_rationality = -10
 	ai_zeal = -20
-
+	tracks = {
+		secret_knowledge = {
+			25 = {
+				learning = 3
+				magic_gain_terrain_advantage = 0.5
+				negate_health_penalty_add = 0.5
+			}
+			50 = {
+				learning = 3
+				monthly_lifestyle_xp_gain_mult = 0.2
+				advantage = 10
+				siege_phase_time = -0.4
+			}
+			75 = {
+				learning = 3
+				magic_gain_terrain_advantage = 0.5
+				owned_hostile_scheme_success_chance_add = 10
+			}
+			100 = {
+				learning = 3
+				health = 30
+				#life_expectancy = 1000
+				magic_pen_terrain_cancel_negative_supply = yes
+			}
+		}
+		power_saturation = {
+			10 = {
+				health = 0.2
+			}
+			40 = {
+				prowess = 10
+				dread_baseline_add = 20
+				character_travel_safety = 10
+			}
+			100 = {
+				prowess = 10
+				advantage = 10
+				enemy_hard_casualty_modifier = 0.5
+			}
+		}
+	}
 	compatibility = {
 
-		lifestyle_mystic = 5
-		lifestyle_mystic = 10
-		lifestyle_mystic = 15
+		lifestyle_mystic=10
 		possessed_genetic = 30
 	}
 	opposites = {
@@ -188,6 +306,7 @@ witch_hunter = {
 	intrigue = 1
 	learning = 1
 	diplomacy = 1
+	ai_zeal = 50
 	prowess = 2
 	monthly_piety_gain_mult = 0.1
 	same_opinion = 25
@@ -206,6 +325,47 @@ witch_hunter = {
 		true_witch
 		archmage
 		necromancer
+	}
+}
+
+grandmaster_coven = {
+	#ruler_designer_cost = 50
+	shown_in_ruler_designer = no
+	ai_zeal = 50
+
+	monthly_lifestyle_xp_gain_mult = 0.1
+	cgm_spec_1_terrain_cancel_negative_supply = yes
+	culture_modifier = {
+		parameter = coven_rule3
+		vassal_tax_contribution_mult = 0.1
+		monthly_dynasty_prestige = 1
+	}
+
+	track = {
+		30 = {
+			diplomacy = 1
+			dread_gain_mult = 0.25
+			cgm_spec_2_terrain_cancel_negative_supply = yes
+		}
+		65 = {
+			diplomacy = 1
+			intrigue = 3
+			dynasty_house_opinion = 10
+			cgm_spec_3_terrain_cancel_negative_supply = yes
+		}
+		100 = {
+			diplomacy = 1
+			learning = 3
+			cgm_spec_4_terrain_cancel_negative_supply = yes
+			life_expectancy = 5
+		}
+	}
+
+	compatibility = {
+		witch = 30
+		lifestyle_mystic=10
+		demon = 20
+		true_witch = 20
 	}
 }
 
@@ -271,6 +431,10 @@ lifestyle_mystic = {
 	}
 	
 	ruler_designer_cost = 20
+
+	# AI Values
+	ai_rationality = -10
+	ai_zeal = -10
 
 	# Loc
 	name = {
@@ -345,6 +509,7 @@ lifestyle_mystic = {
 	ai_zeal = -10
 
 }
+
 
 scholar = {
 	category = lifestyle

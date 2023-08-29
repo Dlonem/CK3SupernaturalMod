@@ -1,0 +1,7992 @@
+﻿namespace = magic_ev4
+
+#aid for witch hunter player
+magic_ev4.1 = {
+	title = ev4.1.title
+	desc = ev4.1.desc
+	theme =  martial_strategy_focus
+	#left_portrait = root
+	left_portrait = {
+		character = root
+		animation = scheme
+	}
+	right_portrait = scope:sidek
+
+	trigger = {
+		has_trait = supernatural_hunter
+		has_trait_xp = {
+			trait = supernatural_hunter
+			track = witch_hunting
+			value > 4
+		}
+		is_alive = yes
+		is_ai = no
+	}
+
+	immediate = {
+		hidden_effect = {
+			create_character = {
+				location = root.capital_province
+				gender = male
+				template = witch_hunter_knight_character
+				save_scope_as = sidek
+			}
+			scope:sidek = {
+				add_perk = protective_runes_perk
+				add_perk = magical_senses_perk
+				add_trait_xp = {
+					trait = supernatural_hunter
+					track = witch_hunting
+					value = 70
+				}
+			}
+		}
+	}
+	option = {
+		name = ev4.1.0.a
+		add_courtier = scope:sidek
+		pay_short_term_gold = {
+			target = scope:sidek
+			gold = 50
+		}
+		stress_impact = {
+			arrogant = minor_stress_gain
+			paranoid = minor_stress_gain
+		}
+	}
+	option = {
+		name = ev4.1.0.b
+		stress_impact = {
+			paranoid = minor_stress_loss
+		}
+	}
+}
+
+#stop the witch - unlanded witch
+magic_ev4.2 = {
+	title = ev4.2.title
+	desc = ev4.2.desc
+	theme = intrigue_skulduggery_focus
+	left_portrait = root
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		has_trait = witch_hunter
+	}
+
+	immediate = {
+		save_scope_as = whunter
+		if = {
+			limit = {
+				OR = {
+					any_courtier_or_guest = {
+						has_trait = witch_hunter
+					}
+					any_vassal_or_below = {
+						has_trait = witch_hunter
+					}
+				}
+			}
+			random_courtier_or_guest = {
+				limit = {	has_trait = witch_hunter	}
+				save_scope_as = helper
+			}
+			if = {
+				limit = {
+					NOT = {	exists = scope:helper	}
+				}
+				random_vassal_or_below = {
+					limit = {	has_trait = witch_hunter	is_ai = yes	}
+					save_scope_as = helper
+				}
+			}
+		}
+		
+		if = {
+			limit = {
+				NOT = {	exists = scope:helper	}
+				employs_court_position = champion_court_position
+			}
+			random_courtier_or_guest = {
+				limit = {	has_court_position = champion_court_position	is_ai = yes	}
+				save_scope_as = helper
+			}
+		}
+		if = {
+			limit = {
+				NOT = {	exists = scope:helper	}
+				num_active_accolades > 0
+			}
+			random_knight = {
+				limit = {
+					is_acclaimed = yes
+					is_ai = yes
+				}
+				save_scope_as = helper
+			}
+		}
+		if = {
+			limit = {
+				NOT = {	exists = scope:helper	}
+				exists = root.cp:councillor_marshal
+				root.cp:councillor_marshal = {
+					is_ai = yes
+				}
+			}
+			root.cp:councillor_marshal = {
+				save_scope_as = helper
+			}
+		}
+		if = {
+			limit = {
+				exists = scope:recipient.liege_or_court_owner
+				scope:recipient.liege_or_court_owner = {
+					NOT = {	ROOT = THIS	}
+					is_ai = yes
+				}
+			}
+			scope:recipient.liege_or_court_owner = {
+				save_scope_as = wliege
+			}
+		}
+		
+	}
+	option = {
+		name = ev4.2.0.a
+		trigger = {
+			has_trait = impatient
+			OR = {
+				any_courtier_or_guest = {
+					scope:recipient=this
+				}
+				any_vassal_or_below = {
+					any_courtier_or_guest = {
+						scope:recipient=this
+					}
+				}
+				scope:recipient.location = root.capital_province
+			}
+		}
+		trait = impatient
+		duel = {
+			skill = intrigue
+			value = scope:recipient.intrigue
+			3 = {
+				desc = ev4.2.0.a1
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.2.0.a1
+					imprison = {
+						target = scope:recipient
+						type = dungeon
+					}
+				}
+			}
+			7 = {
+				desc = ev4.2.0.a2
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.2.0.a2
+					custom_tooltip = ev3.52.a_2
+				}
+				hidden_effect = {
+					if = {
+						limit = {
+							NOT = {
+								exists = scope:wliege
+							}
+						}
+						scope:recipient = {
+							move_to_pool = yes
+						}
+					}
+				}
+			}
+		}
+	}
+	option = {
+		name = ev4.2.0.b
+		trigger = {
+			exists = scope:helper
+		}
+		scope:helper = {
+			duel = {
+				skill = prowess
+				value = scope:recipient.prowess
+				4 = {
+					desc = ev4.2.0.a1
+					compare_modifier = {
+						value = scope:duel_value
+						multiplier = 1
+						min = 0
+					}
+					root = {
+						send_interface_toast = {
+							title=ev4.2.0.a1
+							imprison = {
+								target = scope:recipient
+								type = dungeon
+							}
+						}
+					}
+					add_prestige = 100
+					if = {
+						limit = {	has_trait = witch_hunter	}
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = 10
+						}
+					}
+					else = {
+						random = {
+							chance = 10
+							add_trait = witch_hunter
+						}
+					}
+				}
+				6 = {
+					desc = ev4.2.0.a2
+					compare_modifier = {
+						value = scope:duel_value
+						multiplier = -1
+						min = 0
+					}
+					root = {
+						send_interface_toast = {
+							title=ev4.2.0.a2
+							if = {
+								limit = {
+									scope:recipient = {
+										OR = {
+											has_trait = archmage
+											has_trait = demon
+										}
+									}
+								}
+								scope:helper = {
+									death = {
+										death_reason = death_murder
+										killer = scope:recipient
+									}
+								}
+							}
+							else = {
+								if = {
+									limit = {
+										exists = scope:wliege
+									}
+									scope:wliege = {
+										imprison = {
+											target = scope:helper
+											type = dungeon
+										}
+									}
+								}
+								else = {
+									scope:helper = {
+										add_trait = wounded_2
+									}
+								}
+							}
+							
+						}
+					}
+					hidden_effect = {
+						if = {
+							limit = {
+								NOT = {
+									exists = scope:wliege
+								}
+							}
+							scope:recipient = {
+								move_to_pool = yes
+							}
+						}
+					}
+				}
+			}
+		}
+		
+	}
+	option = {
+		name = ev4.2.0.c
+		custom_tooltip = ev4.2.0.ct
+		add_stress = minor_stress_gain
+		trigger_event = {
+			id = magic_ev4.8 #on my own
+			days = { 12 24 }
+		}
+	}
+	option = {
+		name = ev4.2.0.d
+		trigger = {
+			NOT = {
+				exists = scope:wliege
+			}
+		}
+		remove_short_term_gold = medium_gold_value
+		duel = {
+			skill = stewardship
+			value = 15
+			5 = {
+				desc = ev4.2.0.d1
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.2.0.d1
+					custom_tooltip = ev4.2.0.d_ct
+				}
+				add_character_flag = proficient_bounty
+				trigger_event = {
+					id = magic_ev4.3
+					months = { 1 3 }
+				}
+			}
+			5 = {
+				desc = ev4.2.0.d2
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.2.0.d2
+					custom_tooltip = ev4.2.0.d_ct
+				}
+				trigger_event = {
+					id = magic_ev4.3
+					months = { 1 3 }
+				}
+			}
+		}
+	}
+	option = {
+		name = ev4.2.0.e
+		trigger = {
+			exists = scope:wliege
+		}
+		custom_tooltip = ev4.2.0.e_ct
+		duel = {
+			skill = diplomacy
+			value = scope:wliege.diplomacy
+			5 = {
+				#desc = ev4.2.0.d1
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 2
+					min = 0
+				}
+				send_interface_toast = {
+					title=stop_the_witch
+					custom_tooltip = ev4.2.0.e_ct1
+				}
+				add_character_flag = persuasive_petition
+			}
+			5 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -2
+					min = 0
+				}
+				send_interface_toast = {
+					title=stop_the_witch
+					custom_tooltip = ev4.2.0.e_ct2
+				}
+			}
+		}
+		scope:wliege = {
+			trigger_event = {
+				id = magic_ev4.6
+				days = { 7 14 }
+			}
+		}
+		
+	}
+}
+#bounty hunter hunts
+magic_ev4.3 = {
+	hidden = yes
+	type = character_event
+	trigger = {
+		is_alive = yes
+		scope:recipient = {
+			is_alive = yes
+		}
+	}
+	immediate = {
+		random_list = {
+			10 = {
+				#success
+				modifier = {
+					add = 30
+					has_character_flag = proficient_bounty
+				}
+				trigger_event = {
+					id = magic_ev4.4 
+					days = 1
+				}
+			}
+			10 = {
+				#failure
+				modifier = {
+					add = 20
+					scope:recipient = {
+						has_trait = true_witch
+					}
+				}
+				modifier = {
+					add = 190
+					scope:recipient = {
+						has_trait = archmage
+					}
+				}
+				modifier = {
+					add = 190
+					scope:recipient = {
+						has_trait = demon
+					}
+				}
+				trigger_event = {
+					id = magic_ev4.5 
+					days = 1
+				}
+			}
+		}
+		remove_character_flag = proficient_bounty
+		
+	}
+}
+
+#bounty hunter conclusion - success
+magic_ev4.4 = {
+	title = stop_the_witch
+	desc = ev4.4.desc
+	theme =  intrigue_skulduggery_focus
+	left_portrait = root
+	right_portrait = scope:recipient
+
+#	trigger = {
+#
+#	}
+
+	immediate = {
+		if = {
+			limit = {
+				scope:recipient = {
+					OR = {
+						has_trait = archmage
+						has_trait = demon
+					}
+				}
+			}
+			scope:recipient = {
+				death = { death_reason = death_vanished }
+			}
+		}
+		else = {
+			imprison = {
+				target = scope:recipient
+				type = dungeon
+			}
+		}
+	}
+	option = {
+		name = ev4.4.0.a
+		stress_impact = {
+			paranoid = minor_stress_loss
+		}
+		#add_trait_xp = {
+		#	trait = witch_hunter
+		#	value = 5
+		#}
+	}
+}
+
+#bounty hunter conclusion - failure
+magic_ev4.5 = {
+	title = stop_the_witch
+	desc = ev4.5.desc
+	theme =  intrigue_skulduggery_focus
+	left_portrait = root
+	right_portrait = scope:recipient
+
+#	trigger = {
+#
+#	}
+
+	option = {
+		name = ev4.5.0.a
+		stress_impact = {
+			paranoid = minor_stress_gain
+		}
+		custom_tooltip = ev4.5.0.a_ct
+		hidden_effect = {
+			scope:recipient = {
+				move_to_pool = yes
+			}
+		}
+	}
+	option = {
+		name = ev4.5.0.b
+		trigger = {
+			has_trait = stubborn
+		}
+		trait = stubborn
+		random_list = {
+			10 = {
+				#success
+				modifier = {
+					add = 10
+					number_of_knights>5
+				}
+				modifier = {
+					add = 10
+					number_of_knights>7
+				}
+				modifier = {
+					add = 10
+					number_of_knights>9
+				}
+				modifier = {
+					add = 20
+					number_of_knights>11
+				}
+				
+				send_interface_toast = {
+					title=stop_the_witch
+					imprison = {
+						target = scope:recipient
+						type = dungeon
+					}
+				}
+				hidden_effect = {
+					add_trait_xp = {
+						trait = supernatural_hunter
+						track = witch_hunting
+						value = 5
+					}
+				}
+			}
+			10 = {
+				#failure
+				modifier = {
+					add = 20
+					scope:recipient = {
+						has_trait = true_witch
+					}
+				}
+				modifier = {
+					add = 190
+					scope:recipient = {
+						has_trait = archmage
+					}
+				}
+				modifier = {
+					add = 190
+					scope:recipient = {
+						has_trait = demon
+					}
+				}
+				send_interface_toast = {
+					title=ev3.52.a_2
+					custom_tooltip = ev4.5.0.a_ct
+					add_stress = medium_stress_gain
+				}
+				hidden_effect = {
+					scope:recipient = {
+						move_to_pool = yes
+					}
+				}
+			}
+		}
+		
+	}
+}
+
+#liege of the witch decides
+magic_ev4.6 = {
+	title = ev4.6.title
+	desc = ev4.6.desc
+	theme =  diplomacy
+	left_portrait = root
+	right_portrait = scope:whunter
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		scope:whunter = {
+			is_alive = yes
+		}
+		scope:recipient = {
+			is_alive = yes
+		}
+	}
+
+	option = {
+		name = ev4.6.0.a
+		if = {
+			limit = {
+				trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = root }
+			}
+			add_piety = major_piety_loss
+		}
+		scope:whunter = {
+			trigger_event = {
+				id = magic_ev4.7
+				days = 1
+			}
+		}
+		
+		ai_chance = {
+			base = 100
+			
+			modifier = {
+				add = 300
+				
+				OR = {
+					has_relation_lover = scope:recipient
+					has_relation_soulmate = scope:recipient
+					has_relation_friend = scope:recipient
+					has_relation_best_friend = scope:recipient
+					has_relation_mminion = scope:recipient
+					has_relation_mmaster = scope:recipient
+				}
+			}
+			modifier = {
+				add = 200
+				OR = {
+					has_trait = true_witch
+					has_trait = archmage
+					has_trait = demon
+					has_trait = witch
+					any_secret = { secret_type = secret_witch }
+				}
+			}
+		}
+	}
+	option = {
+		name = ev35.0.a
+		scope:whunter = {
+			send_interface_toast = {
+				title=stop_the_witch
+				imprison = {
+					target = scope:recipient
+					type = dungeon
+				}
+			}
+			hidden_effect = {
+				add_trait_xp = {
+					trait = supernatural_hunter
+					track = witch_hunting
+					value = 5
+				}
+			}
+		}
+		ai_chance = {
+			base = 10
+			modifier = {
+				add = 270
+				scope:whunter = {
+					has_character_flag = persuasive_petition
+				}
+			}
+			modifier = {
+				add = 40
+				scope:whunter = {
+					dread>60
+				}
+			}
+			modifier = {
+				add = 50
+				has_trait = craven
+			}
+			modifier = {
+				add = 40
+				trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = root }
+			}
+			modifier = {
+				add = 200
+				trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = root }
+				has_trait = zealous
+			}
+		}
+	}
+	after = {
+		if = {
+			limit = {
+				scope:whunter = {
+					has_character_flag = persuasive_petition
+				}
+			}
+			scope:whunter = {
+				remove_character_flag = persuasive_petition
+			}
+		}
+	}
+}
+
+#liege says nope
+magic_ev4.7 = {
+	title = ev4.7.title
+	desc = ev4.7.desc
+	theme =  diplomacy
+	left_portrait = root
+	right_portrait = scope:wliege
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		exists = scope:wliege
+		scope:wliege = {
+			is_alive = yes
+		}
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+		}
+	}
+
+	immediate = {
+		if = {
+			limit = {	trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = scope:wliege.faith GENDER_CHARACTER = scope:recipient }	}
+			show_as_tooltip = {
+				scope:wliege = {
+					add_piety = major_piety_loss
+				}
+			}
+		}
+		custom_tooltip = ev4.5.0.a_ct
+	}
+
+	option = {
+		name = ev4.7.0.a
+		
+	}
+	option = {
+		name = ev4.7.0.b
+		trigger = {
+			has_trait = strategist
+		}
+		trait = strategist
+		add_unpressed_claim = scope:wliege.primary_title
+	}
+	option = {
+		name = ev4.7.0.b
+		trigger = {
+			NOT = {	has_trait = strategist	}
+			martial >20
+		}
+		skill=martial
+		add_unpressed_claim = scope:wliege.primary_title
+	}
+	option = {
+		name = ev4.7.0.c
+		trigger = {
+			has_trait = diplomat
+		}
+		trait = diplomat
+		scope:wliege = {
+			add_character_modifier = {
+				modifier = harmful_rumors_modifier
+				years = 2
+			}
+		}
+	}
+	option = {
+		name = ev4.7.0.c
+		trigger = {
+			NOT = {	has_trait = diplomat	}
+			diplomacy > 20
+		}
+		skill = diplomacy
+		scope:wliege = {
+			add_character_modifier = {
+				modifier = harmful_rumors_modifier
+				years = 2
+			}
+		}
+	}
+}
+
+#I'll handle it on my own
+magic_ev4.8 = {
+	title = ev4.2.title
+	desc = ev4.8.desc
+	theme =  intrigue_intimidation_focus
+	left_portrait = root
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	#immediate = {
+	#
+	#}
+
+	option = {
+		name = ev4.8.0.a
+		start_scheme = {
+			type = murder
+			target = scope:recipient
+		}
+		custom_tooltip = ev4.8.0.a_ct
+		hidden_effect = {
+			random_scheme = {
+				limit = {
+					scheme_type = murder
+					scheme_target = scope:recipient
+				}
+				add_scheme_modifier = {
+					type = witch_hunter_hunts_modifier
+				}
+			}
+		}
+		
+	}
+	option = {
+		name = ev4.8.0.b
+		
+		duel = {
+			skill = intrigue
+			value = scope:recipient.intrigue
+			6 = {
+				desc = ev4.8.0.b1
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 2
+					min = 0
+				}
+				add_character_modifier = {
+					modifier = witchhunter_weapons_modifier
+					days = 7
+				}
+				custom_tooltip = start_duel_ct
+				save_scope_as = actor
+				hidden_effect = {
+					configure_start_single_combat_effect = {
+						SC_INITIATOR = root
+						SC_ATTACKER = root
+						SC_DEFENDER = scope:recipient
+						FATALITY = always
+						FIXED = no
+						LOCALE = alley_night
+						OUTPUT_EVENT = fp1_tbc.0011
+						INVALIDATION_EVENT = fp1_tbc.0021
+					}
+				}
+			}
+			4 = {
+				desc = ev4.8.0.b2
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -2
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.8.0.b2
+					custom_tooltip = ev4.5.0.a_ct
+				}
+				hidden_effect = {
+					if = {
+						limit = {
+							NOT = {
+								exists = scope:wliege
+							}
+						}
+						scope:recipient = {
+							move_to_pool = yes
+						}
+					}
+				}
+			}
+		}
+	}
+	option = {
+		name = ev4.8.0.c
+		custom_tooltip = ev4.5.0.a_ct
+		custom_tooltip = ev4.8.0.c_ct
+		hidden_effect = {
+			random = {
+				chance = 50
+				trigger_event = {
+					id = magic_ev4.9
+					months = { 4 10 }
+				}
+			}
+		}
+		
+	}
+}
+
+#observations
+magic_ev4.9 = {
+	title = ev4.9.title
+	desc = ev4.9.desc
+	theme =  intrigue_intimidation_focus
+	left_portrait = root
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+			any_secret = {
+				NOT = { is_known_by = root }
+			}
+		}
+	}
+
+	immediate = {
+		add_trait_xp = {
+			trait = supernatural_hunter
+			track = witch_hunting
+			value = 10
+		}
+		random_secret = {
+			limit = {
+				NOT = { is_known_by = root }
+			}
+			save_scope_as = nnew_secret
+		}
+		scope:nnew_secret = {
+			reveal_to = root
+		}
+	}
+
+	option = {
+		name = ev4.9.0.a
+		trigger = {
+			NOT = {
+				scope:nnew_secret = {
+					secret_type = secret_witch
+				}
+			}
+		}
+	}
+	option = {
+		name = ev4.9.0.b
+		trigger = {
+			scope:nnew_secret = {
+				secret_type = secret_witch
+			}
+		}
+	}
+}
+
+#stop the witch - landed witch
+magic_ev4.10 = {
+	title = ev4.2.title
+	desc = ev4.2.desc
+	theme =  intrigue_intimidation_focus
+	left_portrait = {
+		character = root
+		animation = scheme
+	}
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	immediate = {
+		save_scope_as = whunter
+		if = {
+			limit = {
+				OR = {
+					any_courtier_or_guest = {
+						has_trait = witch_hunter
+					}
+					any_vassal_or_below = {
+						has_trait = witch_hunter
+					}
+				}
+			}
+			random_courtier_or_guest = {
+				limit = {	has_trait = witch_hunter	}
+				save_scope_as = helper
+			}
+			if = {
+				limit = {
+					NOT = {	exists = scope:helper	}
+				}
+				random_vassal_or_below = {
+					limit = {	has_trait = witch_hunter	is_ai = yes	}
+					save_scope_as = helper
+				}
+			}
+		}
+		
+		
+		if = {
+			limit = {
+				NOT = {	exists = scope:helper	}
+				exists = cp:councillor_spymaster
+			}
+			root.cp:councillor_spymaster = {
+				save_scope_as = helper
+			}
+		}
+	}
+
+	option = {
+		#I'll talk with the witch
+		name = ev4.10.0.a
+		trigger = {
+			scope:recipient = {
+				NOT = {	has_character_flag = witch_hunter_meeting	}
+			}
+		}
+		custom_tooltip = ev4.10.0.a_ct
+		custom_tooltip = hunt_witch_lord_ps
+		scope:recipient = {
+			trigger_event = {
+				id = magic_ev4.11
+				days = { 12 24 }
+			}
+		}
+	}
+	option = {
+		#helper handle it
+		trigger = {
+			exists = scope:helper
+		}
+		name = ev4.10.0.b
+		custom_tooltip = ev4.10.0.b_ct
+		scope:helper = {
+			start_scheme = {
+				type = murder
+				target = scope:recipient
+			}
+			if = {
+				limit = {
+					has_trait = witch_hunter
+				}
+				hidden_effect = {
+					random_scheme = {
+						limit = {
+							scheme_type = murder
+							scheme_target = scope:recipient
+						}
+						add_scheme_modifier = {
+							type = witch_hunter_hunts_modifier
+						}
+					}
+				}
+			}
+		}
+		
+	}
+	option = {
+		#Plan must be prepared
+		name = ev4.10.0.c
+		custom_tooltip = hunt_witch_lord_ps
+		trigger_event = {
+			id = magic_ev4.31
+			days = { 20 30 }
+		}
+	}
+}
+
+#meeting - the witch pov1
+magic_ev4.11 = {
+	title = ev4.11.title
+	desc = ev4.11.desc
+	theme =  realm
+	left_portrait = root
+	right_portrait = scope:whunter
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:whunter
+		scope:whunter = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		#Let the guest come in
+		name = ev4.11.0.a
+		stress_impact = {
+			shy = medium_stress_gain
+			paranoid = medium_stress_gain
+			gregarious = minor_stress_loss
+		}
+		scope:whunter = {
+			trigger_event = magic_ev4.13
+		}
+		ai_chance = {
+			base = 50
+			
+			modifier = {
+				add = -40
+				OR = {
+					has_trait = shy
+					has_trait = paranoid
+					has_trait = archmage
+					has_trait = demon
+				}
+			}
+			modifier = {
+				add = 100
+				has_trait = gregarious
+			}
+			modifier = {
+				add = 100
+				has_trait = lifestyle_reveler
+			}
+			modifier = {
+				add = 100
+				scope:whunter = {
+					OR = {
+						has_trait = diplomat
+						highest_held_title_tier > root.highest_held_title_tier
+					}
+				}
+			}
+		}
+	}
+	option = {
+		#The hunter!
+		name = ev4.11.0.c
+		trigger = {
+			has_trait = schemer
+		}
+		trait = schemer
+		add_character_modifier = {
+			modifier = prepared_for_hunter_modifier
+			months = 1
+		}
+		scope:whunter = {
+			trigger_event = magic_ev4.13
+		}
+		ai_chance = {
+			base = 300
+		}
+	}
+	option = {
+		#The hunter!
+		name = ev4.11.0.c
+		trigger = {
+			NOT = {	has_trait = schemer	}
+			intrigue > 20
+		}
+		skill = intrigue
+		add_character_modifier = {
+			modifier = prepared_for_hunter_modifier
+			months = 1
+		}
+		scope:whunter = {
+			trigger_event = magic_ev4.13
+		}
+		ai_chance = {
+			base = 300
+		}
+	}
+	option = {
+		#I dont have a time
+		name = ev4.11.0.b
+		stress_impact = {
+			gregarious = medium_stress_gain
+		}
+		scope:whunter = {
+			add_opinion = {
+				target = root
+				modifier = insult_opinion
+				opinion = -30
+			}
+			trigger_event = magic_ev4.12
+		}
+		ai_chance = {
+			base = 50
+			modifier = {
+				add = 50
+				scope:whunter = {
+					OR = {
+						has_trait = torturer
+						has_trait = lovers_pox
+						has_trait = beauty_bad_1
+						has_trait = beauty_bad_2
+						has_trait = beauty_bad_3
+						has_trait = excommunicated
+						has_trait = murderer
+						dread > 40
+					}
+				}
+			}
+		}
+	}
+}
+
+#stop the witch - landed witch - without first option
+magic_ev4.12 = {
+	title = ev4.2.title
+	
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					has_character_flag = whunter_must_go
+				}
+				desc = ev4.12.desc2
+			}
+			desc = ev4.12.desc
+		}
+	}
+	
+	theme =  intrigue_intimidation_focus
+	left_portrait = root
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	immediate = {
+		if = {
+			limit = {
+				OR = {
+					any_courtier_or_guest = {
+						has_trait = witch_hunter
+					}
+					any_vassal_or_below = {
+						has_trait = witch_hunter
+					}
+				}
+			}
+			random_courtier_or_guest = {
+				limit = {	has_trait = witch_hunter	}
+				save_scope_as = helper
+			}
+			if = {
+				limit = {
+					NOT = {	exists = scope:helper	}
+				}
+				random_vassal_or_below = {
+					limit = {	has_trait = witch_hunter	}
+					save_scope_as = helper
+				}
+			}
+		}
+		
+		
+		if = {
+			limit = {
+				NOT = {	exists = scope:helper	}
+				exists = cp:councillor_spymaster
+			}
+			root.cp:councillor_spymaster = {
+				save_scope_as = helper
+			}
+		}
+		if = {
+			limit = {
+				exists = scope:recipient.liege_or_court_owner
+			}
+			scope:recipient.liege_or_court_owner = {
+				save_scope_as = wliege
+			}
+		}
+	}
+	option = {
+		#helper handle it
+		trigger = {
+			exists = scope:helper
+		}
+		name = ev4.10.0.b
+		custom_tooltip = ev4.10.0.b_ct
+		scope:helper = {
+			start_scheme = {
+				type = murder
+				target = scope:recipient
+			}
+			if = {
+				limit = {
+					has_trait = witch_hunter
+				}
+				hidden_effect = {
+					random_scheme = {
+						limit = {
+							scheme_type = murder
+							scheme_target = scope:recipient
+						}
+						add_scheme_modifier = {
+							type = witch_hunter_hunts_modifier
+						}
+					}
+				}
+			}
+		}
+	}
+	option = {
+		#Plan must be prepared
+		name = ev4.10.0.c
+		custom_tooltip = hunt_witch_lord_ps
+		trigger_event = {
+			id = magic_ev4.31
+			days = { 20 30 }
+		}
+	}
+	option = {
+		#enough
+		name = ev4.12.0.a
+		custom_tooltip = ev4.5.0.a_ct
+		add_trait_xp = {
+			trait = supernatural_hunter
+			track = witch_hunting
+			value = 5
+		}
+	}
+	after = {
+		if = {
+			limit = {
+				has_character_flag = whunter_must_go
+			}
+			remove_character_flag = whunter_must_go
+		}
+	}
+}
+
+#meeting - come in - the hunter pov1
+magic_ev4.13 = {
+	title = ev4.13.title
+	desc = ev4.13.desc
+	theme =  diplomacy
+	left_portrait = root
+	right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		#You are a witch
+		name = ev4.13.0.a
+		scope:recipient = {
+			trigger_event = magic_ev4.14
+			if = {
+				limit = {	NOT = {	has_character_flag = witch_hunter_meeting	}	}
+				add_character_flag = witch_hunter_meeting
+			}
+			show_as_tooltip = {
+				add_stress = minor_stress_gain
+			}
+		}
+		
+	}
+	option = {
+		#We have common interests
+		name = ev4.13.0.b
+		scope:recipient = {
+			trigger_event = magic_ev4.21
+			if = {
+				limit = {	NOT = {	has_character_flag = witch_hunter_meeting	}	}
+				add_character_flag = witch_hunter_meeting
+			}
+		}
+	}
+	option = {
+		#I must go...
+		name = ev4.13.0.c
+		custom_tooltip = ev4.13.0.c_ct
+		add_character_flag = whunter_must_go
+		trigger_event = {
+			id = magic_ev4.12
+			days = { 2 10 }
+		}
+	}
+}
+
+#meeting - the witch pov2 - witch hunter knows
+magic_ev4.14 = {
+	title = ev4.11.title
+	#desc = ev4.14.desc
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					has_character_modifier = prepared_for_hunter_modifier
+				}
+				desc = ev4.14.desc2
+			}
+			desc = ev4.14.desc
+		}
+	}
+	theme =  realm
+	left_portrait = root
+	right_portrait = scope:whunter
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:whunter
+		scope:whunter = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+	immediate = {
+		add_stress = minor_stress_gain
+	}
+	option = {
+		#So what?
+		name = ev4.14.0.a
+		scope:whunter = {
+			trigger_event = magic_ev4.15
+		}
+		ai_chance = {
+			base = 60
+			modifier = {
+				add = 50
+				OR = {
+					has_trait = arrogant
+					NOT = {	trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = root }	}
+				}
+			}
+			modifier = {
+				add = 100
+				OR = {
+					has_trait = forgiving
+					has_trait = compassionate
+				}
+			}
+		}
+	}
+	option = {
+		#Guards!
+		name = ev4.14.0.b
+		
+		duel = {
+			skill = martial
+			value = scope:whunter.prowess
+			6 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				show_as_tooltip = {
+					imprison = {
+						target = scope:whunter
+						type = dungeon
+					}
+				}
+				scope:whunter = {
+					trigger_event = magic_ev4.26
+				}
+			}
+			4 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.11.title
+					custom_tooltip = ev4.14.0.b_ct
+				}
+				scope:whunter = {
+					trigger_event = magic_ev4.27
+				}
+			}
+		}
+		ai_chance = {
+			base = 50
+			modifier = {
+				add = 50
+				scope:whunter = {
+					dread > 40
+				}
+			}
+			modifier = {
+				add = 50
+				has_trait = craven
+			}
+		}
+	}
+}
+
+#meeting - so what? - the hunter pov2
+magic_ev4.15 = {
+	title = ev4.13.title
+	desc = ev4.15.desc
+	theme =  diplomacy
+	left_portrait = root
+	right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		#I am a witch hunter
+		name = ev4.15.0.a
+		scope:recipient = {
+			trigger_event = magic_ev4.16
+		}
+		add_dread = 5
+	}
+	option = {
+		#I challenge you!
+		name = ev4.15.0.b
+		custom_tooltip = ev4.15.0.b_ct
+		scope:recipient = {
+			trigger_event = magic_ev4.28
+		}
+	}
+}
+
+#meeting - the witch pov3 - hunter admits that he is a hunter
+magic_ev4.16 = {
+	title = ev4.11.title
+	desc = ev4.16.desc
+	theme =  realm
+	left_portrait = root
+	right_portrait = scope:whunter
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:whunter
+		scope:whunter = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+	immediate = {
+		add_character_modifier = {
+			modifier = more_vigilant_recistance_modifier
+			years = 1
+		}
+	}
+
+	option = {
+		#You are a fool
+		name = ev4.16.0.a
+		scope:whunter = {
+			trigger_event = magic_ev4.17
+		}
+		ai_chance = {
+			base = 60
+			modifier = {
+				add = 50
+				has_trait = arrogant
+			}
+			modifier = {
+				add = 100
+				OR = {
+					has_trait = forgiving
+					has_trait = compassionate
+				}
+			}
+		}
+	}
+	option = {
+		#Wait!
+		name = ev4.16.0.b 
+		scope:whunter = {
+			trigger_event = magic_ev4.34
+		}
+		show_as_tooltip = {
+			every_known_secret = {
+				reveal_to = scope:whunter
+			}
+			scope:whunter = {
+				add_hook = {
+					type = loyalty_hook
+					target = root
+				}
+			}
+		}
+		ai_chance = {
+			base = 20
+			modifier = {
+				add = 70
+				has_trait = craven
+			}
+			modifier = {
+				add = -100
+				OR = {
+					has_trait = archmage
+					has_trait = demon
+				}
+			}
+			modifier = {
+				add = -20
+				has_trait = true_witch
+			}
+			modifier = {
+				add = 50
+				scope:whunter = {
+					dread > 40
+				}
+			}
+		}
+	}
+	option = {
+		#Guards!
+		name = ev4.14.0.b
+		
+		duel = {
+			skill = martial
+			value = scope:whunter.prowess
+			6 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				show_as_tooltip = {
+					imprison = {
+						target = scope:whunter
+						type = dungeon
+					}
+				}
+				scope:whunter = {
+					trigger_event = magic_ev4.26
+				}
+			}
+			4 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.11.title
+					custom_tooltip = ev4.14.0.b_ct
+				}
+				scope:whunter = {
+					trigger_event = magic_ev4.27
+				}
+			}
+		}
+		ai_chance = {
+			base = 20
+			
+			modifier = {
+				add = 50
+				OR = {
+					has_trait = archmage
+					has_trait = demon
+				}
+			}
+		}
+	}
+	option = {
+		#Burn
+		name = ev4.18.0.b
+		trigger = {
+			has_trait = archmage
+			can_spend_standard_ps_trigger = yes
+		}
+		trait = archmage
+		spend_standard_ps_effect = yes
+		custom_tooltip = ev4.18.0.b_ct
+		scope:whunter = {
+			trigger_event = magic_ev4.29
+		}
+		ai_chance = {
+			base = 100
+			modifier = {
+				add = 50
+				has_trait = wrathful
+			}
+		}
+	}
+	option = {
+		#Burn2
+		name = ev4.18.0.b
+		trigger = {
+			has_trait = demon
+			can_spend_standard_ps_trigger = yes
+			NOT = {
+				has_trait = archmage
+			}
+		}
+		trait = demon
+		spend_standard_ps_effect = yes
+		custom_tooltip = ev4.18.0.b_ct
+		scope:whunter = {
+			trigger_event = magic_ev4.29
+		}
+		ai_chance = {
+			base = 100
+			modifier = {
+				add = 50
+				has_trait = wrathful
+			}
+		}
+	}
+}
+
+#meeting - you're fool - the hunter pov4
+magic_ev4.17 = {
+	title = ev4.13.title
+	desc = ev4.17.desc
+	theme =  diplomacy
+	left_portrait = root
+	right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		#I wanted to get to know you before I deal with you.
+		name = ev4.17.0.a
+		scope:recipient = {
+			trigger_event = magic_ev4.18
+		}
+		
+	}
+	option = {
+		#Surrender!
+		name = ev4.17.0.b
+		custom_tooltip = ev4.15.0.b_ct
+		scope:recipient = {
+			trigger_event = magic_ev4.35
+		}
+	}
+	option = {
+		#I'll kill you
+		name = ev4.17.0.c
+		duel = {
+			skill = prowess
+			value = 20
+			5 = {
+				desc = ev4.17.0.c1
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 2
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.17.0.c1
+					custom_tooltip = start_duel_ct
+				}
+				trigger_event = magic_ev4.36
+			}
+			5 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -2
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.17.0.c2
+					custom_tooltip = ev4.17.0.c2_ct
+				}
+				trigger_event = magic_ev4.26
+			}
+		}
+	}
+}
+
+#meeting - the witch pov4 - 'I wanted to get to know you'
+magic_ev4.18 = {
+	title = ev4.11.title
+	desc = ev4.18.desc
+	theme =  realm
+	left_portrait = root
+	right_portrait = scope:whunter
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:whunter
+		scope:whunter = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		#Get out of here
+		name = ev4.18.0.a
+		scope:whunter = {
+			trigger_event = magic_ev4.19
+		}
+		show_as_tooltip = {
+			if = {
+				limit = {
+					NOR = {
+						has_relation_rival = scope:whunter
+						has_relation_nemesis = scope:whunter
+					}
+				}
+				set_relation_rival = {
+					target = scope:whunter
+					reason = rival_bad_chemistry
+				}
+			}
+		}
+		
+		ai_chance = {
+			base = 100
+			modifier = {
+				add = 50
+				has_trait = arrogant
+			}
+			modifier = {
+				add = 200
+				OR = {
+					has_trait = forgiving
+					has_trait = compassionate
+				}
+				
+			}
+		}
+	}
+	option = {
+		#Guards!
+		name = ev4.14.0.b
+		
+		duel = {
+			skill = martial
+			value = scope:whunter.prowess
+			6 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				show_as_tooltip = {
+					imprison = {
+						target = scope:whunter
+						type = dungeon
+					}
+				}
+				scope:whunter = {
+					trigger_event = magic_ev4.26
+				}
+			}
+			4 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.11.title
+					custom_tooltip = ev4.14.0.b_ct
+				}
+				scope:whunter = {
+					trigger_event = magic_ev4.27
+				}
+			}
+		}
+		ai_chance = {
+			base = 20
+			
+			modifier = {
+				add = 50
+				OR = {
+					has_trait = archmage
+					has_trait = demon
+					has_trait = true_witch
+				}
+			}
+		}
+	}
+	option = {
+		#Burn
+		name = ev4.18.0.b
+		trigger = {
+			has_trait = archmage
+			can_spend_standard_ps_trigger = yes
+		}
+		trait = archmage
+		spend_standard_ps_effect = yes
+		custom_tooltip = ev4.18.0.b_ct
+		scope:whunter = {
+			trigger_event = magic_ev4.29
+		}
+		ai_chance = {
+			base = 100
+			modifier = {
+				add = 50
+				has_trait = wrathful
+			}
+		}
+	}
+	option = {
+		#Burn2
+		name = ev4.18.0.b
+		trigger = {
+			has_trait = demon
+			can_spend_standard_ps_trigger = yes
+			NOT = {
+				has_trait = archmage
+			}
+		}
+		trait = demon
+		spend_standard_ps_effect = yes
+		custom_tooltip = ev4.18.0.b_ct
+		scope:whunter = {
+			trigger_event = magic_ev4.29
+		}
+		ai_chance = {
+			base = 100
+			modifier = {
+				add = 50
+				has_trait = wrathful
+			}
+		}
+	}
+}
+
+#meeting - Get out of here - the hunter pov5
+magic_ev4.19 = {
+	title = ev4.13.title
+	desc = ev4.19.desc
+	theme =  diplomacy
+	left_portrait = root
+	right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+	immediate = {
+		if = {
+			limit = {
+				NOR = {
+					has_relation_rival = scope:recipient
+					has_relation_nemesis = scope:recipient
+				}
+			}
+			set_relation_rival = {
+				target = scope:recipient
+				reason = rival_bad_chemistry
+				#reason = rival_murderer
+			}
+		}
+	}
+
+	option = {
+		#See you around
+		name = ev4.19.0.a
+		scope:recipient = {
+			hidden_effect = {
+				send_interface_toast = {
+					title=ev4.11.title
+					custom_tooltip = ev4.19.0.a_ctx
+				}
+			}
+		}
+		custom_tooltip = ev4.13.0.c_ct
+		
+		
+		trigger_event = magic_ev4.20
+	}
+	option = {
+		#Surrender!
+		name = ev4.17.0.b
+		custom_tooltip = ev4.15.0.b_ct
+		scope:recipient = {
+			trigger_event = magic_ev4.35
+		}
+	}
+	option = {
+		#I'll kill you
+		name = ev4.19.0.b
+		duel = {
+			skill = prowess
+			value = 20
+			5 = {
+				desc = ev4.17.0.c1
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 2
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.17.0.c1
+					custom_tooltip = start_duel_ct
+				}
+				trigger_event = magic_ev4.36
+			}
+			5 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -2
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.17.0.c2
+					custom_tooltip = ev4.17.0.c2_ct
+				}
+				trigger_event = magic_ev4.26
+			}
+		}
+	}
+}
+
+#after meeting - hunter
+magic_ev4.20 = {
+	title = ev4.2.title
+	#desc = ev4.20.desc
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					has_character_flag = witch_is_a_true_mage
+				}
+				desc = ev4.20.desc3
+			}
+			triggered_desc = {
+				trigger = {
+					has_character_flag = witch_didnt_take_bait
+				}
+				desc = ev4.20.desc2
+			}
+			desc = ev4.20.desc
+		}
+	}
+	theme = murder_scheme
+	left_portrait = root
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		name = ev4.20.0.a
+		add_character_flag = whunter_must_go
+		custom_tooltip = hunt_witch_lord_ps
+		trigger_event = {
+			id = magic_ev4.12
+			months = { 1 2 }
+		}
+	}
+
+	option = {
+		name = ev4.20.0.b
+		custom_tooltip = ev4.5.0.a_ct
+		add_trait_xp = {
+			trait = witch_hunter
+			value = 5
+		}
+	}
+	after = {
+		if = {
+			limit = {
+				has_character_flag = witch_didnt_take_bait
+			}
+			remove_character_flag = witch_didnt_take_bait
+		}
+		if = {
+			limit = {
+				has_character_flag = witch_is_a_true_mage
+			}
+			remove_character_flag = witch_is_a_true_mage
+		}
+	}
+}
+
+#meeting - the witch pov2 - we have common interests?
+magic_ev4.21 = {
+	title = ev4.11.title
+	desc = ev4.21.desc
+	theme =  realm
+	left_portrait = root
+	right_portrait = scope:whunter
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:whunter
+		scope:whunter = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		#go ahead
+		name = ev4.21.0.a
+		scope:whunter = {
+			trigger_event = magic_ev4.22
+		}
+		ai_chance = {
+			base = 100
+			modifier = {
+				add = 50
+				has_trait = arrogant
+			}
+		}
+	}
+	option = {
+		#nice try
+		name = ev4.21.0.b
+		trigger = {
+			has_character_modifier = prepared_for_hunter_modifier
+		}
+		#Guards!
+		name = ev4.14.0.b
+		duel = {
+			skill = martial
+			value = scope:whunter.prowess
+			6 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				show_as_tooltip = {
+					imprison = {
+						target = scope:whunter
+						type = dungeon
+					}
+				}
+				scope:whunter = {
+					trigger_event = magic_ev4.26
+				}
+			}
+			4 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.11.title
+					custom_tooltip = ev4.14.0.b_ct
+				}
+				scope:whunter = {
+					trigger_event = magic_ev4.27
+				}
+			}
+		}
+		ai_chance = {
+			base = 100
+			modifier = {
+				add=-100
+				has_trait = compassionate
+			}
+		}
+	}
+}
+#meeting - the hunter pov2 - speak
+magic_ev4.22 = {
+	title = ev4.2.title
+	desc = ev4.22.desc
+	theme = diplomacy
+	left_portrait = root
+	right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+	immediate = {
+		if = {
+			limit = {
+				scope:recipient = {
+					any_relation = {
+						type = rival
+						NOT = { root = this }
+					}
+				}
+			}
+			scope:recipient = {
+				random_relation = {
+					type = rival
+					limit = {
+						NOT = { root = this }
+					}
+					save_scope_as = riv1
+				}
+			}
+		}
+	}
+
+	option = {
+		name = ev4.22.0.a
+		trigger = {
+			exists = scope:riv1
+		}
+		scope:recipient = {
+			add_character_flag = common_rival_witch
+			trigger_event = magic_ev4.23
+		}
+	}
+	option = {
+		name = ev4.22.0.b
+		scope:recipient = {
+			trigger_event = magic_ev4.23
+		}
+	}
+
+}
+
+#meeting - the witch pov3 - take the bait?
+magic_ev4.23 = {
+	title = ev4.11.title
+	#desc = ev4.23.desc
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					has_character_flag = common_rival_witch
+				}
+				desc = ev4.23.desc2
+			}
+			desc = ev4.23.desc
+		}
+	}
+	theme =  realm
+	left_portrait = root
+	right_portrait = scope:whunter
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:whunter
+		scope:whunter = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		#I see.
+		name = ev4.23.0.a
+		custom_tooltip = ev4.23.0.a_ct
+		scope:whunter = {
+			trigger_event = magic_ev4.24
+			trigger_event = {
+				id = magic_ev4.25
+				months = 1
+			}
+		}
+		ai_chance = {
+			base = 100
+			modifier = {
+				add = 100
+				has_trait = trusting
+				NOT = {	has_character_modifier = prepared_for_hunter_modifier	}
+			}
+			modifier = {
+				add = 100
+				has_trait = ambitious
+				NOT = {	has_character_modifier = prepared_for_hunter_modifier	}
+			}
+			modifier = {
+				add = -100
+				has_character_modifier = prepared_for_hunter_modifier
+			}
+		}
+	}
+	option = {
+		#I see (actually, I see a lot)
+		name = ev4.23.0.a
+		custom_tooltip = ev4.23.0.a_ct2
+		scope:whunter = {
+			trigger_event = magic_ev4.24
+			add_character_flag = witch_didnt_take_bait
+			trigger_event = {
+				id = magic_ev4.20
+				months = 1
+			}
+		}
+		ai_chance = {
+			base = 50
+			modifier = {
+				add = 50
+				has_character_modifier = prepared_for_hunter_modifier
+			}
+			modifier = {
+				add = 50
+				has_trait = paranoid
+			}
+			modifier = {
+				add = 50
+				has_trait = craven
+			}
+			modifier = {
+				add = 30
+				has_trait = lazy
+			}
+		}
+	}
+	option = {
+		#nice try
+		name = ev4.21.0.b
+		trigger = {
+			has_character_modifier = prepared_for_hunter_modifier
+		}
+		#Guards!
+		name = ev4.14.0.b
+		duel = {
+			skill = martial
+			value = scope:whunter.prowess
+			6 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				show_as_tooltip = {
+					imprison = {
+						target = scope:whunter
+						type = dungeon
+					}
+				}
+				scope:whunter = {
+					trigger_event = magic_ev4.26
+				}
+			}
+			4 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.11.title
+					custom_tooltip = ev4.14.0.b_ct
+				}
+				scope:whunter = {
+					trigger_event = magic_ev4.27
+				}
+			}
+		}
+		ai_chance = {
+			base = 100
+			modifier = {
+				add=-100
+				has_trait = compassionate
+			}
+		}
+	}
+	after = {
+		if = {
+			limit = {
+				has_character_flag = common_rival_witch
+			}
+			remove_character_flag = common_rival_witch
+		}
+	}
+}
+
+#meeting - the hunter pov3 - witch took the bait?
+magic_ev4.24 = {
+	title = ev4.2.title
+	desc = ev4.24.desc
+	theme = diplomacy
+	left_portrait = root
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		name = ev4.24.0.a
+		custom_tooltip = hunt_witch_lord_ps
+	}
+}
+
+#meeting - the hunter pov4 - witch took the bait? clearly yes
+magic_ev4.25 = {
+	title = ev4.2.title
+	desc = ev4.25.desc
+	theme = secret
+	left_portrait = root
+	right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+	immediate = {
+		add_trait_xp = {
+			trait = supernatural_hunter
+			track = witch_hunting
+			value = 10
+		}
+	}
+
+	option = {
+		name = ev4.25.0.a
+		imprison = {
+			target = scope:recipient
+			type = dungeon
+		}
+		hidden_effect = {
+			scope:recipient = {
+				send_interface_toast = {
+					title=ev4.25.0.a_tit
+					show_as_tooltip = {
+						root = {
+							imprison = {
+								target = scope:recipient
+								type = dungeon
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	option = {
+		name = ev4.25.0.b
+		scope:recipient = {
+			death = {
+				death_reason = death_murder
+				killer = root
+			}
+		}
+		hidden_effect = {
+			scope:recipient = {
+				send_interface_toast = {
+					title=ev4.25.0.a_tit
+					show_as_tooltip = {
+						death = {
+							death_reason = death_murder
+							killer = root
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+#meeting - the hunter - imprisoned by guards
+magic_ev4.26 = {
+	title = ev4.26.title
+	desc = ev4.26.desc
+	theme = diplomacy
+	left_portrait = root
+	right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	immediate = {
+		scope:recipient = {
+			imprison = {
+				target = root
+				type = dungeon
+			}
+		}
+	}
+	option = {
+		name = ev4.26.0.a
+	}
+}
+
+#meeting - the hunter - defeated the guards
+magic_ev4.27 = {
+	title = ev4.2.title
+	desc = ev4.27.desc
+	theme = diplomacy
+	left_portrait = root
+	right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+	immediate = {
+		add_trait = wounded_1
+	}
+	option = {
+		name = ev4.27.0.a
+		custom_tooltip = start_duel_ct
+		save_scope_as = actor
+		configure_start_single_combat_effect = {
+			SC_INITIATOR = root
+			SC_ATTACKER = root
+			SC_DEFENDER = scope:recipient
+			FATALITY = always
+			FIXED = no
+			LOCALE = throne_room
+			OUTPUT_EVENT = fp1_tbc.0011
+			INVALIDATION_EVENT = fp1_tbc.0021
+		}
+	}
+	option = {
+		name = ev4.27.0.b
+		custom_tooltip = ev4.27.0.b_ct
+		hidden_effect = {
+			scope:recipient = {
+				send_interface_toast = {
+					title = ev4.27.0.b_tit
+					custom_tooltip = ev4.27.0.b_ct2
+				}
+			}
+		}
+		add_character_flag = whunter_must_go
+		trigger_event = {
+			id = magic_ev4.12
+			months = { 1 2 }
+		}
+	}
+}
+
+#meeting - the witch pov3 - hunter challenge witch
+magic_ev4.28 = {
+	title = ev4.11.title
+	desc = ev4.28.desc
+	theme =  realm
+	left_portrait = root
+	right_portrait = scope:whunter
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:whunter
+		scope:whunter = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		#Agree
+		name = ev4.28.0.a
+		custom_tooltip = start_duel_ct
+		scope:whunter = {
+			save_scope_as = actor
+		}
+		
+		configure_start_single_combat_effect = {
+			SC_INITIATOR = scope:whunter
+			SC_ATTACKER = scope:whunter
+			SC_DEFENDER = root
+			FATALITY = always
+			FIXED = no
+			LOCALE = throne_room
+			OUTPUT_EVENT = fp1_tbc.0011
+			INVALIDATION_EVENT = fp1_tbc.0021
+		}
+		ai_chance = {
+			base = 100
+			modifier = {
+				add = 50
+				has_trait = lifestyle_blademaster
+			}
+			modifier = {
+				add = 50
+				has_trait = brave
+			}
+		}
+	}
+	option = {
+		#nope - guards!
+		name = ev4.28.0.b
+		duel = {
+			skill = martial
+			value = scope:whunter.prowess
+			6 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				show_as_tooltip = {
+					imprison = {
+						target = scope:whunter
+						type = dungeon
+					}
+				}
+				scope:whunter = {
+					trigger_event = magic_ev4.26
+				}
+			}
+			4 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.11.title
+					custom_tooltip = ev4.14.0.b_ct
+				}
+				scope:whunter = {
+					trigger_event = magic_ev4.27
+				}
+			}
+		}
+		ai_chance = {
+			base = 50
+			modifier = {
+				add = 500
+				prowess < scope:whunter.prowess
+			}
+		}
+	}
+}
+
+#meeting - the hunter - magic beam strikes
+magic_ev4.29 = {
+	title = ev4.2.title
+	desc = ev4.29.desc
+	theme = diplomacy
+	left_portrait = root
+	right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+	immediate = {
+		add_trait = wounded_2
+		add_character_flag = witch_is_a_true_mage
+	}
+	option = {
+		name = ev4.29.0.a
+		custom_tooltip = ev4.27.0.b_ct
+		scope:recipient = {
+			trigger_event = magic_ev4.30
+		}
+		trigger_event = {
+			id = magic_ev4.20
+			days = 5
+		}
+	}
+}
+
+#meeting - the witch pov - hunter escaped
+magic_ev4.30 = {
+	title = ev4.11.title
+	desc = ev4.30.desc
+	theme =  realm
+	left_portrait = root
+	right_portrait = scope:whunter
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:whunter
+		scope:whunter = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+	immediate = {
+		show_as_tooltip = {
+			scope:whunter = {
+				add_trait = wounded_2
+			}
+			custom_tooltip = ev4.27.0.b_ct2
+		}
+	}
+
+	option = {
+		name = ev4.30.0.a
+		
+	}
+}
+
+#the witch hunters plan - select your way
+magic_ev4.31 = {
+	title = ev4.2.title
+	desc = ev4.31.desc
+	theme = murder_scheme
+	left_portrait = root
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+	#immediate = {
+	#
+	#}
+	option = {
+		#via diplomacy
+		name = ev4.31.0.a
+		custom_tooltip = hunt_witch_lord_ps
+		#scope:recipient = {
+		#	add_character_modifier = {
+		#		modifier = harmful_rumors_modifier
+		#		years = 1
+		#	}
+		#}
+		trigger_event = {
+			id = magic_ev4.33
+			days = { 3 6 }
+		}
+	}
+	option = {
+		#direct approach
+		name = ev4.31.0.b
+		trigger = {
+			scope:recipient = {
+				NOR = {
+					has_trait = paranoid
+					has_character_modifier = double_guards_modifier
+				}
+			}
+		}
+		show_as_unavailable = {
+			scope:recipient = {
+				OR = {
+					has_trait = paranoid
+					has_character_modifier = double_guards_modifier
+				}
+			}
+		}
+		custom_tooltip = hunt_witch_lord_ps
+		scope:recipient = {
+			add_character_modifier = {
+				modifier = tracked_by_witch_hunter_modifier
+				years = 1
+			}
+		}
+		trigger_event = {
+			id = magic_ev4.37
+			days = { 3 6 }
+		}
+	}
+	option = {
+		#strike in funds
+		name = ev4.31.0.c
+		trigger = {
+			stewardship > 20
+		}
+		skill = stewardship
+		random_list = {
+			1 = {
+				desc = ev4.31.0.c1
+				send_interface_toast = {
+					title=ev4.31.0.c
+					scope:recipient = {
+						pay_short_term_gold = {
+							target = root
+							gold = medium_gold_max_value
+						}
+					}
+				}
+			}
+			1 = {
+				desc = ev4.31.0.c2
+				send_interface_toast = {
+					title=ev4.31.0.c
+					scope:recipient = {
+						add_character_modifier = {
+							modifier = problems_with_merchants_modifier
+							years = 1
+						}
+						remove_short_term_gold = medium_gold_max_value
+					}
+				}
+			}
+			1 = {
+				desc = ev3.52.a_2
+				hidden_effect = {
+					send_interface_toast = {
+						title=ev4.31.0.c
+						custom_tooltip = ev3.52.a_2
+					}
+				}
+			}
+		}
+		custom_tooltip = ev4.5.0.a_ct
+	}
+	option = {
+		#war
+		name = ev4.31.0.e
+		trigger = {
+			martial > 20
+			NOT = {
+				has_claim_on = scope:recipient.primary_title
+			}
+		}
+		skill = martial
+		add_unpressed_claim = scope:recipient.primary_title
+		custom_tooltip = ev4.5.0.a_ct
+	}
+	option = {
+		#obtaining more information
+		name = ev4.31.0.d
+		trigger = {
+			exists = cp:councillor_spymaster
+		}
+		custom_tooltip = ev4.31.0.d
+		custom_tooltip = ev4.5.0.a_ct
+		add_trait_xp = {
+			trait = supernatural_hunter
+			track = witch_hunting
+			value = 5
+		}
+		cp:councillor_spymaster = {
+			add_character_modifier = {
+				modifier = special_task_modifier
+				months = 6
+			}
+			set_council_task = {
+				task_type = task_find_secrets
+				target = scope:recipient
+			}
+		}
+		hidden_effect = {
+			if = {
+				limit = {
+					intrigue > scope:recipient.intrigue
+				}
+				trigger_event = {
+					id = magic_ev4.32
+					months = { 3 6 }
+				}
+			}
+		}
+	}
+}
+
+#the witch hunter - coven exist
+magic_ev4.32 = {
+	title = ev4.2.title
+	desc = ev4.32.desc
+	theme = murder_scheme
+	left_portrait = root
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			exists = house
+			house = {
+				has_house_modifier = witch_coven
+			}
+		}
+	}
+
+	option = {
+		name = ev4.20.0.a
+		custom_tooltip = ev4.5.0.a_ct
+		add_trait_xp = {
+			trait = supernatural_hunter
+			track = witch_hunting
+			value = 10
+		}
+	}
+}
+
+#the witch hunter - diplomatics efforts
+magic_ev4.33 = {
+	title = ev4.2.title
+	desc = ev4.33.desc
+	theme = murder_scheme
+	left_portrait = root
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	immediate = {
+		save_scope_as = whunter
+		if = {
+			limit = {
+				exists = scope:recipient.liege
+				scope:recipient.liege = {
+					NOT = {	ROOT = THIS	}
+					is_ai = yes
+					#NOT = {
+					#	has_relation_to = scope:recipient
+					#}
+				}
+			}
+			scope:recipient.liege = {
+				save_scope_as = wliege
+			}
+		}
+		if = {
+			limit = {
+				trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = scope:recipient.faith GENDER_CHARACTER = scope:recipient }
+				faith = {	this = scope:recipient.faith	}
+				exists = scope:whunter.faith.religious_head
+				scope:whunter.faith.religious_head = {
+					NOT = {	scope:whunter = THIS	}
+					NOT = {	scope:recipient = THIS	}
+					is_ai = yes
+				}
+			}
+			root.faith.religious_head = {
+				save_scope_as = whead
+			}
+		}
+		scope:recipient = {
+			if = {
+				limit = {
+					any_character_war = {
+						exists = this
+					}
+				}
+				random_character_war = {
+					save_scope_as = wwar
+				}
+				if = {
+					limit = {
+						is_attacker_in_war = scope:wwar
+					}
+					scope:wwar.primary_defender = {	save_scope_as = opponentX	}
+				}
+				else = {
+					scope:wwar.primary_attacker = {	save_scope_as = opponentX	}
+				}
+			}
+			
+			if = {
+				limit = {
+					NOT = {	exists = scope:opponentX	}
+					any_relation = {
+						type = rival
+					}
+				}
+				random_relation = {
+					type = rival
+					save_scope_as = opponentX
+				}
+			}
+		}
+	}
+
+	option = {
+		name = ev4.33.0.a
+		trigger = {
+			exists = scope:wliege
+		}
+		duel = {
+			skill = diplomacy
+			value = scope:recipient.diplomacy
+			5 = {
+				#desc = ev4.2.0.d1
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.33.0.a_tit
+					scope:recipient = {
+						set_relation_rival = scope:wliege
+					}
+					set_relation_potential_friend = scope:wliege
+				}
+			}
+			5 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.33.0.a_tit
+					scope:wliege = {
+						add_opinion = {
+							target = scope:recipient
+							modifier = disgusted_opinion
+							opinion = -20
+						}
+					}
+				}
+			}
+		}
+	}
+	option = {
+		name = ev4.33.0.b
+		trigger = {
+			exists = scope:whead
+		}
+		duel = {
+			skill = diplomacy
+			value = scope:whead.diplomacy
+			5 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.33.0.a_tit
+					scope:recipient = {
+						add_trait = excommunicated
+						add_piety = -1000
+					}
+				}
+				add_gold = medium_gold_min_value
+				scope:whead = {
+					add_opinion = {
+						target = scope:recipient
+						modifier = disgusted_opinion
+						opinion = -50
+					}
+				}
+			}
+			5 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.33.0.a_tit
+					scope:whead = {
+						add_opinion = {
+							target = scope:recipient
+							modifier = disgusted_opinion
+							opinion = -30
+						}
+					}
+				}
+			}
+		}
+	}
+	option = {
+		name = ev4.33.0.c
+		trigger = {
+			exists = scope:opponentX
+		}
+		pay_short_term_gold = {
+			target = scope:opponentX
+			gold = medium_gold_max_value
+		}
+		scope:opponentX = {
+			add_opinion = {
+				target = root
+				modifier = grateful_opinion
+				opinion = 30
+			}
+			add_character_modifier = {
+				modifier = close_support_modifier
+				years = 2
+			}
+		}
+	}
+	option = {
+		name = ev4.33.0.d
+		scope:recipient.capital_county = {
+			add_county_modifier = {
+				modifier = medium_investment_in_revolt_modifier
+				years = 1
+			}
+		}
+		scope:recipient = {
+			add_character_modifier = {
+				modifier = harmful_rumors_modifier
+				years = 1
+			}
+		}
+	}
+}
+
+#meeting - wait! - the hunter pov4
+magic_ev4.34 = {
+	title = ev4.13.title
+	desc = ev4.34.desc
+	theme =  diplomacy
+	left_portrait = root
+	right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+	immediate = {
+		scope:recipient = {
+			every_known_secret = {
+				reveal_to = root
+			}
+		}
+	}
+
+	option = {
+		#I'll spare you for now
+		name = ev4.34.0.a
+		add_hook = {
+			type = loyalty_hook
+			target = scope:recipient
+		}
+		custom_tooltip = ev4.5.0.a_ct
+	}
+	option = {
+		#Let the Lord judge you.
+		name = ev4.34.0.b
+		custom_tooltip = ev4.15.0.b_ct
+		scope:recipient = {
+			death = {
+				death_reason = death_murder
+				killer = root
+			}
+		}
+	}
+}
+
+#meeting - the witch pov4 - 'Surrender!'
+magic_ev4.35 = {
+	title = ev4.11.title
+	desc = ev4.35.desc
+	theme =  realm
+	left_portrait = root
+	right_portrait = scope:whunter
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:whunter
+		scope:whunter = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		#I'll surrender
+		name = ev4.35.0.a
+		scope:whunter = {
+			trigger_event = magic_ev4.34
+		}
+		show_as_tooltip = {
+			every_known_secret = {
+				reveal_to = scope:whunter
+			}
+			scope:whunter = {
+				add_hook = {
+					type = loyalty_hook
+					target = root
+				}
+			}
+		}
+		ai_chance = {
+			base = 100
+			modifier = {
+				add = -50
+				OR = {
+					has_trait = arrogant
+					has_trait = brave
+				}
+			}
+			modifier = {
+				add = -50
+				has_trait = true_witch
+			}
+			modifier = {
+				add = -100
+				OR = {
+					has_trait = archmage
+					has_trait = demon
+				}
+			}
+			modifier = {
+				add = 200
+				has_trait = craven
+			}
+		}
+	}
+	option = {
+		#Guards!
+		name = ev4.21.0.b
+		
+		duel = {
+			skill = martial
+			value = scope:whunter.prowess
+			6 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				show_as_tooltip = {
+					imprison = {
+						target = scope:whunter
+						type = dungeon
+					}
+				}
+				scope:whunter = {
+					trigger_event = magic_ev4.26
+				}
+			}
+			4 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.11.title
+					custom_tooltip = ev4.14.0.b_ct
+				}
+				scope:whunter = {
+					trigger_event = magic_ev4.27
+				}
+			}
+		}
+		ai_chance = {
+			base = 20
+			
+			modifier = {
+				add = 50
+				OR = {
+					has_trait = archmage
+					has_trait = demon
+					has_trait = true_witch
+				}
+			}
+		}
+	}
+	option = {
+		#Burn
+		name = ev4.18.0.b
+		trigger = {
+			has_trait = archmage
+			can_spend_standard_ps_trigger = yes
+		}
+		trait = archmage
+		spend_standard_ps_effect = yes
+		custom_tooltip = ev4.18.0.b_ct
+		scope:whunter = {
+			trigger_event = magic_ev4.29
+		}
+		ai_chance = {
+			base = 100
+			modifier = {
+				add = 50
+				has_trait = wrathful
+			}
+		}
+	}
+	option = {
+		#Burn2
+		name = ev4.18.0.b
+		trigger = {
+			has_trait = demon
+			can_spend_standard_ps_trigger = yes
+			NOT = {
+				has_trait = archmage
+			}
+		}
+		trait = demon
+		spend_standard_ps_effect = yes
+		custom_tooltip = ev4.18.0.b_ct
+		scope:whunter = {
+			trigger_event = magic_ev4.29
+		}
+		ai_chance = {
+			base = 100
+			modifier = {
+				add = 50
+				has_trait = wrathful
+			}
+		}
+	}
+}
+
+#meeting - the witch pov4 - 'I'll kill you!'
+magic_ev4.36 = {
+	title = ev4.11.title
+	desc = ev4.36.desc
+	theme =  realm
+	left_portrait = root
+	right_portrait = scope:whunter
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:whunter
+		scope:whunter = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		#Fight
+		name = ev4.36.0.a
+		custom_tooltip = start_duel_ct
+		scope:whunter = {
+			save_scope_as = actor
+		}
+		
+		configure_start_single_combat_effect = {
+			SC_INITIATOR = scope:whunter
+			SC_ATTACKER = scope:whunter
+			SC_DEFENDER = root
+			FATALITY = always
+			FIXED = no
+			LOCALE = throne_room
+			OUTPUT_EVENT = fp1_tbc.0011
+			INVALIDATION_EVENT = fp1_tbc.0021
+		}
+		ai_chance = {
+			base = 10
+		}
+	}
+	option = {
+		#Burn
+		name = ev4.18.0.b
+		trigger = {
+			has_trait = archmage
+			can_spend_standard_ps_trigger = yes
+		}
+		trait = archmage
+		spend_standard_ps_effect = yes
+		custom_tooltip = ev4.18.0.b_ct
+		scope:whunter = {
+			trigger_event = magic_ev4.29
+		}
+		ai_chance = {
+			base = 100
+			modifier = {
+				add = 50
+				has_trait = wrathful
+			}
+		}
+	}
+	option = {
+		#Burn2
+		name = ev4.18.0.b
+		trigger = {
+			has_trait = demon
+			can_spend_standard_ps_trigger = yes
+			NOT = {
+				has_trait = archmage
+			}
+		}
+		trait = demon
+		spend_standard_ps_effect = yes
+		custom_tooltip = ev4.18.0.b_ct
+		scope:whunter = {
+			trigger_event = magic_ev4.29
+		}
+		ai_chance = {
+			base = 100
+			modifier = {
+				add = 50
+				has_trait = wrathful
+			}
+		}
+	}
+}
+
+#the witch hunter - stop the witch - direct actions
+magic_ev4.37 = {
+	title = ev4.2.title
+	desc = ev4.37.desc
+	theme = murder_scheme
+	left_portrait = root
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	immediate = {
+		show_as_tooltip = {
+			scope:recipient = {
+				add_character_modifier = {
+					modifier = tracked_by_witch_hunter_modifier
+					years = 1
+				}
+			}
+		}
+	}
+
+	option = {
+		name = ev4.37.0.a
+		custom_tooltip = ev4.37.0.a_ct
+		scope:recipient = {
+			trigger_event = {
+				id = magic_ev4.38
+				days = { 12 24 }
+			}
+		}
+	}
+	option = {
+		name = ev4.37.0.b
+		custom_tooltip = ev4.37.0.b_ct
+		custom_tooltip = ev4.10.0.a_ct
+		add_character_modifier = {
+			modifier = witchhunter_weapons_modifier
+			months = 1
+		}
+		trigger_event = {
+			id = magic_ev4.40
+			days = { 3 6 }
+		}
+	}
+	option = {
+		name = ev4.37.0.c
+		trigger = {
+			has_trait = schemer
+		}
+		trait = schemer
+		duel = {
+			skill = intrigue
+			value = scope:recipient.intrigue
+			4 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.2.title
+					scope:recipient = {
+						death = {
+							death_reason = death_accident
+						}
+					}
+				}
+			}
+			6 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.2.title
+					custom_tooltip = ev3.52.a_2
+					custom_tooltip = ev4.5.0.a_ct
+				}
+			}
+		}
+	}
+}
+
+#the witch pov - duel?'
+magic_ev4.38 = {
+	title = ev4.11.title
+	desc = ev4.38.desc
+	theme =  realm
+	left_portrait = root
+	right_portrait = scope:whunter
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:whunter
+		scope:whunter = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		#Fight
+		name = ev4.36.0.a
+		custom_tooltip = start_duel_ct
+		scope:whunter = {
+			save_scope_as = actor
+		}
+		
+		configure_start_single_combat_effect = {
+			SC_INITIATOR = scope:whunter
+			SC_ATTACKER = scope:whunter
+			SC_DEFENDER = root
+			FATALITY = always
+			FIXED = no
+			LOCALE = throne_room
+			OUTPUT_EVENT = fp1_tbc.0011
+			INVALIDATION_EVENT = fp1_tbc.0021
+		}
+		ai_chance = {
+			base = 10
+			modifier = {
+				add=1000
+				prowess > scope:whunter.prowess
+			}
+		}
+	}
+	option = {
+		#Nope
+		name = ev4.38.0.b
+		scope:whunter = {
+			trigger_event = {
+				id = magic_ev4.39
+				days = { 12 24 }
+			}
+		}
+		ai_chance = {
+			base = 10
+			modifier = {
+				add=-1000
+				prowess < scope:whunter.prowess
+			}
+		}
+	}
+}
+
+#the witch hunter - stop the witch - the witch refused duel
+magic_ev4.39 = {
+	title = ev4.2.title
+	desc = ev4.39.desc
+	theme = murder_scheme
+	left_portrait = root
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		name = ev4.37.0.b
+		custom_tooltip = ev4.37.0.b_ct
+		custom_tooltip = ev4.10.0.a_ct
+		add_character_modifier = {
+			modifier = witchhunter_weapons_modifier
+			months = 1
+		}
+		trigger_event = {
+			id = magic_ev4.40
+			days = { 12 24 }
+		}
+	}
+	option = {
+		name = ev4.37.0.c
+		trigger = {
+			has_trait = schemer
+		}
+		trait = schemer
+		duel = {
+			skill = intrigue
+			value = scope:recipient.intrigue
+			4 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.2.title
+					scope:recipient = {
+						death = {
+							death_reason = death_accident
+						}
+					}
+				}
+			}
+			6 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.2.title
+					custom_tooltip = ev3.52.a_2
+					custom_tooltip = ev4.5.0.a_ct
+				}
+			}
+		}
+	}
+	option = {
+		#enough
+		name = ev4.12.0.a
+		custom_tooltip = ev4.5.0.a_ct
+		add_trait_xp = {
+			trait = supernatural_hunter
+			track = witch_hunting
+			value = 5
+		}
+	}
+}
+
+#the witch hunter - stop the witch - night's operation begins
+magic_ev4.40 = {
+	title = ev4.2.title
+	desc = ev4.40.desc
+	theme = travel_intrigue
+	left_portrait = root
+	#lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		name = ev4.40.0.a
+		duel = {
+			skill = prowess
+			value = 12
+			5 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				custom_tooltip = ev4.40.0.a_ct
+				trigger_event = magic_ev4.41
+			}
+			5 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				custom_tooltip = ev4.40.0.a_ct2
+				hidden_effect = {
+					send_interface_toast = {
+						title = ev3.52.a_2
+						custom_tooltip = ev4.40.0.a_ct2
+						custom_tooltip = ev4.5.0.a_ct
+					}
+				}
+				
+			}
+		}
+	}
+	option = {
+		name = ev4.40.0.b
+		duel = {
+			skill = diplomacy
+			value = 12
+			5 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				custom_tooltip = ev4.40.0.a_ct
+				remove_short_term_gold = 30
+				trigger_event = magic_ev4.41
+			}
+			5 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				custom_tooltip = ev4.40.0.a_ct2
+				hidden_effect = {
+					send_interface_toast = {
+						title = ev3.52.a_2
+						custom_tooltip = ev4.40.0.a_ct2
+						custom_tooltip = ev4.5.0.a_ct
+					}
+				}
+				
+			}
+		}
+	}
+	option = {
+		name = ev4.40.0.c
+		random_list = {
+			9 = {
+				custom_tooltip = ev4.40.0.a_ct
+				trigger_event = magic_ev4.41
+			}
+			1 = {
+				death = {
+					death_reason = death_fall
+				}
+			}
+		}
+	}
+	option = {
+		name = ev4.40.0.d
+		custom_tooltip = ev4.40.0.d_ct
+		custom_tooltip = ev4.5.0.a_ct
+	}
+}
+#inside the witch liar
+magic_ev4.41 = {
+	title = ev4.2.title
+	desc = ev4.41.desc
+	theme = dungeon
+	left_portrait = root
+	#lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+	immediate = {
+		add_stress = minor_stress_gain
+	}
+
+	option = {
+		name = ev4.41.0.a
+	}
+	option = {
+		name = ev4.41.0.b
+	}
+	option = {
+		name = ev4.41.0.c
+	}
+	after = {
+		trigger_event = magic_ev4.42
+	}
+}
+
+#inside the witch liar part 2
+magic_ev4.42 = {
+	title = ev4.2.title
+	desc = ev4.42.desc
+	theme = dungeon
+	left_portrait = root
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+
+	option = {
+		name = ev4.42.0.a
+		duel = {
+			skill = prowess
+			value = scope:recipient.martial
+			6 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				show_as_tooltip = {
+					scope:recipient = {
+						death = {
+							death_reason = death_murder
+							killer = root
+						}
+					}
+				}
+				trigger_event = magic_ev4.43
+			}
+			4 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				custom_tooltip = ev4.42.0.a_ct
+				trigger_event = magic_ev4.26
+				hidden_effect = {
+					scope:recipient = {
+						send_interface_toast = {
+							title = witch_hunter_burgler
+							show_as_tooltip = {
+								imprison = {
+									target = root
+									type = dungeon
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+magic_ev4.43 = {
+	title = ev4.2.title
+	desc = ev4.43.desc
+	theme = murder_scheme
+	override_background = { reference = bedchamber }
+	left_portrait = root
+	lower_right_portrait = scope:recipient
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+	immediate = {
+		scope:recipient = {
+			death = {
+				death_reason = death_murder
+				killer = root
+			}
+		}
+	}
+	option = {
+		name = ev3.62.a
+		add_stress = medium_stress_loss
+		add_prestige = major_prestige_gain
+	}
+}
+
+#scrying 1.
+magic_ev4.44 = {
+	title = ev4.44.title
+	desc = ev4.44.desc
+	theme = witchcraft
+	left_portrait = root
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+	}
+	immediate = {
+		#random_list = {
+		#	1= {	add_diplomacy_skill = 1	}
+		#	1= {	add_martial_skill = 1	}
+		#	1= {	add_stewardship_skill = 1	}
+		#	1= {	add_intrigue_skill = 1	}
+		#	1= {	add_learning_skill = 1	}
+		#}
+		#tournament_astronomy_modifier
+		#bp1_1000_focus_on_work_modifier
+		#determination_modifier
+		
+	}
+	option = {
+		name = ev4.44.a
+		if = {
+			limit = {
+				NOT = {
+					has_character_modifier = bp1_1000_focus_on_work_modifier
+				}
+			}
+			add_character_modifier = {
+				modifier = bp1_1000_focus_on_work_modifier
+				years = 2
+			}
+		}
+	}
+}
+
+#scrying 2.
+magic_ev4.45 = {
+	title = ev4.44.title
+	desc = ev4.45.desc
+	theme = witchcraft
+	left_portrait = root
+	lower_right_portrait = scope:scrying_target
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+	}
+	immediate = {
+		random_neighboring_and_across_water_realm_same_rank_owner ={
+			limit = {	
+				has_any_secrets = yes
+				any_secret = {
+					NOT = {	is_known_by = root	}
+				}
+			}
+			add_to_list = scrying_targets
+		}
+		random_neighboring_and_across_water_top_liege_realm_owner ={
+			limit = {	
+				has_any_secrets = yes
+				any_secret = {
+					NOT = {	is_known_by = root	}
+				}
+			}
+			add_to_list = scrying_targets
+		}
+		random_councillor = {
+			limit = {	
+				has_any_secrets = yes
+				any_secret = {
+					NOT = {	is_known_by = root	}
+				}
+			}
+			add_to_list = scrying_targets
+		}
+		random_vassal = {
+			limit = {	
+				has_any_secrets = yes
+				any_secret = {
+					NOT = {	is_known_by = root	}
+				}
+			}
+			add_to_list = scrying_targets
+		}
+		if = {
+			limit = {
+				exists = root.primary_spouse
+				root.primary_spouse = {
+					has_any_secrets = yes
+					any_secret = {
+						NOT = {	is_known_by = root	}
+					}
+				}
+			}
+			root.primary_spouse = {
+				add_to_list = scrying_targets
+			}
+		}
+		if = {
+			limit = {
+				exists = root.liege
+				root.liege = {
+					has_any_secrets = yes
+					any_secret = {
+						NOT = {	is_known_by = root	}
+					}
+				}
+			}
+			root.liege = {
+				add_to_list = scrying_targets
+			}
+		}
+		random_in_list = {
+			list = scrying_targets
+			save_scope_as = scrying_target
+		}
+		
+		hidden_effect = {
+			if = {
+				limit = {
+					NOT = {	exists = scope:scrying_target	}
+				}
+				#random_courtier_or_guest = {
+				#	limit = {
+				#		is_adult = yes
+				#	}
+				#	save_scope_as = scrying_target
+				#	add_secret = {
+				#		type = secret_cannibal
+				#		target = THIS
+				#	}
+				#	random_secret = {
+				#		limit = {
+				#			NOT = {	is_known_by = root	}
+				#		}
+				#		save_scope_as = sssecret
+				#	}
+				#}
+				random_living_character = {
+					limit = {
+						has_any_secrets = yes
+						any_secret = {
+							NOT = {	is_known_by = root	}
+						}
+					}
+					save_scope_as = scrying_target
+				}
+				scope:scrying_target = {
+					random_secret = {
+						limit = {
+							NOT = {	is_known_by = root	}
+						}
+						save_scope_as = sssecret
+					}
+				}
+			}
+			else = {
+				scope:scrying_target = {
+					random_secret = {
+						limit = {
+							NOT = {	is_known_by = root	}
+						}
+						if = {
+							limit = {	exists = this	}
+							save_scope_as = sssecret
+						}
+					}
+				}
+			}
+		}
+		#random_character_artifact = {
+		#	limit = {
+		#		has_variable = magic1
+		#	}
+		#	save_scope_as = full_temp_art
+		#}
+	}
+	option = {
+		name = ev4.45.a
+		scope:sssecret = {
+			reveal_to = root
+		}
+		#icon = scope:full_temp_art
+	}
+}
+
+#scrying 3.
+magic_ev4.46 = {
+	title = ev4.44.title
+	desc = ev4.46.desc
+	theme = witchcraft
+	left_portrait = root
+	lower_right_portrait = scope:rruler
+
+	trigger = {
+		#any_character = {
+		#	NOT = { this = root }
+		#	any_character_artifact = { has_variable = magic1 }
+		#}
+		any_artifact = {
+			has_variable = magic1
+			NOT = {	artifact_owner = ROOT	}
+		}
+	}
+	on_trigger_fail = {
+		trigger_event = magic_ev4.45
+	}
+	immediate = {
+		random_artifact = {
+			limit = {
+				has_variable = magic1
+				NOT = {	artifact_owner = ROOT	}
+			}
+			save_scope_as = arteX
+		}
+		scope:arteX.artifact_owner = {
+			save_scope_as = rruler
+		}
+		#random_character = {
+		#	limit = {
+		#		NOT = { this = root }
+		#		any_character_artifact = { has_variable = magic1 }
+		#	}
+		#	save_scope_as = rruler
+		#}
+	}
+	option = {
+		name = ev4.46.a
+	}
+}
+#Darkblade upgrade
+magic_ev4.47 = {
+	hidden = yes
+	trigger = {
+		exists = scope:killer
+		scope:killer = {
+			any_equipped_character_artifact = {	has_variable = dark_blade	}
+		}
+	}
+	immediate = {
+		save_scope_as = victim
+		scope:killer = {
+			trigger_event = {
+				id = magic_ev4.48
+				days = 1
+			}
+		}
+	}
+}
+
+#Darkblade upgrade
+magic_ev4.48 = {
+	hidden = yes
+	trigger = {
+		any_equipped_character_artifact = {	has_variable = dark_blade	}
+		scope:victim = {
+			OR = {
+				death_reason = death_tournament_melee_throat
+				death_reason = death_tournament_quintain_hit
+				death_reason = death_contest_duel_accident
+				death_reason = death_contest_melee_accident
+				death_reason = death_duel
+				death_reason = death_fight
+				death_reason = death_fight_killer
+				death_reason = death_battle
+				death_reason = death_head_ripped_off
+				death_reason = death_cloven_in_half
+				death_reason = death_decapitated
+				death_reason = death_sacrificed_to_gods
+				death_reason = death_sacrificed_to_foreign_gods
+			}
+		}
+		
+	}
+	immediate = {
+		send_interface_toast = {
+			title=dark_blade_fed
+			custom_tooltip = dark_blade_fed_ct
+			if = {
+				limit = {
+					can_be_power_saturated_trigger = yes
+				}
+				gain_standard_ps_effect = yes
+			}
+		}
+		dark_blade_grows_stronger = yes
+	}
+}
+#auto convertion2witch
+magic_ev4.49 = {
+	hidden = yes
+	type = character_event
+	trigger = {
+		is_alive = yes
+		is_ai = yes
+		NOR = {
+			ROOT = scope:dpriest
+			has_trait = witch
+			has_trait = witch_hunter
+			any_secret = { secret_type = secret_witch }
+			has_relation_rival = scope:dpriest
+			has_relation_nemesis = scope:dpriest
+		}
+	}
+	immediate = {
+		save_scope_as = tttarget
+		if = {
+			limit = {
+				trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = root }
+			}
+			add_secret = {
+				type = secret_witch
+				target = root
+			}
+			random_secret = {
+				limit = {
+					secret_type = secret_witch
+				}
+				save_scope_as = wsecret
+			}
+			if = {
+				limit = {
+					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = scope:dpriest.faith GENDER_CHARACTER = scope:dpriest }
+				}
+				scope:dpriest = {
+					random_secret = {
+						limit = {
+							secret_type = secret_witch
+						}
+						reveal_to = root
+					}
+				}
+			}
+		}
+		else = {
+			add_trait = witch
+		}
+		
+		
+		scope:dpriest = {
+			send_interface_toast = {
+				title = converted2witch
+				if = {
+					limit = {
+						trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = root }
+					}
+					scope:wsecret = {
+						reveal_to = scope:dpriest
+					}
+				}
+				else = {
+					root = {
+						add_trait = witch
+					}
+				}
+			}
+		}
+	}
+}
+
+#auto convertion2witch - game rules
+magic_ev4.50 = {
+	hidden = yes
+	scope = none
+	trigger = {
+		has_game_rule = yep_magic_witches
+	}
+	immediate = {
+		every_ruler = {
+			limit = {
+				is_ai = no
+			}
+			send_interface_toast = {
+				title = rule_magic_witches_info
+				give_witch_secret_or_trait_effect = yes
+			}
+		}
+
+	}
+}
+
+#ring of life paranoia
+magic_ev4.51 = {
+	title = ev4.51.title
+	desc = ev4.51.desc
+	theme = witchcraft
+	left_portrait = root
+
+	artifact = {
+        target = scope:mring
+        position = lower_right_portrait
+    }
+
+	trigger = {
+		is_adult = yes
+		is_alive = yes
+		is_imprisoned = no
+		any_character_artifact = { has_variable = magic_ring }
+		NOT = {	has_character_flag = ring_of_life_paranoia	}
+	}
+
+	immediate = {
+		random_character_artifact = {
+			limit = {
+				has_variable = magic_ring
+			}
+			save_scope_as = mring
+		}
+	}
+	option = {
+		name = ev4.51.a
+		add_character_modifier = {
+			modifier = more_vigilant_recistance_modifier
+			months = 3
+		}
+		add_stress = medium_stress_gain
+		if = {
+			limit = {
+				number_of_personality_traits < 4
+				NOR = {
+					has_trait = paranoid
+					has_trait = trusting
+				}
+			}
+			random = {
+				chance = 10
+				add_trait = paranoid
+			}
+		}
+	}
+	after = {
+		hidden_effect = {
+			add_character_flag = {
+				flag = ring_of_life_paranoia
+				years = 80
+			}
+			if = {
+				limit = {
+					is_independent_ruler = no
+					exists = root.liege
+					liege = {
+						NOT = {	ROOT = THIS	}
+						is_ai = yes
+					}
+				}
+				liege = {
+					save_scope_as = wliege
+				}
+			}
+			random_neighboring_and_across_water_realm_same_rank_owner ={
+				limit = {	
+					is_ai = yes
+				}
+				if = {
+					limit = {
+						exists = this
+					}
+					save_scope_as = nruler
+				}
+			}
+			if = {
+				limit = {
+					exists = scope:wliege
+				}
+				scope:wliege = {
+					if = {
+						limit = {
+							NOT = {
+								has_personal_artifact_claim = scope:mring
+							}
+						}
+						add_personal_artifact_claim = scope:mring
+					}
+					progress_towards_rival_effect = {
+						CHARACTER = root
+						OPINION = 0
+						REASON = rival_random_m1
+					}
+				}
+			}
+			if = {
+				limit = {
+					exists = scope:nruler
+				}
+				scope:nruler = {
+					if = {
+						limit = {
+							NOT = {
+								has_personal_artifact_claim = scope:mring
+							}
+						}
+						add_personal_artifact_claim = scope:mring
+					}
+					progress_towards_rival_effect = {
+						CHARACTER = root
+						OPINION = -100
+						REASON = rival_random_m1
+					}
+					spawn_army = {
+						levies = {
+							add = max_military_strength
+							multiply = 1.5
+						}
+						location = scope:nruler.capital_province
+						name = grizzled_veterans
+						inheritable = no
+						uses_supply = no
+					}
+					if = {
+						limit = {
+							number_of_personality_traits < 4
+							NOR = {
+								has_trait = greedy
+								has_trait = generous
+							}
+						}
+						add_trait = greedy
+					}
+				}
+			}
+		}
+	}
+}
+
+#Darkblade 1
+magic_ev4.52 = {
+	title = ev95.1.title
+	desc = ev4.52.desc
+	theme = witchcraft
+	left_portrait = root
+
+	artifact = {
+        target = scope:msword
+        position = lower_right_portrait
+    }
+
+	trigger = {
+		is_adult = yes
+		is_alive = yes
+		is_imprisoned = no
+		any_character_artifact = { has_variable = dark_blade }
+		NOT = {	has_character_flag = db_story_flag	}
+	}
+
+	immediate = {
+		random_character_artifact = {
+			limit = {
+				has_variable = dark_blade
+			}
+			save_scope_as = msword
+		}
+	}
+	option = {
+		name = ev4.52.a
+		add_stress = major_stress_gain
+	}
+	option = {
+		name = ev4.52.b
+		trigger = {
+			number_of_personality_traits < 4
+				NOR = {
+					has_trait = calm
+					has_trait = wrathful
+				}
+		}
+		add_trait = wrathful
+	}
+	option = {
+		name = ev4.52.c
+		trigger = {
+			number_of_personality_traits < 4
+				NOR = {
+					has_trait = fickle
+					has_trait = stubborn
+				}
+		}
+		add_trait = fickle
+	}
+	option = {
+		name = ev4.14.0.a
+		trigger = {
+			OR = {
+				has_trait = lunatic_1
+				has_trait = lunatic_genetic
+			}
+		}
+		trait = lunatic_1
+	}
+	after = {
+		add_character_flag = db_story_flag
+		trigger_event = {
+			id = magic_ev4.53
+			months = { 9 12 }
+		}
+	}
+}
+#Darkblade 2
+magic_ev4.53 = {
+	title = ev95.1.title
+	desc = ev4.53.desc
+	theme = dread
+	left_portrait = root
+	right_portrait = scope:rvic
+
+	#artifact = {
+    #    target = scope:msword
+    #    position = lower_right_portrait
+    #}
+
+	trigger = {
+		is_adult = yes
+		is_alive = yes
+		is_imprisoned = no
+		any_character_artifact = { has_variable = dark_blade }
+	}
+
+	immediate = {
+		random_courtier_or_guest = {
+			limit = {
+				is_adult = yes
+			}
+			save_scope_as = rvic
+		}
+		if = {
+			limit = {
+				NOT = {
+					exists = scope:rvic
+					exists = root.primary_spouse
+					root.primary_spouse = {
+						is_ai = yes
+					}
+				}
+			}
+			primary_spouse = {
+				save_scope_as = rvic
+			}
+		}
+		if = {
+			limit = {
+				NOT = {
+					exists = scope:rvic
+				}
+			}
+			random_living_character = {
+				limit = {
+					is_adult = yes
+					is_landed = no
+				}
+				save_scope_as = rvic
+			}
+		}
+	}
+	option = {
+		name = ev4.53.a
+		add_stress = medium_stress_gain
+		add_dread = 20
+		scope:rvic = {
+			death = {
+				death_reason = death_cloven_in_half
+				killer = root
+			}
+		}
+		trigger_event = {
+			id = magic_ev4.54
+			days = { 9 12 }
+		}
+	}
+	option = {
+		name = ev4.53.b
+		trigger = {
+			has_trait = calm
+		}
+		trait = calm
+		add_dread = 10
+		scope:rvic = {
+			add_stress = major_stress_gain
+		}
+		trigger_event = {
+			id = magic_ev4.54
+			days = { 9 12 }
+		}
+	}
+	option = {
+		name = ev4.53.c
+		trigger = {
+			has_trait =true_witch
+		}
+		trait = true_witch
+		add_dread = 10
+		scope:rvic = {
+			add_stress = major_stress_gain
+		}
+		trigger_event = {
+			id = magic_ev4.54
+			days = { 9 12 }
+		}
+	}
+	option = {
+		name = ev4.53.d
+		trigger = {
+			OR = {
+				has_trait = lunatic_1
+				has_trait = lunatic_genetic
+			}
+		}
+		trait = lunatic_1
+		add_dread = 30
+		scope:rvic = {
+			death = {
+				death_reason = death_cloven_in_half
+				killer = root
+			}
+		}
+	}
+	option = {
+		name = ev4.53.d
+		trigger = {
+			OR = {
+				has_trait = possessed_1
+				has_trait = possessed_genetic
+			}
+			NOR = {
+				has_trait = lunatic_1
+				has_trait = lunatic_genetic
+			}
+		}
+		trait = possessed_1
+		add_dread = 30
+		scope:rvic = {
+			death = {
+				death_reason = death_cloven_in_half
+				killer = root
+			}
+		}
+	}
+
+}
+
+#Darkblade 3
+magic_ev4.54 = {
+	title = ev95.1.title
+	desc = ev4.54.desc
+	theme = witchcraft
+	left_portrait = root
+
+	artifact = {
+        target = scope:msword
+        position = lower_right_portrait
+    }
+
+	trigger = {
+		is_adult = yes
+		is_alive = yes
+		is_imprisoned = no
+		any_character_artifact = { has_variable = dark_blade }
+		NOR = {
+			has_trait = possessed_1
+			has_trait = possessed_genetic
+		}
+	}
+
+	#immediate = {
+	#
+	#}
+	option = {
+		name = ev4.54.a
+		duel = {
+			skill = learning
+			value = 25
+			5 = {
+				desc = ev4.54.a1
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 2
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.54.a
+					custom_tooltip = ev4.54.a_ct
+				}
+				add_stress = medium_stress_loss
+			}
+			5 = {
+				desc = ev4.54.a1
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -2
+					min = 0
+				}
+				add_trait = possessed_1
+				add_stress = medium_stress_gain
+				dark_blade_grows_stronger = yes
+				trigger_event = {
+					id = magic_ev4.55
+					months = { 9 12 }
+				}
+			}
+		}
+	}
+	option = {
+		name = ev4.54.b
+		trigger = {
+			has_trait = true_witch
+			NOT = {
+				has_trait = archmage
+			}
+		}
+		trait = true_witch
+		add_stress = medium_stress_loss
+		custom_tooltip = ev4.54.a_ct
+	}
+	option = {
+		name = ev4.54.b
+		trigger = {
+			has_trait = archmage
+		}
+		trait = archmage
+		add_stress = medium_stress_loss
+		custom_tooltip = ev4.54.a_ct
+	}
+}
+#Darkblade 4
+magic_ev4.55 = {
+	title = ev95.1.title
+	desc = ev4.55.desc
+	theme = dread
+	left_portrait = root
+
+	artifact = {
+        target = scope:msword
+        position = lower_right_portrait
+    }
+
+	trigger = {
+		is_adult = yes
+		is_alive = yes
+		is_imprisoned = no
+		any_character_artifact = { has_variable = dark_blade }
+	}
+
+	option = {
+		name = ev4.55.a
+		add_dread = 50
+		every_courtier_or_guest = {
+			death = {
+				death_reason = death_murder
+				killer = root
+			}
+		}
+		dark_blade_grows_stronger = yes
+		if = {
+			limit = {
+				number_of_personality_traits < 4
+				NOR = {
+					has_trait = callous
+					has_trait = sadistic
+					has_trait = compassionate
+				}
+			}
+			add_trait = callous
+		}
+		if = {
+			limit = {
+				NOT = {
+					has_trait = murderer
+				}
+			}
+			add_trait = murderer
+		}
+	}
+}
+
+#Servant for dark priest
+magic_ev4.56 = {
+	title = ev4.56.title
+	desc = ev4.56.desc
+	theme = realm
+	left_portrait = root
+	right_portrait = scope:created_witch
+
+	trigger = {
+		is_adult = yes
+		is_alive = yes
+		is_imprisoned = no
+		has_trait = heresiarch
+	}
+
+	immediate = {
+		create_common_witch_effect2 = yes
+		scope:created_witch = {
+			add_trait = witch
+		}
+	}
+
+	option = {
+		name = ev4.56.a
+		add_courtier = scope:created_witch
+		add_hook = {
+			type = loyalty_hook
+			target = scope:created_witch
+		}
+		scope:created_witch = {
+			add_trait = loyal
+		}
+		hidden_effect = {
+			set_relation_mminion = scope:created_witch
+		}
+	}
+	option = {
+		name = ev4.56.b
+		stress_impact = {
+			paranoid = medium_stress_loss
+		}
+	}
+	option = {
+		name = ev4.56.c
+		scope:created_witch = {
+			death = {
+				death_reason = death_sacrificed_to_gods
+				killer = root
+			}
+		}
+		if = {
+			limit = {
+				OR = {
+					has_focus = arcane_focus
+					has_trait = archmage
+				}
+				can_be_power_saturated_trigger = yes
+			}
+			gain_standard_ps_effect = yes
+		}
+		else_if = {
+			limit = {
+				has_trait = lifestyle_mystic
+			}
+			add_trait_xp = {
+				trait = lifestyle_mystic
+				value = medium_lifestyle_random_xp_high
+			}
+		}
+		else_if = {
+			limit = {
+				NOT = {
+					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = root }
+				}
+			}
+			add_piety = major_piety_gain
+		}
+		else_if = {
+			limit = {
+				OR = {
+					has_focus = witch_focus
+					has_focus = arcane_focus
+				}
+			}
+			custom_tooltip = ev2.47.a_ct
+			hidden_effect = {
+				add_magic_lifestyle_perk_points=1
+			}
+		}
+		else = {
+			add_dread = 20
+		}
+	}
+}
+
+#Black Grimoire Special
+magic_ev4.57 = {
+	title = blackgrimoire
+	desc = ev4.57.desc
+	theme = witchcraft
+	left_portrait = root
+	right_portrait = scope:riv0
+	artifact = {
+        target = scope:mbook
+        position = lower_right_portrait
+    }
+
+	trigger = {
+		is_adult = yes
+		is_alive = yes
+		is_imprisoned = no
+		any_character_artifact = { has_variable = blackgrimoire }
+		any_relation = {
+			type = rival
+			is_ai = yes
+			NOR = {
+				any_character_artifact = { has_variable = magic_ring }
+				has_character_modifier = amp_modifier
+			}
+		}
+	}
+
+	immediate = {
+		random_relation = {
+			type = rival
+			limit = {
+				is_ai = yes
+				NOR = {
+					any_character_artifact = { has_variable = magic_ring }
+					has_character_modifier = amp_modifier
+				}
+			}
+			save_scope_as = riv0
+		}
+		random_character_artifact = {
+			limit = {
+				has_variable = blackgrimoire
+			}
+			save_scope_as = mbook
+		}
+	}
+
+	option = {
+		name = ev4.57.a
+		custom_tooltip = use_magic2_custom_tooltip
+		trigger_event = {
+			id = magic_ev4.58
+			days = 3
+		}
+		hidden_effect = {
+			dynasty = {
+				set_variable = {
+					name = used_magic_book
+					value = yes
+					years = 50
+				}
+			}
+		}
+	}
+	option = {
+		name = ev4.57.b
+		if = {
+			limit = {
+				has_trait = lifestyle_mystic
+			}
+			add_trait_xp = {
+				trait = lifestyle_mystic
+				value = medium_lifestyle_random_xp_high
+			}
+		}
+		else_if = {
+			limit = {
+				NOT = {
+					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = root }
+				}
+			}
+			add_piety = major_piety_gain
+		}
+	}
+}
+#Black Grimoire Special #2
+magic_ev4.58 = {
+	title = blackgrimoire
+	desc = ev4.58.desc
+	theme = witchcraft
+	left_portrait = root
+	right_portrait = scope:riv0
+	artifact = {
+        target = scope:mbook
+        position = lower_right_portrait
+    }
+
+	trigger = {
+		is_adult = yes
+		is_alive = yes
+		is_imprisoned = no
+		any_character_artifact = { has_variable = blackgrimoire }
+	}
+
+	immediate = {
+		scope:riv0 = {
+			death = {
+				death_reason = death_mysterious
+			}
+		}
+	}
+
+	option = {
+		name = ev4.58.a
+		if = {
+			limit = {
+				has_trait = archmage
+				has_trait_xp = {
+					trait = archmage
+					track = secret_knowledge
+					value < 100
+				}
+			}
+			gain_sc_xp2_effect = yes
+		}
+		else_if = {
+			limit = {
+				OR = {
+					has_focus = witch_focus
+					has_focus = arcane_focus
+				}
+			}
+			custom_tooltip = ev2.47.a_ct
+			hidden_effect = {
+				add_magic_lifestyle_perk_points=1
+			}
+		}
+		else_if = {
+			limit = {
+				has_trait = lifestyle_mystic
+			}
+			add_trait_xp = {
+				trait = lifestyle_mystic
+				value = medium_lifestyle_random_xp_high
+			}
+		}
+		else_if = {
+			limit = {
+				NOT = {
+					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = root }
+				}
+			}
+			add_prestige = major_prestige_gain
+		}
+	}
+}
+
+#heresiarch1
+magic_ev4.59 = {
+	type = activity_event
+	title = ev4.59.title
+	desc = ev4.59.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+
+
+	#immediate = {
+	#
+	#}
+
+	option = {
+		name = ev4.59.a
+		add_prestige = medium_prestige_gain
+		add_diplomacy_skill = 1
+		add_stress = minor_stress_loss
+	}
+}
+
+#heresiarch2
+magic_ev4.60 = {
+	type = activity_event
+	title = ev4.60.title
+	desc = ev4.60.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+
+
+	#immediate = {
+	#
+	#}
+
+	option = {
+		name = ev4.60.a
+		gain_sc_xp1_effect = yes
+		if = {
+			limit = {
+				OR = {
+					has_focus = witch_focus
+					has_focus = arcane_focus
+				}
+			}
+			custom_tooltip = ev2.47.a_ct
+			hidden_effect = {
+				add_magic_lifestyle_perk_points=1
+			}
+		}
+		else_if = {
+			limit = {
+				has_trait = lifestyle_mystic
+			}
+			add_trait_xp = {
+				trait = lifestyle_mystic
+				value = medium_lifestyle_random_xp_high
+			}
+		}
+		else_if = {
+			limit = {
+				NOT = {
+					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = root }
+				}
+			}
+			add_prestige = medium_prestige_gain
+		}
+		add_character_modifier = {
+			modifier = horned_god_blessing_modifier
+			years = 2
+		}
+	}
+}
+
+#heresiarch3
+magic_ev4.61 = {
+	type = activity_event
+	title = ev4.61.title
+	desc = ev4.61.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+
+	trigger = {
+		NOT = {
+			has_character_flag = second_familiar
+		}
+	}
+
+	#immediate = {
+	#
+	#}
+
+	option = {
+		name = ev4.61.a
+		random_list = {
+			1 = {
+				trigger = {
+					NOT = {	has_character_modifier = witch_familiar_modifier1	}
+				}
+				send_interface_toast = {
+					title = witch_familiar_perk_name1
+					add_character_modifier = witch_familiar_modifier1
+				}
+			}
+			1 = {
+				trigger = {
+					NOT = {	has_character_modifier = witch_familiar_modifier2	}
+				}
+				send_interface_toast = {
+					title = witch_familiar_perk_name1
+					add_character_modifier = witch_familiar_modifier2
+				}
+			}
+			1 = {
+				trigger = {
+					NOT = {	has_character_modifier = witch_familiar_modifier3	}
+				}
+				send_interface_toast = {
+					title = witch_familiar_perk_name1
+					add_character_modifier = witch_familiar_modifier3
+				}
+			}
+			1 = {
+				trigger = {
+					NOT = {	has_character_modifier = witch_familiar_modifier4	}
+				}
+				send_interface_toast = {
+					title = witch_familiar_perk_name1
+					add_character_modifier = witch_familiar_modifier4
+				}
+			}
+			1 = {
+				trigger = {
+					NOT = {	has_character_modifier = witch_familiar_modifier5	}
+				}
+				send_interface_toast = {
+					title = witch_familiar_perk_name1
+					add_character_modifier = witch_familiar_modifier5
+				}
+			}
+		}
+
+	}
+	after = {
+		add_character_flag = second_familiar
+	}
+}
+
+#heresiarch4
+magic_ev4.62 = {
+	type = activity_event
+	title = ev4.62.title
+	desc = ev4.62.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+
+	trigger = {
+		has_perk = mind_control_p6_perk
+		can_be_power_saturated_trigger = yes
+	}
+
+	#immediate = {
+	#
+	#}
+
+	option = {
+		name = ev4.60.a
+		gain_standard_ps_effect = yes
+		gain_sc_xp1_effect = yes
+		if = {
+			limit = {
+				OR = {
+					has_focus = witch_focus
+					has_focus = arcane_focus
+				}
+			}
+			custom_tooltip = ev2.47.a_ct
+			hidden_effect = {
+				add_magic_lifestyle_perk_points=1
+			}
+		}
+		else_if = {
+			limit = {
+				has_trait = lifestyle_mystic
+			}
+			add_trait_xp = {
+				trait = lifestyle_mystic
+				value = medium_lifestyle_random_xp_high
+			}
+		}
+		else_if = {
+			limit = {
+				NOT = {
+					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = root }
+				}
+			}
+			add_prestige = medium_prestige_gain
+		}
+	}
+}
+
+#heresiarch5
+magic_ev4.63 = {
+	type = activity_event
+	title = ev4.63.title
+	desc = ev4.63.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+	lower_right_portrait = scope:demon
+
+	trigger = {
+		is_male = no
+		NOT = {
+			has_trait = pregnant
+		}
+	}
+
+	immediate = {
+		hidden_effect = {
+			create_character = {
+				location = root.location
+				gender = male
+				template = generic_demon_character
+				save_scope_as = demon
+			}
+			scope:demon = {
+				set_sexuality = bisexual
+				add_trait = witch
+			}
+			
+		}
+	}
+
+	option = {
+		name = ev4.63.a
+		#show_as_tooltip = {
+		#	add_trait = pregnant
+		#}
+		add_trait = pregnant
+		add_character_modifier = {
+			modifier = touched_magic_modifier
+			years = 1
+		}
+		trigger_event = {
+			id = magic_ev4.91
+			months = 9
+		}
+		#hidden_effect = {
+		#	make_pregnant = {
+		#		father = scope:demon
+		#		number_of_children = 1
+		#	}
+		#}
+	}
+	after = {
+		hidden_effect = {
+			scope:demon = {
+				death = natural
+			}
+			#clear_saved_scope = demon
+		}
+	}
+}
+
+#seek the power1/heresiarch6
+magic_ev4.64 = {
+	type = activity_event
+	title = ev4.64.title
+	desc = ev4.64.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+	right_portrait = scope:demon
+	lower_right_portrait = scope:sssac
+
+	trigger = {
+		NOT = { has_character_flag = no_soul }
+		NOT = {
+			#dynasty = {
+			#	has_variable = demon_during_rite
+			#}
+			has_character_modifier = gift_from_hell_modifier
+		}
+	}
+
+	immediate = {
+		scope:activity = {
+			random_attending_character = {
+				limit = {
+					is_ai = yes
+					NOT = {	this = root	}
+					NOT = { has_character_flag = no_soul }
+				}
+				save_scope_as = sssac
+			}
+		}
+		hidden_effect = {
+			create_character = {
+				location = root.location
+				gender_female_chance = 30
+				template = generic_demon_character
+				culture = root.culture
+				faith = root.faith
+				save_scope_as = demon
+				after_creation = {
+					set_sexuality = bisexual
+					give_witch_secret_or_trait_effect = yes
+				}
+			}
+			#scope:demon = {
+			#	set_sexuality = bisexual
+			#	give_witch_secret_or_trait_effect = yes
+			#}
+			seek_the_power1_effect = yes
+		}
+	}
+
+	option = {
+		name = ev4.64.a
+		custom_tooltip = no_soul_custom_tooltip
+		add_character_flag = no_soul
+		trigger_event = {
+			id = magic_ev2.11
+			years = { 18 20 }
+		}
+		#if = {
+		#	limit = {
+		#		has_perk = mind_control_p6_perk
+		#		can_be_power_saturated_trigger = yes
+		#	}
+		#	gain_standard_ps_effect = yes
+		#}
+		add_character_modifier = gift_from_hell_modifier
+	}
+	option = {
+		name = ev4.64.b
+		set_relation_rival = scope:sssac
+		scope:sssac = {
+			add_character_flag = no_soul
+			trigger_event = {
+				id = magic_ev2.11
+				years = { 18 20 }
+			}
+		}
+		#if = {
+		#	limit = {
+		#		has_perk = mind_control_p6_perk
+		#		can_be_power_saturated_trigger = yes
+		#	}
+		#	gain_standard_ps_effect = yes
+		#}
+		add_character_modifier = gift_from_hell_modifier
+	}
+	option = {
+		name = ev4.64.c
+		custom_tooltip = ev4.64.c_ct
+		add_prestige = medium_prestige_gain
+	}
+	option = {
+		name = ev4.64.d
+		trigger = {
+			has_trait = archmage
+			can_spend_standard_ps_trigger = yes
+		}
+		trait = archmage
+		spend_standard_ps_effect = yes
+		add_character_modifier = gift_from_hell_modifier
+	}
+	after = {
+		hidden_effect = {
+			#dynasty = {
+			#	set_variable = demon_during_rite
+			#}
+			scope:demon = {
+				death = natural
+			}
+		}
+	}
+}
+
+#aspiring to grandmaster 1
+magic_ev4.65 = {
+	type = activity_event
+	title = ev4.65.title
+	desc = ev4.65.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+	lower_right_portrait = scope:thooker
+
+	immediate = {
+		random_hooked_character = {
+			limit = {
+				involved_activity = root.involved_activity
+			}
+			save_scope_as = thooker
+		}
+	}
+
+	option = {
+		name = ev4.65.a
+		add_stress = major_stress_gain
+		custom_tooltip = progress4magicintent
+		add_character_flag = gm_support1
+		ai_chance = {
+			base = 10
+		}
+	}
+	option = {
+		name = ev4.65.b
+		trigger = {
+			exists = scope:thooker
+		}
+		use_hook = scope:thooker
+		custom_tooltip = progress4magicintent
+		add_character_flag = gm_support1
+		ai_chance = {
+			base = 10
+		}
+	}
+	option = {
+		name = ev4.65.c
+		ai_chance = {
+			base = 5
+		}
+	}
+	after = {
+		trigger_event = magic_ev4.66
+		#trigger_event = {
+		#	id = magic_ev4.66
+		#	days = 1
+		#}
+	}
+}
+
+#aspiring to grandmaster 2
+magic_ev4.66 = {
+	type = activity_event
+	title = ev4.65.title
+	desc = ev4.66.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+
+	#immediate = {
+	#
+	#}
+
+	option = {
+		name = ev4.66.a
+		remove_short_term_gold = major_gold_min_value
+		custom_tooltip = progress4magicintent
+		add_character_flag = gm_support2
+		ai_chance = {
+			base = 10
+		}
+	}
+	option = {
+		name = ev4.66.b
+		trigger = {
+			has_trait = true_witch
+		}
+		trait = true_witch
+		custom_tooltip = progress4magicintent
+		add_character_flag = gm_support2
+		ai_chance = {
+			base = 10
+		}
+	}
+	option = {
+		name = ev4.66.c
+		trigger = {
+			diplomacy > 24
+		}
+		skill = diplomacy
+		custom_tooltip = progress4magicintent
+		add_character_flag = gm_support2
+		ai_chance = {
+			base = 10
+		}
+	}
+	option = {
+		name = ev4.66.d
+		trigger = {
+			has_trait = archmage
+		}
+		trait = archmage
+		custom_tooltip = progress4magicintent
+		add_character_flag = gm_support2
+		ai_chance = {
+			base = 10
+		}
+	}
+	option = {
+		name = ev4.66.e
+		ai_chance = {
+			base = 1
+		}
+	}
+	#after = {
+	#	trigger_event = {
+	#		id = magic_ev4.66
+	#		days = 1
+	#	}
+	#}
+}
+
+#grandmaster prepare final
+magic_ev4.67 = {
+	hidden = yes
+	scope = none
+	trigger = {
+		scope:activity = {
+			any_attending_character = {
+				OR = {
+					has_activity_intent = choose_grandmaster_intent
+					has_character_flag = magic_rite_in3
+				}
+			}
+		}
+	}
+	immediate = {
+		scope:activity = {
+			if = {
+				limit = {
+					NOR = {
+						any_attending_character = {
+							has_trait = grandmaster_coven
+							house = scope:host.house
+						}
+						scope:host.house = {
+							any_house_member = {
+								has_trait = grandmaster_coven
+							}
+						}
+					}
+				}
+				if = {
+					limit = {
+						any_attending_character = {
+							OR = {
+								has_activity_intent = choose_grandmaster_intent
+								has_character_flag = magic_rite_in3
+							}
+							count = 1
+						}
+					}
+					random_attending_character = {
+						limit = {
+							OR = {
+								has_activity_intent = choose_grandmaster_intent
+								has_character_flag = magic_rite_in3
+							}
+						}
+						save_scope_as = new_cgm
+						trigger_event = magic_ev4.68
+					}
+				}
+				else = {
+					ordered_attending_character = {
+						limit = {
+							OR = {
+								has_activity_intent = choose_grandmaster_intent
+								has_character_flag = magic_rite_in3
+							}
+						}
+						order_by = {
+							value = highest_held_title_tier
+							if = {
+								limit = {
+									OR = {
+										has_trait = true_witch
+										has_trait = archmage
+									}
+								}
+								add = 1
+							}
+							if = {
+								limit = {
+									has_character_flag = gm_support2
+								}
+								add = 3
+							}
+							if = {
+								limit = {
+									has_character_flag = gm_support1
+								}
+								add = 3
+							}
+							if = {
+								limit = {
+									has_trait = heresiarch
+								}
+								add = 1
+							}
+							if = {
+								limit = {
+									house.house_head = this
+								}
+								add = 1
+							}
+							if = {
+								limit = {
+									any_character_artifact = {
+										has_variable = magic1
+									}
+								}
+								add = 1
+							}
+							if = {
+								limit = {
+									can_spend_standard_ps_trigger = yes
+								}
+								add = 1
+							}
+						}
+						add_to_list = new_cgms
+					}
+					random_in_list = {
+						list = new_cgms
+						save_scope_as = new_cgm
+						trigger_event = magic_ev4.68
+					}
+				}
+				every_attending_character = {
+					limit = {
+						NOT = {
+							THIS = scope:new_cgm
+						}
+					}
+					trigger_event = magic_ev4.69
+				}
+			}
+			else = {
+				ordered_attending_character = {
+					limit = {
+						OR = {
+							has_activity_intent = choose_grandmaster_intent
+							has_character_flag = magic_rite_in3
+						}
+						NOT = {
+							has_trait = grandmaster_coven
+						}
+					}
+					order_by = {
+						value = highest_held_title_tier
+						if = {
+							limit = {
+								OR = {
+									has_trait = true_witch
+									has_trait = archmage
+								}
+							}
+							add = 1
+						}
+						if = {
+							limit = {
+								has_character_flag = gm_support2
+							}
+							add = 3
+						}
+						if = {
+							limit = {
+								has_character_flag = gm_support1
+							}
+							add = 3
+						}
+						if = {
+							limit = {
+								has_trait = heresiarch
+							}
+							add = 1
+						}
+						if = {
+							limit = {
+								house.house_head = this
+							}
+							add = 1
+						}
+						if = {
+							limit = {
+								any_character_artifact = {
+									has_variable = magic1
+								}
+							}
+							add = 1
+						}
+						if = {
+							limit = {
+								can_spend_standard_ps_trigger = yes
+							}
+							add = 1
+						}
+					}
+					add_to_list = new_cgms
+				}
+				random_in_list = {
+					list = new_cgms
+					save_scope_as = new_cgm
+					
+				}
+				if = {
+					limit = {
+						any_attending_character = {
+							has_trait = grandmaster_coven
+						}
+					}
+					scope:new_cgm = {
+						trigger_event = magic_ev4.70
+					}
+				}
+				else = {
+					scope:host.house = {
+						every_house_member = {
+							limit = {
+								has_trait = grandmaster_coven
+							}
+							remove_trait = grandmaster_coven
+						}
+					}
+					scope:new_cgm = {
+						trigger_event = magic_ev4.68
+					}
+					every_attending_character = {
+						limit = {
+							NOT = {
+								THIS = scope:new_cgm
+							}
+						}
+						trigger_event = magic_ev4.69
+					}
+				}
+			}
+		}
+	}
+}
+
+#aspiring to grandmaster 3 - the elect
+magic_ev4.68 = {
+	type = activity_event
+	title = ev4.68.title
+	desc = ev4.68.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+
+	option = {
+		name = ev4.68.a
+		cgrandmaster_has_been_chosen_effect = yes
+	}
+	after = {
+		hidden_effect = {
+			if = {
+				limit = {
+					has_character_flag = gm_support1
+				}
+				remove_character_flag = gm_support1
+			}
+			if = {
+				limit = {
+					has_character_flag = gm_support2
+				}
+				remove_character_flag = gm_support2
+			}
+		}
+	}
+}
+
+#aspiring to grandmaster 3 - the rest of members
+magic_ev4.69 = {
+	type = activity_event
+	title = ev4.68.title
+	desc = ev4.69.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+	lower_right_portrait = scope:new_cgm
+	immediate = {
+		show_as_tooltip = {
+			scope:new_cgm = {
+				add_trait = grandmaster_coven
+			}
+		}
+	}
+
+	option = {
+		name = ev4.69.a
+		trigger = {
+			NOR = {
+				has_relation_rival = scope:new_cgm
+				has_relation_nemesis = scope:new_cgm
+			}
+		}
+		if = {
+			limit = {
+				OR = {
+					has_activity_intent = choose_grandmaster_intent
+					has_character_flag = magic_rite_in3
+				}
+			}
+			add_stress = medium_stress_gain
+		}
+		ai_chance = {
+			base = 100
+		}
+	}
+	option = {
+		name = ev4.69.b
+		if = {
+			limit = {
+				NOR = {
+					has_relation_rival = scope:new_cgm
+					has_relation_nemesis = scope:new_cgm
+				}
+			}
+			set_relation_rival = scope:new_cgm
+		}
+		else = {
+			if = {
+				limit = {
+					OR = {
+						has_activity_intent = choose_grandmaster_intent
+						has_character_flag = magic_rite_in3
+					}
+				}
+				add_stress = major_stress_gain
+			}
+			else = {
+				add_stress = medium_stress_gain
+			}
+		}
+		ai_chance = {
+			base = 1
+			
+		}
+	}
+	#after = {
+	#	if = {
+	#		limit = {
+	#			has_character_flag = gm_support1
+	#		}
+	#		remove_character_flag = gm_support1
+	#	}
+	#	if = {
+	#		limit = {
+	#			has_character_flag = gm_support2
+	#		}
+	#		remove_character_flag = gm_support2
+	#	}
+	#}
+}
+
+#aspiring to grandmaster 3 - new candidate
+magic_ev4.70 = {
+	type = activity_event
+	title = ev4.68.title
+	desc = ev4.70.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+	lower_right_portrait = scope:old_cgm
+	immediate = {
+		scope:activity = {
+			random_attending_character = {
+				limit = {
+					has_trait = grandmaster_coven
+				}
+				save_scope_as = old_cgm
+			}
+		}
+	}
+
+	option = {
+		name = ev4.70.a
+		custom_tooltip = ev4.70.a_ct
+		scope:old_cgm = {
+			trigger_event = magic_ev4.71
+		}
+		ai_chance = {
+			base = 100
+		}
+	}
+	option = {
+		name = ev4.70.b
+		custom_tooltip = ev4.70.b_ct
+		ai_chance = {
+			base = 1
+		}
+	}
+}
+
+#aspiring to grandmaster 4 - new candidate - response
+magic_ev4.71 = {
+	type = activity_event
+	title = ev4.68.title
+	desc = ev4.71.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+	lower_right_portrait = scope:new_cgm
+
+	option = {
+		name = ev4.36.0.a
+		custom_tooltip = start_duel_ct
+		hidden_effect = {
+			scope:new_cgm = {
+				save_scope_as = actor
+			}
+			configure_start_single_combat_effect = {
+				SC_INITIATOR = scope:new_cgm
+				SC_ATTACKER = scope:new_cgm
+				SC_DEFENDER = root
+				FATALITY = possible
+				FIXED = no
+				LOCALE = temple
+				OUTPUT_EVENT = magic_ev4.73
+				INVALIDATION_EVENT = fp1_tbc.0021
+			}
+		}
+		stress_impact = {
+			craven = medium_stress_gain
+		}
+		ai_chance = {
+			base = 10
+			modifier = {
+				add = 10
+				has_trait = brave
+			}
+			modifier = {
+				add = 10
+				prowess > scope:new_cgm.prowess
+			}
+			modifier = {
+				add = -20
+				has_trait = craven
+			}
+		}
+	}
+	option = {
+		name = ev4.71.c
+		trigger = {
+			is_ai = no
+			scope:new_cgm = {
+				is_ai = yes
+			}
+		}
+		add_prestige_level = -1
+		add_stress = medium_stress_gain
+		scope:activity = {
+			every_attending_character = {
+				limit = {
+					NOT = {
+						THIS = ROOT
+					}
+				}
+				add_opinion = {
+					modifier = angry_opinion
+					target = root
+					opinion = -40
+				}
+			}
+		}
+		ai_chance = {
+			base = 1
+		}
+	}
+	option = {
+		name = ev4.71.b
+		remove_trait = grandmaster_coven
+		add_prestige = -200
+		scope:new_cgm = {
+			show_as_tooltip = {
+				cgrandmaster_has_been_chosen_effect = yes
+			}
+			trigger_event = magic_ev4.72
+		}
+		stress_impact = {
+			arrogant = medium_stress_gain
+			ambitious = medium_stress_gain
+		}
+		ai_chance = {
+			base = 10
+		}
+	}
+}
+
+#aspiring to grandmaster 5 - new candidate - old cgm surrender
+magic_ev4.72 = {
+	type = activity_event
+	title = ev4.68.title
+	desc = ev4.72.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+	right_portrait = scope:old_cgm
+	immediate = {
+		show_as_tooltip = {
+			scope:old_cgm = {
+				remove_trait = grandmaster_coven
+			}
+		}
+		cgrandmaster_has_been_chosen_effect = yes
+	}
+
+	option = {
+		name = ev4.72.0.a
+	}
+}
+
+#aspiring to grandmaster 5 - new candidate - and the winner is...
+magic_ev4.73 = {
+	type = activity_event
+	title = ev4.68.title
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					has_trait = grandmaster_coven
+					root = scope:sc_victor
+				}
+				desc = ev4.73.desc
+			}
+			triggered_desc = {
+				trigger = {
+					has_trait = grandmaster_coven
+					NOT = {	root = scope:sc_victor	}
+				}
+				desc = ev4.73.desc2
+			}
+			triggered_desc = {
+				trigger = {
+					NOT = {	has_trait = grandmaster_coven	}
+					root = scope:sc_victor
+				}
+				desc = ev4.73.desc3
+			}
+			desc = ev4.73.desc4
+		}
+	}
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+	right_portrait = scope:opponentZ
+	immediate = {
+		if = {
+			limit = {
+				has_trait = grandmaster_coven
+			}
+			scope:new_cgm = {
+				save_scope_as = opponentZ
+			}
+		}
+		else = {
+			scope:old_cgm = {
+				save_scope_as = opponentZ
+			}
+		}
+	}
+
+	option = {
+		name = ev4.72.0.a
+		trigger = {
+			root = scope:sc_victor
+		}
+		if = {
+			limit = {
+				has_trait = grandmaster_coven
+			}
+			add_trait_xp = {
+				trait = grandmaster_coven
+				value = 20
+			}
+			add_prestige = minor_prestige_gain
+		}
+		else = {
+			scope:opponentZ = {
+				if = {
+					limit = {
+						is_alive = yes
+						has_trait = grandmaster_coven
+					}
+					remove_trait = grandmaster_coven
+				}
+			}
+			cgrandmaster_has_been_chosen_effect = yes
+		}
+	}
+	option = {
+		name = ev4.72.0.b
+		trigger = {
+			NOT = {	root = scope:sc_victor	}
+		}
+		if = {
+			limit = {
+				is_alive = yes
+				has_trait = grandmaster_coven
+			}
+			remove_trait = grandmaster_coven
+		}
+		add_prestige = -200
+		hidden_effect = {
+			scope:sc_victor = {
+				if = {
+					limit = {
+						has_trait = grandmaster_coven
+					}
+					send_interface_toast = {
+						title = ev4.72.0.b_tit
+						add_trait_xp = {
+							trait = grandmaster_coven
+							value = 20
+						}
+						add_prestige = minor_prestige_gain
+					}
+				}
+				else = {
+					cgrandmaster_has_been_chosen_effect = yes
+				}
+			}
+		}
+	}
+}
+
+#Rite Management - intents4ai
+#for unknown reasons ai always picks default activity intent, so I designed my own intent selection system for ai
+#each intent has corresponding character flag:
+#1 - worshipping
+#2 - seeking power
+#3 - grandmaster
+#proper events fire up (mostly in magic_dup_evs.3010) depending on the flag
+magic_ev4.74 = {
+	hidden = yes
+	scope = none
+	trigger = {
+		exists = scope:host
+	}
+	immediate = {
+		scope:host.involved_activity = {
+			every_attending_character = {
+				limit = {
+					is_ai = yes
+				}
+				random_list = {
+					100 = {
+						modifier = {
+							add = 50
+							has_trait = heresiarch
+						}
+						modifier = {
+							add = 50
+							has_trait = zealous
+						}
+						add_character_flag = magic_rite_in1	#1 - worshipping
+					}
+					0 = {
+						modifier = {
+							add = 30
+							OR = {
+								has_focus = witch_focus
+								has_focus = arcane_focus
+								has_trait = true_witch
+							}
+						}
+						modifier = {
+							add = 70
+							has_trait = true_witch
+							NOR = {
+								any_character_artifact = { has_variable = magic1 }
+								any_character_artifact = { has_variable = magic_ring }
+								has_trait = source
+								has_trait = source2
+								has_perk = magical_experiments_p1_perk
+							}
+						}
+						modifier = {
+							add = 70
+							OR = {
+								has_focus = arcane_focus
+								has_trait = archmage
+							}
+							can_be_power_saturated_trigger = yes
+						}
+						add_character_flag = magic_rite_in2	#2 - seeking power
+					}
+					0 = {
+						trigger = {
+							NOT = {
+								has_trait = grandmaster_coven
+							}
+							exists = house
+							house = scope:host.house
+						}
+						modifier = {
+							add = 25
+							OR = {
+								has_trait = true_witch
+								has_trait = heresiarch
+							}
+						}
+						modifier = {
+							add = 25
+							has_trait = archmage
+						}
+						modifier = {
+							add = 100
+							has_trait = ambitious
+						}
+						modifier = {
+							add = 100
+							any_relation ={
+								type = rival
+								has_trait = grandmaster_coven
+							}
+						}
+						modifier = {
+							add = 50
+							has_trait = arrogant
+						}
+						modifier = {
+							add = -100
+							has_trait = craven
+						}
+						modifier = {
+							add = -100
+							has_trait = content
+						}
+						modifier = {
+							add = 150
+							has_character_modifier = yaga_modifier
+						}
+						modifier = {
+							add = -50
+							house = {
+								any_house_member = {
+									has_trait = grandmaster_coven
+								}
+							}
+						}
+						modifier = {
+							add = -25
+							house = {
+								any_house_member = {
+									has_trait = grandmaster_coven
+									has_trait_xp = {
+										trait = grandmaster_coven
+										value > 50
+									}
+								}
+							}
+						}
+						modifier = {
+							add = -25
+							house = {
+								any_house_member = {
+									has_trait = grandmaster_coven
+									dread > 70
+								}
+							}
+							NOT = {	has_trait = brave	}
+						}
+						modifier = {
+							add = -50
+							house = {
+								any_house_member = {
+									has_trait = grandmaster_coven
+									has_trait = archmage
+								}
+							}
+						}
+						modifier = {
+							add = -50
+							house = {
+								any_house_member = {
+									has_trait = grandmaster_coven
+									dread > 60
+								}
+							}
+						}
+						add_character_flag = magic_rite_in3	#3 - grandmaster
+					}
+				}
+			}
+			#every_attending_character = {
+			#	limit = {
+			#		is_ai = no
+			#	}
+			#	
+			#}
+		}
+	}
+}
+
+#seek the power 2
+magic_ev4.75 = {
+	type = activity_event
+	title = ev4.75.title
+	desc = ev4.75.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+
+	option = {
+		name = ev4.72.0.a
+		add_character_modifier = {
+			modifier = ancient_tomes_modifier
+			years = 3
+		}
+		gain_sc_xp2_effect = yes
+		hidden_effect = {
+			seek_the_power2_effect = yes
+		}
+	}
+}
+
+#seek the power 3
+magic_ev4.76 = {
+	type = activity_event
+	title = ev4.76.title
+	desc = ev4.76.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+	lower_right_portrait = scope:sacvic
+	immediate = {
+		scope:activity = {
+			random_attending_character = {
+				limit = {
+					is_ai = yes
+					NOT = {	
+						ROOT = THIS
+					}
+				}
+				save_scope_as = sacvic
+			}
+		}
+		if = {
+			limit = {
+				NOT = {
+					exists = scope:sacvic
+				}
+			}
+			hidden_effect = {
+				create_common_witch_effect2 = yes
+				scope:created_witch = {
+					add_trait = witch
+					save_scope_as = sacvic
+				}
+			}
+		}
+	}
+
+	option = {
+		name = ev4.76.0.a
+		if = {
+			limit = {
+				has_trait = grandmaster_coven
+			}
+			custom_tooltip = ev4.76.0.a_ct2
+		}
+		else = {
+			custom_tooltip = ev4.76.0.a_ct
+		}
+		
+		scope:sacvic = {
+			death = {
+				death_reason = death_decapitated
+				killer = root
+			}
+		}
+		if = {
+			limit = {
+				can_be_power_saturated_trigger = yes
+			}
+			gain_standard_ps_effect = yes
+		}
+		hidden_effect = {
+			seek_the_power3a_effect = yes
+		}
+	}
+	option = {
+		name = ev4.38.0.b
+		add_stress = minor_stress_loss
+		hidden_effect = {
+			seek_the_power3b_effect = yes
+			try_one_more_seek_power_effect1 = yes
+		}
+
+	}
+}
+
+#seek the power 4
+magic_ev4.77 = {
+	type = activity_event
+	title = ev4.77.title
+	desc = ev4.77.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+	right_portrait = scope:just_a_guy
+
+	immediate = {
+		hidden_effect = {
+			involved_activity = { 
+				random_attending_character = {
+					limit = {
+						NOR = {
+							THIS = ROOT
+							has_relation_rival = root
+						}
+						is_ai = yes
+					}
+					save_scope_as = just_a_guy
+				}
+				scope:just_a_guy = {
+					gain_sc_xp1_effect = yes
+					add_learning_skill = 1
+				}
+			}
+		}
+	}
+
+	option = {
+		name = ev2.64.a
+		if = {
+			limit = {
+				OR = {
+					has_focus = witch_focus
+					has_focus = arcane_focus
+				}
+			}
+			custom_tooltip = ev2.47.a_ct
+			hidden_effect = {
+				add_magic_lifestyle_perk_points = 1
+				seek_the_power4a_effect = yes
+			}
+		}
+		else_if = {
+			limit = {
+				has_trait = archmage
+			}
+			gain_sc_xp2_effect = yes
+			hidden_effect = {
+				seek_the_power4c_effect = yes
+			}
+		}
+		
+	}
+	option = {
+		name = ev4.77.0.a
+		add_stress = medium_stress_loss
+		add_learning_skill = 1
+		hidden_effect = {
+			seek_the_power4b_effect = yes
+		}
+	}
+}
+
+#seek the power 5
+magic_ev4.78 = {
+	type = activity_event
+	title = ev2.55.title
+	desc = ev2.55.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+	right_portrait = scope:mmage
+	artifact = {
+        target = scope:artif
+        position = lower_right_portrait
+    }
+
+	immediate = {
+		random_living_character = {
+			limit = {
+				any_character_artifact = { has_variable = magic1 }
+				NOT = {	THIS = ROOT	}
+			}
+			save_scope_as = mmage
+		}
+		scope:mmage = {
+			random_character_artifact = {
+				limit = {
+					has_variable = magic1
+				}
+				save_scope_as = artif
+			}
+		}
+		hidden_effect = {
+			seek_the_power5_effect = yes
+		}
+	}
+
+	option = {
+		name = ev2.55.a
+		trigger = {
+			has_trait = grandmaster_coven
+			has_trait_xp = {
+				trait = grandmaster_coven
+				value > 64
+			}
+			NAND = {
+				house = {
+					has_house_artifact_claim = scope:artif
+				}
+				has_personal_artifact_claim = scope:artif
+			}
+		}
+		trait = grandmaster_coven
+		if = {
+			limit = {
+				NOT = {
+					house = {
+						has_house_artifact_claim = scope:artif
+					}
+					#has_personal_artifact_claim = scope:artif
+				}
+			}
+			#add_personal_artifact_claim = scope:artif
+			set_random_rivalry_reason = { TARGET = scope:mmage }
+			house = {
+				add_house_artifact_claim = scope:artif
+			}
+		}
+		else_if = {
+			limit = {
+				NOT = {
+					has_personal_artifact_claim = scope:artif
+				}
+			}
+			add_personal_artifact_claim = scope:artif
+			set_random_rivalry_reason = { TARGET = scope:mmage }
+		}
+		ai_chance = {
+			base = 20
+		}
+	}
+	option = {
+		name = ev4.78.0.a
+		trigger = {
+			has_trait = true_witch
+			NOT = {
+				has_personal_artifact_claim = scope:artif
+			}
+		}
+		trait = true_witch
+		duel = {
+			skill = intrigue
+			value = scope:mmage.intrigue
+			3 = {
+				desc = ev4.78.0.a1
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.78.0.a1
+					add_personal_artifact_claim = scope:artif
+				}
+				set_random_rivalry_reason = { TARGET = scope:mmage }
+			}
+			7 = {
+				desc = ev3.52.a_2
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev3.52.a_2
+					set_random_rivalry_reason = { TARGET = scope:mmage }
+				}
+			}
+		}
+		ai_chance = {
+			base = 10
+		}
+	}
+	option = {
+		name = ev2.53.a
+		if = {
+			limit = {
+				intrigue <20
+			}
+			add_intrigue_skill = 1
+		}
+		ai_chance = {
+			base = 1
+		}
+	}
+	after = {
+		gain_sc_xp1_effect = yes
+	}
+}
+
+#heresiarch5
+magic_ev4.79 = {
+	type = activity_event
+	title = ev4.79.title
+	desc = ev4.79.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+
+	trigger = {
+		exists = dynasty
+		dynasty = {
+			NOT = {
+				has_dynasty_perk = witchcraft_legacy_5
+			}
+		}
+	}
+
+	option = {
+		name = ev4.79.a
+		upgrade_arcana_legacy_effect = yes
+		add_prestige = medium_prestige_gain
+		gain_sc_xp1_effect = yes
+	}
+}
+
+#from send agent interaction - collect secret
+magic_ev4.80 = {
+	hidden = yes
+	
+	trigger = {
+		exists = scope:created_witch
+		exists = scope:actor
+		scope:created_witch = {
+			is_alive = yes
+			is_imprisoned = no
+			#exists = employer
+			#NOT = {
+			#	employer = scope:actor
+			#}
+		}
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+		}
+		scope:actor = {
+			is_alive = yes
+			is_imprisoned = no
+			has_trait = grandmaster_coven
+		}
+	}
+	immediate = {
+		scope:recipient = {
+			random_secret = {
+				limit = {
+					NOT = { is_known_by = scope:actor }
+				}
+				save_scope_as = nnew_secret
+			}
+			if = {
+				limit = {
+					NOT = {
+						exists = scope:nnew_secret
+					}
+				}
+				random_vassal_or_below = {
+					limit = {
+						any_secret = {
+							NOT = { is_known_by = scope:actor }
+						}
+					}
+					random_secret = {
+						limit = {
+							NOT = { is_known_by = scope:actor }
+						}
+						save_scope_as = nnew_secret
+					}
+				}
+			}
+		}
+		if = {
+			limit = {
+				exists = scope:nnew_secret
+			}
+			scope:actor = {
+				send_interface_toast = {
+					title = ev4.80.title
+					left_icon = scope:created_witch
+					right_icon = scope:nnew_secret.secret_owner
+					scope:nnew_secret = {
+						hidden_effect = {
+							reveal_to = scope:created_witch
+						}
+						reveal_to = scope:actor
+					}
+				}
+				hidden_effect = {
+					random = {
+						chance = 50
+						trigger_event = {
+							id = magic_ev4.80
+							months = { 2 3 }
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+#from send agent interaction - capture magic item
+magic_ev4.81 = {
+	hidden = yes
+	
+	trigger = {
+		exists = scope:created_witch
+		exists = scope:actor
+		scope:created_witch = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+		exists = scope:recipient
+		scope:recipient = {
+			is_alive = yes
+			OR = {
+				any_character_artifact = { has_variable = magic1 }
+				any_courtier_or_guest = {
+					any_character_artifact = { has_variable = magic1 }
+				}
+			}
+		}
+		scope:actor = {
+			is_alive = yes
+			is_imprisoned = no
+			has_trait = grandmaster_coven
+		}
+	}
+	immediate = {
+		scope:recipient = {
+			if = {
+				limit = {
+					any_character_artifact = { has_variable = magic1 }
+				}
+				save_scope_as = atarget
+			}
+			else = {
+				random_courtier_or_guest = {
+					limit = {
+						any_character_artifact = { has_variable = magic1 }
+					}
+					save_scope_as = atarget
+				}
+			}
+		}
+		scope:atarget = {
+			random_character_artifact = {
+				limit = {
+					has_variable = magic1
+				}
+				save_scope_as = magic_art
+			}
+		}
+		scope:created_witch = {
+			duel = {
+				skill = intrigue
+				value = {
+					add = scope:recipient.intrigue
+					if = {
+						limit = {
+							scope:recipient = {
+								OR = {
+									has_character_modifier = double_guards_modifier
+									has_character_modifier = more_vigilant_recistance_modifier
+								}
+							}
+						}
+						add = 10
+					}
+				}
+				2 = {
+					compare_modifier = {
+						value = scope:duel_value
+						multiplier = 1
+						min = 0
+					}
+					scope:actor = {
+						send_interface_toast = {
+							title=cgm_agent_action
+							left_icon = scope:created_witch
+							right_icon = scope:atarget
+							scope:magic_art = {
+								set_owner = {
+									target = scope:actor
+									history = {
+										type = stolen
+										actor = scope:atarget
+										recipient = scope:actor
+										location = root.location
+									}
+								}
+							}
+						}
+					}
+					
+				}
+				8 = {
+					compare_modifier = {
+						value = scope:duel_value
+						multiplier = -1
+						min = 0
+					}
+					scope:actor = {
+						send_interface_toast = {
+							title=cgm_agent_action
+							left_icon = scope:created_witch
+							right_icon = scope:atarget
+							scope:recipient = {
+								imprison = {
+									target = scope:created_witch
+									type = dungeon
+								}
+							}
+						}
+					}
+					scope:atarget = {
+						send_interface_toast = {
+							title=witch_hunter_burgler
+							left_icon = scope:created_witch
+							right_icon = scope:atarget
+							scope:recipient = {
+								show_as_tooltip = {
+									imprison = {
+										target = scope:created_witch
+										type = dungeon
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+#new magic triangulation
+magic_ev4.82 = {
+	title = ev9.0.title
+	desc = ev4.82.desc
+	theme =  witchcraft
+	
+	left_portrait = root
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+	}
+
+	option = {
+		name = ev4.82.0.a
+		trigger = {
+			any_living_character = {
+				NOT = { this = root }
+				any_character_artifact = { has_variable = magic1 }
+			}
+		}
+		trigger_event = magic_ev.9
+	}
+
+	option = {
+		name = ev4.82.0.b
+		trigger = {
+			is_landed = yes
+			any_ruler = {
+				NOT = { this = root }
+				is_landed = yes
+				has_power_place_trigger = yes
+			}
+		}
+		trigger_event = magic_ev4.83
+	}
+}
+#new magic triangulation - places
+magic_ev4.83 = {
+	title = ev9.0.title
+	desc = ev4.83.desc
+	theme =  witchcraft
+	
+	left_portrait = root
+	right_portrait = scope:owner_p
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+	}
+	immediate = {
+		random_ruler = {
+			limit = {
+				NOT = {	THIS = ROOT	}
+				has_power_place_trigger = yes
+			}
+			save_scope_as = owner_p
+		}
+		scope:owner_p = {
+			random_held_county = {
+				limit = {
+					#tier = tier_county
+					#exists = title_province
+					#title_province = {
+					#	OR = {
+					#		has_building_or_higher = witch_house
+					#		has_building_or_higher = horned_god_house
+					#		has_building_or_higher = mage_house
+					#	}
+					#}
+					any_county_province = {
+						OR = {
+							has_building_or_higher = witch_house
+							has_building_or_higher = horned_god_house
+							has_building_or_higher = mage_house
+						}
+					}
+				}
+				save_scope_as = magic_t
+				title_province = {
+					save_scope_as = magic_p
+				}
+			}
+		}
+	}
+
+	option = {
+		name = ev3.17.a
+		#random = {
+		#	chance = 50
+		#	gain_sc_xp1_effect = yes
+		#}
+	}
+	option = {
+		name = ev4.83.0.a
+		trigger = {
+			has_trait = ambitious
+		}
+		trait = ambitious
+		add_unpressed_claim = scope:magic_t
+	}
+}
+
+#info for witch
+magic_ev4.84 = {
+	title = ev4.84.title
+	desc = ev4.84.desc
+	theme =  witchcraft
+	
+	left_portrait = root
+	right_portrait = scope:owner_p
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		is_landed = yes
+		any_ruler = {
+			has_power_place_trigger = yes
+			NOT = {	ROOT = THIS }
+		}
+		NOT = {
+			has_character_flag = known_magic_place_flag
+		}
+	}
+	immediate = {
+		random_ruler = {
+			limit = {
+				NOT = {	THIS = ROOT	}
+				has_power_place_trigger = yes
+			}
+			save_scope_as = owner_p
+		}
+		scope:owner_p = {
+			random_held_county = {
+				limit = {
+					#tier = tier_county
+					#exists = title_province
+					#title_province = {
+					#	OR = {
+					#		has_building_or_higher = witch_house
+					#		has_building_or_higher = horned_god_house
+					#		has_building_or_higher = mage_house
+					#	}
+					#}
+					any_county_province = {
+						OR = {
+							has_building_or_higher = witch_house
+							has_building_or_higher = horned_god_house
+							has_building_or_higher = mage_house
+						}
+					}
+				}
+				save_scope_as = magic_t
+				title_province = {
+					save_scope_as = magic_p
+				}
+			}
+		}
+	}
+
+	option = {
+		name = ev3.17.a
+		hidden_effect = {
+			add_character_flag = known_magic_place_flag
+		}
+	}
+}
+
+#Hecate
+magic_ev4.85 = {
+	title = ev4.85.title
+	desc = ev4.85.desc
+	theme =  witchcraft
+	
+	left_portrait = root
+	right_portrait = scope:demon
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		is_landed = yes
+	}
+	option = {
+		name = ev4.85.0.a
+		trigger = {
+			NOR = {
+				has_trait = source
+				has_trait = source2
+			}
+		}
+		show_as_tooltip = {
+			add_trait = source
+		}
+		add_character_flag = hecate_option1
+	}
+	option = {
+		name = ev4.85.0.b
+		trigger = {
+			age > 30
+		}
+		#show_as_tooltip = {
+		#	add_character_modifier = gift_from_hecate_modifier
+		#}
+		custom_tooltip = ev4.85.0.b_ct
+		add_character_flag = hecate_option2
+	}
+	option = {
+		name = ev4.85.0.c
+		trigger = {
+			NOT = {
+				has_character_modifier = amp_modifier
+			}
+		}
+		show_as_tooltip = {
+			add_character_modifier = amp_modifier
+		}
+		add_character_flag = hecate_option3
+	}
+	option = {
+		name = ev4.85.0.d
+		show_as_tooltip = {
+			if = {
+				limit = {
+					has_trait = archmage
+				}
+				add_trait_xp = {
+					trait = archmage
+					track = secret_knowledge
+					value = 25
+				}
+			}
+			else_if = {
+				limit = {
+					NOT = {
+						has_character_modifier = secret_knowledge_modifier
+					}
+				}
+				add_character_modifier = secret_knowledge_modifier
+				if = {
+					limit = {
+						OR = {
+							has_focus = witch_focus
+							has_focus = arcane_focus
+						}
+					}
+					custom_tooltip = ev2.47.a_ct
+					add_magic_lifestyle_perk_points = 1
+				}
+			}
+			else = {
+				add_learning_skill = 10
+				if = {
+					limit = {
+						OR = {
+							has_focus = witch_focus
+							has_focus = arcane_focus
+						}
+					}
+					custom_tooltip = ev2.47.a_ct
+					add_magic_lifestyle_perk_points = 1
+				}
+			}
+		}
+		add_character_flag = hecate_option4
+	}
+	after = {
+		add_character_flag = met_hecate
+		trigger_event = magic_ev4.86
+	}
+}
+
+#Hecate2
+magic_ev4.86 = {
+	title = ev4.85.title
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					has_character_flag = hecate_option2
+				}
+				desc = ev4.86.desc2
+			}
+			desc = ev4.86.desc
+		}
+	}
+	
+	theme =  witchcraft
+	
+	left_portrait = root
+	right_portrait = scope:demon
+
+	option = {
+		name = ev4.86.0.a
+		if = {
+			limit = {	has_character_flag = hecate_option1	}
+			add_trait = source
+		}
+		else_if = {
+			limit = {	has_character_flag = hecate_option2	}
+			custom_tooltip = hecate_option2_ct
+			hidden_effect = {
+				set_age = 20
+			}
+		}
+		else_if = {
+			limit = {	has_character_flag = hecate_option3	}
+			add_character_modifier = amp_modifier
+		}
+		else_if = {
+			limit = {	has_character_flag = hecate_option4	}
+			if = {
+				limit = {
+					has_trait = archmage
+				}
+				add_trait_xp = {
+					trait = archmage
+					track = secret_knowledge
+					value = 25
+				}
+			}
+			else_if = {
+				limit = {
+					NOT = {
+						has_character_modifier = secret_knowledge_modifier
+					}
+				}
+				add_character_modifier = secret_knowledge_modifier
+				if = {
+					limit = {
+						OR = {
+							has_focus = witch_focus
+							has_focus = arcane_focus
+						}
+					}
+					custom_tooltip = ev2.47.a_ct
+					add_magic_lifestyle_perk_points = 1
+				}
+			}
+			else = {
+				add_learning_skill = 10
+				if = {
+					limit = {
+						OR = {
+							has_focus = witch_focus
+							has_focus = arcane_focus
+						}
+					}
+					custom_tooltip = ev2.47.a_ct
+					add_magic_lifestyle_perk_points = 1
+				}
+			}
+		}
+		custom_tooltip = no_soul_custom_tooltip
+		add_character_flag = no_soul
+		trigger_event = {
+			id = magic_ev2.11
+			years = 30
+		}
+		trigger_event = magic_ev.18
+		if = {
+			limit = {
+				has_character_flag = hecate_option1
+			}
+			remove_character_flag = hecate_option1
+		}
+		if = {
+			limit = {
+				has_character_flag = hecate_option2
+			}
+			remove_character_flag = hecate_option2
+		}
+		if = {
+			limit = {
+				has_character_flag = hecate_option3
+			}
+			remove_character_flag = hecate_option3
+		}
+		if = {
+			limit = {
+				has_character_flag = hecate_option4
+			}
+			remove_character_flag = hecate_option4
+		}
+	}
+	option = {
+		name = ev4.86.0.b
+		trigger = {
+			has_character_flag = hecate_option2
+			NOR = {
+				has_trait = source
+				has_trait = source2
+			}
+		}
+		add_trait = source
+		custom_tooltip = no_soul_custom_tooltip
+		add_character_flag = no_soul
+		trigger_event = {
+			id = magic_ev2.11
+			years = 30
+		}
+		trigger_event = magic_ev.18
+		if = {
+			limit = {
+				has_character_flag = hecate_option1
+			}
+			remove_character_flag = hecate_option1
+		}
+		if = {
+			limit = {
+				has_character_flag = hecate_option2
+			}
+			remove_character_flag = hecate_option2
+		}
+		if = {
+			limit = {
+				has_character_flag = hecate_option3
+			}
+			remove_character_flag = hecate_option3
+		}
+		if = {
+			limit = {
+				has_character_flag = hecate_option4
+			}
+			remove_character_flag = hecate_option4
+		}
+	}
+	option = {
+		name = ev4.86.0.c
+		trigger = {
+			has_character_flag = hecate_option2
+			NOT = {
+				has_character_modifier = amp_modifier
+			}
+		}
+		add_character_modifier = amp_modifier
+		custom_tooltip = no_soul_custom_tooltip
+		add_character_flag = no_soul
+		trigger_event = {
+			id = magic_ev2.11
+			years = 30
+		}
+		trigger_event = magic_ev.18
+		if = {
+			limit = {
+				has_character_flag = hecate_option1
+			}
+			remove_character_flag = hecate_option1
+		}
+		if = {
+			limit = {
+				has_character_flag = hecate_option2
+			}
+			remove_character_flag = hecate_option2
+		}
+		if = {
+			limit = {
+				has_character_flag = hecate_option3
+			}
+			remove_character_flag = hecate_option3
+		}
+		if = {
+			limit = {
+				has_character_flag = hecate_option4
+			}
+			remove_character_flag = hecate_option4
+		}
+	}
+	option = {
+		name = ev4.86.0.d
+		trigger = {
+			has_trait = archmage
+			has_trait_xp = {
+				trait = archmage
+				track = power_saturation
+				value > 19
+			}
+		}
+		custom_tooltip = ev4.86.0.d_ct
+		add_trait_xp = {
+			trait = archmage
+			track = power_saturation
+			value = -20
+		}
+		duel = {
+			skill = learning
+			value = scope:demon.learning
+			5 = {
+				desc = ev4.86.0.d1
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				send_interface_toast = {
+					title=ev4.86.0.d1
+					if = {
+						limit = {	has_character_flag = hecate_option1	}
+						add_trait = source
+					}
+					else_if = {
+						limit = {	has_character_flag = hecate_option2	}
+						add_character_modifier = gift_from_hecate_modifier
+					}
+					else_if = {
+						limit = {	has_character_flag = hecate_option3	}
+						add_character_modifier = amp_modifier
+					}
+					else_if = {
+						limit = {	has_character_flag = hecate_option4	}
+						if = {
+							limit = {
+								has_trait = archmage
+							}
+							add_trait_xp = {
+								trait = archmage
+								track = secret_knowledge
+								value = 25
+							}
+						}
+						else_if = {
+							limit = {
+								NOT = {
+									has_character_modifier = secret_knowledge_modifier
+								}
+							}
+							add_character_modifier = secret_knowledge_modifier
+							if = {
+								limit = {
+									OR = {
+										has_focus = witch_focus
+										has_focus = arcane_focus
+									}
+								}
+								custom_tooltip = ev2.47.a_ct
+								add_magic_lifestyle_perk_points = 1
+							}
+						}
+						else = {
+							add_learning_skill = 10
+							if = {
+								limit = {
+									OR = {
+										has_focus = witch_focus
+										has_focus = arcane_focus
+									}
+								}
+								custom_tooltip = ev2.47.a_ct
+								add_magic_lifestyle_perk_points = 1
+							}
+						}
+					}
+				}
+				trigger_event = magic_ev.18
+				if = {
+					limit = {
+						has_character_flag = hecate_option1
+					}
+					remove_character_flag = hecate_option1
+				}
+				if = {
+					limit = {
+						has_character_flag = hecate_option2
+					}
+					remove_character_flag = hecate_option2
+				}
+				if = {
+					limit = {
+						has_character_flag = hecate_option3
+					}
+					remove_character_flag = hecate_option3
+				}
+				if = {
+					limit = {
+						has_character_flag = hecate_option4
+					}
+					remove_character_flag = hecate_option4
+				}
+			}
+			5 = {
+				desc = ev4.86.0.d2
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+				death = {
+					death_reason = death_chopped_to_pieces
+					killer = scope:demon
+				}
+				hidden_effect = {
+					scope:demon = {
+						death = natural
+					}
+				}
+			}
+		}
+	}
+	option = {
+		name = ev4.86.0.e
+		gain_sc_xp1_effect = yes
+		trigger_event = magic_ev.18
+		if = {
+			limit = {
+				has_character_flag = hecate_option1
+			}
+			remove_character_flag = hecate_option1
+		}
+		if = {
+			limit = {
+				has_character_flag = hecate_option2
+			}
+			remove_character_flag = hecate_option2
+		}
+		if = {
+			limit = {
+				has_character_flag = hecate_option3
+			}
+			remove_character_flag = hecate_option3
+		}
+		if = {
+			limit = {
+				has_character_flag = hecate_option4
+			}
+			remove_character_flag = hecate_option4
+		}
+	}
+}
+
+#mage tower selection
+magic_ev4.87 = {
+	hidden = yes
+	type = character_event
+	trigger = {
+		is_alive = yes
+		is_landed = yes
+		NOT = {
+			any_held_county = {
+				exists = title_province
+				title_province = {
+					OR = {
+						has_building_or_higher = mage_tower_02
+						has_variable = prepared_for_tower_constr
+					}
+				}
+			}
+		}
+	}
+	immediate = {
+		random_held_county = {
+			limit = {
+				title_province = {
+					has_special_building_slot = no
+				}
+			}
+			if = {
+				limit = {
+					exists = this
+				}
+				title_province = {
+					save_scope_as = tttower
+				}
+			}
+		}
+		if = {
+			limit = {
+				exists = scope:tttower
+			}
+			send_interface_toast = {
+				title=ev4.87.title
+				scope:tttower = {
+					add_special_building_slot = mage_tower_02
+				}
+			}
+			scope:tttower = {
+				set_variable = prepared_for_tower_constr
+			}
+		}
+		else = {
+			trigger_event = {
+				id = magic_ev4.87
+				years = 5
+			}
+		}
+	}
+}
+
+#seek the power 6
+magic_ev4.88 = {
+	type = activity_event
+	title = ev4.88.title
+	desc = ev4.88.desc
+	theme = witchcraft
+	override_background = {
+		reference = bp1_bonfire
+	}
+	left_portrait = root
+	trigger = {
+		NOR = {
+			has_perk = fate_weaver_p10_perk
+			has_focus = arcane_focus
+			has_trait = source
+			has_trait = source2
+		}
+	}
+
+	option = {
+		name = ev4.88.0.a
+		custom_tooltip = ev4.88.0.a_ct
+		gain_standard_ps_effect = yes
+		add_character_flag = powerful_curse_one_time
+		hidden_effect = {
+			seek_the_power6a_effect = yes
+		}
+	}
+	option = {
+		name = ev4.88.0.b
+		add_stress = medium_stress_loss
+		add_learning_skill = 1
+		if = {
+			limit = {
+				OR = {
+					has_focus = witch_focus
+					has_focus = arcane_focus
+				}
+			}
+			custom_tooltip = ev2.47.a_ct
+			hidden_effect = {
+				add_magic_lifestyle_perk_points = 1
+				seek_the_power4a_effect = yes
+			}
+		}
+		hidden_effect = {
+			seek_the_power4b_effect = yes
+		}
+		try_one_more_seek_power_effect1 = yes
+	}
+}
+
+#Yaga's house changes location in there is no Yaga nearby
+#...but it doesnt work as should (special slots remain) so I turned it off
+#magic_ev4.89 = {
+#	hidden = yes
+#	type = character_event
+#	trigger = {
+#		is_alive = yes
+#		is_landed = yes
+#		has_witch_house_trigger = yes
+#		NOR = {
+#			has_character_modifier = yaga_modifier
+#			has_character_modifier = yagas_blood_modifier
+#		}
+#	}
+#	immediate = {
+#		random_held_county = {
+#			limit = {
+#				exists = title_province
+#				title_province = {
+#					has_building_or_higher = witch_house
+#				}
+#			}
+#			if = {
+#				limit = {
+#					exists = this
+#				}
+#				title_province = {
+#					remove_building = witch_house
+#				}
+#			}
+#		}
+#		if = {
+#			limit = {
+#				any_ruler = {
+#					is_landed = yes
+#					is_ai = yes
+#					primary_title = { is_mercenary_company = no }	
+#					#highest_held_title_tier=2
+#					OR = {
+#						has_trait = true_witch
+#						has_focus = witch_focus
+#					}
+#					any_held_county = {
+#						exists = title_province
+#						title_province = {
+#							has_special_building_slot = no
+#						}
+#					}
+#					NOR = {
+#						has_trait = archmage
+#						has_focus = arcane_focus
+#					}
+#				}
+#			}
+#			random_ruler = {
+#				limit = {
+#					is_landed = yes
+#					is_ai = yes
+#					primary_title = { is_mercenary_company = no }	
+#					#highest_held_title_tier=2
+#					OR = {
+#						has_trait = true_witch
+#						has_focus = witch_focus
+#					}
+#					any_held_county = {
+#						exists = title_province
+#						title_province = {
+#							has_special_building_slot = no
+#						}
+#					}
+#					NOR = {
+#						has_trait = archmage
+#						has_focus = arcane_focus
+#					}
+#				}
+#				random_held_county = {
+#					limit = {
+#						exists = title_province
+#						title_province = {
+#							has_special_building_slot = no
+#						}
+#					}
+#					title_province = {
+#						add_special_building = witch_house
+#					}
+#				}
+#			}
+#		}
+#		else = {
+#			random_ruler = {
+#				limit = {
+#					is_landed = yes
+#					primary_title = { is_mercenary_company = no }	
+#					any_held_county = {
+#						exists = title_province
+#						title_province = {
+#							has_special_building_slot = no
+#						}
+#					}
+#				}
+#				random_held_county = {
+#					limit = {
+#						exists = title_province
+#						title_province = {
+#							has_special_building_slot = no
+#						}
+#					}
+#					title_province= {
+#						add_special_building = witch_house
+#					}
+#				}
+#			}
+#		}
+#	}
+#}
+
+#in instead we have:
+#vengeance of Yaga's family (if they havent Yaga's house anymore)
+#(root is the current province owner)
+magic_ev4.90 = {
+	hidden = yes
+	type = character_event
+	trigger = {
+		is_alive = yes
+		is_landed = yes
+		has_witch_house_trigger = yes
+		NOR = {
+			has_trait = source2
+			any_living_character = {
+				has_trait = source2
+				any_close_or_extended_family_member = {
+					THIS = ROOT
+				}
+			}
+		}
+		#any_living_character = {
+		#	has_trait = source2
+		#	NOT = {
+		#		any_close_or_extended_family_member = {
+		#			THIS = ROOT
+		#		}
+		#	}
+		#}
+	}
+	immediate = {
+		if = {
+			limit = {
+				any_living_character = {
+					is_ai = yes
+					has_character_modifier = yaga_modifier
+					NOT = {
+						any_scheme = {
+							scheme_type = murder
+						}
+						THIS = ROOT
+					}
+					in_diplomatic_range = root
+				}
+			}
+			random_living_character = {
+				limit = {
+					is_ai = yes
+					has_character_modifier = yaga_modifier
+					NOT = {
+						any_scheme = {
+							scheme_type = murder
+						}
+						THIS = ROOT
+					}
+					in_diplomatic_range = root
+				}
+				if = {
+					limit = {
+						has_trait = incapable
+					}
+					remove_trait = incapable
+				}
+				start_scheme = {
+					type = murder
+					target = root
+				}
+			}
+		}
+		else_if = {
+			limit = {
+				any_living_character = {
+					is_ai = yes
+					has_trait = source2
+					NOT = {
+						any_scheme = {
+							scheme_type = murder
+						}
+						any_close_or_extended_family_member = {
+							THIS = ROOT
+						}
+						THIS = ROOT
+					}
+					in_diplomatic_range = root
+				}
+			}
+			random_living_character = {
+				limit = {
+					is_ai = yes
+					has_trait = source2
+					NOT = {
+						any_scheme = {
+							scheme_type = murder
+						}
+						any_close_or_extended_family_member = {
+							THIS = ROOT
+						}
+						THIS = ROOT
+					}
+					in_diplomatic_range = root
+				}
+				start_scheme = {
+					type = murder
+					target = root
+				}
+			}
+		}
+	}
+}
+
+#unholy pregnant - manual management
+magic_ev4.91 = {
+	hidden = yes
+	type = character_event
+	trigger = {
+		is_alive = yes
+		has_trait = pregnant
+		has_character_modifier = touched_magic_modifier
+	}
+	immediate = {
+		remove_character_modifier = touched_magic_modifier
+		remove_trait = pregnant
+		create_character = {
+			dynasty_house = root.house
+			gender_female_chance = 50
+			employer = root
+			age = 0
+			mother = root
+			real_father = scope:demon
+			save_scope_as = child
+		}
+
+		scope:child = {
+			add_trait = beauty_bad_3
+			add_trait = scaly
+			if = {
+				limit = {
+					NOR = {
+						has_trait = source
+						has_trait = source2
+					}
+				}
+				random = {
+					chance = 50
+					add_trait = source
+				}
+			}
+			random_list = {
+				1 = {
+					add_trait = albino
+					add_trait = shrewd
+				}
+				1 = {
+					add_trait = hunchbacked
+					add_trait = shrewd
+				}
+			}
+			real_father = {
+				save_scope_as = real_father
+			}
+		}
+		if = {
+			limit = {
+				exists = root.primary_partner
+			}
+			primary_partner = {
+				save_scope_as = father
+			}
+		}
+		
+		trigger_event = birth.1002
+		clear_saved_scope = demon
+	}
+}
