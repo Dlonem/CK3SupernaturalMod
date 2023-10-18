@@ -7,5 +7,5 @@ tags={
 	"Character Interactions"
 }
 name="Supernatural"
-supported_version="1.10.1"
+supported_version="1.10.2"
 remote_file_id="2856525601"
