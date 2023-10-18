@@ -1,0 +1,426 @@
+﻿artifacts_searching = {
+	is_shown = {
+		#has_bp2_dlc_trigger = yes
+		highest_held_title_tier > tier_barony
+		is_landed = yes
+		is_adult = yes
+		has_trait = true_witch
+		any_character_artifact = {
+			count < 6
+			has_variable = magic1
+		}
+	}
+
+	can_start_showing_failures_only = {
+		is_available_adult = yes
+		
+	}
+
+	is_valid = {
+		scope:host = {
+			#Getting imprisoned will invalidate
+			is_imprisoned = no
+			#Getting unlanded will invalidate
+			is_landed = yes 
+			#Becoming incapable will invalidate
+			NOT = { is_incapable = yes }
+		}
+	}
+
+	on_invalidated = {
+		# Host becomes unlanded
+		if = {
+			limit = {
+				scope:host = { is_landed = no }
+			}
+			scope:activity = {
+				activity_type = { save_scope_as = activity_type }
+			}
+			every_attending_character = {
+				trigger_event = activity_system.0320
+			}
+		}
+		# Host becomes incapable
+		else_if = {
+			limit = {
+				scope:host = { is_incapable = yes }
+			}
+			scope:activity = {
+				activity_type = { save_scope_as = activity_type }
+			}
+			scope:host = {
+				trigger_event = activity_system.0330
+			}
+			every_attending_character = {
+				limit = { NOT = { this = scope:host } }
+				trigger_event = activity_system.0331
+			}
+		}
+		# Host is imprisoned
+		else_if = {
+			limit = {
+				scope:host = { is_imprisoned = yes } 
+			}
+			scope:host = { trigger_event = bp2_adult_education.0005 }
+		}
+	}
+
+	on_host_death = {
+		#cancel the activity by not setting a new host
+		#free the students
+		scope:activity = {
+			every_attending_character = {
+				limit = {
+					has_character_flag = generated_character_uni
+				}
+				remove_character_flag = generated_character_uni
+			}
+		}
+		# Send your entourage home
+		scope:host = {
+			current_travel_plan = {
+				every_entourage_character = { set_location_to_default = yes }
+			}
+		}
+	}
+
+
+
+	###################
+	# PARAMETERS
+	###################
+
+	is_grand_activity = no
+
+	is_single_location = yes
+	wait_time_before_start = { days = 2 }
+
+	province_filter = capital
+	ai_province_filter = capital
+	max_province_icons = 1
+
+	cooldown = {
+		years = 12
+	}
+
+	max_route_deviation_mult = 3.0
+
+	cost = {
+		gold = {
+			add = {
+				value = feast_activity_cost
+				desc = hunt_base_cost
+			}
+			multiply = 1
+			add = 100
+		}
+	}
+
+	ui_predicted_cost = {
+		gold = {
+			# Base Cost
+			value = feast_activity_cost
+			# Make it a multiple of 5 (rounded up)
+			divide = 5 
+			ceiling = yes 
+			multiply = 5
+			add = 100
+		}
+	}
+
+	###################
+	# OPTIONS
+	###################
+
+	options = {
+	}
+
+	###################
+	# PHASES
+	###################
+
+	phases = {
+		artifacts_searching_phase = {
+			is_predefined = yes
+
+			ai_will_do = {
+				value = 0
+				add = {
+					value = 30
+					desc = "Base test value"
+				}
+			}
+
+			#This is when you start
+			on_phase_active = {
+				scope:host = {
+					if = {
+						limit = {
+							has_character_flag = observed_by_whunters
+						}
+						remove_character_flag = observed_by_whunters
+					}
+					if = {
+						limit = {
+							has_character_flag = magic_arti1_selected
+						}
+						remove_character_flag = magic_arti1_selected
+					}
+					if = {
+						limit = {
+							has_character_flag = magic_arti2_selected
+						}
+						remove_character_flag = magic_arti2_selected
+					}
+					if = {
+						limit = {
+							has_character_flag = magic_arti3_selected
+						}
+						remove_character_flag = magic_arti3_selected
+					}
+				}
+				if = {
+					limit = { this = scope:host }
+					scope:activity = {
+						#Phase progression
+						progress_activity_phase_after = { months = 6 }
+						#Loc
+						activity_location = { save_scope_as = location }
+					}
+					random_artifact = {
+						limit = {
+							NOT = {
+								artifact_owner = scope:host
+							}
+							has_variable = magic1
+						}
+						save_scope_as = arti1
+					}
+					random_artifact = {
+						limit = {
+							NOR = {
+								artifact_owner = scope:host
+								#AND = {
+								#	exists = scope:arti1
+								#	this = scope:arti1
+								#}
+								this = scope:arti1
+							}
+							has_variable = magic1
+						}
+						save_scope_as = arti2
+					}
+					random_artifact = {
+						limit = {
+							NOR = {
+								artifact_owner = scope:host
+								this = scope:arti1
+								this = scope:arti2
+							}
+							has_variable = magic1
+						}
+						save_scope_as = arti3
+					}
+					scope:activity = {
+						set_variable = {
+							name = artx1
+							value = scope:arti1
+						}
+						set_variable = {
+							name = artx2
+							value = scope:arti2
+						}
+						set_variable = {
+							name = artx3
+							value = scope:arti3
+						}
+					}
+					#Arrival event
+					trigger_event = { on_action = artifacts_searching_arrival_events }
+					#Main events
+					trigger_event = {
+						id = magic_ev5.22
+						days = { 19 59 }
+					}
+					trigger_event = {
+						id = magic_ev5.23
+						days = { 61 109 }
+					}
+				}
+			}
+
+			#Events that happen while we're on site
+			on_monthly_pulse = {
+				if = {
+					limit = { this = scope:host }
+					trigger_event = { on_action = artifacts_searching_destination_events }				
+				}
+			}
+
+			on_end = {
+				if = {
+					limit = { this = scope:host }
+					#Resolve how how successful we were so we can bake that into the total reward
+					#resolve_adult_education_success_reward_effect = yes 
+					#Conclusion event
+					trigger_event = magic_ev5.21			
+				}
+			}
+		}
+	}
+
+	###################
+	# GUEST HANDLING
+	###################
+
+	allow_zero_guest_invites = yes
+
+	can_be_activity_guest = {
+		is_adult = yes
+		# exclude travel leaders, travel companions, mercenaries, and sea captains
+		NOT = { current_travel_plan ?= scope:host.current_travel_plan }
+	}
+
+	max_guests = 1
+
+	host_intents = {
+		intents = { artifacts_searching_intent }
+		default = artifacts_searching_intent
+	}
+
+	guest_intents = {
+		intents = { artifacts_searching_intent }
+		default = artifacts_searching_intent
+	}
+
+	#travel_entourage_selection = {
+	#	weight = standard_travel_entourage_additions
+	#	max = 5
+	#	invite_rule_order = 1
+	#}
+
+	###################
+	# ACTIVITY-SPECIFIC PULSES
+	###################
+
+	pulse_actions = {
+		entries = {
+			asp_procrastination
+			asp_night_on_books
+			asp_witch_hunters
+			asp_breakthrough
+		}
+		chance_of_no_event = 20
+	}
+
+	on_start = {
+		
+		scope:activity ?= {
+			#Counter for the Activity Success Progress bar
+			activity_setup_special_type_progression_effect = yes
+			#if = {
+			#	limit = {
+			#		has_activity_option = {
+			#			category = adult_education_option_books
+			#			option = adult_education_books_normal
+			#		}
+			#	}
+			#	activity_special_type_progression_tiny = yes
+			#}
+			#else_if = {
+			#	limit = {
+			#		has_activity_option = {
+			#			category = adult_education_option_books
+			#			option = adult_education_books_good
+			#		}
+			#	}
+			#	activity_special_type_progression_major = yes
+			#}
+			activity_location = { save_scope_as = location }
+		}
+	}
+	
+	on_enter_travel_state = {
+	
+	}
+
+	on_travel_state_pulse = {
+		
+	}
+
+	on_enter_passive_state = {
+		
+	}
+
+	on_passive_state_pulse = { }
+
+	on_enter_active_state = { }
+
+	on_active_state_pulse = { }
+
+	on_complete = {
+		
+	}
+
+	###################
+	# GRAPHICS
+	###################
+
+	# End Travel
+	background = {	#Western-ish University
+		trigger = {
+			scope:host.location = scope:activity.activity_location
+			scope:host.location.culture = {
+				OR = {
+					has_graphical_western_culture_group_trigger = yes
+					has_graphical_norse_culture_group_trigger = yes
+					has_graphical_iberian_culture_group_trigger = yes
+					has_graphical_mediterranean_culture_group_trigger = yes
+				}
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/bp2_university.dds"
+		environment = "environment_bp2_university"
+		ambience = "event:/SFX/Events/Backgrounds/BP2/bp2_university"
+	}
+	background = {	#Indian garden
+		trigger = {
+			scope:host.location = scope:activity.activity_location
+			scope:host.location.culture = { has_graphical_india_culture_group_trigger = yes }
+		}
+		texture = "gfx/interface/illustrations/event_scenes/bp2_indian_garden.dds"
+		environment = "environment_bp2_garden_india_day"
+		ambience = "event:/SFX/Events/Backgrounds/castle_garden_day"
+	}
+	background = {	#Fallback: Madrasa
+		texture = "gfx/interface/illustrations/event_scenes/bp2_university_mena.dds"
+		environment = environment_bp2_university_mena
+		ambience = "event:/SFX/Events/Backgrounds/meetingchamber_western"
+	}
+
+	### Plug in widgets
+	activity_window_widgets = {
+		activity_special_type_progression = "activity_plugin_widgets_summary"
+		artifact_rewards = "activity_plugin_widgets_conclusion"
+		trait_rewards = "activity_plugin_widgets_conclusion"
+	}
+
+	window_characters = {
+		noble_student = {
+			camera = camera_body
+			
+			effect = {
+				if = {
+					limit = {
+						scope:host.location = scope:activity.activity_location
+					}
+					scope:host = { add_to_list = characters }
+				}
+			}
+			scripted_animation = {	
+				#Fallback
+				animation = reading
+			}
+		}
+	}
+}

@@ -5,32 +5,12 @@
 		magic_ev2.15
 		magic_ev2.43
 		magic_ev2.71
+		#magic_ev5.25 #Yearly Demon XP, Removed in 2.05 as I don't want Demons leveling up
+		spn_xp_sys.1000
 		#magic_ev.95
 		#delay = { days = { 1 36 } }
 	}
 }
-
-#random_yearly_everyone_pulse = {
-#	random_events = {
-#		8 = magic_ev.11
-#		2 = 0
-		#delay = { days = { 1 360 } }	
-#	}
-#}
-
-#three_year_playable_pulse = {
-#	events = {
-#		magic_ev.11
-#		delay = { days = { 1 360 } }	
-#	}
-#}
-
-#random_yearly_playable_pulse = {
-#	events = {
-#		magic_ev.45
-#		delay = { days = { 1 36 } }
-#	}
-#}
 
 on_imprison = {
 	events = {
@@ -131,6 +111,9 @@ on_birth_child = {
 		on_action_demon_inherited
 		on_action_unholy
 		on_action_yagas_blood
+		on_action_source_from_s3
+		on_action_pandora_s3
+		on_action_source
 	}
 }
 
@@ -149,7 +132,7 @@ on_action_enchanted_blood = {
 	}
 	effect = {
 		random = {
-			chance = 10
+			chance = 12
 			scope:child = {
 				add_trait = source
 			}
@@ -192,7 +175,28 @@ on_action_demon_inherited = {
 	}
 	effect = {
 		scope:child = {
-			add_trait = source
+			if = {
+				limit = {
+					NOR = {
+						has_trait = source
+						has_trait = source2
+						has_trait = source3
+					}
+				}
+			}
+			if = {
+				limit = {
+					has_inactive_trait = source
+					NOR = {
+						has_trait = source2
+						has_trait = source3
+					}
+				}
+				make_trait_active = source
+			}
+			else = {
+				add_trait = source
+			}
 			trigger_event = {
 				id = magic_ev3.75
 				years = { 20 21 }
@@ -200,6 +204,105 @@ on_action_demon_inherited = {
 		}
 	}
 }
+on_action_source = {
+	trigger = {
+		scope:child = {
+			NOR = {
+				has_trait = source2
+				has_trait = source3
+			}
+		}
+		OR = {
+			AND = {
+				exists = scope:mother
+				scope:mother = {
+					has_trait = source
+				}
+			}
+			AND = {
+				exists = scope:real_father
+				scope:real_father = {
+					has_trait = source
+				}
+			}
+		}
+	}
+	effect = {
+		if = {
+			limit = {
+				scope:child = {
+					has_inactive_trait = source
+					NOR = {
+						has_trait = source2
+						has_trait = source3
+					}
+				}
+			}
+			if = {
+				limit = {
+					exists = scope:mother
+					scope:mother = {
+						has_trait = source
+					}
+					exists = scope:real_father
+					scope:real_father = {
+						has_trait = source
+					}
+				}
+				scope:child = {
+					make_trait_active = source
+				}
+				
+			}
+			else = {
+				random = {
+					chance = 50
+					scope:child = {
+						make_trait_active = source
+					}
+				}
+			}
+		}
+		else_if = {
+			limit = {
+				scope:child = {
+					NOR = {
+						has_trait = source
+						has_trait = source2
+						has_trait = source3
+					}
+				}
+			}
+			if = {
+				limit = {
+					exists = scope:mother
+					scope:mother = {
+						has_trait = source
+					}
+					exists = scope:real_father
+					scope:real_father = {
+						has_trait = source
+					}
+				}
+				random = {
+					chance = 90
+					scope:child = {
+						add_trait = source
+					}
+				}
+			}
+			else = {
+				random = {
+					chance = 40
+					scope:child = {
+						add_trait = source
+					}
+				}
+			}
+		}
+	}
+}
+
 
 on_action_yagas_blood = { 
 	trigger = {
@@ -209,6 +312,12 @@ on_action_yagas_blood = {
 			}
 			scope:real_father = {
 				has_trait = source2
+			}
+			scope:mother = {
+				has_trait = yaga
+			}
+			scope:real_father = {
+				has_trait = yaga
 			}
 		}
 	}
@@ -226,8 +335,13 @@ on_action_yagas_blood = {
 								has_trait = source2
 							}
 						}
+						scope:mother = {
+							has_trait = yaga
+						}
+						scope:real_father = {
+							has_trait = yaga
+						}
 					}
-					
 				}
 				hidden_effect = {
 					if = {
@@ -239,12 +353,141 @@ on_action_yagas_blood = {
 				}
 				if = {
 					limit = {
-						NOT = {
+						NOR = {
 							has_trait = source2
+							has_trait = source3
 						}
 					}
 					add_trait = source2
 				}
+			}
+			else_if = {
+				limit = {
+					OR = {
+						AND = {
+							scope:mother = {
+								has_trait = source
+							}
+							scope:real_father = {
+								has_trait = source2
+							}
+						}
+						AND = {
+							scope:mother = {
+								has_trait = source2
+							}
+							scope:real_father = {
+								has_trait = source
+							}
+						}
+					}
+				}
+				if = {
+					limit = {
+						NOR = {
+							has_trait = source2
+							has_trait = source3
+						}
+					}
+					random_list = {
+						4 = {
+							if = {
+								limit = {
+									has_inactive_trait = source
+									NOR = {
+										has_trait = source2
+										has_trait = source3
+									}
+								}
+								make_trait_active = source
+							}
+							else = {
+								add_trait = source
+							}
+						}
+						4 = {
+							add_trait = source2
+						}
+						2 = {
+							
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+on_action_source_from_s3 = { 
+	trigger = {
+		OR = {
+			scope:mother = {
+				has_trait = source3
+			}
+			scope:real_father = {
+				has_trait = source3
+			}
+		}
+	}
+	effect = {
+		scope:child = {
+			if = {
+				limit = {
+					NOR = {
+						has_trait = source
+						has_trait = source2
+						has_trait = source3
+					}
+				}
+				if = {
+					limit = {
+						has_inactive_trait = source
+						NOR = {
+							has_trait = source2
+							has_trait = source3
+						}
+					}
+					make_trait_active = source
+				}
+				else = {
+					add_trait = source
+				}
+			}
+		}
+	}
+}
+
+on_action_pandora_s3 = {
+	trigger = {
+		OR = {
+			scope:mother = {
+				has_character_flag = pandora_flag
+			}
+			scope:real_father = {
+				has_character_flag = pandora_flag
+			}
+		}
+	}
+	effect = {
+		random = {
+			chance = 1
+			if = {
+				limit = {
+					has_trait = source
+				}
+				remove_trait = source
+			}
+			if = {
+				limit = {
+					has_trait = source2
+				}
+				remove_trait = source2
+			}
+			if = {
+				limit = {
+					NOT = {	has_trait = source3	}
+				}
+				add_trait = source3
 			}
 		}
 	}
@@ -254,6 +497,7 @@ on_death = {
 	on_actions = {
 		on_action_death_witch
 		on_action_death_witch_hunter
+		pandoras_protector_dies_on_action
 		#on_action_death_dark_blade
 	}
 	events = {
@@ -410,5 +654,196 @@ on_action_death_witch_hunter = {
 on_game_start_after_lobby = {
 	events = {
 		magic_ev4.50
+	}
+}
+
+on_travel_plan_movement = {
+	on_actions = {
+		witch_hunter_trap_on_action
+		delay = { days = 1 }
+	}
+}
+witch_hunter_trap_on_action = {
+	trigger = {
+		is_landed = yes
+		is_adult = yes
+		has_character_modifier = tracked_by_witch_hunter_modifier
+	}
+	random_events = {
+		chance_of_no_event = {
+			value = {
+				add = 100
+				subtract = root.current_travel_plan.current_danger_value
+				add = root.current_travel_plan.travel_safety
+			}
+			max = {
+				value = 100
+				subtract = define:NTravel|TRAVEL_DANGER_MINIMUM
+			}
+		}
+		80 = 0
+		20 = magic_ev5.31
+	}
+}
+
+on_county_occupied = {
+	on_actions = {
+		pandora_capture_on_action
+		delay = { days = 1 }
+	}
+}
+
+pandora_capture_on_action = {
+	trigger = {
+		has_character_flag = pandora_stage1
+		scope:county = {
+			has_variable = pandoras_hideout
+		}
+	}
+	effect = {
+		add_character_flag = pandora_from_castle
+		scope:county = {
+			remove_variable = pandoras_hideout
+		}
+	}
+	events = {
+		magic_ev5.47
+	}
+}
+pandoras_protector_dies_on_action = {
+	trigger = {
+		has_character_flag = pandoras_protector
+		#exists = scope:killer
+		any_living_character = {
+			has_character_flag = pandora_stage1
+			#this = scope:killer
+		}
+	}
+	events = {
+		magic_ev5.48
+	}
+}
+
+on_war_started = {
+	on_actions = {
+		mage_war_on_action
+	}
+}
+mage_war_on_action = {
+	trigger = {
+		OR = {
+			scope:attacker = {
+				has_trait = archmage
+				is_ai = yes
+			}
+			scope:defender = {
+				has_trait = archmage
+				is_ai = yes
+			}
+		}
+	}
+	effect = {
+		if = {
+			limit = {
+				scope:attacker = {
+					has_trait = archmage
+					is_ai = yes
+					any_relation ={
+						type = mminion
+						count < 4
+					}
+				}
+			}
+			scope:attacker = {
+				if = {
+					limit = {
+						any_neighboring_and_across_water_realm_same_rank_owner = {
+							is_ai = yes
+							is_at_war = no
+							NOR = {
+								has_perk = protective_runes_perk
+								has_perk = mage_p4_perk
+								has_character_modifier = aura_boost1_modifier
+								has_character_modifier = aura_boost2_modifier
+								has_trait = demon
+							}
+						}
+					}
+					random_neighboring_and_across_water_realm_same_rank_owner = {
+						limit = {
+							is_ai = yes
+							is_at_war = no
+							NOR = {
+								has_perk = protective_runes_perk
+								has_perk = mage_p4_perk
+								has_character_modifier = aura_boost1_modifier
+								has_character_modifier = aura_boost2_modifier
+								has_trait = demon
+							}
+						}
+						save_scope_as = neig0
+					}
+					set_relation_mminion = scope:neig0
+					add_hook = {
+						type = magic_domination_hook
+						target = scope:neig0
+					}
+					scope:war = {
+						add_attacker = scope:neig0
+					}
+				}
+			}
+		}
+		else_if = {
+			limit = {
+				scope:defender = {
+					has_trait = archmage
+					is_ai = yes
+					any_relation ={
+						type = mminion
+						count < 4
+					}
+				}
+			}
+			scope:defender = {
+				if = {
+					limit = {
+						any_neighboring_and_across_water_realm_same_rank_owner = {
+							is_ai = yes
+							is_at_war = no
+							NOR = {
+								has_perk = protective_runes_perk
+								has_perk = mage_p4_perk
+								has_character_modifier = aura_boost1_modifier
+								has_character_modifier = aura_boost2_modifier
+								has_trait = demon
+							}
+						}
+					}
+					random_neighboring_and_across_water_realm_same_rank_owner = {
+						limit = {
+							is_ai = yes
+							is_at_war = no
+							NOR = {
+								has_perk = protective_runes_perk
+								has_perk = mage_p4_perk
+								has_character_modifier = aura_boost1_modifier
+								has_character_modifier = aura_boost2_modifier
+								has_trait = demon
+							}
+						}
+						save_scope_as = neig0
+					}
+					set_relation_mminion = scope:neig0
+					add_hook = {
+						type = magic_domination_hook
+						target = scope:neig0
+					}
+					scope:war = {
+						add_defender = scope:neig0
+					}
+				}
+			}
+		}
 	}
 }
