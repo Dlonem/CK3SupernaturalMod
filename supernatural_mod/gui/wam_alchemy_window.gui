@@ -1,0 +1,774 @@
+﻿window = {
+	name = "wam_alchemy_window"
+	position = { 0 0 }
+	parentanchor = center
+	layer = middle
+	datacontext = "[GetPlayer.MakeScope.GetCharacter]"
+
+	using = Window_Background
+	using = Window_Decoration_Spike
+	allow_outside = yes
+
+	state = {
+		name = _show
+		using = Animation_FadeIn_Standard
+		using = Sound_WindowShow_Standard
+		on_start = "[GetScriptedGui('wam_open_alchemy_window_sgui').Execute(GuiScope.SetRoot(GetPlayer.MakeScope).End)]"
+		on_start = "[GetVariableSystem.Set('wam_alchemy_treatment_dropdown_open', 'no')]"
+	}
+
+	state = {
+		name = _hide
+		using = Animation_FadeOut_Standard
+		using = Sound_WindowHide_Standard
+		on_start = "[GetScriptedGui('wam_close_alchemy_window_sgui').Execute(GuiScope.SetRoot(GetPlayer.MakeScope).End)]"
+	}
+
+	visible = "[And(GetVariableSystem.HasValue('wam_alchemy_window_open', 'yes'),IsInGame)]"
+
+	vbox = {
+		set_parent_size_to_minimum = yes
+		using = Window_Margins
+		
+		allow_outside = yes
+
+		header_pattern = {
+			layoutpolicy_horizontal = expanding
+
+			blockoverride "header_text"
+			{
+				text = "wam_alchemy_window_title"
+			}
+
+			blockoverride "button_close"
+			{
+				onclick = "[GetVariableSystem.Set('wam_alchemy_window_open', 'no')]"
+			}
+		}
+
+		widget = {
+			name = "wam_alchemy_bg"
+			size = { 650 625 }
+			allow_outside = yes
+
+			background = {
+				texture = "gfx/interface/illustrations/wam_forest_night.dds"
+				fittype = centercrop
+				alpha = 0.6
+				margin_top = 10
+				margin_left = 5
+				margin_right = 5
+				margin_bottom = 5
+				modify_texture = {
+					texture = "gfx/interface/component_masks/mask_edge_3px.dds"
+					spriteType = Corneredtiled
+					spriteborder = { 4 4 }
+					blend_mode = alphamultiply
+				}
+			}
+
+			portrait_button = {
+				parentanchor = bottom|hcenter
+				size = { 650 600 }
+				using = portrait_base
+				alwaystransparent = yes
+				tooltip_enabled = no
+				portrait_texture = "[Character.GetAnimatedPortrait('wam_forest_alchemy_environment', 'camera_wam_alchemist', 'happiness', PdxGetWidgetScreenSize(PdxGuiWidget.Self))]"
+				mask = "gfx/portraits/portrait_mask_blank.dds"
+				effectname = "NoHighlight"
+			}
+
+			button_primary_big = {
+				parentanchor = bottom|hcenter
+				position = { 0 -10 }
+				text = "wam_alchemy_btn_confirm"
+				onclick = "[GetScriptedGui('wam_do_alchemy_sgui').Execute(GuiScope.SetRoot(GetPlayer.MakeScope).End)]"
+				clicksound = "event:/SFX/UI/Unique/CharacterLifestyle/sfx_ui_unique_lifestyle_learning"
+			}
+
+
+			widget = {
+				name = "ingredients_input"
+				size = { 180 350 }
+				parentanchor = bottom|left
+				position = {
+					10 -60
+				}
+
+				background = {
+					using = Background_Area_Dark
+					alpha = 0.6
+				}
+
+				text_single = {
+					text = "wam_alchemy_ingredients_header"
+					using = Font_Size_Big
+					using = Font_Type_Flavor
+					align = top|hcenter
+					parentanchor = top|hcenter
+					max_width = 180
+					position = { 0 8 }
+				}
+
+				wam_ingredient_display = {
+					parentanchor = top|hcenter
+					position = { 0 50 }
+					blockoverride "datacontext" {
+						datacontext = "[GetPlayer.MakeScope.Var('wam_selected_ingredient_1')]"
+						visible = "[GetPlayer.MakeScope.Var('wam_selected_ingredient_1').IsSet]"
+					}
+				}
+				wam_ingredient_display = {
+					parentanchor = top|hcenter
+					position = { 0 145 }
+					blockoverride "datacontext" {
+						datacontext = "[GetPlayer.MakeScope.Var('wam_selected_ingredient_2')]"
+						visible = "[GetPlayer.MakeScope.Var('wam_selected_ingredient_2').IsSet]"
+					}
+				}
+				wam_ingredient_display = {
+					parentanchor = top|hcenter
+					position = { 0 240 }
+					blockoverride "datacontext" {
+						datacontext = "[GetPlayer.MakeScope.Var('wam_selected_ingredient_3')]"
+						visible = "[GetPlayer.MakeScope.Var('wam_selected_ingredient_3').IsSet]"
+					}
+				}
+			}
+
+			widget = {
+				name = "treatment_selection"
+				size = { 280 120 }
+				parentanchor = bottom|hcenter
+				position = {
+					0 -70
+				}
+				allow_outside = yes
+
+				background = {
+					using = Background_Area_Dark
+					alpha = 0.6
+				}
+
+				text_single = {
+					text = "wam_alchemy_treatment_selection_header"
+					using = Font_Size_Big
+					using = Font_Type_Flavor
+					align = top|hcenter
+					parentanchor = top|hcenter
+					max_width = 180
+					position = { 0 8 }
+				}
+				
+				widget = {
+					name = "treatment_dropdown"
+					parentanchor = top|hcenter
+					position = { 0 45 }
+					size = { 280 120 }
+					allow_outside = yes
+
+					button_standard = {
+						visible = "[And(GetVariableSystem.HasValue('wam_alchemy_treatment_dropdown_open', 'no'),IsInGame)]"
+						datacontext = "[GetPlayer.MakeScope.Var('wam_selected_treatment')]"
+						name = "treatment_button"
+						size = { 265 40 }
+						parentanchor = top|hcenter
+
+						onclick = "[GetVariableSystem.Set('wam_alchemy_treatment_dropdown_open', 'yes')]"
+
+						text_single = {
+							text = "[Localize(Concatenate('wam_treatment_',Concatenate(Scope.GetFlagName,'_name')))]"
+							using = Font_Size_Medium
+							parentanchor = center
+							
+							align = left|nobaseline
+							max_width = 220
+						}
+						icon = {
+							frame = "1"
+							alwaystransparent = yes
+							parentanchor = top|right
+							position = { -6 5 }
+							texture = "gfx/interface/buttons/button_sort_toggle.dds"
+							framesize = { 36 36 }
+							size = { 30 30 }
+					
+							using = Master_Button_Modify_Texture
+					
+							blockoverride "master_color_frame" {
+								frame = 1
+							}
+						}
+					}
+
+					fixedgridbox = {
+						visible = "[And(GetVariableSystem.HasValue('wam_alchemy_treatment_dropdown_open', 'yes'),IsInGame)]"
+						datamodel = "[GetPlayer.MakeScope.GetList('wam_treatments')]"
+						
+						state = {
+							name = _show
+							using = Animation_FadeIn_Quick
+							using = Sound_WindowShow_Standard
+						}
+					
+						state = {
+							name = _hide
+							using = Animation_FadeOut_Quick
+							using = Sound_WindowHide_Standard
+						}
+						
+						minimumsize = { 275 1 }
+						addcolumn = 100%
+						addrow = 50
+						background = {
+							using = Background_Area_Solid
+						}
+
+						maxhorizontalslots = 1
+						item = {
+							button_standard_list = {
+								name = "treatment_button"
+								size = { 265 40 }
+								parentanchor = top|hcenter
+	
+								down = "[EqualTo_string(Scope.GetFlagName, GetPlayer.MakeScope.Var('wam_selected_treatment').GetFlagName)]"
+								onclick = "[GetScriptedGui('wam_select_treatment_sgui').Execute(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('treatment', MakeScopeFlag(Scope.GetFlagName)).End)]"
+								onclick = "[GetVariableSystem.Set('wam_alchemy_treatment_dropdown_open', 'no')]"
+
+								text_single = {
+									text = "[Localize(Concatenate('wam_treatment_',Concatenate(Scope.GetFlagName,'_name')))]"
+									using = Font_Size_Medium
+									parentanchor = center
+									
+									align = left|nobaseline
+									max_width = 220
+								}
+							}
+						}
+						
+								
+						icon = {
+							frame = "2"
+							alwaystransparent = yes
+							parentanchor = top|right
+							position = { -12 4 }
+							texture = "gfx/interface/buttons/button_sort_toggle.dds"
+							framesize = { 36 36 }
+							size = { 30 30 }
+					
+							using = Master_Button_Modify_Texture
+					
+							blockoverride "master_color_frame" {
+								frame = 2
+							}
+						}
+					}
+				}
+			}
+
+			widget = {
+				name = "artifact_outcome"
+				datacontext = "[GetPlayer.MakeScope.Var('outcome_artifact').Artifact]"
+
+				size = { 180 200 }
+				parentanchor = bottom|right
+				position = {
+					-10 -60
+				}
+
+				background = {
+					using = Background_Area_Dark
+					alpha = 0.6
+				}
+
+				text_single = {
+					text = "wam_alchemy_outcome_header"
+					using = Font_Size_Big
+					using = Font_Type_Flavor
+					align = top|hcenter
+					parentanchor = top|hcenter
+					max_width = 180
+					position = { 0 8 }
+				}
+
+				widget = {
+					name = "outcome_artifact_empty"
+					parentanchor = top|hcenter
+					size = { 130 130 }
+					position = { 0 40 }
+					visible = "[Not(Artifact.IsValid)]"
+					background = {
+						using = Background_Area_Dark
+						alpha = 0.8
+					}
+				}
+
+				button_artifact = {
+					name = "outcome_artifact"
+					visible = "[Artifact.IsValid]"
+					parentanchor = top|hcenter
+					size = { 150 150 }
+					position = { 0 30 }
+				}
+			}
+
+			button_standard = {
+				parentanchor = top|left
+				position = { 5 5 }
+				size = { 200 35 }
+				text = "wam_alchemy_open_ingredients_window"
+				onclick = "[GetVariableSystem.Set('wam_ingredients_window_open', 'yes')]"
+			}
+
+			button_standard = {
+				parentanchor = top|right
+				position = { -5 5 }
+				size = { 200 35 }
+				text = "wam_alchemy_open_recipes_window"
+				onclick = "[GetVariableSystem.Set('wam_recipes_window_open', 'yes')]"
+			}
+		}
+	}
+
+	window = {
+		position = { -500 30 }
+		
+		name = "wam_ingredients_window"
+		parentanchor = top|left
+		layer = middle
+		datacontext = "[GetPlayer.MakeScope.GetCharacter]"
+		visible = "[And(GetVariableSystem.HasValue('wam_ingredients_window_open', 'yes'),IsInGame)]"
+
+		using = Window_Background
+		using = Window_Decoration_Spike
+		allow_outside = yes
+
+		state = {
+			name = _show
+			using = Animation_FadeIn_Quick
+			using = Sound_WindowShow_Standard
+		}
+	
+		state = {
+			name = _hide
+			using = Animation_FadeOut_Quick
+			using = Sound_WindowHide_Standard
+		}
+
+		vbox = {
+			set_parent_size_to_minimum = yes
+			using = Window_Margins
+			
+			allow_outside = yes
+	
+			header_pattern = {
+				layoutpolicy_horizontal = expanding
+	
+				blockoverride "header_text"
+				{
+					text = "wam_ingredients_window_title"
+				}
+	
+				blockoverride "button_close"
+				{
+					onclick = "[GetVariableSystem.Set('wam_ingredients_window_open', 'no')]"
+				}
+			}
+
+			text_multi = {
+				background = {
+					using = Background_Area_Dark
+					alpha = 0.4
+				}
+				size = { 430 100 }
+				margin_top = 10
+				margin_left = 10
+				margin_right = 10
+				margin_bottom = 10
+				text = "wam_ingredients_window_desc"
+				align = top|hcenter
+			}
+			widget = { size = { 10 5 } }
+
+			widget = {
+				name = "ingredients_table"
+				size = { 450 450 }
+				scrollbox = {
+					layoutpolicy_horizontal = expanding
+					layoutpolicy_vertical = expanding
+					size = { 450 450 }
+	
+					blockoverride "scrollbox_content"
+					{
+						margin_top = 10
+						margin_left = 5
+
+						fixedgridbox = {
+							datamodel = "[GetPlayer.MakeScope.GetList('wam_ingredients')]"
+							addcolumn = 30%
+							addrow = 80
+							flipdirection = yes
+							maxhorizontalslots = 3
+							datamodel_wrap = 3
+							minimumsize = { 450 1 }
+							item = {
+								button_standard = {
+									size = { 140 75 }
+									button_ignore = none
+									onrightclick = "[GetScriptedGui('wam_select_ingredient_for_detail_view_sgui').Execute(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('ingredient', MakeScopeFlag(Scope.GetFlagName)).End)]"
+									onrightclick = "[GetVariableSystem.Set('wam_ingredient_detail_view_open', 'yes')]"
+									onclick = "[GetScriptedGui('wam_select_ingredient_sgui').Execute(GuiScope.SetRoot(GetPlayer.MakeScope).AddScope('ingredient', MakeScopeFlag(Scope.GetFlagName)).End)]"
+									down = "[Or(Or(EqualTo_string(Scope.GetFlagName, GetPlayer.MakeScope.Var('wam_selected_ingredient_1').GetFlagName),EqualTo_string(Scope.GetFlagName, GetPlayer.MakeScope.Var('wam_selected_ingredient_2').GetFlagName)),EqualTo_string(Scope.GetFlagName, GetPlayer.MakeScope.Var('wam_selected_ingredient_3').GetFlagName))]"
+
+									background = {
+										using = Background_Area_Solid
+										visible = "[Not(GreaterThan_CFixedPoint(GetPlayer.MakeScope.Var(Concatenate('wam_amount_owned_ingr_',Scope.GetFlagName)).GetValue, '(CFixedPoint)0'))]"
+									}
+									tooltip = "wam_ingredient_tt"
+
+									icon = {
+										alwaystransparent = yes
+										parentanchor = center
+										position = { 0 4 }
+										widgetanchor = center
+										size = { 60 60 }
+										texture = "gfx/interface/colors/white.dds"
+										alpha = 0.2
+								
+										modify_texture = {
+											texture = "gfx/interface/component_masks/mask_glow.dds"
+											blend_mode = alphamultiply
+											rotate_uv = 1
+										}
+
+										modify_texture = {
+											texture = "gfx/interface/component_masks/mask_glow.dds"
+											blend_mode = alphamultiply
+											rotate_uv = -1
+										}
+									}
+
+									icon = {
+										alwaystransparent = yes
+										parentanchor = center
+										position = { 0 4 }
+										texture = "[GetCultureInnovationType(Concatenate('wam_ingr_', Scope.GetFlagName)).GetIcon]"
+										size = { 50 50 }
+									}
+
+									text_single = {
+										text = "[Localize(Concatenate('wam_ingr_',Concatenate(Scope.GetFlagName,'_name')))]"
+										parentanchor = top|left
+										position = { 8 0 }
+										max_width = 110
+									}
+									text_single = {
+										text = "[GetPlayer.MakeScope.Var(Concatenate('wam_amount_owned_ingr_',Scope.GetFlagName)).GetValue]"
+										parentanchor = top|right
+										position = { -8 0 }
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	window = {
+		position = { 0 100 }
+		
+		name = "wam_ingredients_detail_window"
+		parentanchor = top|hcenter
+		layer = middle
+		datacontext = "[GetPlayer.MakeScope.Var('wam_selected_detail_view_ingredient')]"
+		visible = "[And(GetVariableSystem.HasValue('wam_ingredient_detail_view_open', 'yes'),IsInGame)]"
+
+		using = Window_Background
+		using = Window_Decoration_Spike
+		allow_outside = yes
+
+		state = {
+			name = _show
+			using = Animation_FadeIn_Quick
+			using = Sound_WindowShow_Standard
+		}
+	
+		state = {
+			name = _hide
+			using = Animation_FadeOut_Quick
+			using = Sound_WindowHide_Standard
+			on_start = "[GetScriptedGui('wam_close_ingredient_detail_view_sgui').Execute(GuiScope.SetRoot(GetPlayer.MakeScope).End)]"
+		}
+
+		vbox = {
+			set_parent_size_to_minimum = yes
+			using = Window_Margins
+			
+			allow_outside = yes
+	
+			header_pattern = {
+				layoutpolicy_horizontal = expanding
+	
+				blockoverride "header_text"
+				{
+					text = "wam_ingredient_detail_window_title"
+				}
+	
+				blockoverride "button_close"
+				{
+					onclick = "[GetVariableSystem.Set('wam_ingredient_detail_view_open', 'no')]"
+				}
+			}
+
+			widget = {
+				name = "ingredient_info"
+				size = { 500 110 }
+				background = {
+					using = Background_Area_Dark
+					alpha = 0.5
+				}
+				wam_ingredient_icon_big = {
+					parentanchor = top|left
+					position = { 10 10 }
+				}
+				text_single = {
+					parentanchor = top|right
+					position = { -15 75 }
+					size = { 200 30 }
+					using = Font_Size_Medium
+					text = "wam_ingredient_detail_window_amount_owned"
+				}
+				text_multi = {
+					parentanchor = top|right
+					position = { 0 0 }
+					size = { 400 95 }
+					margin_top = 10
+					margin_left = 10
+					margin_right = 10
+					margin_bottom = 10
+					text = "wam_ingredient_detail_window_desc"
+					align = top|hcenter
+					using = Font_Size_Medium
+				}
+			}
+			widget = { size = { 10 5 } }
+			widget = {
+				name = "ingredient_availability"
+				size = { 500 90 }
+				background = {
+					using = Background_Area_Solid
+					alpha = 0.5
+				}
+
+				button_standard_big = {
+					parentanchor = top|hcenter
+					position = { 0 10 }
+					size = { 400 70 }
+					text = "wam_ingredient_import_btn"
+					onclick = "[GetScriptedGui('wam_buy_ingredient_sgui').Execute(GuiScope.SetRoot(GetPlayer.MakeScope).End)]"
+					clicksound = "event:/SFX/UI/Unique/CharacterLifestyle/sfx_ui_unique_lifestyle_stewardship"
+				}
+			}
+		}
+	}
+
+	
+	window = {
+		position = { 500 30 }
+		name = "wam_recipes_window"
+		parentanchor = top|right
+		layer = middle
+		datacontext = "[GetPlayer.MakeScope.GetCharacter]"
+		visible = "[And(GetVariableSystem.HasValue('wam_recipes_window_open', 'yes'),IsInGame)]"
+
+		using = Window_Background
+		using = Window_Decoration_Spike
+		allow_outside = yes
+
+		state = {
+			name = _show
+			using = Animation_FadeIn_Quick
+			using = Sound_WindowShow_Standard
+		}
+	
+		state = {
+			name = _hide
+			using = Animation_FadeOut_Quick
+			using = Sound_WindowHide_Standard
+		}
+
+		vbox = {
+			set_parent_size_to_minimum = yes
+			using = Window_Margins
+			
+			allow_outside = yes
+	
+			header_pattern = {
+				layoutpolicy_horizontal = expanding
+	
+				blockoverride "header_text"
+				{
+					text = "wam_recipes_window_title"
+				}
+	
+				blockoverride "button_close"
+				{
+					onclick = "[GetVariableSystem.Set('wam_recipes_window_open', 'no')]"
+				}
+			}
+
+			text_multi = {
+				background = {
+					using = Background_Area_Dark
+					alpha = 0.4
+				}
+				size = { 430 60 }
+				margin_top = 10
+				margin_left = 10
+				margin_right = 10
+				margin_bottom = 10
+				text = "wam_recipes_window_desc"
+				align = top|hcenter
+			}
+			widget = { size = { 10 5 } }
+
+			widget = {
+				name = "recipes_table"
+				size = { 450 450 }
+
+				scrollbox = {
+					layoutpolicy_horizontal = expanding
+					layoutpolicy_vertical = expanding
+					size = { 450 450 }
+	
+					blockoverride "scrollbox_content"
+					{
+						margin_top = 10
+						margin_left = 0
+
+						fixedgridbox = {
+							datamodel = "[GetPlayer.MakeScope.GetList('wam_recipes')]"
+							addcolumn = 400
+							addrow = 50
+							maxhorizontalslots = 1
+							minimumsize = { 450 1 }
+							item = {
+								widget = {
+									background = {
+										using = Background_Area_Light
+									}
+									size = { 430 40 }
+									parentanchor = top|hcenter
+		
+									text_single = {
+										text = "[Localize(Concatenate('wam_recipe_',Concatenate(Scope.GetFlagName,'_desc')))]"
+										using = Font_Size_Medium
+										parentanchor = center
+										
+										align = left|nobaseline
+										max_width = 400
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+types wam_alchemy_types {
+	type wam_ingredient_display = widget {
+		size = { 85 85 }
+
+		background = {
+			using = Background_Area_Dark
+			alpha = 0.8
+		}
+		widget = {
+			parentanchor = center
+			name = "ingr_icon"
+			block "datacontext" {
+
+			}
+			icon = {
+				alwaystransparent = yes
+				parentanchor = center
+				position = { 0 4 }
+				#widgetanchor = center
+				size = { 60 60 }
+				texture = "gfx/interface/colors/white.dds"
+				alpha = 0.2
+		
+				modify_texture = {
+					texture = "gfx/interface/component_masks/mask_glow.dds"
+					blend_mode = alphamultiply
+					rotate_uv = 1
+				}
+	
+				modify_texture = {
+					texture = "gfx/interface/component_masks/mask_glow.dds"
+					blend_mode = alphamultiply
+					rotate_uv = -1
+				}
+			}
+	
+			icon = {
+				alwaystransparent = yes
+				parentanchor = center
+				position = { 0 4 }
+				texture = "[GetCultureInnovationType(Concatenate('wam_ingr_', Scope.GetFlagName)).GetIcon]"
+				size = { 50 50 }
+			}
+	
+			text_single = {
+				text = "[Localize(Concatenate('wam_ingr_',Concatenate(Scope.GetFlagName,'_name')))]"
+				parentanchor = center
+				position = { 0 -31 }
+				max_width = 125
+			}
+		}
+	}
+
+	type wam_ingredient_icon_big = widget {
+		
+		block "datacontext" {
+
+		}
+		background = {
+			using = Background_Area_Light
+			alpha = 0.9
+		}
+		size = { 95 95 }
+
+		icon = {
+			alwaystransparent = yes
+			parentanchor = center
+			size = { 90 90 }
+			texture = "gfx/interface/colors/white.dds"
+			alpha = 0.2
+	
+			modify_texture = {
+				texture = "gfx/interface/component_masks/mask_glow.dds"
+				blend_mode = alphamultiply
+				rotate_uv = 1
+			}
+
+			modify_texture = {
+				texture = "gfx/interface/component_masks/mask_glow.dds"
+				blend_mode = alphamultiply
+				rotate_uv = -1
+			}
+		}
+
+		icon = {
+			alwaystransparent = yes
+			parentanchor = center
+			texture = "[GetCultureInnovationType(Concatenate('wam_ingr_', Scope.GetFlagName)).GetIcon]"
+			size = { 80 80 }
+		}
+	}
+}

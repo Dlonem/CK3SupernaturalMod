@@ -1,0 +1,332 @@
+﻿wam_setup_ingredient_default_vars_effect = {
+	if = {
+		limit = { NOT = { exists = var:wam_is_known_ingr_$INGREDIENT$ } }
+		if = {
+			limit = {
+				story_owner = { any_realm_province = { wam_trigger_for_scoped_ingredient = { SCOPED_INGREDIENT = flag:$INGREDIENT$ TRIGGER = wam_province_has_ingredient_trigger } } }
+			}
+			set_variable = { name = wam_is_known_ingr_$INGREDIENT$ value = yes }
+		} else = {
+			set_variable = { name = wam_is_known_ingr_$INGREDIENT$ value = no }
+		}
+	}
+	if = {
+		limit = { NOT = { exists = var:wam_amount_owned_ingr_$INGREDIENT$ } }
+		if = {
+			limit = { wam_ingredient_is_ubiquitous_trigger = { INGREDIENT = $INGREDIENT$ } }
+			set_variable = { name = wam_amount_owned_ingr_$INGREDIENT$ value = { integer_range = { min = 2 max = 5 } } }
+		} else_if = {
+			limit = { wam_ingredient_is_common_trigger = { INGREDIENT = $INGREDIENT$ } }
+			set_variable = { name = wam_amount_owned_ingr_$INGREDIENT$ value = { integer_range = { min = 1 max = 3 } } }
+		} else = {
+			set_variable = { name = wam_amount_owned_ingr_$INGREDIENT$ value = { integer_range = { min = 0 max = 1 } } }
+		}
+	}
+}
+
+wam_setup_treatment_default_vars_effect = {
+	if = {
+		limit = { NOT = { exists = var:wam_is_known_treatment_$TREATMENT$ } }
+		set_variable = { name = wam_is_known_treatment_$TREATMENT$ value = yes }
+	}
+}
+
+wam_setup_recipe_default_vars_effect = {
+	if = {
+		limit = { NOT = { exists = var:wam_is_known_recipe_$RECIPE$ } }
+		set_variable = { name = wam_is_known_recipe_$RECIPE$ value = no }
+	}
+}
+
+
+#General:
+wam_find_or_create_alchemy_story_effect = {
+	if = {
+		limit = { NOT = { exists = scope:alchemy_story } }
+		
+		random_owned_story = {
+			limit = { story_type = wam_alchemic_knowledge_story }
+			save_scope_as = alchemy_story
+		}
+		if = {
+			limit = { not = { exists = scope:alchemy_story } }
+			create_story = {
+				type = wam_alchemic_knowledge_story
+				save_scope_as = alchemy_story
+			}
+		}
+	}
+}
+
+wam_move_alchemy_story_to_vars_effect = {
+	wam_find_or_create_alchemy_story_effect = yes
+		
+	scope:alchemy_story = {
+		wam_execute_effect_for_every_ingredient = { EFFECT = wam_move_ingredient_from_story_to_char_effect }
+		wam_execute_effect_for_every_treatment = { EFFECT = wam_move_treatment_from_story_to_char_effect }
+		wam_execute_effect_for_every_recipe = { EFFECT = wam_move_recipe_from_story_to_char_effect }
+	}
+}
+
+#Ingredients:
+wam_ingredient_remove_vars_effect = {
+	if = {
+		limit = { exists = var:wam_is_known_ingr_$INGREDIENT$ }
+		remove_variable = wam_is_known_ingr_$INGREDIENT$
+	}
+	if = {
+		limit = { exists = var:wam_amount_owned_ingr_$INGREDIENT$ }
+		remove_variable = wam_amount_owned_ingr_$INGREDIENT$
+	}
+}
+
+wam_move_ingredient_from_story_to_char_effect = {
+	if = {
+		limit = {
+			var:wam_is_known_ingr_$INGREDIENT$ = yes
+		}
+		story_owner = {
+			save_scope_value_as = { name = wam_ingr_$INGREDIENT$ value = flag:$INGREDIENT$ }
+			add_to_variable_list = { name = wam_ingredients target = scope:wam_ingr_$INGREDIENT$ }
+			set_variable = { name = wam_amount_owned_ingr_$INGREDIENT$ value = PREV.var:wam_amount_owned_ingr_$INGREDIENT$ }
+		}
+	}
+}
+
+wam_reorder_selected_ingredients_effect = {
+	if = {
+		limit = {
+			NOT = { exists = var:wam_selected_ingredient_1 }
+			exists = var:wam_selected_ingredient_2
+		}
+		set_variable = { name = wam_selected_ingredient_1 value = var:wam_selected_ingredient_2 }
+		remove_variable = wam_selected_ingredient_2
+	}
+	if = {
+		limit = {
+			NOT = { exists = var:wam_selected_ingredient_1 }
+			exists = var:wam_selected_ingredient_3
+		}
+		set_variable = { name = wam_selected_ingredient_1 value = var:wam_selected_ingredient_3 }
+		remove_variable = wam_selected_ingredient_3
+	}
+	if = {
+		limit = {
+			NOT = { exists = var:wam_selected_ingredient_2 }
+			exists = var:wam_selected_ingredient_3
+		}
+		set_variable = { name = wam_selected_ingredient_2 value = var:wam_selected_ingredient_3 }
+		remove_variable = wam_selected_ingredient_3
+	}
+}
+
+wam_remove_ingredient_effect = {
+	wam_find_or_create_alchemy_story_effect = yes
+	scope:alchemy_story = {
+		change_variable = {
+			name = wam_amount_owned_ingr_$INGREDIENT$
+			subtract = 1
+		}
+	}
+}
+
+wam_add_ingredient_effect = {
+	wam_find_or_create_alchemy_story_effect = yes
+	scope:alchemy_story = {
+		change_variable = {
+			name = wam_amount_owned_ingr_$INGREDIENT$
+			add = 1
+		}
+	}
+}
+
+wam_learn_ingredient_effect = {
+	wam_find_or_create_alchemy_story_effect = yes
+	scope:alchemy_story = {
+		set_variable = {
+			name = wam_is_known_ingr_$INGREDIENT$
+			value = yes
+		}
+	}
+	custom_tooltip = wam_learn_ingredient_tt
+}
+
+wam_deselect_ingredients_no_longer_owned_effect = {
+	wam_execute_effect_for_every_ingredient = { EFFECT = wam_deselect_ingredient_if_no_longer_owned_effect }
+}
+
+wam_deselect_ingredient_if_no_longer_owned_effect = {
+	if = {
+		limit = { 
+			exists = var:wam_selected_ingredient_1 
+			var:wam_selected_ingredient_1 = flag:$INGREDIENT$
+			NOT = {
+				wam_owns_ingredient_trigger = { INGREDIENT = $INGREDIENT$ }
+			}
+		}
+		remove_variable = wam_selected_ingredient_1
+	}
+	if = {
+		limit = { 
+			exists = var:wam_selected_ingredient_2
+			var:wam_selected_ingredient_2 = flag:$INGREDIENT$
+			NOT = {
+				wam_owns_ingredient_trigger = { INGREDIENT = $INGREDIENT$ }
+			}
+		}
+		remove_variable = wam_selected_ingredient_2
+	}
+	if = {
+		limit = { 
+			exists = var:wam_selected_ingredient_3
+			var:wam_selected_ingredient_3 = flag:$INGREDIENT$
+			NOT = {
+				wam_owns_ingredient_trigger = { INGREDIENT = $INGREDIENT$ }
+			}
+		}
+		remove_variable = wam_selected_ingredient_3
+	}
+	wam_reorder_selected_ingredients_effect = yes
+}
+
+wam_set_price_for_detail_view_ingredient_effect = {
+	set_variable = {
+		name = wam_selected_detail_view_ingredient_cost
+		value = {
+			value = 150
+			if = {
+				limit = {
+					any_realm_province = { wam_trigger_for_scoped_ingredient = { SCOPED_INGREDIENT = scope:ingredient TRIGGER = wam_province_has_ingredient_trigger } }
+				}
+				divide = 2
+			}
+			if = {
+				limit = {
+					wam_trigger_for_scoped_ingredient = { SCOPED_INGREDIENT = scope:ingredient TRIGGER = wam_ingredient_is_ubiquitous_trigger }
+				}
+				divide = 4
+			}
+			if = {
+				limit = {
+					wam_trigger_for_scoped_ingredient = { SCOPED_INGREDIENT = scope:ingredient TRIGGER = wam_ingredient_is_common_trigger }
+				}
+				divide = 2
+			}
+		}
+	}
+}
+
+move_unknown_ingredient_to_list_effect = {
+	if = {
+		limit = {
+			var:wam_is_known_ingr_$INGREDIENT$ = no
+		}
+		save_scope_value_as = {
+			name = ingr_$INGREDIENT$
+			value = flag:$INGREDIENT$
+		}
+		scope:ingr_$INGREDIENT$ = {
+			add_to_list = unknown_ingredients
+		}
+	}
+}
+
+#Treatments:
+wam_treatment_remove_vars_effect = {
+	if = {
+		limit = { exists = var:wam_is_known_treatment_$TREATMENT$ }
+		remove_variable = wam_is_known_treatment_$TREATMENT$
+	}
+}
+
+wam_move_treatment_from_story_to_char_effect = {
+	if = {
+		limit = {
+			var:wam_is_known_treatment_$TREATMENT$ = yes
+		}
+		story_owner = {
+			save_scope_value_as = { name = wam_treatmt_$TREATMENT$ value = flag:$TREATMENT$ }
+			add_to_variable_list = { name = wam_treatments target = scope:wam_treatmt_$TREATMENT$ }
+		}
+	}
+}
+
+#Recipes:
+wam_recipe_remove_vars_effect = {
+	if = {
+		limit = { exists = var:wam_is_known_recipe_$RECIPE$ }
+		remove_variable = wam_is_known_recipe_$RECIPE$
+	}
+}
+
+wam_move_recipe_from_story_to_char_effect = {
+	if = {
+		limit = {
+			exists = var:wam_is_known_recipe_$RECIPE$
+			var:wam_is_known_recipe_$RECIPE$ = yes
+		}
+		story_owner = {
+			save_scope_value_as = { name = wam_recipe_$RECIPE$ value = flag:$RECIPE$ }
+			add_to_variable_list = { name = wam_recipes target = scope:wam_recipe_$RECIPE$ }
+		}
+	}
+}
+
+wam_learn_recipe_effect = {
+	scope:alchemy_story = {
+		set_variable = {
+			name = wam_is_known_recipe_$RECIPE$
+			value = yes
+		}
+	}
+}
+
+#Execution:
+wam_do_alchemy_effect = {
+	wam_find_or_create_alchemy_story_effect = yes
+	wam_execute_effect_for_every_recipe = {
+		EFFECT = wam_try_recipe_with_selection_effect 
+	}
+	wam_consume_selected_ingredients_effect = yes
+	if = {
+		limit = { NOT = { exists = scope:experiment_succeeded } }
+		trigger_event = wam_modjam_events.0012	#Failed Potion Crafting Event
+	}
+}
+
+wam_try_recipe_with_selection_effect = {
+	if = {
+		limit = {
+			wam_has_right_input_for_$RECIPE$_trigger = yes
+		}
+		wam_execute_recipe_$RECIPE$_effect = yes
+		wam_learn_recipe_effect = { RECIPE = $RECIPE$ }
+		wam_move_alchemy_story_to_vars_effect = yes
+		save_scope_value_as = {
+			name = experiment_succeeded
+			value = yes
+		}
+	}
+}
+wam_consume_selected_ingredients_effect = {
+	if = {
+		limit = { exists = var:wam_selected_ingredient_1 }
+		wam_execute_effect_for_scoped_ingredient_effect = { SCOPED_INGREDIENT = var:wam_selected_ingredient_1 EFFECT = wam_remove_ingredient_effect }
+	}
+	if = {
+		limit = { exists = var:wam_selected_ingredient_2 }
+		wam_execute_effect_for_scoped_ingredient_effect = { SCOPED_INGREDIENT = var:wam_selected_ingredient_2 EFFECT = wam_remove_ingredient_effect }
+	}
+	if = {
+		limit = { exists = var:wam_selected_ingredient_3}
+		wam_execute_effect_for_scoped_ingredient_effect = { SCOPED_INGREDIENT = var:wam_selected_ingredient_3 EFFECT = wam_remove_ingredient_effect }
+	}
+}
+
+wam_create_artifact_effect = {
+	wam_create_artifact_$ARTIFACT$_effect = yes
+	set_variable = {
+		name = outcome_artifact
+		value = scope:artifact
+	}
+}

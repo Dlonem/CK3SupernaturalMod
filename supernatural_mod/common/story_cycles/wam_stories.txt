@@ -1,0 +1,60 @@
+﻿wam_alchemic_knowledge_story = { #Tracks a character's known recipes, available ingredients, etc.
+
+	on_setup = {
+		#Effects for someone starting out alchemy, setting up what they already know
+		wam_execute_effect_for_every_ingredient = { EFFECT = wam_setup_ingredient_default_vars_effect }
+		wam_execute_effect_for_every_treatment = { EFFECT = wam_setup_treatment_default_vars_effect }
+		wam_execute_effect_for_every_recipe = { EFFECT = wam_setup_recipe_default_vars_effect }
+	}
+
+	on_owner_death = {
+		if = {
+			limit = {
+				story_owner = {
+					exists = player_heir
+				}
+			}
+			if = {
+				limit = {
+					story_owner.player_heir = {
+						owns_story_of_type = wam_alchemic_knowledge_story
+					}
+				}
+			} else = {
+				story_owner.player_heir = {
+					save_temporary_scope_as = new_owner
+				}
+			}
+			if = {
+				limit = {
+					exists = scope:new_owner
+				}
+				make_story_owner = scope:new_owner
+			}
+		} else = {
+			end_story = yes
+		}
+	}
+	
+	effect_group = { #Basic maintenance
+		months = 3
+		triggered_effect = {
+			trigger = {
+				story_owner = { is_ruler = no }
+			}
+			effect = { end_story = yes }
+		}
+
+		triggered_effect = {
+			trigger = {
+				story_owner = {
+					any_owned_story = {
+						story_type = wam_alchemic_knowledge_story
+						count = 2
+					}
+				}
+			}
+			effect = { end_story = yes }
+		}
+	}
+}
