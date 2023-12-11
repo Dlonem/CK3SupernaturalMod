@@ -530,6 +530,7 @@ magic_healing = {
 				has_trait = smallpox
 				has_trait = sickly
 				has_trait = blind
+				has_trait = disfigured
 				has_character_modifier = chronic_headaches_modifier
 				has_character_modifier = infected_wound_modifier
 				has_character_modifier = gangrene_modifier
@@ -654,6 +655,9 @@ magic_healing = {
 					}
 					if = { limit = { has_trait = blind }
 						remove_trait = blind
+					}
+					if = {	limit = {	has_trait = disfigured	}
+						remove_trait = disfigured
 					}
 					if = {	limit = {	has_character_modifier = chronic_headaches_modifier	}
 						remove_character_modifier = chronic_headaches_modifier
@@ -1170,14 +1174,15 @@ consume_child = {
 					}
 					if = {
 						limit = {
-							NOT = {
-								has_character_modifier = yaga_beauty_modifier
-							}
+							has_character_modifier = yaga_beauty_modifier
 						}
-						add_character_modifier = {
-							modifier = yaga_beauty_modifier
-							years = 1
+						hidden_effect = {
+							remove_character_modifier = yaga_beauty_modifier
 						}
+					}
+					add_character_modifier = {
+						modifier = yaga_beauty_modifier
+						years = 1
 					}
 				}
 				if = {
@@ -2453,7 +2458,7 @@ demand_submission_cgm_interaction = {
 	greeting = negative
 	notification_text = DEMAND_SUBMISSION_PROPOSAL
 	cooldown_against_recipient = { years = 20 } 
-	cooldown = { years = 1 }
+	cooldown = { months = 6 }
 	can_send_despite_rejection = yes
 	popup_on_receive = yes
 	pause_on_receive = yes
@@ -2783,15 +2788,15 @@ send_agent_cgm_interaction = {
 					}
 					reveal_to = scope:actor
 				}
-				set_relation_mmaster = scope:actor
+				
 				add_character_modifier = {
 					modifier = special_task_modifier
 					years = 1
 				}
 				add_opinion = {
-					target = scope:recipient
+					target = scope:actor
 					modifier = friendliness_opinion
-					opinion = 50
+					opinion = 200
 				}
 			}
 			scope:actor = {
@@ -3614,8 +3619,13 @@ power_strike = {
 					#	wrathful = medium_stress_impact_loss
 					#	sadistic = medium_stress_impact_loss
 					#}
+					if = {
+						limit = {
+							scope:weaken_spell_flag = no
+						}
+						metamagic_effect = yes
+					}
 					
-					metamagic_effect = yes
 					if = {
 						limit = {
 							has_trait = compassionate
@@ -3686,70 +3696,101 @@ power_strike = {
 						add_dread = major_dread_gain
 						if = {
 							limit = {
-								has_execute_reason = scope:recipient
+								scope:actor = {
+									is_in_army = yes
+									exists = commanding_army
+									commanding_army = {
+										is_army_in_combat = yes
+									}
+								}
+								scope:recipient = {
+									is_in_army = yes
+									OR = {
+										AND = {
+											exists = commanding_army
+											commanding_army = {
+												is_army_in_combat = yes
+											}
+											NOT = {
+												commanding_army = scope:actor.commanding_army
+											}
+											commanding_army.location = scope:actor.commanding_army.location
+										}
+										AND = {
+											exists = liege_or_court_owner
+											liege_or_court_owner = {
+												any_army = {
+													is_army_in_combat = yes
+													NOT = {
+														THIS = scope:actor.commanding_army
+													}
+													location = scope:actor.commanding_army.location
+												}
+											}
+										}
+									}
+								}
 							}
-							custom_tooltip = IS_ALLOWED_TO_EXECUTE_DESC
+							add_character_flag = mage_during_battle_flag
 						}
 						else = {
-							#if = {
-							#	limit = {
-							#		scope:recipient = {
-							#			OR = {
-							#				is_vassal_or_below_of = scope:actor
-							#				is_courtier_of = scope:actor
-							#			}
-							#		}
-							#	}
-							#	add_tyranny = execution_tyranny_gain
-							#}
-							add_tyranny = execution_tyranny_gain
-							add_kinslayer_trait_or_nothing_effect = { VICTIM = scope:recipient }
 							if = {
 								limit = {
-									NOT = {	has_trait = murderer	}
+									has_execute_reason = scope:recipient
 								}
-								add_trait = murderer
+								custom_tooltip = IS_ALLOWED_TO_EXECUTE_DESC
 							}
-							hidden_effect = {
+							else = {
+								add_tyranny = execution_tyranny_gain
+								add_kinslayer_trait_or_nothing_effect = { VICTIM = scope:recipient }
 								if = {
 									limit = {
-										exists = scope:recipient.primary_heir
-										scope:recipient.primary_heir = {
-											any_close_family_member = {
-												this = scope:recipient
-											}
-											NOR = {
-												has_relation_rival = scope:actor
-												has_relation_nemesis = scope:actor
-												has_relation_mminion = scope:actor
-												has_trait = craven
-												has_trait = forgiving
-											}
-										}
+										NOT = {	has_trait = murderer	}
 									}
-									set_relation_rival = scope:recipient.primary_heir
+									add_trait = murderer
 								}
-								else_if = {
-									limit = {
-										scope:recipient.age<16
-										exists = scope:recipient.father
-										scope:recipient.father = {
-											is_alive = yes
-											is_landed = yes
-											is_ruler = yes
-											NOR = {
-												has_relation_rival = scope:actor
-												has_relation_nemesis = scope:actor
-												has_relation_mminion = scope:actor
-												has_trait = craven
-												has_trait = forgiving
+								hidden_effect = {
+									if = {
+										limit = {
+											exists = scope:recipient.primary_heir
+											scope:recipient.primary_heir = {
+												any_close_family_member = {
+													this = scope:recipient
+												}
+												NOR = {
+													has_relation_rival = scope:actor
+													has_relation_nemesis = scope:actor
+													has_relation_mminion = scope:actor
+													has_trait = craven
+													has_trait = forgiving
+												}
 											}
 										}
+										set_relation_rival = scope:recipient.primary_heir
 									}
-									set_relation_rival = scope:recipient.father
+									else_if = {
+										limit = {
+											scope:recipient.age<16
+											exists = scope:recipient.father
+											scope:recipient.father = {
+												is_alive = yes
+												is_landed = yes
+												is_ruler = yes
+												NOR = {
+													has_relation_rival = scope:actor
+													has_relation_nemesis = scope:actor
+													has_relation_mminion = scope:actor
+													has_trait = craven
+													has_trait = forgiving
+												}
+											}
+										}
+										set_relation_rival = scope:recipient.father
+									}
 								}
 							}
 						}
+						
 					}
 	
 					
@@ -3847,11 +3888,29 @@ power_strike = {
 						limit = {
 							scope:weaken_spell_flag = no
 						}
-						execute_opinion_effect = { VICTIM = scope:recipient EXECUTIONER = scope:actor }
-						scope:recipient = {
-							death = {
-								death_reason = death_execution
-								killer = scope:actor
+						if = {
+							limit = {
+								scope:actor = {
+									has_character_flag = mage_during_battle_flag
+								}
+							}
+							scope:recipient = {
+								death = {
+									death_reason = death_battle
+									killer = scope:actor
+								}
+							}
+							scope:actor = {
+								remove_character_flag = mage_during_battle_flag
+							}
+						}
+						else = {
+							execute_opinion_effect = { VICTIM = scope:recipient EXECUTIONER = scope:actor }
+							scope:recipient = {
+								death = {
+									death_reason = death_execution
+									killer = scope:actor
+								}
 							}
 						}
 					}
@@ -3950,6 +4009,9 @@ power_strike = {
 					has_trait = demon
 					has_trait = yaga
 				}
+			}
+			scope:actor = {
+				is_in_army = no
 			}
 		}
 		is_valid = {
@@ -4246,18 +4308,28 @@ bless_land = {
 					}
 					remove_county_modifier = cursed_land_modifier
 				}
+				if = {
+					limit = {
+						has_county_modifier = blessed_land_modifier
+					}
+					remove_county_modifier = blessed_land_modifier
+				}
+				add_county_modifier = {
+					modifier = blessed_land_modifier
+					years = 10
+				}
 			}
 			
-			if = {
-				limit = {
-					has_province_modifier = blessed_land_modifier
-				}
-				remove_province_modifier = blessed_land_modifier
-			}
-			add_province_modifier = {
-				modifier = blessed_land_modifier
-				years = 10
-			}
+			#if = {
+			#	limit = {
+			#		has_province_modifier = blessed_land_modifier
+			#	}
+			#	remove_province_modifier = blessed_land_modifier
+			#}
+			#add_province_modifier = {
+			#	modifier = blessed_land_modifier
+			#	years = 10
+			#}
 		}
 	}
 	auto_accept = yes
