@@ -1,0 +1,184 @@
+﻿wam_open_alchemy_window_sgui = {
+	scope = character
+	
+	effect = {
+		wam_move_alchemy_story_to_vars_effect = yes
+
+		ordered_in_list = {
+			variable = wam_treatments
+			position = 1
+			PREV = {
+				set_variable = {
+					name = wam_selected_treatment
+					value = PREV
+				}
+			}
+		}
+	}
+}
+
+wam_close_alchemy_window_sgui = {
+	scope = character
+
+	effect = {
+		wam_execute_effect_for_every_ingredient = { EFFECT = wam_ingredient_remove_vars_effect }
+		wam_execute_effect_for_every_treatment = { EFFECT = wam_treatment_remove_vars_effect }
+		if = {
+			limit = { has_variable_list = wam_treatments }
+			clear_variable_list = wam_treatments
+		}
+		if = {
+			limit = { has_variable_list = wam_ingredients }
+			clear_variable_list = wam_ingredients
+		}
+		if = {
+			limit = { has_variable_list = wam_recipes }
+			clear_variable_list = wam_recipes
+		}
+
+		if = {
+			limit = { exists = var:wam_selected_treatment }
+			remove_variable = wam_selected_treatment
+		}
+		if = {
+			limit = { exists = var:wam_selected_ingredient_1 }
+			remove_variable = wam_selected_ingredient_1
+		}
+		if = {
+			limit = { exists = var:wam_selected_ingredient_2 }
+			remove_variable = wam_selected_ingredient_2
+		}
+		if = {
+			limit = { exists = var:wam_selected_ingredient_3 }
+			remove_variable = wam_selected_ingredient_3
+		}
+
+		if = {
+			limit = { exists = var:outcome_artifact }
+			remove_variable = outcome_artifact
+		}
+	}
+}
+
+wam_select_treatment_sgui = {
+	scope = character
+	saved_scopes = { treatment }
+	effect = {
+		set_variable = {
+			name = wam_selected_treatment
+			value = scope:treatment
+		}
+	}
+}
+
+wam_select_ingredient_sgui = {
+	scope = character
+	saved_scopes = { ingredient }
+	effect = {
+		if = {
+			limit = {
+				wam_trigger_for_scoped_ingredient = { SCOPED_INGREDIENT = scope:ingredient TRIGGER = wam_owns_ingredient_trigger }
+			}
+			
+			#If selected, deselect:
+			if = {
+				limit = { 
+					exists = var:wam_selected_ingredient_1
+					var:wam_selected_ingredient_1 = { this = scope:ingredient }
+				}
+				remove_variable = wam_selected_ingredient_1
+			} else_if = {
+				limit = { 
+					exists = var:wam_selected_ingredient_2
+					var:wam_selected_ingredient_2 = { this = scope:ingredient }
+				}
+				remove_variable = wam_selected_ingredient_2
+			} else_if = {
+				limit = { 
+					exists = var:wam_selected_ingredient_3
+					var:wam_selected_ingredient_3 = { this = scope:ingredient }
+				}
+				remove_variable = wam_selected_ingredient_3
+			} else_if = { #Else, select:
+				limit = { NOT = { exists = var:wam_selected_ingredient_1 } }
+				set_variable = {
+					name = wam_selected_ingredient_1
+					value = scope:ingredient
+				}
+			} else_if = {
+				limit = { NOT = { exists = var:wam_selected_ingredient_2 } }
+				set_variable = {
+					name = wam_selected_ingredient_2
+					value = scope:ingredient
+				}
+			} else_if = {
+				limit = { NOT = { exists = var:wam_selected_ingredient_3 } }
+				set_variable = {
+					name = wam_selected_ingredient_3
+					value = scope:ingredient
+				}
+			}
+			wam_reorder_selected_ingredients_effect = yes
+		}
+	}
+}
+
+wam_do_alchemy_sgui = {
+	scope = character
+	effect = {
+		wam_do_alchemy_effect = yes
+		wam_deselect_ingredients_no_longer_owned_effect = yes
+	}
+}
+
+wam_select_ingredient_for_detail_view_sgui = {
+	scope = character
+	saved_scopes = { ingredient }
+	effect = {
+		set_variable = {
+			name = wam_selected_detail_view_ingredient
+			value = scope:ingredient
+		}
+
+		wam_set_price_for_detail_view_ingredient_effect = yes
+	}
+}
+
+wam_buy_ingredient_sgui = {
+	scope = character
+	effect = {
+		if = {
+			limit = {
+				gold >= var:wam_selected_detail_view_ingredient_cost
+			}
+			remove_short_term_gold = var:wam_selected_detail_view_ingredient_cost
+			wam_execute_effect_for_scoped_ingredient_effect = {
+				SCOPED_INGREDIENT = var:wam_selected_detail_view_ingredient
+				EFFECT = wam_add_ingredient_effect
+			}
+			wam_move_alchemy_story_to_vars_effect = yes
+		}
+	}
+}
+
+wam_close_ingredient_detail_view_sgui = {
+	scope = character
+	effect = {
+		if = {
+			limit = {
+				exists = var:wam_selected_detail_view_ingredient
+			}
+			remove_variable = wam_selected_detail_view_ingredient
+		}
+	}
+}
+
+wam_alchemy_button_should_show_sgui = {
+	scope = character
+	is_valid = {
+		OR = {
+			wam_is_alchemist_trigger = yes
+			has_trait = witch
+		}
+	}
+}

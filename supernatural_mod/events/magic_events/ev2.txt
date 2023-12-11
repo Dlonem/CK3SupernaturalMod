@@ -299,7 +299,7 @@ magic_ev2.1 = {
 				#preemptive strike
 				trigger = {
 					any_ruler = {
-						NOR = {
+						NOT = {
 							has_character_flag = special_magic_character
 						}
 						OR = {
@@ -465,7 +465,6 @@ magic_ev2.1 = {
 							has_focus = arcane_focus
 							has_trait = archmage
 						}
-						
 						intrigue > 12
 						NOR = {
 							has_trait = source
@@ -605,6 +604,7 @@ magic_ev2.1 = {
 						NOT = {	has_character_flag = special_magic_character	}
 						has_trait = demon
 						NOT = { has_character_flag = lilith }
+						NOT = {	has_trait = incapable	}
 						NOT = {
 							any_relation = {
 								type = rival
@@ -2010,6 +2010,7 @@ magic_ev2.10 = {
 		else = {
 			hidden_effect = {
 				set_relation_rival = scope:target
+				
 				#set_random_rivalry_reason = { TARGET = scope:target }
 			}
 		}
@@ -2093,16 +2094,52 @@ magic_ev2.11 = {
 				employer = scope:this0
 				gender = male
 				template = generic_demon_character
+				after_creation = {
+					set_sexuality = bisexual
+					if = {
+						limit = {
+							root = {
+								has_full_magic_prot_trigger = yes
+							}
+						}
+						add_trait_xp = {
+							trait = demon
+							value = 100
+						}
+					}
+					else = {
+						add_trait_xp = {
+							trait = demon
+							value = 55
+						}
+					}
+					
+					give_witch_secret_or_trait_effect = yes
+				}
 				save_scope_as = demon
 			}
-			scope:demon = {
-				set_sexuality = bisexual
-				#add_secret = {
-				#	type = secret_witch
-				#	target = scope:demon
-				#}
-				give_witch_secret_or_trait_effect = yes
-			}
+			#scope:demon = {
+			#	set_sexuality = bisexual
+			#	if = {
+			#		limit = {
+			#			root = {
+			#				has_full_magic_prot_trigger = yes
+			#			}
+			#		}
+			#		add_trait_xp = {
+			#			trait = demon
+			#			value = 100
+			#		}
+			#	}
+			#	else = {
+			#		add_trait_xp = {
+			#			trait = demon
+			#			value = 55
+			#		}
+			#	}
+			#	
+			#	give_witch_secret_or_trait_effect = yes
+			#}
 		}
 	}
 
@@ -2802,6 +2839,16 @@ magic_ev2.17 = {
 		scope:witch = {
 			random_vassal = {
 				save_scope_as = rvas
+			}
+			if = {
+				limit = {
+					NOT = {
+						exists = scope:rvas
+					}
+				}
+				root = {
+					save_scope_as = rvas
+				}
 			}
 			add_character_flag = hunted4magic
 			if = {
@@ -4550,16 +4597,16 @@ magic_ev2.38 = {
 			trait = demon
 			value = 20
 		}
-		if = {
-			limit = {
-				is_ai = yes
-			}
-			random = {
-				chance = 50
-				create_cadet_branch = yes
-			}
-			
-		}
+		#if = {
+		#	limit = {
+		#		is_ai = yes
+		#	}
+		#	random = {
+		#		chance = 50
+		#		create_cadet_branch = yes
+		#	}
+		#	
+		#}
 	}
 }
 
@@ -4728,7 +4775,7 @@ magic_ev2.41 = {
 				send_interface_toast = {
 					title = ev2.41.title
 					add_character_modifier = {
-						modifier = witch_drug_modifier
+						modifier = witch_brew_modifier
 						years = 3
 					}
 				}
@@ -4780,7 +4827,7 @@ magic_ev2.41 = {
 		trait = true_witch
 		if = {
 			limit = {
-				has_perk = combat_spells_p3_perk
+				#has_perk = combat_spells_p3_perk
 				has_trait = lifestyle_herbalist
 			}
 			custom_tooltip = ev2.41.d_ct2
@@ -5431,9 +5478,12 @@ magic_ev2.49 = {
 
 			every_vassal = {
 				limit = {
-					is_powerful_vassal = yes
 					is_ai = yes
+					is_powerful_vassal = yes
 				}
+				set_relation_mmaster = scope:demon
+			}
+			every_courtier = {
 				set_relation_mmaster = scope:demon
 			}
 			trigger_event = {
@@ -5524,6 +5574,7 @@ magic_ev2.50 = {
 					add_character_modifier = demonic_charm_modifier
 					add_character_modifier = strength_ohm_modifier
 					add_character_modifier = looked_to_the_future
+					
 					change_target_weight = 99
 					add_trait_xp = {
 						trait = demon
@@ -5537,6 +5588,8 @@ magic_ev2.50 = {
 						}
 						add_character_modifier = magic_duelist_modifier
 					}
+					set_character_faith = scope:target0.faith
+					set_culture = scope:target0.culture
 				}
 			}
 			#scope:demon = {
@@ -5636,16 +5689,19 @@ magic_ev2.50 = {
 					}
 					set_relation_mmaster = scope:demon
 				}
-				every_vassal_or_below = {
-					limit = {
-						is_ai = yes
-						NOR = {
-							faith = scope:demon.faith
-							this = faith.religious_head
-						}
-					}
-					set_character_faith = scope:demon.faith
+				every_courtier = {
+					set_relation_mmaster = scope:demon
 				}
+				#every_vassal_or_below = {
+				#	limit = {
+				#		is_ai = yes
+				#		NOR = {
+				#			faith = scope:demon.faith
+				#			this = faith.religious_head
+				#		}
+				#	}
+				#	set_character_faith = scope:demon.faith
+				#}
 				add_pressed_claim = scope:ttitle_emp
 				add_pressed_claim = scope:ttitle_rand
 				trigger_event = {

@@ -1,0 +1,226 @@
+﻿namespace = wam_eltyranos
+
+wam_eltyranos.0001 = { # Someone spotted a witch
+	type = character_event
+	theme = realm
+	override_background = {
+		reference = market
+	}
+	
+	title = wam_eltyranos.0001.t
+	desc = wam_eltyranos.0001.desc
+	
+	right_portrait = {
+		character = root
+		animation = fear
+	}
+	left_portrait = {
+		character = scope:witch
+		animation = wam_broom
+	}
+	
+	cooldown = { days = 730 }
+	
+	trigger = {
+		basic_is_valid_for_yearly_events_trigger = yes
+		faith = { NOT = { has_doctrine = doctrine_witchcraft_accepted } }
+		capital_province = {
+			geographical_region = world_europe
+		}
+	}
+	
+	weight_multiplier = {
+		base = 1
+		modifier = {
+			has_trait = zealous
+			add = 0.75
+		}
+	}
+	
+	immediate = {
+		random_courtier_or_guest = {
+			limit = { has_council_position = councillor_court_chaplain }
+			save_scope_as = court_chaplain
+		}
+		create_character = {
+			gender = female
+			culture = this.culture
+			location = root.capital_province
+			template = witch_character
+			save_scope_as = witch
+		}
+	}
+	
+	option = { # Hunt for the witch
+		name = wam_eltyranos.0001.a
+		# debug_log = "WAM_Debug: a ruler hunted for a witch in wam_eltyranos.0001"
+		trigger_event = {
+			id = wam_eltyranos.0002
+			days = 2
+		}
+		remove_short_term_gold = 5
+		
+		if = {
+			limit = { exists = scope:court_chaplain }
+			scope:court_chaplain = {
+				add_opinion = {
+					target = root
+					modifier = pious_opinion
+					opinion = 5
+				}
+			}
+		}
+		
+		stress_impact = { cynical = minor_stress_gain }
+		
+		ai_chance = {
+			base = 50
+			ai_value_modifier = {
+				ai_zeal = 0.5
+			}
+			modifier = {
+				add = -20
+				has_trait = cynical
+			}
+			modifier = {
+				add = 20
+				has_trait = zealous
+			}
+		}
+	}
+	option = { # Give up
+		name = wam_eltyranos.0001.b
+		# debug_log = "WAM_Debug: a ruler left a witch alive in wam_eltyranos.0001"
+		if = {
+			limit = { exists = scope:court_chaplain }
+			scope:court_chaplain = {
+				add_opinion = {
+					target = root
+					modifier = pious_opinion
+					opinion = -5
+				}
+			}
+		}
+		stress_impact = { 
+			zealous = medium_stress_gain
+			zealous = minor_stress_loss
+		}
+		hidden_effect = {
+			scope:witch = {
+				death = { death_reason = death_vanished	}
+			}
+		}
+		
+		ai_chance = {
+			base = 50
+			ai_value_modifier = {
+				ai_zeal = -0.5
+			}
+			modifier = {
+				add = 20
+				has_trait = cynical
+			}
+			modifier = {
+				add = -20
+				has_trait = zealous
+			}
+		}
+	}
+}
+
+wam_eltyranos.0002 = { # Decide on the fate of the witch
+	type = character_event
+	theme = realm
+	override_background = {
+		reference = wilderness_scope
+	}
+	
+	title = wam_eltyranos.0001.t
+	desc = wam_eltyranos.0002.desc
+	
+	right_portrait = {
+		character = root
+		animation = personality_compassionate
+	}
+	left_portrait = {
+		character = scope:witch
+		animation = wam_bonfire
+	}
+	
+	option = { # Burn her
+		name = wam_eltyranos.0002.a
+		# debug_log = "WAM_Debug: a ruler burned a witch in wam_eltyranos.0002"
+		
+		if = {
+			limit = { exists = scope:court_chaplain }
+			scope:court_chaplain = {
+				add_opinion = {
+					target = root
+					modifier = pious_opinion
+					opinion = 10
+				}
+			}
+		}
+		
+		scope:witch = {
+			death = { death_reason = death_burned }
+		}
+		
+		stress_impact = {
+			compassionate = medium_stress_impact_gain			
+			just = minor_stress_gain
+			sadistic = medium_stress_impact_loss
+		}
+		
+		ai_chance = {
+			base = 50
+			ai_value_modifier = {
+				ai_zeal = 0.5
+			}
+			modifier = {
+				add = -20
+				has_trait = cynical
+			}
+			modifier = {
+				add = 20
+				has_trait = zealous
+			}
+		}
+	}
+	option = { # Don't burn her
+		name = wam_eltyranos.0002.b
+		# debug_log = "WAM_Debug: a ruler left a witch alive in wam_eltyranos.0001"
+		custom_tooltip = wam_eltyranos.0002.b.tt
+		
+		if = {
+			limit = { exists = scope:court_chaplain }
+			scope:court_chaplain = {
+				add_opinion = {
+					target = root
+					modifier = pious_opinion
+					opinion = -10
+				}
+			}
+		}
+		
+		stress_impact = { 
+			zealous = medium_stress_gain
+			trusting = minor_stress_impact_loss
+		}
+		
+		ai_chance = {
+			base = 50
+			ai_value_modifier = {
+				ai_zeal = -0.5
+			}
+			modifier = {
+				add = 20
+				has_trait = cynical
+			}
+			modifier = {
+				add = -20
+				has_trait = zealous
+			}
+		}
+	}
+}
