@@ -3975,7 +3975,15 @@ magic_ev4.44 = {
 		#tournament_astronomy_modifier
 		#bp1_1000_focus_on_work_modifier
 		#determination_modifier
-		
+		if = {
+			limit = {
+				has_trait = archmage
+			}
+			random = {
+				chance = 50
+				gain_sc_xp1_effect = yes
+			}
+		}
 	}
 	option = {
 		name = ev4.44.a
@@ -3990,6 +3998,7 @@ magic_ev4.44 = {
 				years = 2
 			}
 		}
+		
 	}
 }
 
@@ -4235,8 +4244,8 @@ magic_ev4.48 = {
 				death_reason = death_head_ripped_off
 				death_reason = death_cloven_in_half
 				death_reason = death_decapitated
-				death_reason = death_sacrificed_to_gods
-				death_reason = death_sacrificed_to_foreign_gods
+				#death_reason = death_sacrificed_to_gods
+				#death_reason = death_sacrificed_to_foreign_gods
 			}
 		}
 		
@@ -4364,7 +4373,7 @@ magic_ev4.51 = {
 		is_adult = yes
 		is_alive = yes
 		is_imprisoned = no
-		any_character_artifact = { has_variable = magic_ring }
+		any_character_artifact = { has_variable = magic_ring0 }
 		NOT = {	has_character_flag = ring_of_life_paranoia	}
 	}
 
@@ -4402,6 +4411,17 @@ magic_ev4.51 = {
 			add_character_flag = {
 				flag = ring_of_life_paranoia
 				years = 80
+			}
+			if = {
+				limit = {
+					exists = player_heir
+				}
+				player_heir = {
+					add_character_flag = {
+						flag = ring_of_life_paranoia
+						years = 60
+					}
+				}
 			}
 			if = {
 				limit = {
@@ -4805,10 +4825,15 @@ magic_ev4.55 = {
 		is_alive = yes
 		is_imprisoned = no
 		any_character_artifact = { has_variable = dark_blade }
+		OR = {
+			has_trait = possessed_1
+			has_trait = possessed_genetic
+		}
 	}
 
 	option = {
 		name = ev4.55.a
+		trait = possessed_1
 		add_dread = 50
 		every_courtier_or_guest = {
 			limit = {
@@ -4832,6 +4857,18 @@ magic_ev4.55 = {
 				}
 			}
 			add_trait = callous
+		}
+		stress_impact = {
+			compassionate = massive_stress_gain
+			calm = medium_stress_gain
+			forgiving = medium_stress_gain
+			humble = minor_stress_gain
+			just = major_stress_gain
+			sadistic = major_stress_loss
+		}
+		add_character_modifier = {
+			modifier = madman_modifier
+			years = 5
 		}
 		if = {
 			limit = {
@@ -4962,6 +4999,7 @@ magic_ev4.57 = {
 			NOR = {
 				any_character_artifact = { has_variable = dragon_scales }
 				has_character_modifier = amp_modifier
+				has_trait = demon
 			}
 		}
 	}
@@ -4974,6 +5012,7 @@ magic_ev4.57 = {
 				NOR = {
 					any_character_artifact = { has_variable = dragon_scales }
 					has_character_modifier = amp_modifier
+					has_trait = demon
 				}
 			}
 			save_scope_as = riv0
@@ -5062,7 +5101,7 @@ magic_ev4.58 = {
 					value < 100
 				}
 			}
-			gain_sc_xp2_effect = yes
+			gain_sc_xp1_effect = yes
 		}
 		else_if = {
 			limit = {
@@ -5266,6 +5305,9 @@ magic_ev4.62 = {
 	trigger = {
 		has_perk = mind_control_p6_perk
 		can_be_power_saturated_trigger = yes
+		NOT = {
+			has_character_modifier = magic_flu_modifier
+		}
 	}
 
 	#immediate = {
@@ -5923,12 +5965,12 @@ magic_ev4.69 = {
 
 	option = {
 		name = ev4.69.a
-		trigger = {
-			NOR = {
-				has_relation_rival = scope:new_cgm
-				has_relation_nemesis = scope:new_cgm
-			}
-		}
+		#trigger = {
+		#	NOR = {
+		#		has_relation_rival = scope:new_cgm
+		#		has_relation_nemesis = scope:new_cgm
+		#	}
+		#}
 		if = {
 			limit = {
 				OR = {
@@ -5944,6 +5986,11 @@ magic_ev4.69 = {
 	}
 	option = {
 		name = ev4.69.b
+		trigger = {
+			NOT = {
+				has_trait = grandmaster_coven
+			}
+		}
 		if = {
 			limit = {
 				NOR = {
@@ -6455,6 +6502,7 @@ magic_ev4.75 = {
 			years = 3
 		}
 		gain_sc_xp1_effect = yes
+		gain_cm_xp1_effect = yes
 		hidden_effect = {
 			seek_the_power2_effect = yes
 		}
@@ -6477,8 +6525,9 @@ magic_ev4.76 = {
 			random_attending_character = {
 				limit = {
 					is_ai = yes
-					NOT = {	
+					NOR = {	
 						ROOT = THIS
+						has_trait = demon
 					}
 				}
 				save_scope_as = sacvic
@@ -6510,6 +6559,10 @@ magic_ev4.76 = {
 		}
 		else = {
 			custom_tooltip = ev4.76.0.a_ct
+		}
+		stress_impact = {
+			compassionate = massive_stress_gain
+			sadistic = medium_stress_loss
 		}
 		
 		scope:sacvic = {
@@ -6590,21 +6643,37 @@ magic_ev4.77 = {
 		else_if = {
 			limit = {
 				has_trait = archmage
+				has_trait_xp = {
+					trait = archmage
+					track = secret_knowledge
+					value < 100
+				}
 			}
-			gain_sc_xp1_effect = yes
+			gain_sc_xp2_effect = yes
 			hidden_effect = {
 				seek_the_power4c_effect = yes
 			}
 		}
-		
+		else = {
+			add_diplomacy_skill = 1
+		}
 	}
 	option = {
 		name = ev4.77.0.a
 		add_stress = medium_stress_loss
-		random = {
-			chance = 20
+		if = {
+			limit = {
+				root.age < 100
+			}
+			random = {
+				chance = root.age
+				add_learning_skill = 1
+			}
+		}
+		else = {
 			add_learning_skill = 1
 		}
+		
 		hidden_effect = {
 			seek_the_power4b_effect = yes
 		}
@@ -7269,7 +7338,6 @@ magic_ev4.85 = {
 		add_character_flag = hecate_option4
 	}
 	after = {
-		add_character_flag = met_hecate
 		trigger_event = magic_ev4.86
 	}
 }
@@ -7305,6 +7373,12 @@ magic_ev4.86 = {
 			custom_tooltip = hecate_option2_ct
 			hidden_effect = {
 				set_age = 20
+				if = {
+					limit = {
+						has_trait = infirm
+					}
+					remove_trait = infirm
+				}
 			}
 		}
 		else_if = {
@@ -7386,6 +7460,9 @@ magic_ev4.86 = {
 			}
 			remove_character_flag = hecate_option4
 		}
+		ai_chance = {
+			base = 10
+		}
 	}
 	option = {
 		name = ev4.86.0.b
@@ -7429,6 +7506,9 @@ magic_ev4.86 = {
 			}
 			remove_character_flag = hecate_option4
 		}
+		ai_chance = {
+			base = 10
+		}
 	}
 	option = {
 		name = ev4.86.0.c
@@ -7469,6 +7549,9 @@ magic_ev4.86 = {
 				has_character_flag = hecate_option4
 			}
 			remove_character_flag = hecate_option4
+		}
+		ai_chance = {
+			base = 10
 		}
 	}
 	option = {
@@ -7600,6 +7683,9 @@ magic_ev4.86 = {
 				}
 			}
 		}
+		ai_chance = {
+			base = 1
+		}
 	}
 	option = {
 		name = ev4.86.0.e
@@ -7629,13 +7715,18 @@ magic_ev4.86 = {
 			}
 			remove_character_flag = hecate_option4
 		}
+		ai_chance = {
+			base = 100
+		}
 	}
 }
 
 #mage tower selection
+#now we use magic_ev6.71
 magic_ev4.87 = {
 	hidden = yes
 	type = character_event
+	#orphan = yes # "Event magic_ev4.87 is scripted as an orphan, but has callers" ;p yeah, from itself...
 	trigger = {
 		is_alive = yes
 		is_landed = yes
@@ -7738,8 +7829,8 @@ magic_ev4.88 = {
 		}
 		hidden_effect = {
 			seek_the_power4b_effect = yes
+			try_one_more_seek_power_effect1 = yes
 		}
-		try_one_more_seek_power_effect1 = yes
 	}
 }
 
@@ -7881,6 +7972,17 @@ magic_ev4.90 = {
 					THIS = ROOT
 				}
 			}
+			#any_living_character = {
+			#	has_trait = yaga
+			#	is_ai = yes
+			#	is_imprisoned = no
+			#	is_at_war_with = root
+			#}
+		}
+		any_living_character = {
+			has_trait = yaga
+			is_ai = yes
+			is_imprisoned = no
 		}
 	}
 	immediate = {
