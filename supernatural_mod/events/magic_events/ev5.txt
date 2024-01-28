@@ -979,8 +979,11 @@ magic_ev5.10 = {
 	option = {
 		name = ev2.2.a
 		remove_short_term_gold = medium_gold_value
+		stress_impact = {
+			greedy = minor_stress_gain
+		}
 		random_list = {
-			1 = {
+			8 = {
 				custom_tooltip = artifacts_searching_tt_positive_medium
 				if = {
 					limit = {
@@ -995,13 +998,17 @@ magic_ev5.10 = {
 				}
 				
 			}
-			1 = {
+			2 = {
 
 			}
 		}
 	}
 	option = {
 		name = ev5.10.0.a
+		stress_impact = {
+			ambitious = minor_stress_gain
+			lazy = medium_stress_loss
+		}
 	}
 }
 
@@ -1434,10 +1441,52 @@ magic_ev5.15 = {
 				}
 			}
 		}
+		stress_impact = {
+			compassionate = minor_stress_gain
+		}
+	}
+	option = {
+		name = ev2.66.a
+		if = {
+			limit = {
+				has_trait = eccentric
+			}
+			stress_impact = {
+				eccentric = minor_stress_loss
+			}
+		}
+		else = {
+			add_stress = minor_stress_gain
+		}
+		duel = {
+			skill = learning
+			value = 20
+			5 = {
+				desc = ev3.33.a_1
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 1
+					min = 0
+				}
+				custom_tooltip = artifacts_searching_tt_positive_medium
+				scope:activity = { activity_special_type_progression_medium = yes }
+			}
+			5 = {
+				desc = ev3.52.a_2
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -1
+					min = 0
+				}
+
+			}
+		}
 	}
 	option = {
 		name = ev5.15.0.b
-		
+		remove_short_term_gold = minor_gold_min_value
+		custom_tooltip = artifacts_searching_tt_positive_tiny
+		scope:activity = { activity_special_type_progression_tiny = yes }
 	}
 }
 
@@ -2453,6 +2502,12 @@ magic_ev5.28 = {
 			}
 			triggered_desc = {
 				trigger = {
+					has_character_flag = spared_in_md_but_title_is_lost
+				}
+				desc = ev5.28.desc_lost6
+			}
+			triggered_desc = {
+				trigger = {
 					has_character_flag = md_desc1
 				}
 				desc = ev5.28.desc1
@@ -2600,6 +2655,7 @@ magic_ev5.28 = {
 					has_character_flag = spared_in_md
 					has_character_flag = spared_in_md_but_items_lost
 					has_character_flag = spared_in_md_but_war_is_lost
+					has_character_flag = spared_in_md_but_title_is_lost
 				}
 			}
 			remove_mana_after_md_effect = yes
@@ -2621,6 +2677,12 @@ magic_ev5.28 = {
 			scope:char2 = {
 				NOT = {	has_character_flag = md_has_full_magic_prot_flag	}
 				has_trait = demon
+				NOT = {	has_character_flag = summoned_by_abdul_flag	}
+				NOT = {
+					any_character_artifact = {
+						has_variable = magic_scepter
+					}
+				}
 				#is_ai = yes
 			}
 			OR = {
@@ -2912,10 +2974,13 @@ magic_ev5.28 = {
 		name = ev5.28.0.f
 		trigger = {
 			has_character_flag = mage_duel_type2
-			NOT = {
+			NOR = {
 				any_character_artifact = {
 					has_variable = singularity
 					has_artifact_modifier = singularity_modifier5
+				}
+				any_character_artifact = {
+					has_variable = singularity2
 				}
 			}
 		}
@@ -2980,9 +3045,14 @@ magic_ev5.28 = {
 		name = ev5.28.0.f2
 		trigger = {
 			has_character_flag = mage_duel_type2
-			any_character_artifact = {
-				has_variable = singularity
-				has_artifact_modifier = singularity_modifier5
+			OR = {
+				any_character_artifact = {
+					has_variable = singularity
+					has_artifact_modifier = singularity_modifier5
+				}
+				any_character_artifact = {
+					has_variable = singularity2
+				}
 			}
 			scope:char2 = {
 				NOT = {	has_character_flag = md_has_full_magic_prot_flag	}
@@ -3081,6 +3151,7 @@ magic_ev5.28 = {
 		trigger = {
 			OR = {
 				has_character_flag = mage_duel_type2
+				has_character_flag = mage_duel_type3
 				has_character_flag = mage_duel_type6
 				AND = {
 					has_character_flag = mage_duel_type7
@@ -3091,9 +3162,14 @@ magic_ev5.28 = {
 					is_legendary_mage_trigger = no
 				}
 			}
-			any_character_artifact = {
-				has_variable = singularity
-				has_artifact_modifier = singularity_modifier5
+			OR = {
+				any_character_artifact = {
+					has_variable = singularity
+					has_artifact_modifier = singularity_modifier5
+				}
+				any_character_artifact = {
+					has_variable = singularity2
+				}
 			}
 			scope:char2 = {
 				has_character_flag = md_has_full_magic_prot_flag
@@ -3113,7 +3189,18 @@ magic_ev5.28 = {
 				}
 			}
 		}
-		md_no_pc_progress_effect = yes
+		#if = {
+		#	limit = {
+		#		any_character_artifact = {
+		#			has_variable = singularity2
+		#		}
+		#	}
+		#	md_normal_pc_progress_effect = yes
+		#}
+		#else = {
+		#	md_no_pc_progress_effect = yes
+		#}
+		
 		ai_chance = {
 			base = 1000
 		}
@@ -3699,7 +3786,16 @@ magic_ev5.28 = {
 		trigger = {
 			has_character_flag = mage_duel_type6
 		}
-		md_no_pc_progress_effect = yes
+		
+		if = {
+			limit = {
+				is_ai = no
+			}
+			md_no_pc_progress_effect = yes
+		}
+		else = {
+			md_low_pc_progress_effect = yes
+		}
 		stress_impact = {
 			arrogant = minor_stress_loss
 		}
@@ -3745,7 +3841,15 @@ magic_ev5.28 = {
 						multiplier = -1
 						min = 0
 					}
-					md_no_pc_progress_effect = yes
+					if = {
+						limit = {
+							is_ai = no
+						}
+						md_no_pc_progress_effect = yes
+					}
+					else = {
+						md_low_pc_progress_effect = yes
+					}
 				}
 			}
 		}
@@ -3779,7 +3883,15 @@ magic_ev5.28 = {
 		trigger = {
 			has_character_flag = mage_duel_type6
 		}
-		md_no_pc_progress_effect = yes
+		if = {
+			limit = {
+				is_ai = no
+			}
+			md_no_pc_progress_effect = yes
+		}
+		else = {
+			md_low_pc_progress_effect = yes
+		}
 		random_list = {
 			5 = {	md_high_doom_spell_progress_effect = yes	}
 			5 = {	md_normal_doom_spell_progress_effect = yes	}
@@ -4061,6 +4173,15 @@ magic_ev5.28 = {
 		}
 		add_proper_prize_for_md_winner_effect = yes
 		add_dread = major_dread_gain
+		if = {
+			limit = {
+				scope:char2 = {
+					has_trait = demon
+					has_character_flag = special_magic_character
+				}
+			}
+			consider_demonslayer_nickname = yes
+		}
 		scope:char2 = {
 			add_character_flag = dies_in_md
 			show_as_tooltip = {
@@ -4095,6 +4216,68 @@ magic_ev5.28 = {
 				}
 			}
 			add_trait = grandmaster_coven
+		}
+		if = {
+			limit = {
+				culture = {
+					has_cultural_tradition = mage_rulership_tradition
+				}
+				is_landed = yes
+				any_claim = {
+					holder = scope:char2
+				}
+			}
+			show_as_tooltip = {
+				scope:char2 = {
+					create_title_and_vassal_change = {
+						type = granted
+						save_scope_as = title_change
+						add_claim_on_loss = yes
+					}
+		
+					every_held_title = {
+						limit = {
+							any_claimant = {
+								this = root
+							}
+						}
+						change_title_holder_include_vassals = {
+							holder = root
+							change = scope:title_change
+						}
+					}
+					resolve_title_and_vassal_change = scope:title_change
+				}
+			}
+		}
+		else_if = {
+			limit = {
+				culture = {
+					has_cultural_tradition = mage_rulership_tradition
+				}
+				exists = liege
+				liege = scope:char2
+			}
+			show_as_tooltip = {
+				scope:char2 = {
+					create_title_and_vassal_change = {
+						type = granted
+						save_scope_as = title_change
+						add_claim_on_loss = yes
+					}
+					primary_title = {
+						change_title_holder_include_vassals = {
+							holder = root
+							change = scope:title_change
+						}
+					}
+					change_liege = {
+						liege = root
+						change = scope:title_change
+					}
+					resolve_title_and_vassal_change = scope:title_change
+				}
+			}
 		}
 		stress_impact = {
 			vengeful = medium_stress_loss
@@ -4136,11 +4319,19 @@ magic_ev5.28 = {
 				}
 			}
 			modifier = {
-				add = 100
+				add = -100
 				OR = {
-					has_relation_rival = scope:char2
-					has_relation_nemesis = scope:char2
+					has_trait = forgiving
+					has_trait = compassionate
 				}
+			}
+			modifier = {
+				add = 100
+				has_relation_rival = scope:char2
+			}
+			modifier = {
+				add = 1000
+				has_relation_nemesis = scope:char2
 			}
 		}
 	}
@@ -4288,17 +4479,28 @@ magic_ev5.28 = {
 			var:dspell < 14
 			any_character_war = {
 				OR = {
-					primary_attacker = root
-					primary_attacker = scope:char2
-				}
-				OR = {
-					primary_attacker = scope:char2
-					primary_attacker = root
+					AND = {
+						primary_attacker = root
+						primary_defender = scope:char2
+					}
+					AND = {
+						primary_attacker = scope:char2
+						primary_defender = root
+					}
 				}
 			}
 		}
 		add_proper_prize_for_md_winner_effect = yes
 		add_dread = medium_dread_gain
+		if = {
+			limit = {
+				scope:char2 = {
+					has_trait = demon
+					has_character_flag = special_magic_character
+				}
+			}
+			consider_demonslayer_nickname = yes
+		}
 		scope:char2 = {
 			add_character_flag = spared_in_md_but_war_is_lost
 		}
@@ -4306,12 +4508,14 @@ magic_ev5.28 = {
 			every_character_war = {
 				limit = {
 					OR = {
-						primary_attacker = root
-						primary_attacker = scope:char2
-					}
-					OR = {
-						primary_attacker = scope:char2
-						primary_attacker = root
+						AND = {
+							primary_attacker = root
+							primary_defender = scope:char2
+						}
+						AND = {
+							primary_attacker = scope:char2
+							primary_defender = root
+						}
 					}
 				}
 				if = {
@@ -4337,10 +4541,177 @@ magic_ev5.28 = {
 		}
 	}
 	option = {
+		#end - I take your titles
+		name = ev5.28.0.z3bb
+		trigger = {
+			has_character_flag = md_winner
+			var:dspell < 14
+			culture = {
+				has_cultural_tradition = mage_rulership_tradition
+			}
+			is_landed = yes
+			OR = {
+				any_claim = {
+					holder = scope:char2
+				}
+				AND = {
+					exists = liege
+					liege = scope:char2
+				}
+			}
+		}
+		if = {
+			limit = {
+				culture = {
+					has_cultural_tradition = mage_rulership_tradition
+				}
+				any_claim = {
+					holder = scope:char2
+				}
+			}
+			show_as_tooltip = {
+				scope:char2 = {
+					create_title_and_vassal_change = {
+						type = granted
+						save_scope_as = title_change
+						add_claim_on_loss = yes
+					}
+		
+					every_held_title = {
+						limit = {
+							any_claimant = {
+								this = root
+							}
+						}
+						change_title_holder_include_vassals = {
+							holder = root
+							change = scope:title_change
+						}
+					}
+					resolve_title_and_vassal_change = scope:title_change
+				}
+			}
+		}
+		else_if = {
+			limit = {
+				culture = {
+					has_cultural_tradition = mage_rulership_tradition
+				}
+				exists = liege
+				liege = scope:char2
+			}
+			show_as_tooltip = {
+				scope:char2 = {
+					create_title_and_vassal_change = {
+						type = granted
+						save_scope_as = title_change
+						add_claim_on_loss = yes
+					}
+					primary_title = {
+						change_title_holder_include_vassals = {
+							holder = root
+							change = scope:title_change
+						}
+					}
+					change_liege = {
+						liege = root
+						change = scope:title_change
+					}
+					resolve_title_and_vassal_change = scope:title_change
+				}
+			}
+		}
+		add_proper_prize_for_md_winner_effect = yes
+		add_dread = medium_dread_gain
+		scope:char2 = {
+			add_character_flag = spared_in_md_but_title_is_lost
+		}
+		ai_chance = {
+			base = 300
+		}
+	}
+	option = {
 		#end - I am died
 		name = ev5.28.0.z4
 		trigger = {
 			has_character_flag = dies_in_md
+		}
+		if = {
+			limit = {
+				scope:char2 = {
+					culture = {
+						has_cultural_tradition = mage_rulership_tradition
+					}
+					any_claim = {
+						holder = root
+					}
+				}
+			}
+			create_title_and_vassal_change = {
+				type = granted
+				save_scope_as = title_change
+				add_claim_on_loss = yes
+			}
+
+			every_held_title = {
+				limit = {
+					any_claimant = {
+						this = scope:char2
+					}
+				}
+				change_title_holder_include_vassals = {
+					holder = scope:char2
+					change = scope:title_change
+				}
+			}
+			resolve_title_and_vassal_change = scope:title_change
+		}
+		else_if = {
+			limit = {
+				scope:char2 = {
+					culture = {
+						has_cultural_tradition = mage_rulership_tradition
+					}
+					exists = liege
+					liege = root
+				}
+			}
+			liege = {
+				save_scope_as = liege0
+			}
+			create_title_and_vassal_change = {
+				type = granted
+				save_scope_as = title_change
+				add_claim_on_loss = yes
+			}
+			primary_title = {
+				change_title_holder_include_vassals = {
+					holder = scope:char2
+					change = scope:title_change
+				}
+			}
+			change_liege = {
+				liege = scope:char2
+				change = scope:title_change
+			}
+			resolve_title_and_vassal_change = scope:title_change
+			if = {
+				limit = {
+					exists = scope:liege0
+				}
+				scope:char2 = {
+					create_title_and_vassal_change = {
+						type = granted
+						save_scope_as = title_change2
+						add_claim_on_loss = no
+					}
+					change_liege = {
+						liege = scope:liege0
+						change = scope:title_change2
+					}
+					resolve_title_and_vassal_change = scope:title_change2
+				}
+			}
 		}
 		show_as_tooltip = {
 			death = {
@@ -4382,6 +4753,7 @@ magic_ev5.28 = {
 			has_character_flag = spared_in_md
 		}
 		add_stress = medium_stress_loss
+		gain_cm_xp5_effect = yes
 		if = {
 			limit = {
 				has_relation_nemesis = scope:char2
@@ -4434,6 +4806,7 @@ magic_ev5.28 = {
 			#}
 		}
 		add_stress = medium_stress_gain
+		gain_cm_xp5_effect = yes
 		every_character_artifact = {
 			limit = {
 				has_variable = magic1
@@ -4457,15 +4830,18 @@ magic_ev5.28 = {
 			has_character_flag = spared_in_md_but_war_is_lost
 		}
 		add_stress = medium_stress_gain
+		gain_cm_xp5_effect = yes
 		every_character_war = {
 			limit = {
 				OR = {
-					primary_attacker = root
-					primary_attacker = scope:char2
-				}
-				OR = {
-					primary_attacker = scope:char2
-					primary_attacker = root
+					AND = {
+						primary_attacker = root
+						primary_defender = scope:char2
+					}
+					AND = {
+						primary_attacker = scope:char2
+						primary_defender = root
+					}
 				}
 			}
 			if = {
@@ -4482,6 +4858,93 @@ magic_ev5.28 = {
 			}
 		}
 		remove_character_flag = spared_in_md_but_war_is_lost
+	}
+	option = {
+		#end - I lost my title
+		name = ev5.28.0.z6
+		trigger = {
+			has_character_flag = spared_in_md_but_title_is_lost
+		}
+		if = {
+			limit = {
+				scope:char2 = {
+					culture = {
+						has_cultural_tradition = mage_rulership_tradition
+					}
+					any_claim = {
+						holder = root
+					}
+				}
+			}
+			create_title_and_vassal_change = {
+				type = granted
+				save_scope_as = title_change
+				add_claim_on_loss = yes
+			}
+
+			every_held_title = {
+				limit = {
+					any_claimant = {
+						this = scope:char2
+					}
+				}
+				change_title_holder_include_vassals = {
+					holder = scope:char2
+					change = scope:title_change
+				}
+			}
+			resolve_title_and_vassal_change = scope:title_change
+		}
+		else_if = {
+			limit = {
+				scope:char2 = {
+					culture = {
+						has_cultural_tradition = mage_rulership_tradition
+					}
+					exists = liege
+					liege = root
+				}
+			}
+			liege = {
+				save_scope_as = liege0
+			}
+			create_title_and_vassal_change = {
+				type = granted
+				save_scope_as = title_change
+				add_claim_on_loss = yes
+			}
+			primary_title = {
+				change_title_holder_include_vassals = {
+					holder = scope:char2
+					change = scope:title_change
+				}
+			}
+			change_liege = {
+				liege = scope:char2
+				change = scope:title_change
+			}
+			resolve_title_and_vassal_change = scope:title_change
+			if = {
+				limit = {
+					exists = scope:liege0
+				}
+				scope:char2 = {
+					create_title_and_vassal_change = {
+						type = granted
+						save_scope_as = title_change2
+						add_claim_on_loss = no
+					}
+					change_liege = {
+						liege = scope:liege0
+						change = scope:title_change2
+					}
+					resolve_title_and_vassal_change = scope:title_change2
+				}
+			}
+		}
+		gain_cm_xp5_effect = yes
+		
+		remove_character_flag = spared_in_md_but_title_is_lost
 	}
 	after = {
 		clear_mage_duel_moves = yes
@@ -4560,6 +5023,7 @@ magic_ev5.28 = {
 								has_character_flag = spared_in_md
 								has_character_flag = spared_in_md_but_items_lost
 								has_character_flag = spared_in_md_but_war_is_lost
+								has_character_flag = spared_in_md_but_title_is_lost
 							}
 						}
 					}
@@ -4652,9 +5116,11 @@ magic_ev5.29 = {
 	immediate = {
 		display_mage_duel_correctly = yes
 		add_prestige = major_prestige_gain
+		gain_cm_xp5_effect = yes
 		show_as_tooltip = {
 			scope:char2 = {
 				add_prestige = major_prestige_gain
+				gain_cm_xp5_effect = yes
 			}
 		}
 		if = {
@@ -5011,6 +5477,12 @@ magic_ev5.33 = {
 	
 	option = {
 		name = ev5.33.0.a
+		stress_impact = {
+			scholar = medium_stress_loss
+			lifestyle_mystic = minor_stress_loss
+			lazy = medium_stress_gain
+			diligent = minor_stress_loss
+		}
 		if = {
 			limit = {
 				NOT = {
@@ -5026,7 +5498,7 @@ magic_ev5.33 = {
 			#	}
 			#}
 			random = {
-				chance = 3
+				chance = 5
 				add_perk = magical_experiments_p1_perk
 			}
 		}
@@ -5090,6 +5562,37 @@ magic_ev5.34 = {
 		}
 		NOT = {
 			has_trait = demon
+		}
+		OR = {
+			any_character_artifact = { has_variable = magic1 }
+			AND = {
+				exists = house
+				house = {
+					has_house_modifier = witch_coven
+				}
+			}
+			AND = {
+				exists = mother
+				mother = {
+					OR = {
+						has_trait = witch
+						has_trait = true_witch
+						has_trait = archmage
+						has_trait = demon
+					}
+				}
+			}
+			AND = {
+				exists = real_father
+				real_father = {
+					OR = {
+						has_trait = witch
+						has_trait = true_witch
+						has_trait = archmage
+						has_trait = demon
+					}
+				}
+			}
 		}
 		any_living_character = {
 			has_character_flag = merlin_dude
@@ -6730,6 +7233,9 @@ magic_ev5.58 = {
 	trigger = {
 		can_be_power_saturated_trigger = yes
 		has_trait = archmage
+		NOT = {
+			has_character_modifier = magic_flu_modifier
+		}
 	}
 
 	option = {
@@ -6796,6 +7302,7 @@ magic_ev5.59 = {
 						OR = {
 							is_legendary_mage_trigger = yes
 							has_full_magic_prot_trigger = yes
+							any_character_artifact = { has_variable = blackgrimoire }
 						}
 					}
 				}

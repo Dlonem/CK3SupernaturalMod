@@ -19,6 +19,9 @@ magic_ev3.1 = {
 		#Let's get down to business
 		name = ev3.101.a
 		trigger_event = magic_ev3.2
+		ai_chance = {
+			base = 20
+		}
 	}
 	option = {
 		#Maybe I'll release you
@@ -43,16 +46,25 @@ magic_ev3.1 = {
 				any_living_character = {
 					has_character_modifier = inq_modifier
 				}
+				any_living_character = {
+					has_character_flag = abdul_dude
+				}
 			}
 			
 		}
 		trigger_event = magic_ev3.5
+		ai_chance = {
+			base = 0
+		}
 	}
 	option = {
 		#I dont need you
 		name = ev3.101.c
 		add_stress = medium_stress_loss
 		trigger_event = magic_ev.18
+		ai_chance = {
+			base = 1
+		}
 	}
 }
 
@@ -60,7 +72,135 @@ magic_ev3.1 = {
 magic_ev3.2 = {
 	title = ev3.1.title
 	type = character_event
-	desc = ev3.2.desc
+	#desc = ev3.2.desc
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					has_character_flag = ms_met_samael
+				}
+				desc = ev3.2.desc2
+			}
+			desc = ev3.2.desc
+		}
+	}
+	theme = witchcraft
+	left_portrait = root
+	right_portrait = scope:demon
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+	}
+	
+	immediate = {
+		hidden_effect = {
+			if = {
+				limit = {
+					OR = {
+						any_character_war = {
+							primary_attacker = root
+						}
+						any_character_war = {
+							primary_defender = root
+						}
+					}
+				}
+				random_character_war = {
+					limit = {
+						OR = {
+							primary_attacker = root
+							primary_defender = root
+						}
+						NOR = {
+							any_war_participant = {
+								has_character_flag = abdul_dude
+							}
+						}
+					}
+					save_scope_as = wwar
+				}
+			}
+		}
+		
+	}
+
+	option = {
+		#What can you offer me?
+		name = ev3.102.a
+		trigger_event = magic_ev3.3
+		ai_chance = {
+			base = 10
+		}
+	}
+	option = {
+		#fulfil my will!
+		name = ev3.102.b
+		trigger_event = magic_ev3.4
+		ai_chance = {
+			base = 10
+		}
+	}
+	option = {
+		#Maybe I'll release you
+		name = ev3.101.b
+		trigger = {
+			OR = {
+				exists = scope:wwar
+				any_living_character = {
+					has_character_flag = bael_flag
+				}
+				any_living_character = {
+					has_character_flag = belial
+				}
+				any_living_character = {
+					has_character_flag = astaroth_flag
+				}
+				any_living_character = {
+					has_character_flag = lilith
+				}
+				any_living_character = {
+					has_character_flag = moloch
+				}
+				any_living_character = {
+					has_character_modifier = inq_modifier
+				}
+			}
+			has_character_flag = ms_met_samael
+		}
+		trigger_event = magic_ev3.5
+		ai_chance = {
+			base = 0
+		}
+	}
+
+	after = {
+		if = {
+			limit = {
+				NOT = {
+					has_character_flag = ms_met_samael
+				}
+			}
+			add_character_flag = ms_met_samael
+		}
+	}
+}
+
+#Samaels offer
+magic_ev3.3 = {
+	title = ev3.1.title
+	type = character_event
+	#desc = {
+	#	first_valid = {
+	#		triggered_desc = {
+	#			trigger = {
+	#				exists = scope:wwar
+	#			}
+	#			desc = ev3.3.desc2
+	#		}
+	#		desc = ev3.3.desc
+	#	}
+	#}
+	desc = ev3.3.desc
 	theme = witchcraft
 	left_portrait = root
 	right_portrait = scope:demon
@@ -70,66 +210,13 @@ magic_ev3.2 = {
 	}
 	
 	option = {
-		#What can you offer me?
-		name = ev3.102.a
-		trigger_event = magic_ev3.3
-	}
-	option = {
-		#fulfil my will!
-		name = ev3.102.b
-		trigger_event = magic_ev3.4
-	}
-}
-
-#Samaels offer
-magic_ev3.3 = {
-	title = ev3.1.title
-	type = character_event
-	desc = {
-		first_valid = {
-			triggered_desc = {
-				trigger = {
-					exists = scope:wwar
-				}
-				desc = ev3.3.desc2
-			}
-			desc = ev3.3.desc
-		}
-	}
-	theme = witchcraft
-	left_portrait = root
-	right_portrait = scope:demon
-	trigger = {
-		is_alive = yes
-		is_imprisoned = no
-	}
-	immediate = {
-		if = {
-			limit = {
-				OR = {
-					any_character_war = {
-						primary_attacker = root
-					}
-					any_character_war = {
-						primary_defender = root
-					}
-				}
-			}
-			random_character_war = {
-				limit = {
-					OR = {
-						primary_attacker = root
-						primary_defender = root
-					}
-				}
-				save_scope_as = wwar
-			}
-		}
-		
-	}
-	option = {
 		#death wish
 		name = ev3.103.a
+		trigger = {
+			NOT = {
+				has_character_flag = death_wish
+			}
+		}
 		custom_tooltip = ev3.103.a_ct
 		add_character_flag = death_wish
 		trigger_event = magic_ev.18
@@ -148,12 +235,20 @@ magic_ev3.3 = {
 				add_character_modifier = samael_blessing
 			}
 			else = {
-				add_diplomacy_skill = 2
-				add_martial_skill = 2
-				add_stewardship_skill = 2
-				add_intrigue_skill = 2
-				add_learning_skill = 2
-				add_prowess_skill = 2
+				random_list = {
+					1 = {
+						add_martial_skill = 1
+						add_prowess_skill = 1
+					}
+					1 = {
+						add_diplomacy_skill = 1
+						add_intrigue_skill = 1
+					}
+					1 = {
+						add_stewardship_skill = 1
+						add_learning_skill = 1
+					}
+				}
 			}
 			if = {
 				limit = {
@@ -161,7 +256,7 @@ magic_ev3.3 = {
 				}
 				add_character_modifier = {
 					modifier = amp_modifier
-					years = 30
+					years = 25
 				}
 			}
 			if = {
@@ -173,33 +268,33 @@ magic_ev3.3 = {
 					}
 				}
 				random = {
-					chance = 10
+					chance = 5
 					add_trait = source
 				}
 			}
 		}
 		trigger_event = magic_ev.18
 	}
-	option = {
-		#win my war
-		name = ev3.103.c
-		trigger = {
-			exists = scope:wwar
-		}
-		scope:wwar = {
-			if = {
-				limit = {
-					primary_attacker = root
-				}
-				end_war = attacker
-			}
-			else = {
-				end_war = defender
-			}
-		}
-		trigger_event = magic_ev.18
-		clear_saved_scope = wwar
-	}
+	#option = {
+	#	#win my war
+	#	name = ev3.103.c
+	#	trigger = {
+	#		exists = scope:wwar
+	#	}
+	#	scope:wwar = {
+	#		if = {
+	#			limit = {
+	#				primary_attacker = root
+	#			}
+	#			end_war = attacker
+	#		}
+	#		else = {
+	#			end_war = defender
+	#		}
+	#	}
+	#	trigger_event = magic_ev.18
+	#	clear_saved_scope = wwar
+	#}
 }
 
 #Samael - I fullfil your will
@@ -337,6 +432,12 @@ magic_ev3.4 = {
 				has_trait = possessed_genetic
 			}
 			remove_trait = possessed_genetic
+		}
+		if = {
+			limit = {
+				has_character_modifier = magic_flu_modifier
+			}
+			remove_character_modifier = magic_flu_modifier
 		}
 		trigger_event = magic_ev.18
 	}
@@ -519,12 +620,26 @@ magic_ev3.4 = {
 	option = {
 		#strengthen my mind
 		name = ev3.4.e
-		add_diplomacy_skill = 1
-		add_martial_skill = 1
-		add_stewardship_skill = 1
-		add_intrigue_skill = 1
-		add_learning_skill = 1
-		add_prowess_skill = 1
+		#add_diplomacy_skill = 1
+		#add_martial_skill = 1
+		#add_stewardship_skill = 1
+		#add_intrigue_skill = 1
+		#add_learning_skill = 1
+		#add_prowess_skill = 1
+		random_list = {
+			1 = {
+				add_martial_skill = 1
+				add_prowess_skill = 1
+			}
+			1 = {
+				add_diplomacy_skill = 1
+				add_intrigue_skill = 1
+			}
+			1 = {
+				add_stewardship_skill = 1
+				add_learning_skill = 1
+			}
+		}
 		hidden_effect = {
 			if = {
 				limit = {
@@ -566,6 +681,7 @@ magic_ev3.4 = {
 			value = medium_lifestyle_random_xp_high
 		}
 		add_prowess_skill = 5
+		gain_cm_xp1_effect = yes
 		#else_if = {
 		#	limit = {
 		#		has_trait = blademaster_3
@@ -622,7 +738,34 @@ magic_ev3.5 = {
 				save_scope_as = main_inq
 			}
 		}
-		
+		hidden_effect = {
+			if = {
+				limit = {
+					OR = {
+						any_character_war = {
+							primary_attacker = root
+						}
+						any_character_war = {
+							primary_defender = root
+						}
+					}
+				}
+				random_character_war = {
+					limit = {
+						OR = {
+							primary_attacker = root
+							primary_defender = root
+						}
+						NOT = {
+							any_war_participant = {
+								has_character_flag = abdul_dude
+							}
+						}
+					}
+					save_scope_as = wwar
+				}
+			}
+		}
 	}
 	option = {
 		#Kill Bael
@@ -744,6 +887,39 @@ magic_ev3.5 = {
 		}
 	}
 	option = {
+		#Kill Al-Hazred
+		name = ev3.5.h
+		trigger = {
+			any_living_character = {
+				has_character_flag = abdul_dude
+			}
+		}
+		trigger_event = magic_ev6.70
+	}
+	option = {
+		#win my war
+		name = ev3.103.c
+		trigger = {
+			exists = scope:wwar
+		}
+		scope:wwar = {
+			if = {
+				limit = {
+					primary_attacker = root
+				}
+				end_war = attacker
+			}
+			else = {
+				end_war = defender
+			}
+		}
+		trigger_event = {
+			id = magic_ev3.6
+			days = { 4 8 }
+		}
+		clear_saved_scope = wwar
+	}
+	option = {
 		#I changed my mind
 		name = ev3.5.e
 		trigger_event = magic_ev3.3
@@ -778,6 +954,7 @@ magic_ev3.6 = {
 				NOR = {
 					root.primary_spouse = this
 					root.primary_partner = this
+					has_trait = demon
 				}
 			}
 			death = {
@@ -993,9 +1170,32 @@ magic_ev3.10 = {
 		custom_tooltip = ev3.10.a_ct
 		show_as_tooltip = {
 			scope:actor = {
-				add_hook = {
-					type = loyalty_hook
-					target = root
+				if = {
+					limit = {
+						exists = liege
+						liege = scope:recipient
+						NOT = {
+							has_strong_hook = scope:recipient
+						}
+					}
+					add_hook = {
+						type = obligation_hook
+						target = scope:recipient
+					}
+				}
+				else_if = {
+					limit = {
+						NOT = {
+							has_strong_hook = scope:recipient
+						}
+					}
+					add_hook = {
+						type = loyalty_hook
+						target = scope:recipient
+					}
+				}
+				else = {
+					add_prestige = medium_prestige_gain
 				}
 			}
 		}
@@ -1060,7 +1260,7 @@ magic_ev3.11 = {
 		hidden_effect = {
 			if = {
 				limit = {
-					has_hook = scope:disciple
+					has_weak_hook = scope:disciple
 				}
 				remove_hook = {
 					target = scope:disciple
@@ -1078,9 +1278,36 @@ magic_ev3.11 = {
 			id = magic_ev3.13
 			days = { 15 30 }
 		}
-		add_hook = {
-			type = loyalty_hook
-			target = scope:disciple
+		#add_hook = {
+		#	type = loyalty_hook
+		#	target = scope:disciple
+		#}
+		if = {
+			limit = {
+				exists = liege
+				liege = scope:disciple
+				NOT = {
+					has_strong_hook = scope:disciple
+				}
+			}
+			add_hook = {
+				type = obligation_hook
+				target = scope:disciple
+			}
+		}
+		else_if = {
+			limit = {
+				NOT = {
+					has_strong_hook = scope:disciple
+				}
+			}
+			add_hook = {
+				type = loyalty_hook
+				target = scope:disciple
+			}
+		}
+		else = {
+			add_prestige = medium_prestige_gain
 		}
 		scope:recipient = {
 			add_opinion = {
@@ -1455,6 +1682,19 @@ magic_ev3.20 = {
 			trigger_event = magic_ev3.21
 		}
 	}
+	after = {
+		if = {
+			limit = {
+				exists = dynasty
+				culture = {
+					has_cultural_tradition = mage_rulership_tradition
+				}
+			}
+			dynasty = {
+				add_dynasty_prestige = bonus_dynast_prest_value
+			}
+		}
+	}
 }
 
 #Sorcery teaching - ends - disciple
@@ -1487,25 +1727,52 @@ magic_ev3.21 = {
 					min = 0
 				}
 				
-				send_interface_toast = {
-					title=ev3.21.a_1
-					add_perk = magical_experiments_p1_perk
+				if = {
+					limit = {
+						is_ai = yes
+					}
+					send_interface_toast = {
+						title=ev3.21.a_1
+						#add_perk = magical_experiments_p1_perk
+						custom_tooltip = ev3.21.a_ctct
+					}
+					add_character_flag = arcane_unlocked_flag
+					#set_focus = no
+					set_focus = arcane_focus
 				}
-				
-				hidden_effect = {
-					if = {
-						limit = {
-							is_ai = yes
-						}
-						if = {
-							limit = {
-								is_landed = yes
-							}
-							set_focus = arcane_focus
-						}
-						add_magic_lifestyle_perk_points = 1
+				else = {
+					send_interface_toast = {
+						title=ev3.21.a_1
+						add_perk = magical_experiments_p1_perk
 					}
 				}
+				
+				if = {
+					limit = {
+						exists = dynasty
+						culture = {
+							has_cultural_tradition = mage_rulership_tradition
+						}
+					}
+					dynasty = {
+						add_dynasty_prestige = bonus_dynast_prest_value
+					}
+				}
+				#hidden_effect = {
+				#	if = {
+				#		limit = {
+				#			is_ai = yes
+				#		}
+				#		if = {
+				#			limit = {
+				#				is_landed = yes
+				#			}
+				#			#set_focus = no
+				#			set_focus = arcane_focus
+				#		}
+				#		#add_magic_lifestyle_perk_points = 1
+				#	}
+				#}
 			}
 			5 = {
 				desc = ev3.21.a_2
@@ -1555,9 +1822,9 @@ magic_ev3.22 = {
 		is_alive = yes
 		is_imprisoned = no
 	}
-	immediate = {
-		
-	}
+	#immediate = {
+	#	
+	#}
 
 	option = {
 		#book
@@ -1569,6 +1836,15 @@ magic_ev3.22 = {
 		add_character_flag = magic_epic_book
 		custom_tooltip = ev3.22.a1_ct
 		custom_tooltip = ev3.22.a2_ct
+		hidden_effect = {
+			random = {
+				chance = 40
+				trigger_event = {
+					id = magic_ev6.73
+					days = { 80 120 }
+				}
+			}
+		}
 	}
 	option = {
 		#spells
@@ -1579,6 +1855,32 @@ magic_ev3.22 = {
 		}
 		add_character_flag = magic_epic_magic
 		custom_tooltip = ev3.22.b1_ct
+		custom_tooltip = ev3.22.b2_ct
+		hidden_effect = {
+			random = {
+				chance = 40
+				trigger_event = {
+					id = magic_ev6.73
+					days = { 80 120 }
+				}
+			}
+		}
+		
+	}
+	option = {
+		#mring
+		name = ev3.22.c
+		trigger = {
+			any_character_artifact = {
+				has_variable = magic_ring0
+				has_artifact_modifier = artifact_ring_of_life_modifier0
+			}
+		}
+		trigger_event = {
+			id = magic_ev6.26
+			days = { 10 20 }
+		}
+		custom_tooltip = ev3.22.c_ct
 		custom_tooltip = ev3.22.b2_ct
 	}
 }
@@ -2141,6 +2443,7 @@ magic_ev3.28 = {
 						add_artifact_modifier = artifact_intrigue_1_modifier
 						add_artifact_modifier = artifact_learning_1_modifier
 						add_artifact_modifier = artifact_learning_1_modifier
+						add_artifact_modifier = artifact_learning_1_modifier
 					}
 					1 = {
 						set_artifact_name = mbook2_name
@@ -2169,6 +2472,7 @@ magic_ev3.28 = {
 						set_artifact_name = mbook4_name
 						add_artifact_modifier = artifact_learning_1_modifier
 						add_artifact_modifier = artifact_learning_1_modifier
+						add_artifact_modifier = artifact_learning_1_modifier
 						add_artifact_modifier = artifact_monthly_magic_lifestyle_xp_1_modifier
 					}
 				}
@@ -2183,6 +2487,7 @@ magic_ev3.28 = {
 				random_list = {
 					1 = {
 						set_artifact_name = mbook5_name
+						add_artifact_modifier = artifact_learning_1_modifier
 						add_artifact_modifier = artifact_learning_1_modifier
 						add_artifact_modifier = artifact_learning_1_modifier
 						add_artifact_modifier = artifact_monthly_intrigue_lifestyle_xp_4_modifier
@@ -2240,6 +2545,7 @@ magic_ev3.28 = {
 						set_artifact_name = mbook10_name
 						add_artifact_modifier = artifact_learning_1_modifier
 						add_artifact_modifier = artifact_learning_1_modifier
+						add_artifact_modifier = artifact_learning_1_modifier
 						add_artifact_modifier = artifact_monthly_lifestyle_xp_1_modifier
 					}
 				}
@@ -2274,6 +2580,7 @@ magic_ev3.28 = {
 						set_artifact_name = mbook13_name
 						add_artifact_modifier = artifact_learning_1_modifier
 						add_artifact_modifier = artifact_learning_1_modifier
+						add_artifact_modifier = artifact_learning_1_modifier
 						add_artifact_modifier = artifact_martial_1_modifier
 						add_artifact_modifier = artifact_martial_1_modifier
 						add_artifact_modifier = artifact_intrigue_1_modifier
@@ -2283,21 +2590,6 @@ magic_ev3.28 = {
 				set_artifact_description = mbook11_desc
 				}
 			}
-			
-		}
-	}
-	option = {
-		name = ev3.28.a
-		custom_tooltip = ev3.28.a_ct
-		if = {
-			limit = {
-				NOT = { has_trait = journaller }
-			}
-			add_trait = journaller
-		}
-		
-		add_stress = medium_stress_loss
-		hidden_effect = {
 			scope:new_book = {
 				
 				if = {
@@ -2390,6 +2682,28 @@ magic_ev3.28 = {
 							add_artifact_modifier = artifact_scheme_resistance_add_2_modifier
 						}
 					}
+					random_list = {
+						1 = {
+							add_artifact_modifier = artifact_men_at_arms_maintenance_8_modifier
+							add_artifact_modifier = artifact_monthly_martial_lifestyle_xp_2_modifier
+						}
+						1 = {
+							add_artifact_modifier = artifact_domain_limit_1_modifier
+							add_artifact_modifier = artifact_scheme_resistance_add_2_modifier
+						}
+						1 = {
+							add_artifact_modifier = artifact_monthly_prestige_add_8_modifier
+							add_artifact_modifier = artifact_fertility_gain_3_modifier
+						}
+						1= {
+							add_artifact_modifier = artifact_owned_hostile_scheme_success_chance_add_10_modifier
+							add_artifact_modifier = artifact_stress_gain_4_modifier
+						}
+						1 = {
+							add_artifact_modifier = artifact_owned_personal_scheme_success_chance_add_5_modifier
+							add_artifact_modifier = artifact_scheme_resistance_add_2_modifier
+						}
+					}
 				}
 				if = {
 					limit = {
@@ -2451,8 +2765,20 @@ magic_ev3.28 = {
 				}
 				
 			}
-			
 		}
+	}
+	option = {
+		name = ev3.28.a
+		custom_tooltip = ev3.28.a_ct
+		if = {
+			limit = {
+				NOT = { has_trait = journaller }
+			}
+			add_trait = journaller
+		}
+		
+		add_stress = medium_stress_loss
+
 	}
 	after = {
 		hidden_effect = {
@@ -3167,7 +3493,7 @@ magic_ev3.34 = {
 			add_prestige = major_prestige_gain
 			add_learning_skill = 2
 			add_intrigue_skill = 2
-			add_character_modifier = master_defence_modifier
+			gain_cm_xp5_effect = yes
 		}
 	}
 	option = {
@@ -3358,20 +3684,16 @@ magic_ev3.341 = {
 				location = root.capital_province
 				template = witch_hunter_character
 				save_scope_as = whunter
-			}
-			scope:whunter = {
-				add_perk = protective_runes_perk
-				add_perk = magical_senses_perk
-				set_character_faith = root
-				add_trait_xp = {
-					trait = supernatural_hunter
-					track = witch_hunting
-					value = 80
+				after_creation = {
+					add_perk = protective_runes_perk
+					add_perk = magical_senses_perk
+					set_character_faith = root
+					add_trait_xp = {
+						trait = supernatural_hunter
+						track = witch_hunting
+						value = 80
+					}
 				}
-				#start_scheme = {
-				#	type = murder
-				#	target = scope:witch
-				#}
 			}
 		}
 	}

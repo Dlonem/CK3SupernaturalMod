@@ -416,7 +416,7 @@ magic_domination = {
 				metamagic_effect = yes
 				if = {
 					limit = {
-						has_character_flag = better_domination_spell
+						scope:magic_domination_faith = yes
 					}
 					scope:recipient = {
 						custom_tooltip = mind_control_custom_tooltip
@@ -432,6 +432,16 @@ magic_domination = {
 				
 			}
 		}
+	}
+	send_options_exclusive = no
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				has_character_flag = better_domination_spell
+			}
+		}
+		flag = magic_domination_faith
+		localization = MAGIC_DOMINATION_O1
 	}
 	
 	auto_accept = yes
@@ -507,6 +517,9 @@ magic_healing = {
 		scope:actor = {
 			has_character_flag = healing_spell_flag
 			is_imprisoned = no
+			NOT = {
+				has_character_flag = abdul_dude
+			}
 		}
 		scope:recipient = {
 			OR = {
@@ -547,11 +560,13 @@ magic_healing = {
 				text = is_incapable_custom
 				NOT = { has_trait = incapable }
 			}
-		}
-		scope:actor = {
 			custom_description = {
 				text = is_on_mage_duel_custom
 				NOT = {	has_variable = pclash	}
+			}
+			custom_description = {
+				text = physical_contact_custom
+				has_physical_contanct2 = yes
 			}
 		}
 	}
@@ -587,11 +602,25 @@ magic_healing = {
 				metamagic_effect = yes
 				stress_impact = {
 					compassionate = medium_stress_impact_loss
+					sadistic = minor_stress_gain
+					callous = minor_stress_gain
 				}
-				#scope:recipient = {
-				#	custom_tooltip = magic_healing_custom_tooltip
-				#
-				#}
+				if = {
+					limit = {
+						NOT = { scope:actor = scope:recipient }
+						any_secret = {
+							secret_type = secret_witch
+							NOT = { is_known_by = scope:recipient }
+						}
+					}
+					random_secret = {
+						limit = {
+							secret_type = secret_witch
+							NOT = { is_known_by = scope:recipient }
+						}
+						reveal_to = scope:recipient
+					}
+				}
 			}
 		}
 		scope:recipient = {
@@ -667,6 +696,16 @@ magic_healing = {
 					}
 					if = {	limit = {	has_character_modifier = gangrene_modifier	}
 						remove_character_modifier = gangrene_modifier
+					}
+					if = {
+						limit = {
+							NOT = { scope:actor = scope:recipient }
+						}
+						add_opinion = {
+							modifier = grateful_opinion
+							target = scope:actor
+							opinion = 70
+						}
 					}
 		}
 	}
@@ -774,26 +813,30 @@ cast_powerfull_curse = {
 				save_scope_as = reci
 			}
 			hidden_effect = {
-				random = {
-					chance = 4
-					if = {
-						limit = {
-							NOT = {
-								any_courtier_or_guest = {
-									has_trait = witch_hunter
-								}
+						#create_character = {
+						#	employer = scope:actor
+						#	template = witch_hunter_character
+						#	save_scope_as = whunter
+						#}
+						#scope:whunter = {
+						#	add_perk = protective_runes_perk
+						#	add_perk = magical_senses_perk
+						#}
+				if = {
+					limit = {
+						has_game_rule = high_whunters
+					}
+					spawn_witch_hunter_low_chance_effect = { EMPL = scope:actor }
+				}
+				else_if = {
+					limit = {
+						NOT = {
+							any_courtier_or_guest = {
+								has_trait = witch_hunter
 							}
 						}
-						create_character = {
-							employer = scope:actor
-							template = witch_hunter_character
-							save_scope_as = whunter
-						}
-						scope:whunter = {
-							add_perk = protective_runes_perk
-							add_perk = magical_senses_perk
-						}
-					}
+					}	
+					spawn_witch_hunter_low_chance_effect = { EMPL = scope:actor }
 				}
 				if = {
 					limit = {
@@ -918,6 +961,7 @@ banish_demon = {
 		scope:recipient = {
 			has_trait = demon
 			NOT = { has_relation_mminion = scope:actor }
+			NOT = { has_character_flag = summoned_by_abdul_flag }
 		}	
 	}
 	is_valid_showing_failures_only = {
@@ -941,6 +985,11 @@ banish_demon = {
 			custom_description = {
 				text = magic_protection_custom
 				has_full_magic_prot_trigger = no
+				NOT = {
+					any_equipped_character_artifact = {
+						has_variable = magic_scepter
+					}
+				}
 			}
 		}
 	}
@@ -1093,7 +1142,32 @@ consume_child = {
 	on_accept = {
 		scope:actor = {
 			hidden_effect = {
+				random_list = {
+					40 = {
+						send_message_4_child_missing_effect = yes
+					}
+					20 = {
+						trigger_event = {
+							id = magic_ev6.66
+							days = 4
+						}
+					}
+					40 = {
+
+					}
+				}
 				if = {
+					limit = {
+						has_game_rule = high_whunters
+					}
+					if = {
+						limit = {
+							is_ai = no
+						}
+						spawn_witch_hunter_med_chance_effect = { EMPL = scope:actor }
+					}
+				}
+				else_if = {
 					limit = {
 						NOT = {
 							any_courtier_or_guest = {
@@ -1105,37 +1179,8 @@ consume_child = {
 						limit = {
 							is_ai = no
 						}
-						random = {
-							chance = 10
-							create_character = {
-								employer = scope:actor
-								template = witch_hunter_character
-								save_scope_as = whunter
-							}
-							scope:whunter = {
-								add_perk = protective_runes_perk
-								add_perk = magical_senses_perk
-							}
-						}
+						spawn_witch_hunter_med_chance_effect = { EMPL = scope:actor }
 					}
-					else = {
-						random = {
-							chance = 1
-							create_character = {
-								employer = scope:actor
-								template = witch_hunter_character
-								save_scope_as = whunter
-							}
-							scope:whunter = {
-								add_perk = protective_runes_perk
-								add_perk = magical_senses_perk
-							}
-						}
-					}
-				}
-				random = {
-					chance = 40
-					send_message_4_child_missing_effect = yes
 				}
 			}
 			
@@ -1145,6 +1190,7 @@ consume_child = {
 				left_icon = scope:actor
 				right_icon = scope:recipient
 				custom_tooltip = absorb_good_traits_ct
+				custom_tooltip = ev6.66.0.a_ct
 				#hidden_effect = {
 				#	add_secret = {
 				#		type = secret_murder
@@ -1501,6 +1547,39 @@ consume_child = {
 								}
 							}
 						}
+						else_if = {
+							limit = {
+								has_trait = source2
+								scope:actor = {
+									NOR = {
+										has_trait = source
+										has_trait = source2
+										has_trait = source3
+									}
+								}
+							}
+							scope:actor = {
+								random = {
+									chance = 50
+									add_trait = source2
+								}
+							}
+						}
+						else_if = {
+							limit = {
+								has_trait = source3
+								scope:actor = {
+									NOR = {
+										has_trait = source
+										has_trait = source2
+										has_trait = source3
+									}
+								}
+							}
+							scope:actor = {
+								add_trait = source3
+							}
+						}
 	
 						if = {
 							limit = {
@@ -1667,14 +1746,24 @@ use_singularity = {
 	is_shown = {
 		NOT = { scope:recipient = scope:actor }
 		scope:actor = {
-			any_character_artifact = {
-				has_variable = singularity
-				NOT = {
-					has_variable = singularity_sleeping
+			OR = {
+				AND = {
+					any_character_artifact = {
+						has_variable = singularity
+						NOT = {
+							has_variable = singularity_sleeping
+						}
+					}
+					has_character_flag = singularity_solved2
+				}
+				AND = {
+					any_character_artifact = {
+						has_variable = singularity2
+					}
+					has_trait = archmage
 				}
 			}
 			is_imprisoned = no
-			has_character_flag = singularity_solved2
 		}
 		scope:recipient = {
 			is_landed = yes
@@ -1720,7 +1809,13 @@ use_singularity = {
 		}
 		scope:actor = {
 			add_dread = 50
-			gain_sc_xp1_effect = yes
+			gain_cm_xp5_effect = yes
+			spend_standard_ps_effect = yes
+			stress_impact = {
+				compassionate = massive_stress_gain
+				sadistic = major_stress_loss
+				callous = minor_stress_loss
+			}
 		}
 		
 		custom_tooltip = use_singularity_ct
@@ -1730,13 +1825,14 @@ use_singularity = {
 				years = 50
 			}
 		}
-		custom_tooltip = use_singularity_ct2
+		#custom_tooltip = use_singularity_ct2
+		
+		
 		
 		hidden_effect = {
 			scope:actor = {
 				save_scope_as = magic_user
 				send_message_4all_magic_sense_effect = yes
-				spend_standard_ps_effect = yes
 			}
 			every_living_character = {
 				limit = {
@@ -1780,7 +1876,7 @@ use_singularity = {
 				}
 				
 			}
-			every_living_character = {
+			every_ruler = {
 				limit = {
 					is_ai = no
 				}
@@ -1791,42 +1887,68 @@ use_singularity = {
 			}
 			
 			scope:actor = {
-				random = {
-					chance = 10
-					if = {
-						limit = {
-							NOT = {
-								any_courtier_or_guest = {
-									has_trait = witch_hunter
-								}
-							}
-						}
-						create_character = {
-							employer = scope:actor
-							template = witch_hunter_character
-							save_scope_as = whunter
-						}
-						scope:whunter = {
-							add_perk = protective_runes_perk
-							add_perk = magical_senses_perk
+				if = {
+					limit = {
+						has_game_rule = high_whunters
+						NOT = {
+							has_character_flag = abdul_dude
 						}
 					}
+					spawn_witch_hunter_med_chance_effect = { EMPL = scope:actor }
+				}
+				else_if = {
+					limit = {
+						NOT = {
+							any_courtier_or_guest = {
+								has_trait = witch_hunter
+							}
+						}
+						NOT = {
+							has_character_flag = abdul_dude
+						}
+					}
+					spawn_witch_hunter_med_chance_effect = { EMPL = scope:actor }
 				}
 				metamagic_effect = yes
 			}
-			trigger_event = {
-				id = magic_ev2.77
-				days = { 6 12 }
-			}
-			random = {
-				chance = 40
+			if = {
+				limit = {
+					scope:recipient = {
+						NOT = {
+							has_character_flag = abdul_dude
+						}
+					}
+				}
 				trigger_event = {
-					id = magic_ev2.79
-					days = { 21 24 }
+					id = magic_ev2.77
+					days = { 7 12 }
+				}
+			}
+			else = {
+				scope:actor = {
+					trigger_event = {
+						id = magic_ev6.64
+						days = { 7 12 }
+					}
+				}
+			}
+			if = {
+				limit = {
+					scope:actor = {
+						NOT = {
+							has_character_flag = abdul_dude
+						}
+					}
+				}
+				random = {
+					chance = 40
+					trigger_event = {
+						id = magic_ev2.79
+						days = { 21 24 }
+					}
 				}
 			}
 		}
-		
 	}
 	
 	auto_accept = yes
@@ -1837,7 +1959,7 @@ use_singularity = {
 	}
 	
 	ai_targets = {
-		ai_recipients = neighboring_rulers
+		#ai_recipients = neighboring_rulers
 		ai_recipients = war_enemies
 		ai_recipients = scripted_relations
 	}
@@ -1848,13 +1970,24 @@ use_singularity = {
 		base = 0
 		
 		modifier = {
-			add = 50
+			add = 70
+			scope:recipient = {
+				is_at_war_with = scope:actor
+			}
+		}
+		modifier = {
+			add = 10
+			scope:actor = {
+				OR = {
+					has_trait = vengeful
+					has_trait = sadistic
+					has_trait = callous
+				}
+			}
 			scope:recipient = {
 				OR = {
 					has_relation_rival = scope:actor
 					has_relation_nemesis = scope:actor
-					#has_relation_potential_rival = scope:actor
-					is_at_war_with = scope:actor
 				}
 			}
 		}
@@ -2032,6 +2165,7 @@ teach_sorcery = {
 				OR = {
 					has_trait = witch
 					has_trait = true_witch
+					has_focus = witch_focus
 					any_secret = {
 						secret_type = secret_witch
 						is_known_by = scope:actor
@@ -2045,6 +2179,7 @@ teach_sorcery = {
 					has_trait = archmage
 					has_character_flag = start_sorcery_training
 					has_perk = magical_experiments_p1_perk
+					has_character_flag = arcane_unlocked_flag
 				}
 			}
 		}
@@ -2058,8 +2193,12 @@ teach_sorcery = {
 	#custom_description="cast_curse_custom_desc"
 	#notification_text = cast_curse_notification_text
 
-	cooldown_against_recipient = { years = 20 } 
-	cooldown = { years = 20 } 
+	cooldown_against_recipient = {
+		years = teach_sorcery_cooldown_value
+	} 
+	cooldown = {
+		years = teach_sorcery_cooldown_value
+	} 
 	ignores_pending_interaction_block = yes
 	use_diplomatic_range = yes
 	#hidden = yes
@@ -2109,7 +2248,7 @@ teach_sorcery = {
 		base = -30
 		
 		modifier = {
-			add = 80
+			add = 70
 			scope:recipient = {
 				OR = {
 					has_relation_friend = scope:actor
@@ -2142,6 +2281,14 @@ teach_sorcery = {
 				OR = {
 					has_trait = paranoid
 					has_trait = lazy
+				}
+			}
+		}
+		modifier = {
+			add = 30
+			scope:actor = {
+				culture = {
+					has_cultural_tradition = mage_rulership_tradition
 				}
 			}
 		}
@@ -2341,6 +2488,7 @@ fed_dark_blade_interaction = {
 				left_icon = scope:actor
 				right_icon = scope:recipient
 				custom_tooltip = fed_dark_blade_interaction_ct
+				custom_tooltip = fed_dark_blade_interaction_ct2
 				custom_tooltip = use_magic_custom_tooltip
 				send_interface_toast = {
 					title=dark_blade_fed
@@ -2352,11 +2500,14 @@ fed_dark_blade_interaction = {
 						gain_standard_ps_effect = yes
 					}
 				}
+
 				
 				#custom_tooltip = witch_trial_ct3
 				#tooltip="tooltip0"
 				stress_impact = {
 					compassionate = major_stress_impact_gain
+					just = major_stress_gain
+					sadistic = minor_stress_loss
 				}
 				scope:recipient = {
 					death = {
@@ -2364,8 +2515,39 @@ fed_dark_blade_interaction = {
 						killer = scope:actor
 					}
 				}
+				hidden_effect = {
+					add_secret = {
+						type = secret_murder
+						target = scope:recipient
+					}
+				}
+				
 			}
 			dark_blade_grows_stronger = yes
+			#trigger_event = magic_ev6.67
+			hidden_effect = {
+				random = {
+					chance = 10
+					trigger_event = magic_ev6.67
+				}
+			}
+			
+			
+			hidden_effect = {
+				if = {
+					limit = {
+						NOT = {
+							has_game_rule = low_whunters
+						}
+					}
+					if = {
+						limit = {
+							is_ai = no
+						}
+						spawn_witch_hunter_med_chance_effect = { EMPL = scope:actor }
+					}
+				}
+			}
 		}
 	}
 	
@@ -2444,9 +2626,16 @@ demand_submission_cgm_interaction = {
 			}
 		}
 	}
-	#is_valid_showing_failures_only = {
-	#	
-	#}
+	is_valid_showing_failures_only = {
+		custom_description = {
+			text = already_has_strong_hook
+			scope:actor = {
+				NOT = {
+					has_strong_hook = scope:recipient
+				}
+			}
+		}	
+	}
 	icon = icon_grandmaster_coven
 	ai_maybe = yes
 	ai_min_reply_days = 1
@@ -2719,7 +2908,7 @@ send_agent_cgm_interaction = {
 	#cooldown_against_recipient = { days = 1 } 
 	#cooldown = { days = 1 } 
 	ignores_pending_interaction_block = yes
-	use_diplomatic_range = yes
+	use_diplomatic_range = no
 	
 	on_accept = {
 		scope:actor = {
@@ -2916,6 +3105,18 @@ command_minion_interaction = {
 				scope:recipient = {
 					if = {
 						limit = {
+							exists = diarch
+							diarch = scope:actor
+						}
+						scope:actor = {
+							update_diarchy_swing_with_perspective_effect = {
+								SWING = medium_sop_swing_diarch_gain
+								LIEGE = scope:recipient
+							}
+						}
+					}
+					if = {
+						limit = {
 							scope:command_minion_goold = yes
 						}
 						pay_short_term_gold = {
@@ -3061,14 +3262,8 @@ command_minion_interaction = {
 						}
 						hidden_effect = {
 							scope:actor = {
-								create_character = {
-									employer = scope:actor
-									template = witch_hunter_character
-									save_scope_as = whunter
-								}
+								spawn_witch_hunter_full_chance_effect = { EMPL = scope:actor }
 								scope:whunter = {
-									add_perk = protective_runes_perk
-									add_perk = magical_senses_perk
 									add_perk = a_job_done_right_perk
 									add_intrigue_skill = 5
 									random = {
@@ -3152,6 +3347,7 @@ command_minion_interaction = {
 		}
 	}
 	options_heading = command_minion_option_title
+	send_options_exclusive = yes
 	send_option = {
 		flag = command_minion_goold
 		localization = COMMAND_MINION_O1
@@ -3533,46 +3729,52 @@ power_strike = {
 						spend_standard_ps_effect = yes
 					}
 				}
-				
-				scope:actor.location.county_controller = {
-					save_scope_as = owner1
-				}
 				if = {
 					limit = {
-						NOR = {
-							scope:actor = scope:owner1
-							scope:recipient = scope:owner1
-						}
+						is_in_army = no
 					}
-					custom_tooltip = warning_use_magic_out_of_secure_place_ct2
-				}
-				else_if = {
-					limit = {
-						NOT = {
-							scope:actor = scope:owner1
-						}
-						scope:recipient = scope:owner1
+					scope:actor.location.county_controller = {
+						save_scope_as = owner1
 					}
-					custom_tooltip = warning_use_magic_out_of_secure_place_ct
-				}
-				hidden_effect = {
+	
 					if = {
 						limit = {
-							exists = scope:actor.involved_activity
+							NOR = {
+								scope:actor = scope:owner1
+								scope:recipient = scope:owner1
+							}
 						}
-						scope:actor.involved_activity = {
-							every_attending_character = {
-								limit = {
-									NOR = {
-										this = scope:actor
-										this = scope:recipient
+						custom_tooltip = warning_use_magic_out_of_secure_place_ct2
+					}
+					else_if = {
+						limit = {
+							NOT = {
+								scope:actor = scope:owner1
+							}
+							scope:recipient = scope:owner1
+						}
+						custom_tooltip = warning_use_magic_out_of_secure_place_ct
+					}
+					hidden_effect = {
+						if = {
+							limit = {
+								exists = scope:actor.involved_activity
+							}
+							scope:actor.involved_activity = {
+								every_attending_character = {
+									limit = {
+										NOR = {
+											this = scope:actor
+											this = scope:recipient
+										}
 									}
+									trigger_event = magic_ev5.8
 								}
-								trigger_event = magic_ev5.8
 							}
 						}
 					}
 				}
+				
 	
 				send_interface_message = {
 					type = event_generic_neutral
@@ -3585,20 +3787,7 @@ power_strike = {
 							trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = scope:actor.faith GENDER_CHARACTER = scope:actor }
 						}
 						custom_tooltip = use_magic_openly_ct
-						hidden_effect = {
-							random = {
-								chance = 10
-								create_character = {
-									employer = scope:actor
-									template = witch_hunter_character
-									save_scope_as = whunter
-								}
-								scope:whunter = {
-									add_perk = protective_runes_perk
-									add_perk = magical_senses_perk
-								}
-							}
-						}
+						spawn_witch_hunter_med_chance_effect = { EMPL = scope:actor }
 					}
 					else = {
 						custom_tooltip = use_magic_openly_ct2
@@ -3612,7 +3801,7 @@ power_strike = {
 						}
 						custom_tooltip = bypass_magic_prot_custom_tooltip
 					}
-					gain_sc_xp1_effect = yes
+					gain_cm_xp1_effect = yes
 	
 					#stress_impact = {
 					#	compassionate = medium_stress_impact_gain
@@ -4163,29 +4352,45 @@ aura_boost = {
 				gain_sc_xp1_effect = yes
 
 				stress_impact = {
-					compassionate = medium_stress_impact_loss
+					compassionate = minor_stress_impact_loss
+					sadistic = minor_stress_gain
+					callous = minor_stress_gain
 				}
 				metamagic_effect = yes
 				scope:recipient = {
 					if = {
-						limit = {	has_character_modifier = aura_boost1_modifier	}
-						remove_character_modifier = aura_boost1_modifier
+						limit = {
+							NOT = {
+								scope:aura_boost_clear = yes
+							}
+						}
+						if = {
+							limit = {	has_character_modifier = aura_boost1_modifier	}
+							remove_character_modifier = aura_boost1_modifier
+						}
+						if = {
+							limit = {	has_character_modifier = aura_boost2_modifier	}
+							remove_character_modifier = aura_boost2_modifier
+						}
 					}
-					if = {
-						limit = {	has_character_modifier = aura_boost2_modifier	}
-						remove_character_modifier = aura_boost2_modifier
-					}
+					
 					if = {
 						limit = {
 							scope:aura_boost_mind = yes
 						}
-						add_character_modifier = aura_boost1_modifier
+						add_character_modifier = {
+							modifier = aura_boost1_modifier
+							years = 30
+						}
 					}
 					else_if = {
 						limit = {
 							scope:aura_boost_body = yes
 						}
-						add_character_modifier = aura_boost2_modifier
+						add_character_modifier = {
+							modifier = aura_boost2_modifier
+							years = 30
+						}
 					}
 					else_if = {
 						limit = {
@@ -4530,26 +4735,21 @@ plague_spell = {
 			save_scope_as = magic_user
 			send_message_4_magic_sense_effect = yes
 			hidden_effect = {
-				random = {
-					chance = 4
-					if = {
-						limit = {
-							NOT = {
-								any_courtier_or_guest = {
-									has_trait = witch_hunter
-								}
+				if = {
+					limit = {
+						has_game_rule = high_whunters
+					}
+					spawn_witch_hunter_low_chance_effect = { EMPL = scope:actor }
+				}
+				else_if = {
+					limit = {
+						NOT = {
+							any_courtier_or_guest = {
+								has_trait = witch_hunter
 							}
 						}
-						create_character = {
-							employer = scope:actor
-							template = witch_hunter_character
-							save_scope_as = whunter
-						}
-						scope:whunter = {
-							add_perk = protective_runes_perk
-							add_perk = magical_senses_perk
-						}
 					}
+					spawn_witch_hunter_low_chance_effect = { EMPL = scope:actor }
 				}
 			}
 			
@@ -4833,26 +5033,21 @@ firestorm_spell = {
 			save_scope_as = magic_user
 			send_message_4_magic_sense_effect = yes
 			hidden_effect = {
-				random = {
-					chance = 4
-					if = {
-						limit = {
-							NOT = {
-								any_courtier_or_guest = {
-									has_trait = witch_hunter
-								}
+				if = {
+					limit = {
+						has_game_rule = high_whunters
+					}
+					spawn_witch_hunter_low_chance_effect = { EMPL = scope:actor }
+				}
+				else_if = {
+					limit = {
+						NOT = {
+							any_courtier_or_guest = {
+								has_trait = witch_hunter
 							}
 						}
-						create_character = {
-							employer = scope:actor
-							template = witch_hunter_character
-							save_scope_as = whunter
-						}
-						scope:whunter = {
-							add_perk = protective_runes_perk
-							add_perk = magical_senses_perk
-						}
 					}
+					spawn_witch_hunter_low_chance_effect = { EMPL = scope:actor }
 				}
 			}
 			
@@ -4864,7 +5059,7 @@ firestorm_spell = {
 				left_icon = scope:actor
 				right_icon = scope:recipient
 				custom_tooltip = use_magic_custom_tooltip
-				gain_sc_xp1_effect = yes
+				gain_cm_xp1_effect = yes
 				spend_standard_ps_effect = yes
 				
 				stress_impact = {
@@ -4971,6 +5166,12 @@ mana_siphon_spell = {
 			custom_description = {
 				text = is_on_mage_duel_custom
 				NOT = {	has_variable = pclash	}
+			}
+			custom_description = {
+				text = has_magic_flu
+				NOT = {
+					has_character_modifier = magic_flu_modifier
+				}
 			}
 		}
 		scope:actor = {
@@ -5504,6 +5705,15 @@ mage_duel = {
 		modifier = {
 			add = 30
 			scope:recipient = {
+				culture = {
+					has_cultural_tradition = mage_rulership_tradition
+				}
+			}
+			desc = DS_HAS_MAGE_RULERSHIP
+		}
+		modifier = {
+			add = 30
+			scope:recipient = {
 				has_trait = irritable
 			}
 			desc = DS_IS_IRRITABLE
@@ -5517,6 +5727,13 @@ mage_duel = {
 					track = power_saturation
 					value < 50
 				}
+			}
+			desc = DS_HAS_LOW_PS
+		}
+		modifier = {
+			add = -200
+			scope:recipient = {
+				has_character_flag = not_ready_for_duel_yet
 			}
 			desc = DS_HAS_LOW_PS
 		}
@@ -5643,6 +5860,15 @@ mage_duel = {
 				has_trait = greedy
 			}
 			desc = DS_WANT_MAGIC
+		}
+		modifier = {
+			add = -30
+			scope:recipient = {
+				any_character_artifact = {
+					has_variable = magic1
+				}
+			}
+			desc = DS_WANT_NOT_LOSS_MAGIC
 		}
 		modifier = {
 			add = 10
@@ -5887,4 +6113,116 @@ mage_duel = {
 			}
 		}
 	}
+}
+mind_scan = {
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			is_imprisoned = no
+			has_character_modifier = mind_reader_modifier
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = is_incapable_custom
+				NOT = { has_trait = incapable }
+			}
+		}
+		scope:actor = {
+			custom_description = {
+				text = is_on_mage_duel_custom
+				NOT = {	has_variable = pclash	}
+			}
+		}
+		scope:recipient = {
+			custom_description = {
+				text = magic_protection_custom
+				has_full_magic_prot_trigger = no
+				OR = {
+					has_basic_magic_prot_trigger = no
+					AND = {
+						has_basic_magic_prot_trigger = yes
+						scope:actor = {	can_penetrate_basic_magic_prot_trigger = yes	}
+					}
+				}
+			}
+		}
+		scope:actor = {
+			custom_description = {
+				text = physical_contact_custom
+				has_physical_contanct = yes
+			}
+		}
+		
+		scope:actor = {
+			custom_description = {
+				text = power_needed_custom
+				OR = {
+					can_spend_standard_ps_trigger = yes
+					has_character_flag = mind_reading_elixir
+				}
+			}
+		}
+	}
+	icon = icon_magic
+	common_interaction = no
+	interface_priority = 90
+	category = interaction_category_hostile
+	desc = mind_scan_desc
+
+	cooldown_against_recipient = { years = 1 } 
+	cooldown = { years = 1 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = no
+	#hidden = yes
+	
+	on_accept = {
+		scope:actor = {
+			save_scope_as = magic_user
+			send_message_4_magic_sense_effect = yes
+			if = {
+				limit = {
+					NOT = {
+						has_character_flag = mind_reading_elixir
+					}
+				}
+				spend_standard_ps_effect = yes
+			}
+			
+			
+			send_interface_message = {
+				type = event_generic_neutral
+				title = mind_scan
+				desc = "send_interface_message_text"
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				custom_tooltip = use_magic_custom_tooltip
+
+				stress_impact = {
+					honest = medium_stress_impact_gain
+					deceitful = minor_stress_impact_loss
+					paranoid = minor_stress_impact_loss
+				}
+				custom_tooltip = mind_scan_ct1
+				custom_tooltip = mind_scan_ct2
+				scope:recipient = {
+					custom_tooltip = mind_scan_ct3
+				}
+				trigger_event = magic_ev6.11
+				if = {
+					limit = {
+						has_character_flag = mind_reading_elixir
+					}
+					remove_character_flag = mind_reading_elixir
+				}
+				else = {
+					metamagic_effect = yes
+				}
+				
+			}
+		}
+	}
+	
+	auto_accept = yes
 }
