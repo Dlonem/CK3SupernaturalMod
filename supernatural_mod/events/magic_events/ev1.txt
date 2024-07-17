@@ -12,6 +12,7 @@ magic_ev.99 = {
 			any_artifact = { has_variable = dark_blade }
 			any_artifact = { has_variable = dragon_scales }
 			any_artifact = { has_variable = magic_scepter }
+			any_artifact = { has_variable = magic_crown }
 		}
 	}
 	immediate = {
@@ -94,6 +95,13 @@ magic_ev.99 = {
 						}
 						trigger_event = magic_ev.93
 					}
+					#magic crown
+					1 = {
+						trigger = {
+							NOT = { any_artifact = { has_variable = magic_crown } }
+						}
+						trigger_event = magic_ev.92
+					}
 				}
 			}
 		}
@@ -174,6 +182,13 @@ magic_ev.99 = {
 							}
 							trigger_event = magic_ev.93
 						}
+						#magic crown
+						1 = {
+							trigger = {
+								NOT = { any_artifact = { has_variable = magic_crown } }
+							}
+							trigger_event = magic_ev.92
+						}
 					}
 				}
 			}
@@ -245,6 +260,13 @@ magic_ev.99 = {
 								NOT = { any_artifact = { has_variable = magic_scepter } }
 							}
 							trigger_event = magic_ev.93
+						}
+						#magic crown
+						1 = {
+							trigger = {
+								NOT = { any_artifact = { has_variable = magic_crown } }
+							}
+							trigger_event = magic_ev.92
 						}
 					}
 				}
@@ -491,6 +513,40 @@ magic_ev.96 = {
 			create_magic_academy = yes
 		}
 		
+	}	
+}
+#Crown of Shadows
+magic_ev.92 = {
+	title = ev92.1.title
+	desc = ev92.1.desc
+	theme =  secret
+	left_portrait = {
+		character = root
+		animation = paranoia
+	}
+	option = {
+		name = ev98.1.a
+		create_crown_shadows_artifact_effect = { OWNER = root }
+	}	
+	after={
+		dynasty={
+			set_variable=ev1used
+		}
+		
+		if = {
+			limit = {
+				NOT = {
+					any_county = {
+						exists = title_province
+						title_province = {
+							has_building_or_higher = houska
+						}
+					}
+				}
+			}
+			create_houska = yes
+		}
+		create_extra_coven = yes
 	}	
 }
 #hells scepter
@@ -990,8 +1046,10 @@ magic_ev.4 = {
 		trigger = {
 			has_trait = witch_hunter
 			exists = scope:magic_user
-			NOT = {
-				has_relation_mminion = scope:magic_user
+			scope:magic_user = {
+				NOT = {
+					has_strong_hook = ROOT
+				}
 			}
 			NOT = {
 				scope:magic_user = ROOT
@@ -1076,6 +1134,9 @@ magic_ev.44 = {
 			every_secret = {
 				limit = {
 					secret_type = secret_witch
+					NOT = {
+						is_known_by = root
+					}
 				}
 				reveal_to = root
 			}
@@ -1095,6 +1156,9 @@ magic_ev.44 = {
 			every_secret = {
 				limit = {
 					secret_type = secret_witch
+					NOT = {
+						is_known_by = root
+					}
 				}
 				reveal_to = root
 			}
@@ -1134,6 +1198,9 @@ magic_ev.44 = {
 			every_secret = {
 				limit = {
 					secret_type = secret_witch
+					NOT = {
+						is_known_by = root
+					}
 				}
 				reveal_to = root
 			}
@@ -1169,6 +1236,85 @@ magic_ev.44 = {
 		clear_saved_scope = magic_user
 		ai_chance = {
 			base = 50
+		}
+	}
+	option = {
+		name = ev4b.0.d
+		trigger = {
+			NOT = {
+				has_trait = supernatural_hunter
+			}
+			scope:magic_user = {
+				has_character_flag = black_magic_caster_flag
+			}
+			has_character_flag = forbidden_black_magic_flag
+		}
+		scope:magic_user = {
+			every_secret = {
+				limit = {
+					secret_type = secret_witch
+					NOT = {
+						is_known_by = root
+					}
+				}
+				reveal_to = root
+			}
+			if = {
+				limit = {
+					is_landed = yes
+				}
+				primary_title = {
+					save_scope_as = ptitle
+				}
+			}
+		}
+		if = {
+			limit = {
+				exists = scope:ptitle
+				NOT = {
+					has_claim_on = scope:ptitle
+				}
+			}
+			add_unpressed_claim = scope:ptitle
+		}
+		every_living_character = {
+			limit = {
+				has_character_flag = forbidden_black_magic_flag
+				NOR = {
+					has_opinion_modifier = {
+						modifier = use_black_magic_opinion
+						target = root
+					}
+					THIS = scope:magic_user
+				}
+			}
+			add_opinion = {
+				target = scope:magic_user
+				modifier = use_black_magic_opinion
+				opinion = -50
+			}
+		}
+		clear_saved_scope = magic_user
+		ai_chance = {
+			base = 1
+			modifier = {
+				add = 10
+				has_trait = just
+			}
+			modifier = {
+				add = -10
+				has_trait = arbitrary
+			}
+			modifier = {
+				add = 10
+				scope:magic_user = {
+					is_landed = yes
+				}
+				OR = {
+					has_trait = greedy
+					has_trait = ambitious
+				}
+			}
 		}
 	}
 }
@@ -1244,6 +1390,11 @@ magic_ev.5 = {
 		#		flag = magic_user
 		#		years = 5
 		#}
+		stress_impact = {
+			compassionate = major_stress_gain
+			ambitious = minor_stress_loss
+			callous = medium_stress_loss
+		}
 		add_character_modifier = lifestealer_modifier
 		scope:potential_sacrifice = {
 			add_character_modifier = lifestolen_modifier
@@ -1282,9 +1433,29 @@ magic_ev.5 = {
 		}
 	}
 	option = {
+		name = ev7.19.0.e
+		trigger = {
+			has_trait = compassionate
+		}
+		stress_impact = {
+			compassionate = massive_stress_loss
+		}
+		add_character_modifier = lifestolen_modifier
+		scope:potential_sacrifice = {
+			add_character_modifier = lifestealer_modifier
+		}
+		add_piety = major_piety_gain
+		ai_chance = {
+			base = 0
+		}
+	}
+	option = {
 		name = ev5.0.b
 		add_stress = medium_stress_loss
 		add_piety = medium_piety_gain
+		stress_impact = {
+			ambitious = minor_stress_gain
+		}
 		ai_chance = {
 			base = 50
 		}
@@ -1771,10 +1942,12 @@ magic_ev.8 = {
 
 		send_message_4_magic_sense_effect =yes
 		ai_chance = {
-			base = 10
+			base = 5
 			modifier = {
 				add = 20
-				stress_level = 0
+				any_child = {
+					count > 1
+				}
 			}
 		}
 	}
@@ -1783,7 +1956,7 @@ magic_ev.8 = {
 		trigger = {
 			has_trait = archmage
 			has_trait = greedy
-			NOT = {
+			NOR = {
 				has_trait = ambitious
 				has_trait = blind
 			}
@@ -1861,11 +2034,19 @@ magic_ev.8 = {
 			gain_huge_ps_effect = yes
 		}
 		add_character_flag = no_soul
+		if = {
+			limit = {
+				NOT = {
+					has_trait = corrupted
+				}
+			}
+			add_trait = corrupted
+		}
 		custom_tooltip = no_soul_custom_tooltip
 		send_message_4_magic_sense_effect =yes
 		trigger_event = {
 			id = magic_ev2.11
-			years = { 18 20 }
+			years = { 18 22 }
 		}
 		ai_chance = {
 			base = 0
@@ -2056,30 +2237,45 @@ magic_ev.9 = {
 				var:last_ttarget = {
 					save_scope_as = last_ttarget0
 				}
-				random_artifact = {
+				if = {
 					limit = {
-						has_variable = magic1
-						NOR = {
-							artifact_owner = root
-							artifact_owner = scope:last_ttarget0
+						NOT = {
+							exists = scope:artif
 						}
 					}
-					save_scope_as = artif
+					random_artifact = {
+						limit = {
+							has_variable = magic1
+							NOR = {
+								artifact_owner = root
+								artifact_owner = scope:last_ttarget0
+							}
+						}
+						save_scope_as = artif
+					}
 				}
 				scope:artif.artifact_owner = {
 					save_scope_as = potential_magician
 				}
 			}
 			else = {
-				random_artifact = {
+				if = {
 					limit = {
-						has_variable = magic1
-						NOR = {
-							artifact_owner = root
+						NOT = {
+							exists = scope:artif
 						}
 					}
-					save_scope_as = artif
+					random_artifact = {
+						limit = {
+							has_variable = magic1
+							NOT = {
+								artifact_owner = root
+							}
+						}
+						save_scope_as = artif
+					}
 				}
+				
 				scope:artif.artifact_owner = {
 					save_scope_as = potential_magician
 				}
@@ -2576,6 +2772,7 @@ magic_ev.11 = {
 			has_trait = source
 			has_trait = source2
 			has_trait = source3
+			has_trait = source4
 		}
 		
 		can_be_power_saturated_trigger = yes
@@ -2602,8 +2799,10 @@ magic_ev.11 = {
 		name = ev11.0.a
 		trait = source
 		trigger = {
-			NOT = {
+			NOR = {
 				has_trait = source2
+				has_trait = source3
+				has_trait = source4
 			}
 		}
 		add_stress = minor_stress_loss
@@ -2613,8 +2812,25 @@ magic_ev.11 = {
 		trait = source2
 		trigger = {
 			has_trait = source2
+			NOR = {
+				has_trait = source
+				has_trait = source3
+				has_trait = source4
+			}
 		}
 		add_stress = minor_stress_loss
+	}
+	option = {
+		name = ev11.0.a
+		trait = source4
+		trigger = {
+			has_trait = source4
+			NOR = {
+				has_trait = source
+				has_trait = source2
+				has_trait = source3
+			}
+		}
 	}
 	option = {
 		name = ev11.0.a
@@ -2625,6 +2841,17 @@ magic_ev.11 = {
 		exclusive = yes
 		add_stress = minor_stress_loss
 		gain_sc_xp1_effect = yes
+		gain_cm_xp1_effect = yes
+		if = {
+			limit = {
+				is_ai = yes
+				OR = {
+					has_focus = witch_focus
+					has_focus = arcane_focus
+				}
+			}
+			add_magic_lifestyle_perk_points = 1
+		}
 	}
 }
 
@@ -2645,16 +2872,30 @@ magic_ev.12 = {
 	option = {
 		name = ev12.0.a
 		trigger = {
-			NOT = {
+			NOR = {
 				any_equipped_character_artifact = {	has_variable = magic_scepter	}
+				AND = {
+					has_trait = archmage
+					has_trait_xp = {
+						trait = archmage
+						track = demonology
+						value > 99
+					}
+				}
 			}
 		}
 		spend_standard_ps_effect = yes
 		if = {
 			limit = {
-				exists = dynasty
-				dynasty = {
-					NOT = { has_dynasty_perk = witchcraft_legacy_4 }
+				NOT = {
+					AND = {
+						has_trait = archmage
+						has_trait_xp = {
+							trait = archmage
+							track = demonology
+							value > 34
+						}
+					}
 				}
 			}
 			add_stress = minor_stress_gain
@@ -2679,9 +2920,11 @@ magic_ev.12 = {
 				hidden_effect = {
 					if = {
 						limit = {
-							exists = dynasty
-							dynasty = {
-								has_dynasty_perk = witchcraft_legacy_4
+							has_trait = archmage
+							has_trait_xp = {
+								trait = archmage
+								track = demonology
+								value > 34
 							}
 						}
 						random_list = {
@@ -2706,6 +2949,7 @@ magic_ev.12 = {
 				send_interface_toast = {
 					title = ev12.1.a
 					#gain_sc_xp1_effect = yes
+					gain_demonology_or_sc_standard_effect = yes
 				}
 			}
 			5 = {
@@ -2724,6 +2968,7 @@ magic_ev.12 = {
 				send_interface_toast = {
 					title = ev12.3.a
 					#gain_sc_xp1_effect = yes
+					gain_demonology_or_sc_standard_effect = yes
 				}
 			}
 			1 = {
@@ -2731,22 +2976,35 @@ magic_ev.12 = {
 				#desc = ev12.4.a
 				desc = ev12.3.a
 				trigger = {
-					exists = dynasty
-					dynasty = {
-						NOT = { has_dynasty_perk = witchcraft_legacy_4	}
-					}
-					NOR = {
-						has_trait = wounded_1
-						has_trait = wounded_2
-						has_trait = wounded_3
+					NOT = {
+						AND = {
+							has_trait = archmage
+							has_trait_xp = {
+								trait = archmage
+								track = demonology
+								value > 34
+							}
+						}
 					}
 				}
 				trigger_event = magic_ev.19
 				custom_tooltip = ev12.3.a_ct
 				send_interface_toast = {
 					title = ev12.3.a
-					#gain_sc_xp1_effect = yes
-					add_trait = wounded_3
+					if = {
+						limit = {
+							NOR = {
+								has_trait = wounded_1
+								has_trait = wounded_2
+								has_trait = wounded_3
+							}
+						}
+						add_trait = wounded_3
+						gain_demonology_or_sc_standard_effect = yes
+					}
+					else = {
+						death = natural
+					}
 				}
 				#death = natural
 			}
@@ -2758,12 +3016,39 @@ magic_ev.12 = {
 	option = {
 		name = ev12.0.c
 		trigger = {
-			any_equipped_character_artifact = {	has_variable = magic_scepter	}
+			OR = {
+				any_equipped_character_artifact = {	has_variable = magic_scepter	}
+				AND = {
+					has_trait = archmage
+					has_trait_xp = {
+						trait = archmage
+						track = demonology
+						value > 99
+					}
+				}
+			}
 		}
 		add_internal_flag = special
 		spend_standard_ps_effect = yes
+		gain_demonology_or_sc_standard_effect = yes
 		custom_tooltip = ev12.1.a_ct
-		custom_tooltip = ev12.0.c_ct
+		if = {
+			limit = {
+				any_equipped_character_artifact = {	has_variable = magic_scepter	}
+				NOT = {
+					AND = {
+						has_trait = archmage
+						has_trait_xp = {
+							trait = archmage
+							track = demonology
+							value > 99
+						}
+					}
+				}
+			}
+			custom_tooltip = ev12.0.c_ct
+		}
+		
 		#trigger_event = magic_ev6.5
 		metamagic_effect = yes
 		trigger_event = magic_ev6.74 
@@ -2956,6 +3241,7 @@ magic_ev.14 = {
 				10 = {
 					#Hecate - magic
 					trigger = {
+						is_ai = no
 						any_living_character = {
 							has_character_flag = hecate
 							count = 0
@@ -2969,14 +3255,6 @@ magic_ev.14 = {
 							AND = {
 								has_character_flag = ms_met_hecate
 								has_trait = archmage
-								NAND = {
-									has_character_flag = bless_land_flag
-									has_character_flag = healing_spell_flag
-									has_character_flag = shadowstep_flag
-									has_character_flag = plague_spell_flag
-									has_character_flag = hipercognition_flag
-									has_character_flag = firestorm_spell_flag
-								}
 							}
 						}
 					}
@@ -2990,6 +3268,9 @@ magic_ev.14 = {
 							count = 0
 						}
 						has_character_flag = no_complications
+						NOT = {
+							has_character_flag = nyx_no_more_flag
+						}
 					}
 					ms_nyx_demon_effect = yes
 				}
@@ -3059,109 +3340,11 @@ magic_ev.15 = {
 	option = {
 		name = ev15.0.d
 		trigger = {
-			has_trait = lunatic_1
-		}
-		trait = lunatic_1
-		if = {
-			limit = { NOT = { has_trait = demon } }
-			random_list = {
-				10 = {
-					desc = ev15.1.d
-					send_interface_toast = {
-						title = ev15.1.d
-						set_relation_friend = scope:demon
-						#set_random_friendship_reason = { TARGET = scope:demon }
-					}
-				}
-				20 = {
-					desc = ev15.2.d
-					send_interface_toast = {
-						title = ev15.2.d
-						death = {
-							death_reason = death_murder
-							killer = scope:demon
-						}
-					}
-					hidden_effect = {
-						scope:demon = {
-							death = natural
-						}
-					}
-				}
-			}
-		}
-		else = {
-			random_list = {
-				10 = {
-					set_relation_friend = scope:demon
-				}
-				10 = {
-					set_relation_rival = scope:demon
-				}
-			}
-		}
-		
-	}
-	option = {
-		name = ev15.0.d
-		trigger = {
-			has_trait = lunatic_genetic
-		}
-		trait = lunatic_genetic
-		if = {
-			limit = { NOT = { has_trait = demon } }
-			random_list = {
-				10 = {
-					desc = ev15.1.d
-					send_interface_toast = {
-						title = ev15.1.d
-						set_relation_friend = scope:demon
-						#set_random_friendship_reason = { TARGET = scope:demon }
-					}
-				}
-				20 = {
-					desc = ev15.2.d
-					send_interface_toast = {
-						title = ev15.2.d
-						death = {
-							death_reason = death_murder
-							killer = scope:demon
-						}
-					}
-					hidden_effect = {
-						scope:demon = {
-							death = natural
-						}
-					}
-				}
-			}
-		}
-		else = {
-			random_list = {
-				10 = {
-					set_relation_friend = scope:demon
-				}
-				10 = {
-					set_relation_rival = scope:demon
-				}
-			}
-		}
-		
-	}
-	option = {
-		name = ev15.0.d
-		trigger = {
-			OR = {
-				has_trait = possessed_1
-				has_trait = possessed_genetic
-			}
-			
-			NOR = {
-				has_trait = lunatic_genetic
+			OR =  {
 				has_trait = lunatic_1
+				has_trait = lunatic_genetic
 			}
 		}
-		trait = possessed_1
 		if = {
 			limit = { NOT = { has_trait = demon } }
 			random_list = {
@@ -3201,6 +3384,29 @@ magic_ev.15 = {
 			}
 		}
 		
+	}
+	option = {
+		name = ev15.0.e
+		trigger = {
+			any_equipped_character_artifact = {
+				has_variable = magic_scepter
+			}
+		}
+		add_internal_flag = special
+		custom_tooltip = ev12.0.c_ct
+		show_as_tooltip = {
+			add_courtier = scope:demon
+		}
+		scope:demon = {
+			add_opinion = {
+				target = ROOT
+				modifier = respect_opinion
+				opinion = 200
+			}
+			hidden_effect = {
+				add_character_flag = special_magic_character
+			}
+		}
 	}
 	option = {
 		name = ev15.0.c
@@ -3895,7 +4101,7 @@ magic_ev.19 = {
 					}
 				}
 				random = {
-					chance = 60
+					chance = 90
 					add_perk = a_job_done_right_perk
 				}
 			}
@@ -4727,10 +4933,11 @@ magic_ev.28 = {
 	}
 
 	option = {
-		name = ev2.11.d
+		name = ev2.11.d2
 		trigger = {
 			has_trait = archmage
-			any_character_artifact = { has_variable = blackgrimoire }
+			#any_character_artifact = { has_variable = blackgrimoire }
+			can_use_banish_spell = yes
 		}
 		trait = archmage
 		custom_tooltip = banish_demon_ct
@@ -5010,16 +5217,31 @@ magic_ev.37 = {
 	option = {
 		#noooo!
 		name = ev37.0.a
+		trigger = {
+			NOT = {
+				has_trait = archmage
+			}
+		}
 		death = {
 			death_reason = death_murder
 			killer = scope:demon
 		}
-	}
-	after = {
 		hidden_effect = {
 			scope:demon = {
 				death = natural
 			}
+		}
+	}
+	option = {
+		#Are you sure you want to mess with a mage?
+		name = ev2.11.f
+		trigger = {
+			has_trait = archmage
+		}
+		custom_tooltip = start_duel_ct
+		configure_start_mage_duel_effect = {
+			MD_ATTACKER = root
+			MD_DEFENDER = scope:demon
 		}
 	}
 }
@@ -5443,7 +5665,7 @@ magic_ev.45 = {
 	}
 	immediate = {
 		scope:target = {
-					set_immortal_age = 17
+					set_immortal_age = 18
 					if = { limit = { has_trait = disfigured }
 						remove_trait = disfigured
 					}
