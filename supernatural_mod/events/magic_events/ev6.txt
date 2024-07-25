@@ -301,15 +301,111 @@ magic_ev6.4 = {
 		custom_tooltip = ev5.1.0.k_ct
 		add_character_flag = firestorm_spell_flag
 	}
+	option = {
+		name = ev6.4.0.a
+		trigger = {
+			has_character_flag = healing_spell_flag
+			has_character_flag = bless_land_flag
+		}
+		random_list = {
+			1 = {
+				trigger = {
+					has_trait = archmage
+					has_trait_xp = {
+						trait = archmage
+						track = secret_knowledge
+						value < 100
+					}
+				}
+				send_interface_toast = {
+					title = hecate_name
+					gain_sc_xp2_effect = yes
+				}
+			}
+			1 = {
+				trigger = {
+					has_trait = archmage
+					has_trait_xp = {
+						trait = archmage
+						track = demonology
+						value < 100
+					}
+				}
+				send_interface_toast = {
+					title = hecate_name
+					gain_demonology_standard_effect = yes
+				}
+			}
+			1 = {
+				trigger = {
+					has_trait = archmage
+					has_trait_xp = {
+						trait = archmage
+						track = combat_magic
+						value < 100
+					}
+				}
+				send_interface_toast = {
+					title = hecate_name
+					gain_cm_xp5_effect = yes
+				}
+			}
+			1 = {
+				trigger = {
+					NOT = {
+						has_character_modifier = secret_knowledge_modifier
+					}
+				}
+				send_interface_toast = {
+					title = hecate_name
+					add_character_modifier = {
+						modifier = secret_knowledge_modifier
+						years = 1
+					}
+				}
+			}
+			1 = {
+				send_interface_toast = {
+					title = hecate_name
+					add_learning_skill = 1
+				}
+			}
+		}
+	}
+	option = {
+		name = ev6.4.0.b
+		trigger = {
+			has_character_flag = healing_spell_flag
+			has_character_flag = bless_land_flag
+			NOT = {
+				has_character_modifier = hecate_support_modifier
+			}
+		}
+		add_character_modifier = {
+			modifier = hecate_support_modifier
+			years = 4
+		}
+	}
 	after = {
 		trigger_event = magic_ev.18
 	}
 }
 
-#advance summoning with Hells Scepter
+#advance summoning with Hells Scepter/max demonology
 magic_ev6.5 = {
 	title = ev12.0.title
-	desc = ev6.5.desc
+	#desc = ev6.5.desc
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					any_equipped_character_artifact = {	has_variable = magic_scepter	}
+				}
+				desc = ev6.5.desc
+			}
+			desc = ev6.5.desc2
+		}
+	}
 	theme = witchcraft
 	left_portrait = root
 	
@@ -677,6 +773,12 @@ magic_ev6.9 = {
 		first_valid = {
 			triggered_desc = {
 				trigger = {
+					has_character_flag = ms_met_nyx2
+				}
+				desc = ev6.9.desc3
+			}
+			triggered_desc = {
+				trigger = {
 					has_character_flag = ms_met_nyx
 				}
 				desc = ev6.9.desc2
@@ -792,6 +894,57 @@ magic_ev6.9 = {
 		add_character_modifier = {
 			modifier = peaceful_dreams_modifier
 			years = 3
+		}
+		trigger_event = magic_ev.18
+	}
+	option = {
+		#erase my sins
+		name = ev6.9.0.e
+		trigger = {
+			OR = {
+				has_trait = murderer
+				has_trait = kinslayer_1
+				has_trait = kinslayer_2
+				has_trait = kinslayer_3
+				has_trait = adulterer
+				has_trait = fornicator
+			}
+		}
+		if = {
+			limit = {
+				has_trait = murderer
+			}
+			remove_trait = murderer
+		}
+		else_if = {
+			limit = {
+				has_trait = kinslayer_1
+			}
+			remove_trait = kinslayer_1
+		}
+		else_if = {
+			limit = {
+				has_trait = kinslayer_2
+			}
+			remove_trait = kinslayer_2
+		}
+		else_if = {
+			limit = {
+				has_trait = kinslayer_3
+			}
+			remove_trait = kinslayer_3
+		}
+		else_if = {
+			limit = {
+				has_trait = adulterer
+			}
+			remove_trait = adulterer
+		}
+		else_if = {
+			limit = {
+				has_trait = fornicator
+			}
+			remove_trait = fornicator
 		}
 		trigger_event = magic_ev.18
 	}
@@ -1193,7 +1346,7 @@ magic_ev6.15 = {
 		trigger = {
 			NOR = {
 				has_trait = source3
-				has_trait = source
+				has_trait = source4
 			}
 		}
 		custom_tooltip = ev6.15.0.a_ct
@@ -1213,7 +1366,10 @@ magic_ev6.15 = {
 		#Never
 		name = ev6.15.0.a
 		trigger = {
-			has_trait = source
+			OR = {
+				has_trait = source4
+				has_trait = source
+			}
 		}
 		trait = source
 		custom_tooltip = ev6.15.0.a_ct2
@@ -1284,7 +1440,7 @@ magic_ev6.17 = {
 		trigger = {
 			NOR = {
 				has_trait = source3
-				has_trait = source
+				has_trait = source4
 			}
 		}
 		name = ev6.17.0.a
@@ -1304,7 +1460,10 @@ magic_ev6.17 = {
 	option = {
 		#no!
 		trigger = {
-			has_trait = source
+			OR = {
+				has_trait = source4
+				has_trait = source
+			}
 		}
 		trait = source
 		name = ev6.17.0.a
@@ -2299,6 +2458,9 @@ magic_ev6.35 = {
 				death_reason = death_execution_blood_eagle_killer
 				death_reason = death_execution_blot
 				death_reason = death_execution_killer
+				death_reason = death_sacrificed_to_gods
+				death_reason = death_crucified
+				death_reason = death_burned_witch
 			}
 		}
 		
@@ -2390,25 +2552,34 @@ magic_ev6.36 = {
 			}
 		}
 		scope:liege0 = {
-			every_vassal = {
+			
+			if = {
 				limit = {
-					culture = {
-						has_cultural_tradition = mage_rulership_tradition
-					}
-					is_ai = yes
-					OR = {
-						has_trait = archmage
-						has_trait = true_witch
-						has_focus = arcane_focus
-					}
-					NOT = {
-						THIS = ROOT
-					}
+					is_valid_for_legitimacy_change = yes
 				}
-				add_opinion = {
-					modifier = disgusted_opinion
-					target = scope:liege0
-					opinion = -30
+				add_legitimacy = medium_legitimacy_loss
+			}
+			else = {
+				every_vassal = {
+					limit = {
+						culture = {
+							has_cultural_tradition = mage_rulership_tradition
+						}
+						is_ai = yes
+						OR = {
+							has_trait = archmage
+							has_trait = true_witch
+							has_focus = arcane_focus
+						}
+						NOT = {
+							THIS = ROOT
+						}
+					}
+					add_opinion = {
+						modifier = disgusted_opinion
+						target = scope:liege0
+						opinion = -30
+					}
 				}
 			}
 		}
@@ -2610,6 +2781,7 @@ magic_ev6.40 = {
 			has_trait = source
 			has_trait = source2
 			has_trait = source3
+			has_trait = source4
 			has_trait = disfigured
 			has_trait = demon
 		}
@@ -2617,6 +2789,14 @@ magic_ev6.40 = {
 	option = {
 		name = ev5.28.0.z6
 		add_trait = disfigured
+		if = {
+			limit = {
+				NOT = {
+					has_trait = corrupted
+				}
+			}
+			add_trait = corrupted
+		}
 	}
 	option = {
 		name = ev6.40.0.a
@@ -2828,6 +3008,7 @@ magic_ev6.47 = {
 	}
 	after = {
 		hidden_effect = {
+			save_scope_as = player_mage
 			dynasty = {
 				set_variable = legion2
 			}
@@ -3022,6 +3203,47 @@ magic_ev6.51 = {
 			}
 			save_scope_as = atarget
 		}
+		if = {
+			limit = {
+				NOT = {
+					exists = scope:atarget
+				}
+			}
+			random_ruler = {
+				limit = {
+					any_held_title = {
+						tier = tier_kingdom
+						is_titular = no
+					}
+					is_ai = yes
+					NOR = {
+						has_trait = archmage
+						has_trait = demon
+					}
+				}
+				save_scope_as = atarget
+			}
+		}
+		if = {
+			limit = {
+				NOT = {
+					exists = scope:atarget
+				}
+			}
+			random_ruler = {
+				limit = {
+					any_held_title = {
+						is_titular = no
+					}
+					is_ai = yes
+					NOR = {
+						has_trait = archmage
+						has_trait = demon
+					}
+				}
+				save_scope_as = atarget
+			}
+		}
 		scope:atarget = {
 			primary_title = {
 				save_scope_as = emp_tit
@@ -3069,6 +3291,7 @@ magic_ev6.51 = {
 			}
 		}
 		add_gold = 20000
+		add_prestige_level = 3
 		create_artifact = {	
 			name = pot2
 			description = pot2_desc
@@ -3109,6 +3332,11 @@ magic_ev6.51 = {
 		}
 		scope:atarget = {
 			death = natural
+		}
+		add_opinion = {
+			target = scope:player_mage
+			modifier = rival_magic_modifier
+			years = 100
 		}
 	}
 }
@@ -3437,7 +3665,15 @@ magic_ev6.55 = {
 	option = {
 		name = ev6.55.0.a
 		add_stress = medium_stress_gain
-		set_relation_rival = scope:abdul
+		if = {
+			limit = {
+				NOR = {
+					has_relation_nemesis = scope:abdul
+					has_relation_rival = scope:abdul
+				}
+			}
+			set_relation_rival = scope:abdul
+		}
 	}
 }
 
@@ -4571,6 +4807,11 @@ magic_ev6.73 = {
 			has_nickname = mage5f_nickname
 			has_nickname = demonslayer_nickname
 		}
+		OR = {
+			has_character_flag = magic_epic_book
+			has_character_flag = magic_epic_magic
+			has_character_flag = magic_epic_project
+		}
 		any_councillor = {
 			is_imprisoned = no
 			is_ai = yes
@@ -4756,14 +4997,13 @@ magic_ev6.74 = {
 						has_character_flag = hecate
 					}
 				}
-				NAND = {
-					has_character_flag = bless_land_flag
-					has_character_flag = healing_spell_flag
-					has_character_flag = shadowstep_flag
-					has_character_flag = plague_spell_flag
-					has_character_flag = hipercognition_flag
-					has_character_flag = firestorm_spell_flag
+				OR = {
+					NOT = {
+						has_character_flag = no_soul
+					}
+					has_character_flag = ms_met_hecate
 				}
+				is_ai = no
 			}
 			add_character_flag = hecate_accesible
 		}
@@ -4773,6 +5013,9 @@ magic_ev6.74 = {
 					any_living_character = {
 						has_character_flag = nyx
 					}
+				}
+				NOT = {
+					has_character_flag = nyx_no_more_flag
 				}
 			}
 			add_character_flag = nyx_accesible
@@ -4820,6 +5063,16 @@ magic_ev6.75 = {
 	}
 
 	immediate = {
+		random_artifact = {
+			limit = {
+				has_variable=singularity2
+				NOR = {
+					has_variable=singularity
+					has_variable=singularity_sleeping
+				}
+			}
+			destroy_artifact = this
+		}
 		if = {
 			limit = {
 				any_ruler = {
@@ -4832,7 +5085,20 @@ magic_ev6.75 = {
 					is_ai = no
 					is_legendary_mage_trigger = yes
 				}
-				give_nickname = archmage_nickname
+				#give_nickname = archmage_nickname
+				send_interface_toast = {
+					title = ev6.75.title
+					custom_tooltip = ev6.75.ct
+					add_prestige = massive_prestige_gain
+					if = {
+						limit = {
+							exists = dynasty
+						}
+						dynasty = {
+							add_dynasty_prestige = compensate_dynast_prest_value
+						}
+					}
+				}
 			}
 		}
 	}

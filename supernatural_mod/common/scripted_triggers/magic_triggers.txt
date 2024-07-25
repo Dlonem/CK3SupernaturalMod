@@ -68,6 +68,7 @@ has_basic_magic_prot_trigger = {
 		has_perk = protective_runes_perk
 		has_perk = mage_tower_p2_perk
 		has_trait = demon
+		has_trait = golem
 		has_character_modifier = aura_boost1_modifier
 		has_character_modifier = aura_boost2_modifier
 		any_equipped_character_artifact = {	has_variable = magic_ring	}
@@ -98,10 +99,87 @@ has_basic_magic_prot_trigger = {
 		}
 	}
 }
+has_basic_magic_prot_trigger2 = {
+	OR = {
+		has_perk = protective_runes_perk
+		has_perk = mage_tower_p2_perk
+		has_trait = demon
+		has_trait = golem
+		has_character_modifier = aura_boost1_modifier
+		has_character_modifier = aura_boost2_modifier
+		any_equipped_character_artifact = {	has_variable = magic_ring	}
+		AND = {
+			any_parent = { has_perk = protective_runes_perk }
+			NOT = { is_child_of = scope:owner }
+		}
+		AND = {
+			exists = liege
+			liege = { has_perk = protective_runes_perk }
+			is_councillor = yes
+			NOT = { is_councillor_of = scope:owner }
+		}
+		AND = {
+			any_consort = { has_perk = protective_runes_perk }
+			NOT = { is_consort_of = scope:owner }
+		}
+		AND = {
+			employs_court_position = mage_court_position
+			any_court_position_holder = {
+				type = mage_court_position
+				OR = {
+					has_perk = protective_runes_perk
+					has_perk = mage_tower_p2_perk
+				}
+				NOT = { scope:owner = this }
+			}
+		}
+	}
+}
+has_any_basic_magic_prot_trigger = {
+	OR = {
+		has_perk = protective_runes_perk
+		has_perk = mage_tower_p2_perk
+		has_trait = demon
+		has_trait = golem
+		has_character_modifier = aura_boost1_modifier
+		has_character_modifier = aura_boost2_modifier
+		any_equipped_character_artifact = {	has_variable = magic_ring	}
+		any_parent = { has_perk = protective_runes_perk }
+		AND = {
+			exists = liege
+			liege = { has_perk = protective_runes_perk }
+			is_councillor = yes
+		}
+		any_consort = { has_perk = protective_runes_perk }
+		AND = {
+			employs_court_position = mage_court_position
+			any_court_position_holder = {
+				type = mage_court_position
+				OR = {
+					has_perk = protective_runes_perk
+					has_perk = mage_tower_p2_perk
+				}
+			}
+		}
+	}
+}
 can_penetrate_basic_magic_prot_trigger = {
 	OR = {
 		is_legendary_mage_trigger = yes
 		any_equipped_character_artifact = {	has_variable = catalyst	}
+	}
+}
+can_use_banish_spell = {
+	OR = {
+		has_character_flag = banish_spell_flag
+		AND = {
+			has_trait = archmage
+			has_trait_xp = {
+				trait = archmage
+				track = demonology
+				value > 99
+			}
+		}
 	}
 }
 has_full_magic_prot_trigger = {
@@ -258,6 +336,13 @@ has_power_place_trigger = {
 		}
 	}
 }
+is_power_place_trigger = {
+	OR = {
+		has_building_or_higher = witch_house
+		has_building_or_higher = horned_god_house
+		has_building_or_higher = mage_house
+	}
+}
 
 
 has_dark_temple_trigger = {
@@ -284,5 +369,285 @@ has_mage_academy_trigger = {
 		title_province = {
 			has_building_or_higher = mage_house
 		}
+	}
+}
+has_houska_trigger = {
+	any_held_county = {
+		exists = title_province
+		title_province = {
+			has_building_or_higher = houska
+		}
+	}
+}
+
+can_unlock_arcane_focus_trigger = {
+	OR = {
+		has_trait = witch
+		has_trait = true_witch
+		any_secret = { secret_type = secret_witch }
+	}
+	OR = {
+		any_character_artifact = { has_variable = magic1 }
+		any_character_artifact = { has_variable = magic_ring }
+		any_character_artifact = { has_variable = singularity2 }
+		has_trait = source
+		has_trait = source2
+		has_trait = source3
+		has_trait = source4
+		has_perk = magical_experiments_p1_perk
+		has_character_flag = arcane_unlocked_flag
+		has_power_place_trigger = yes
+		has_character_modifier = research_cooperation
+	}
+}
+
+has_ms_knowledge_sharing_intent_trigger = {
+	OR = {
+		AND = {
+			is_ai = no
+			has_activity_intent = sharing_knowledge_intent
+		}
+		AND = {
+			is_ai = yes
+			has_character_flag = ms_intent_flag1
+		}
+	}
+}
+has_ms_political_matters_intent_trigger = {
+	OR = {
+		AND = {
+			is_ai = no
+			has_activity_intent = political_matters_intent
+		}
+		AND = {
+			is_ai = yes
+			has_character_flag = ms_intent_flag2
+		}
+	}
+}
+has_ms_show_superiority_intent_trigger = {
+	OR = {
+		AND = {
+			is_ai = no
+			has_activity_intent = show_superiority_intent
+		}
+		AND = {
+			is_ai = yes
+			has_character_flag = ms_intent_flag3
+		}
+	}
+}
+
+me_can_take_spells_option_trigger = {
+	OR = {
+		NOT = {
+			has_character_modifier = master_alteration_modifier
+		}
+		AND = {
+			has_trait = necromancer
+			NOT = {
+				has_character_modifier = master_necromancer_modifier
+			}
+		}
+		AND = {
+			OR = {
+				has_trait = schemer
+				has_character_modifier = mind_reader_modifier
+			}
+			NOT = {
+				has_character_modifier = master_psionic_modifier
+			}
+		}
+		AND = {
+			learning > 29
+			NOT = {
+				has_character_modifier = master_metamagic_modifier
+			}
+		}
+		AND = {
+			has_trait = whole_of_body
+			NOT = {
+				has_character_modifier = upgraded_body_modifier
+			}
+		}
+		AND = {
+			AND = {
+				has_trait = lifestyle_mystic
+				has_trait_xp = {
+					trait = lifestyle_mystic
+					value >= 30
+				}
+			}
+			NOT = {
+				has_character_modifier = contact_other_worlds_modifier
+			}
+		}
+		NOT = {
+			has_character_flag = mana_siphon_flag
+		}
+	}
+}
+
+me_have_unlocked_special_project = {
+	OR = {
+		any_character_artifact = {
+			has_variable = magic_ring0
+			has_artifact_modifier = artifact_ring_of_life_modifier0
+		}
+		AND = {
+			has_character_flag = me_golem_project
+			NOT = {
+				has_character_flag = me_golem_project_done
+			}
+		}
+		AND = {
+			OR = {
+				has_character_flag = me_immortality_project
+				is_legendary_mage_trigger = yes
+			}
+			NOT = {
+				has_character_flag = me_immortality_project_done
+			}
+		}
+		AND = {
+			has_character_flag = me_death_project
+			NOT = {
+				has_character_flag = me_death_project_done
+			}
+		}
+		AND = {
+			has_character_flag = me_ascendency_project
+			NOR = {
+				has_character_flag = me_ascendency_project_done
+				has_trait = demon
+			}
+		}
+		AND = {
+			has_character_flag = me_castle_project
+			NOT = {
+				has_character_flag = me_castle_project_done
+			}
+		}
+		AND = {
+			has_character_flag = me_sing_project
+			NOT = {
+				has_character_flag = me_sing_project_done
+			}
+		}
+		AND = {
+			has_character_flag = me_soul_project
+			NOT = {
+				has_character_flag = me_soul_project_done
+			}
+		}
+	}
+}
+me_may_unlocks_special_project = {
+	OR = {
+		NOR = {
+			has_character_flag = me_golem_project_done
+			has_character_flag = me_golem_project
+		}
+		AND = {
+			NOR = {
+				has_character_flag = me_immortality_project_done
+				has_character_flag = me_immortality_project
+				is_legendary_mage_trigger = yes
+			}
+			learning > 39
+		}
+		AND = {
+			NOR = {
+				has_character_flag = me_death_project_done
+				has_character_flag = me_death_project
+			}
+			OR = {
+				is_cannibal_trigger = yes
+				has_trait = necromancer
+			}
+		}
+		AND = {
+			NOR = {
+				has_character_flag = me_ascendency_project_done
+				has_character_flag = me_ascendency_project
+				has_trait = demon
+			}
+			OR = {
+				has_trait = source
+				has_trait = source2
+				has_trait = source3
+				has_trait = source4
+				any_character_artifact = {
+					has_variable = magic_scepter
+				}
+			}
+		}
+		AND = {
+			NOR = {
+				has_character_flag = me_castle_project_done
+				has_character_flag = me_castle_project
+			}
+			is_landed = yes
+		}
+		AND = {
+			NOR = {
+				has_character_flag = me_sing_project_done
+				has_character_flag = me_sing_project
+			}
+			any_character_artifact = {
+				has_variable = singularity
+				NOR = {
+					has_variable = singularity_sleeping
+					has_variable = singularity2
+				}
+			}
+		}
+		AND = {
+			NOR = {
+				has_character_flag = me_soul_project_done
+				has_character_flag = me_soul_project
+				has_character_flag = no_soul
+			}
+			is_legendary_mage_trigger = yes
+			#OR = {
+			#	has_character_flag = me_sing_project_done
+			#	has_character_flag = me_castle_project_done
+			#	has_character_flag = me_ascendency_project_done
+			#	has_character_flag = me_death_project_done
+			#	has_character_flag = me_immortality_project_done
+			#	has_character_flag = me_golem_project_done
+			#}
+		}
+	}
+}
+requires_magic_healing_trigger = {
+	OR = {
+		has_trait = ill
+		has_trait = pneumonic
+		has_trait = great_pox
+		has_trait = early_great_pox
+		has_trait = lovers_pox
+		has_trait = leper
+		has_trait = wounded_1
+		has_trait = wounded_2
+		has_trait = wounded_3
+		has_trait = maimed
+		has_trait = infirm
+		has_trait = incapable
+		has_trait = gout_ridden
+		has_trait = consumption
+		has_trait = cancer
+		has_trait = typhus
+		has_trait = bubonic_plague
+		has_trait = smallpox
+		has_trait = sickly
+		has_trait = blind
+		has_trait = disfigured
+		has_character_modifier = chronic_headaches_modifier
+		has_character_modifier = infected_wound_modifier
+		has_character_modifier = gangrene_modifier
+		has_trait = measles
+		has_trait = dysentery
+		has_trait = ergotism
 	}
 }

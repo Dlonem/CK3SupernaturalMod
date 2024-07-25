@@ -267,8 +267,73 @@ gain_sc_xp30_effect = {
 	}
 }
 
+gain_demonology_standard_effect = {
+	if = {
+		limit = {
+			has_trait = archmage
+			has_trait_xp = {
+				trait = archmage
+				track = demonology
+				value < 100
+			}
+		}
+		add_trait_xp = {
+			trait = archmage
+			track = demonology
+			value = gain_standard_demonology_value
+		}
+	}
+}
+gain_demonology_or_sc_standard_effect = {
+	if = {
+		limit = {
+			has_trait = archmage
+			has_trait_xp = {
+				trait = archmage
+				track = demonology
+				value < 100
+			}
+		}
+		add_trait_xp = {
+			trait = archmage
+			track = demonology
+			value = gain_standard_demonology_value
+		}
+	}
+	else_if = {
+		limit = {
+			has_trait = archmage
+			has_trait_xp = {
+				trait = archmage
+				track = secret_knowledge
+				value < 100
+			}
+			NAND = {
+				has_character_flag = ms_met_belial
+				has_character_flag = ms_met_mammon
+				has_character_flag = ms_met_samael
+				has_character_flag = ms_met_hecate
+				has_character_flag = ms_met_nyx
+			}
+		}
+		add_trait_xp = {
+			trait = archmage
+			track = secret_knowledge
+			value = 1
+		}
+	}
+}
+
 send_message_4_magic_sense_effect = {
 	hidden_effect = {
+		if = {
+			limit = {
+				NOT = {
+					exists = scope:magic_user
+				}
+			}
+			save_scope_as = magic_user
+		}
 		random = {
 			chance = 75
 			every_courtier_or_guest = {
@@ -524,6 +589,10 @@ create_merlin_effect = {
 				give_witch_secret_or_trait_effect = yes
 				add_character_flag = merlin_dude
 				add_character_flag = special_magic_character
+				add_hook = {
+					type = magic_domination_hook
+					target = liege
+				}
 			}
 		}
 		clear_saved_scope = merlin_dude
@@ -699,6 +768,11 @@ create_abdul_alhazred_effect = {
 				}
 				add_trait_xp = {
 					trait = archmage
+					track = demonology
+					value = 100
+				}
+				add_trait_xp = {
+					trait = archmage
 					track = power_saturation
 					value = 100
 				}
@@ -712,6 +786,7 @@ create_abdul_alhazred_effect = {
 				add_character_modifier = peaceful_dreams_modifier
 				add_character_modifier = greedy_power_modifier
 				add_character_modifier = upgraded_body_modifier
+				add_character_modifier = contact_other_worlds_modifier 
 				add_trait = necromancer
 				
 			}
@@ -721,6 +796,7 @@ create_abdul_alhazred_effect = {
 			add_character_flag = special_magic_character
 			add_character_flag = skeleton_warriors
 			add_character_flag = shadowstep_flag
+			add_character_flag = banish_spell_flag
 			#add_character_flag = plague_spell_flag
 			#add_character_flag = firestorm_spell_flag
 			
@@ -734,6 +810,39 @@ create_abdul_alhazred_effect = {
 				add_dynasty_perk = witchcraft_legacy_3
 				add_dynasty_perk = witchcraft_legacy_4
 				add_dynasty_perk = witchcraft_legacy_5
+			}
+			if = {
+				limit = {
+					ROOT = {
+						OR = {
+							#has_character_modifier = alchemical_enhancement
+							has_trait = source3
+							any_character_artifact = {
+								has_artifact_modifier = singularity_modifierX
+							}
+							#any_character_artifact = { has_variable = pot8 }
+						}
+					}
+				}
+				create_artifact = {	
+					name = pot8
+					description = pot8_desc
+					template=general_unique_template
+					type = miscellaneous
+					#type = elixir
+					visuals = flask
+					#visuals = fp2_armillary_sphere
+					modifier = elixir_modifier
+					#wealth = scope:wealth
+					#quality = scope:quality
+					rarity=illustrious
+					decaying = no
+					save_scope_as = newly_created_artifact
+					#custom_tooltip = magic_catalyst_tooltip
+				}
+				scope:newly_created_artifact={
+					set_variable=pot8
+				}
 			}
 		}
 	}
@@ -1438,6 +1547,97 @@ create_magic_academy = {
 		}
 	}
 }
+create_houska = {
+	hidden_effect = {
+		#title:b_slany.title_province = {
+		if = {
+			limit = {
+				exists = title:c_litomerice
+			}
+			title:c_litomerice = {
+				title_province = {
+					if = {
+						limit = {
+							has_special_building_slot = no
+						}
+						add_special_building_slot = houska
+					}
+				}
+			}
+		}
+	}
+}
+
+create_extra_coven = {
+	random_ruler = {
+		limit = {
+			is_landed = yes
+			is_ai = yes
+			is_adult = yes
+			exists = house
+			house = {
+				house_head = PREV
+				any_house_member = {
+					is_adult = yes
+					count > 3
+				}
+				NOT = {
+					any_house_member = {
+						OR = {
+							is_ai = no
+							has_trait = witch_hunter
+						}
+					}
+				}
+			}
+		}
+		house = {
+			every_house_member = {
+				limit = {
+					is_adult = yes
+					NOR = {
+						has_trait = witch
+						any_secret = { secret_type = secret_witch }
+					}
+				}
+				give_witch_secret_or_trait_effect = yes
+			}
+			add_house_modifier = {
+				modifier = witch_coven
+			}
+			every_house_member = {
+				limit = {
+					is_adult = yes
+				}
+				save_scope_as = w1
+				house = {
+					every_house_member = {
+						limit = {
+							is_adult = yes
+							NOT = { THIS = scope:w1 }
+						}
+						random_secret = {
+							limit = { secret_type = secret_witch }
+							reveal_to = scope:w1
+						}
+					}
+				}
+				clear_saved_scope = w1
+			}
+		}
+		add_trait = grandmaster_coven
+		add_perk = protective_runes_perk
+		add_perk = witch_familiar_perk
+		add_perk = oneiromancy_perk
+		add_perk = wisdom_of_nature_perk
+		add_perk = love_potions_perk
+		add_perk = mistical_insight_perk
+		add_perk = evil_eye_perk
+		add_perk = magical_senses_perk
+		add_perk = lifestealer_perk
+		add_perk = true_witch_perk
+	}
+}
 
 create_true_witch_effect = {
 	hidden_effect = {
@@ -1466,6 +1666,7 @@ create_true_witch_effect = {
 					has_trait = source
 					has_trait = source2
 					has_trait = source3
+					has_trait = source4
 					has_trait = compassionate
 					has_trait = true_witch
 				}
@@ -1518,73 +1719,321 @@ create_wandering_mage_effect = {
 		if = {
 			limit = {
 				any_living_character = {
-					has_trait = archmage
-					count < 3
-				}
-			}
-			random_ruler = {
-				limit = {
 					is_ai = no
+					OR = {
+						has_focus = arcane_focus
+						has_trait = true_witch
+						has_trait = archmage
+					}
 				}
-				save_scope_as = pruler
 			}
-			create_character = {
-				location = scope:pruler.location
-				template = wandering_mage_character
-				faith =scope:pruler.faith
-				culture = scope:pruler.culture
-				after_creation = {
-					give_witch_secret_or_trait_effect = yes
-					add_trait_xp = {
-						trait = lifestyle_traveler
-						track = travel
-						value = { 40 80 }
+			if = {
+				limit = {
+					any_living_character = {
+						has_trait = archmage
+						count < 5
 					}
-					add_trait_xp = {
-						trait = lifestyle_traveler
-						track = danger
-						value = { 40 80 }
+				}
+				create_pure_wandering_mage_effect = yes
+				random_list = {
+					1 = {
+						create_mage_effect = yes
 					}
-					add_perk = protective_runes_perk
-					add_perk = magical_senses_perk
-					add_perk = magical_experiments_p1_perk
-					add_perk = mage_tower_p2_perk
-					add_perk = mind_control_p6_perk
-					add_perk = forbidden_ritual_p7_perk
-					add_perk = fate_weaver_p10_perk
-					add_perk = magic_triangulation_p5_perk
-					add_perk = combat_spells_p3_perk
-					add_perk = healer_p9_perk
-					add_perk = summoner_p8_perk
-					add_perk = mage_p4_perk
-					add_character_flag = special_magic_character
-					if = {
-						limit = {
-							NOT = {	has_trait = archmage	}
-						}
-						add_trait = archmage
+					3 = {
+						create_true_witch_effect = yes
 					}
-					add_trait_xp = {
-						trait = archmage
-						track = secret_knowledge
-						value = { 10 25 }
-					}
-					add_trait_xp = {
-						trait = archmage
-						track = combat_magic
-						value = 25
-					}
-					add_trait_xp = {
-						trait = archmage
-						track = power_saturation
-						value = 70
+					2 = {
+	
 					}
 				}
 			}
 		}
+		else = {
+			if = {
+				limit = {
+					any_living_character = {
+						has_trait = archmage
+						count < 4
+					}
+				}
+				create_pure_wandering_mage_effect = yes
+				random_list = {
+					1 = {
+						create_mage_effect = yes
+					}
+					3 = {
+						create_true_witch_effect = yes
+					}
+					2 = {
+	
+					}
+				}
+			}
+		}
+		
 	}
 }
-
+create_pure_wandering_mage_effect = {
+	random_ruler = {
+		limit = {
+			is_ai = no
+		}
+		save_scope_as = pruler
+	}
+	create_character = {
+		location = scope:pruler.location
+		template = wandering_mage_character
+		faith =scope:pruler.faith
+		culture = scope:pruler.culture
+		save_scope_as = wmage0
+		after_creation = {
+			give_witch_secret_or_trait_effect = yes
+			add_trait_xp = {
+				trait = lifestyle_traveler
+				track = travel
+				value = { 40 80 }
+			}
+			add_trait_xp = {
+				trait = lifestyle_traveler
+				track = danger
+				value = { 40 80 }
+			}
+			add_perk = protective_runes_perk
+			add_perk = magical_senses_perk
+			add_perk = magical_experiments_p1_perk
+			add_perk = mage_tower_p2_perk
+			add_perk = mind_control_p6_perk
+			add_perk = forbidden_ritual_p7_perk
+			add_perk = fate_weaver_p10_perk
+			add_perk = magic_triangulation_p5_perk
+			add_perk = combat_spells_p3_perk
+			add_perk = healer_p9_perk
+			add_perk = summoner_p8_perk
+			add_perk = mage_p4_perk
+			add_character_flag = special_magic_character
+			if = {
+				limit = {
+					NOT = {	has_trait = archmage	}
+				}
+				add_trait = archmage
+			}
+			add_trait_xp = {
+				trait = archmage
+				track = secret_knowledge
+				value = { 1 25 }
+			}
+			add_trait_xp = {
+				trait = archmage
+				track = combat_magic
+				value = 25
+			}
+			add_trait_xp = {
+				trait = archmage
+				track = power_saturation
+				value = 50
+			}
+		}
+	}
+}
+turn_into_mage_effect = {
+	if = {
+		limit = {
+			NOR = {
+				has_trait = witch_hunter
+				has_character_modifier = novice_witch_hunter_modifier
+			}
+		}
+		if = {
+			limit = {
+				NOT = {
+					has_trait = archmage
+				}
+			}
+			show_as_tooltip = {
+				add_trait = archmage
+			}
+		}
+		hidden_effect = {
+			if = {
+				limit = {
+					NOR = {
+						has_trait = witch
+						any_secret = { secret_type = secret_witch }
+					}
+				}
+				give_witch_secret_or_trait_effect = yes
+			}
+			if = {
+				limit = {
+					NOT = {
+						has_perk = magical_experiments_p1_perk
+					}
+				}
+				add_perk = magical_experiments_p1_perk
+			}
+			if = {
+				limit = {
+					NOT = {
+						has_perk = mage_tower_p2_perk
+					}
+				}
+				add_perk = mage_tower_p2_perk
+			}
+			if = {
+				limit = {
+					NOT = {
+						has_perk = mind_control_p6_perk
+					}
+				}
+				add_perk = mind_control_p6_perk
+			}
+			if = {
+				limit = {
+					NOT = {
+						has_perk = forbidden_ritual_p7_perk
+					}
+				}
+				add_perk = forbidden_ritual_p7_perk
+			}
+			if = {
+				limit = {
+					NOT = {
+						has_perk = fate_weaver_p10_perk
+					}
+				}
+				add_perk = fate_weaver_p10_perk
+			}
+			if = {
+				limit = {
+					NOT = {
+						has_perk = magic_triangulation_p5_perk
+					}
+				}
+				add_perk = magic_triangulation_p5_perk
+			}
+			if = {
+				limit = {
+					NOT = {
+						has_perk = combat_spells_p3_perk
+					}
+				}
+				add_perk = combat_spells_p3_perk
+			}
+			if = {
+				limit = {
+					NOT = {
+						has_perk = healer_p9_perk
+					}
+				}
+				add_perk = healer_p9_perk
+			}
+			if = {
+				limit = {
+					NOT = {
+						has_perk = summoner_p8_perk
+					}
+				}
+				add_perk = summoner_p8_perk
+			}
+			if = {
+				limit = {
+					NOT = {
+						has_perk = mage_p4_perk
+					}
+				}
+				add_perk = mage_p4_perk
+			}
+		}
+	}
+	
+}
+turn_into_mage_progress_effect = {
+	if = {
+		limit = {
+			NOT = {
+				has_perk = magical_experiments_p1_perk
+			}
+		}
+		add_perk = magical_experiments_p1_perk
+	}
+	else_if = {
+		limit = {
+			NOT = {
+				has_perk = mage_tower_p2_perk
+			}
+		}
+		add_perk = mage_tower_p2_perk
+	}
+	else_if = {
+		limit = {
+			NOT = {
+				has_perk = mind_control_p6_perk
+			}
+		}
+		add_perk = mind_control_p6_perk
+	}
+	else_if = {
+		limit = {
+			NOT = {
+				has_perk = forbidden_ritual_p7_perk
+			}
+		}
+		add_perk = forbidden_ritual_p7_perk
+	}
+	else_if = {
+		limit = {
+			NOT = {
+				has_perk = fate_weaver_p10_perk
+			}
+		}
+		add_perk = fate_weaver_p10_perk
+	}
+	else_if = {
+		limit = {
+			NOT = {
+				has_perk = magic_triangulation_p5_perk
+			}
+		}
+		add_perk = magic_triangulation_p5_perk
+	}
+	else_if = {
+		limit = {
+			NOT = {
+				has_perk = combat_spells_p3_perk
+			}
+		}
+		add_perk = combat_spells_p3_perk
+	}
+	else_if = {
+		limit = {
+			NOT = {
+				has_perk = healer_p9_perk
+			}
+		}
+		add_perk = healer_p9_perk
+	}
+	else_if = {
+		limit = {
+			NOT = {
+				has_perk = summoner_p8_perk
+			}
+		}
+		add_perk = summoner_p8_perk
+	}
+	else_if = {
+		limit = {
+			NOT = {
+				has_perk = mage_p4_perk
+			}
+		}
+		add_perk = mage_p4_perk
+		add_trait_xp = {
+			trait = archmage
+			track = secret_knowledge
+			value = { 1 11 }
+		}
+	}
+}
 
 create_mage_effect = {
 	hidden_effect = {
@@ -1619,6 +2068,7 @@ create_mage_effect = {
 				NOT = { has_trait = source }
 				NOT = { has_trait = source2 }
 				NOT = { has_trait = source3 }
+				NOT = { has_trait = source4 }
 				OR = {
 					has_trait = education_learning_1
 					has_trait = education_learning_2
@@ -1635,7 +2085,8 @@ create_mage_effect = {
 					has_trait = education_intrigue_5
 				}
 			}
-			save_temporary_scope_as = new_mage
+			#save_temporary_scope_as = new_mage
+			save_scope_as = new_mage
 			#add_secret = {
 			#	type = secret_witch
 			#	target = this
@@ -1659,27 +2110,225 @@ create_mage_effect = {
 			add_perk = healer_p9_perk
 			add_perk = summoner_p8_perk
 			add_perk = mage_p4_perk
-
+			random = {
+				chance = 50
+				add_trait_xp = {
+					trait = archmage
+					track = demonology
+					value = 30
+				}
+			}
+			
 			random_list = {
-				50 = {
+				40 = {
 					add_trait = source
 					add_trait_xp = {
 						trait = archmage
 						track = secret_knowledge
-						value = 15
+						value = 5
 					}
 				}
-				50= {
+				25 = {
 					gain_huge_ps_effect = yes
 					add_trait_xp = {
 						trait = archmage
 						track = secret_knowledge
-						value = 30
+						value = { 5 20 }
 					}
 					add_trait_xp = {
 						trait = archmage
 						track = combat_magic
-						value = 60
+						value = { 1 60 }
+					}
+				}
+				25 = {
+					gain_huge_ps_effect = yes
+					add_trait_xp = {
+						trait = archmage
+						track = secret_knowledge
+						value = { 15 30 }
+					}
+					add_trait_xp = {
+						trait = archmage
+						track = demonology
+						value = { 25 65 }
+					}
+				}
+				10 = {	#badass
+					trigger = {
+						age > 50
+					}
+					add_learning_skill = 6
+					add_trait_xp = {
+						trait = archmage
+						track = secret_knowledge
+						value = { 40 70 }
+					}
+					add_trait_xp = {
+						trait = archmage
+						track = demonology
+						value = { 35 85 }
+					}
+					add_trait_xp = {
+						trait = archmage
+						track = combat_magic
+						value = { 50 100 }
+					}
+					add_trait_xp = {
+						trait = archmage
+						track = power_saturation
+						value = 70
+					}
+					random_artifact = {
+						limit = {
+							has_variable = magic1
+							NOT = {
+								artifact_owner = scope:new_mage
+							}
+						}
+						save_scope_as = mart2
+					}
+					if = {
+						limit = {
+							exists = scope:mart2
+							NOT = {
+								has_personal_artifact_claim = scope:mart2
+							}
+						}
+						add_personal_artifact_claim = scope:mart2
+						add_character_modifier = {
+							modifier = preparation_for_stealing_modifier
+							years = 5
+						}
+					}
+					if = {
+						limit = {
+							exists = scope:mart2
+							in_diplomatic_range = scope:mart2.artifact_owner
+						}
+						start_scheme = {
+							type = steal_back_artifact
+							target = scope:mart2.artifact_owner
+							artifact = scope:mart2
+						}
+					}
+					random = {
+						chance = 40
+						add_character_modifier = {
+							modifier = master_alteration_modifier
+						}
+						add_character_flag = magic_transmutation
+					}
+					random = {
+						chance = 40
+						add_character_modifier = {
+							modifier = master_necromancer_modifier
+						}
+						add_trait = necromancer
+						spawn_army = {
+							name = undead_army_loc
+							men_at_arms = {
+								type = skeletons
+								stacks = 6
+							}
+							inheritable = no
+							uses_supply = no
+							location = scope:new_mage.location
+						}
+						add_character_flag = skeleton_warriors
+					}
+					random = {
+						chance = 40
+						add_character_modifier = {
+							modifier = master_metamagic_modifier
+						}
+					}
+					random = {
+						chance = 40
+						add_character_modifier = {
+							modifier = upgraded_body_modifier
+						}
+					}
+					random = {
+						chance = 40
+						add_character_modifier = {
+							modifier = master_psionic_modifier
+						}
+						add_character_modifier = {
+							modifier = mind_reader_modifier
+						}
+					}
+					random = {
+						chance = 40
+						add_character_modifier = {
+							modifier = strength_ohm_modifier
+						}
+					}
+					random = {
+						chance = 40
+						add_character_modifier = {
+							modifier = demonic_charm_modifier
+						}
+					}
+					random = {
+						chance = 40
+						add_character_flag = protection_ritual
+					}
+					random = {
+						chance = 40
+						add_character_modifier = {
+							modifier = financial_knowledge_modifier
+							years = 5
+						}
+					}
+					random_list = {
+						1 = {
+							trigger = {
+								NOT = { has_character_flag = shadowstep_flag }
+							}
+							add_character_flag = shadowstep_flag
+						}
+						1 = {
+							trigger = {
+								NOT = { has_character_flag = hipercognition_flag }
+							}
+							add_character_flag = hipercognition_flag
+						}
+						1 = {
+							trigger = {
+								NOT = { has_character_flag = firestorm_spell_flag }
+							}
+							add_character_flag = firestorm_spell_flag
+						}
+						1 = {
+							trigger = {
+								NOT = { has_character_flag = plague_spell_flag }
+							}
+							add_character_flag = plague_spell_flag
+						}
+						1 = {
+							trigger = {
+								NOT = { has_character_flag = healing_spell_flag }
+							}
+							add_character_flag = healing_spell_flag
+						}
+					}
+					random_vassal = {
+						limit = {
+							is_powerful_vassal = yes
+						}
+						save_scope_as = some_vassal
+						
+					}
+					if = {
+						limit = {
+							exists = scope:some_vassal
+						}
+						set_relation_mminion = scope:some_vassal
+						add_hook = {
+							type = magic_domination_hook
+							target = scope:some_vassal
+						}
 					}
 				}
 				#1= {
@@ -1733,13 +2382,15 @@ create_mage_effect = {
 				10 = {
 					gain_huge_ps_effect = yes
 					add_intrigue_skill = 3
+					add_learning_skill = 3
 					add_trait_xp = {
 						trait = archmage
 						track = secret_knowledge
-						value = 15
+						value = 8
 					}
 				}
 			}
+			add_stress = major_stress_loss
 			random_ruler = {
 				limit = {
 					is_ai = no
@@ -1753,10 +2404,16 @@ create_mage_effect = {
 				}
 				save_scope_as = ppplayer
 			}
-			random = {
-				chance = 30
-				add_pressed_claim = scope:ppplayer.primary_title
+			if = {
+				limit = {
+					exists = scope:ppplayer
+				}
+				random = {
+					chance = 30
+					add_pressed_claim = scope:ppplayer.primary_title
+				}
 			}
+			
 			if = {
 				limit = {
 					any_artifact = {
@@ -1767,7 +2424,7 @@ create_mage_effect = {
 					}
 				}
 				random = {
-					chance = 60
+					chance = 50
 					add_character_modifier = {
 						modifier = amp_modifier
 						years = 20
@@ -1776,7 +2433,7 @@ create_mage_effect = {
 			}
 			else = {
 				random = {
-					chance = 5
+					chance = 2
 					add_character_modifier = {
 						modifier = amp_modifier
 						years = 20
@@ -1788,11 +2445,15 @@ create_mage_effect = {
 				random_artifact = {
 					limit = {
 						has_variable = magic1
+						NOT = {
+							artifact_owner = scope:new_mage
+						}
 					}
 					save_scope_as = mart
 				}
 				if = {
 					limit = {
+						exists = scope:mart
 						NOT = {
 							has_personal_artifact_claim = scope:mart
 						}
@@ -1802,8 +2463,12 @@ create_mage_effect = {
 				}
 			}
 			random = {
-				chance = 30
+				chance = 10
 				add_character_modifier = magic_duelist_modifier
+			}
+			random = {
+				chance = 10
+				add_character_modifier = master_defence_modifier
 			}
 			if = {
 				limit = {
@@ -1827,6 +2492,44 @@ create_mage_effect = {
 				add_hook = {
 					type = magic_domination_hook
 					target = scope:vvvasal
+				}
+			}
+			if = {
+				limit = {
+					exists = primary_heir
+					primary_heir = {
+						NOR = {
+							has_trait = witch
+							any_secret = { secret_type = secret_witch }
+						}
+					}
+				}
+				primary_heir = {
+					give_witch_secret_or_trait_effect = yes
+				}
+			}
+			if = {
+				limit = {
+					NOT = {
+						has_trait = source
+					}
+				}
+				random_living_character = {
+					limit = {
+						NOT = { THIS = scope:new_mage }
+						any_character_artifact = {
+							has_variable = magic1
+						}
+						NOT = {
+							has_character_flag = magic_item_offer_already_flag
+						}
+						is_adult = yes
+						is_imprisoned = no
+					}
+					random = {
+						chance = 65
+						trigger_event = magic_ev7.136
+					}
 				}
 			}
 		}
@@ -2016,10 +2719,25 @@ cgrandmaster_has_been_chosen_effect = {
 			prev = {
 				save_scope_as = i_am_new_cmg
 				add_trait = grandmaster_coven
+				if = {
+					limit = {
+						is_valid_for_legitimacy_change = yes
+						culture = {
+							has_cultural_tradition = coven_rule_tradition
+						}
+					}
+					add_legitimacy = medium_legitimacy_gain
+				}
 				add_xp_2_grandmaster_inheriting = yes
 				add_prestige = medium_prestige_gain
 				complete_activity_intent = yes
 				hidden_effect = {
+					random_secret = {
+						limit = {
+							secret_type = secret_witch
+						}
+						save_scope_as = master_secret
+					}
 					house = {
 						every_house_member = {
 							limit = {
@@ -2039,11 +2757,36 @@ cgrandmaster_has_been_chosen_effect = {
 								}
 								reveal_to = scope:i_am_new_cmg
 							}
+							
 							if = {
 								limit = {
 									has_trait = grandmaster_coven
 								}
 								remove_trait = grandmaster_coven
+							}
+						}
+						if = {
+							limit = {
+								exists = scope:master_secret
+							}
+							every_house_member = {
+								limit = {
+									OR = {
+										has_trait = witch
+										any_secret = { secret_type = secret_witch }
+									}
+									NOT = { THIS = scope:i_am_new_cmg }
+								}
+								if = {
+									limit = {
+										scope:master_secret = {
+											NOT = {	is_known_by = PREV	}
+										}
+									}
+									scope:master_secret = {
+										reveal_to = PREV
+									}
+								}
 							}
 						}
 					}
@@ -2166,7 +2909,7 @@ seek_the_power4c_effect = {
 			character = root
 			prev = {
 				show_as_tooltip = {
-					gain_sc_xp2_effect = yes
+					gain_sc_xp1_effect = yes
 				}
 			}
 		}
@@ -2444,9 +3187,28 @@ configure_start_mage_duel_effect = {
 	$MD_DEFENDER$ = { save_scope_as = md_defender }
 	hidden_effect = {
 		scope:md_attacker = {
+			if = {
+				limit = {
+					is_ai = yes
+					any_character_artifact = { has_variable = pot8 }
+					NOT = {
+						has_character_modifier = alchemical_enhancement
+					}
+				}
+				add_character_modifier = {
+					modifier = alchemical_enhancement
+					months = 12
+				}
+				random_character_artifact = {
+					limit = {
+						has_variable = pot8
+						}
+					destroy_artifact = this
+				}
+			}
 			set_variable = {
 				name = pclash
-				value = 7
+				value = 9
 			}
 			set_variable = {
 				name = dspell
@@ -2491,18 +3253,32 @@ configure_start_mage_duel_effect = {
 				}
 				change_variable = {
 					name = dspell
-					add = 1
-				}
-			}
-			if = {
-				limit = {
-					has_trait = source3
-				}
-				change_variable = {
-					name = dspell
 					add = 2
 				}
 			}
+			else_if = {
+				limit = {
+					has_trait = archmage
+					has_trait_xp = {
+						trait = archmage
+						track = combat_magic
+						value > 34
+					}
+				}
+				change_variable = {
+					name = dspell
+					add = 1
+				}
+			}
+			#if = {
+			#	limit = {
+			#		has_trait = source3
+			#	}
+			#	change_variable = {
+			#		name = dspell
+			#		add = 2
+			#	}
+			#}
 			if = {
 				limit = {
 					any_equipped_character_artifact = {
@@ -2512,10 +3288,10 @@ configure_start_mage_duel_effect = {
 				}
 				change_variable = {
 					name = dspell
-					add = 2
+					add = 1
 				}
 			}
-			if = {
+			else_if = {
 				limit = {
 					any_equipped_character_artifact = {
 						has_variable = singularity2
@@ -2523,7 +3299,7 @@ configure_start_mage_duel_effect = {
 				}
 				change_variable = {
 					name = dspell
-					add = 2
+					add = 1
 				}
 			}
 			if = {
@@ -2537,17 +3313,17 @@ configure_start_mage_duel_effect = {
 					add = 1
 				}
 			}
-			if = {
-				limit = {
-					any_equipped_character_artifact = {
-						has_variable = blackgrimoire
-					}
-				}
-				change_variable = {
-					name = dspell
-					add = 1
-				}
-			}
+			#if = {
+			#	limit = {
+			#		any_equipped_character_artifact = {
+			#			has_variable = blackgrimoire
+			#		}
+			#	}
+			#	change_variable = {
+			#		name = dspell
+			#		add = 1
+			#	}
+			#}
 			if = {
 				limit = {
 					has_mage_academy_trigger = yes
@@ -2564,6 +3340,47 @@ configure_start_mage_duel_effect = {
 				change_variable = {
 					name = dspell
 					add = 1
+				}
+			}
+			if = {
+				limit = {
+					has_character_modifier = alchemical_enhancement
+				}
+				change_variable = {
+					name = dspell
+					add = 1
+				}
+			}
+			#if = {
+			#	limit = {
+			#		OR = {
+			#			has_character_modifier = hipercognition_modifier1
+			#			has_character_modifier = hipercognition_modifier2
+			#			has_character_modifier = hipercognition_modifier3
+			#			has_character_modifier = hipercognition_modifier4
+			#		}
+			#	}
+			#	change_variable = {
+			#		name = dspell
+			#		add = 1
+			#	}
+			#}
+			if = {
+				limit = {
+					has_trait = necromancer
+				}
+				change_variable = {
+					name = dspell
+					add = 1
+				}
+			}
+			if = {
+				limit = {
+					has_character_modifier = ultimate_spell_modifier
+				}
+				change_variable = {
+					name = dspell
+					add = 6
 				}
 			}
 			set_variable = {
@@ -2585,12 +3402,31 @@ configure_start_mage_duel_effect = {
 				}
 				add_character_flag = md_has_full_magic_prot_flag
 			}
-			md_select_strategy_for_ai_effect = yes
+			#md_select_strategy_for_ai_effect = yes
 		}
 		scope:md_defender = {
+			if = {
+				limit = {
+					is_ai = yes
+					any_character_artifact = { has_variable = pot8 }
+					NOT = {
+						has_character_modifier = alchemical_enhancement
+					}
+				}
+				add_character_modifier = {
+					modifier = alchemical_enhancement
+					months = 12
+				}
+				random_character_artifact = {
+					limit = {
+						has_variable = pot8
+						}
+					destroy_artifact = this
+				}
+			}
 			set_variable = {
 				name = pclash
-				value = 7
+				value = 9
 			}
 			set_variable = {
 				name = dspell
@@ -2635,18 +3471,32 @@ configure_start_mage_duel_effect = {
 				}
 				change_variable = {
 					name = dspell
-					add = 1
-				}
-			}
-			if = {
-				limit = {
-					has_trait = source3
-				}
-				change_variable = {
-					name = dspell
 					add = 2
 				}
 			}
+			else_if = {
+				limit = {
+					has_trait = archmage
+					has_trait_xp = {
+						trait = archmage
+						track = combat_magic
+						value > 34
+					}
+				}
+				change_variable = {
+					name = dspell
+					add = 1
+				}
+			}
+			#if = {
+			#	limit = {
+			#		has_trait = source3
+			#	}
+			#	change_variable = {
+			#		name = dspell
+			#		add = 2
+			#	}
+			#}
 			if = {
 				limit = {
 					any_equipped_character_artifact = {
@@ -2656,10 +3506,10 @@ configure_start_mage_duel_effect = {
 				}
 				change_variable = {
 					name = dspell
-					add = 2
+					add = 1
 				}
 			}
-			if = {
+			else_if = {
 				limit = {
 					any_equipped_character_artifact = {
 						has_variable = singularity2
@@ -2667,7 +3517,7 @@ configure_start_mage_duel_effect = {
 				}
 				change_variable = {
 					name = dspell
-					add = 2
+					add = 1
 				}
 			}
 			if = {
@@ -2681,17 +3531,17 @@ configure_start_mage_duel_effect = {
 					add = 1
 				}
 			}
-			if = {
-				limit = {
-					any_equipped_character_artifact = {
-						has_variable = blackgrimoire
-					}
-				}
-				change_variable = {
-					name = dspell
-					add = 1
-				}
-			}
+			#if = {
+			#	limit = {
+			#		any_equipped_character_artifact = {
+			#			has_variable = blackgrimoire
+			#		}
+			#	}
+			#	change_variable = {
+			#		name = dspell
+			#		add = 1
+			#	}
+			#}
 			if = {
 				limit = {
 					has_mage_academy_trigger = yes
@@ -2708,6 +3558,47 @@ configure_start_mage_duel_effect = {
 				change_variable = {
 					name = dspell
 					add = 1
+				}
+			}
+			if = {
+				limit = {
+					has_character_modifier = alchemical_enhancement
+				}
+				change_variable = {
+					name = dspell
+					add = 1
+				}
+			}
+			#if = {
+			#	limit = {
+			#		OR = {
+			#			has_character_modifier = hipercognition_modifier1
+			#			has_character_modifier = hipercognition_modifier2
+			#			has_character_modifier = hipercognition_modifier3
+			#			has_character_modifier = hipercognition_modifier4
+			#		}
+			#	}
+			#	change_variable = {
+			#		name = dspell
+			#		add = 1
+			#	}
+			#}
+			if = {
+				limit = {
+					has_trait = necromancer
+				}
+				change_variable = {
+					name = dspell
+					add = 1
+				}
+			}
+			if = {
+				limit = {
+					has_character_modifier = ultimate_spell_modifier
+				}
+				change_variable = {
+					name = dspell
+					add = 6
 				}
 			}
 			set_variable = {
@@ -2728,6 +3619,9 @@ configure_start_mage_duel_effect = {
 				}
 				add_character_flag = md_has_full_magic_prot_flag
 			}
+			md_select_strategy_for_ai_effect = yes
+		}
+		scope:md_attacker = {
 			md_select_strategy_for_ai_effect = yes
 		}
 		#save_scope_value_as = {
@@ -2761,30 +3655,188 @@ md_select_strategy_for_ai_effect = {
 			}
 			10 = {
 				trigger = {
-					has_full_magic_prot_trigger = yes
+					OR = {
+						has_full_magic_prot_trigger = yes
+						AND = {
+							has_trait = archmage
+							has_trait_xp = {
+								trait = archmage
+								track = combat_magic
+								value > 99
+							}
+						}
+					}
 				}
 				add_character_flag = md_ai_is_offensive
 			}
-			12 = {
+			15 = {
+				add_character_flag = md_ai_is_offensive
+			}
+			5 = {
+				trigger = {
+					has_trait = yaga
+				}
 				add_character_flag = md_ai_is_offensive
 			}
 			1 = {
 				add_character_flag = md_ai_is_defensive
 			}
-			10 = {
+			15 = {
 				trigger = {
-					is_legendary_mage_trigger = yes
-					#NOT = {
-					#	has_character_flag = abdul_dude
-					#}
+					has_trait = archmage
+					OR = {
+						AND = {
+							has_trait_xp = {
+								trait = archmage
+								track = combat_magic
+								value > 64
+							}
+							has_trait_xp = {
+								trait = archmage
+								track = combat_magic
+								value < 100
+							}
+							has_trait_xp = {
+								trait = archmage
+								track = secret_knowledge
+								value > 74
+							}
+						}
+						AND = {
+							OR = {
+								AND = {
+									has_trait_xp = {
+										trait = archmage
+										track = combat_magic
+										value > 34
+									}
+									has_trait_xp = {
+										trait = archmage
+										track = secret_knowledge
+										value > 74
+									}
+								}
+								AND = {
+									has_trait_xp = {
+										trait = archmage
+										track = combat_magic
+										value > 64
+									}
+									has_trait_xp = {
+										trait = archmage
+										track = secret_knowledge
+										value > 24
+									}
+								}
+							}
+							has_trait_xp = {
+								trait = archmage
+								track = combat_magic
+								value < 100
+							}
+							OR = {
+								has_character_modifier = magic_duelist_modifier
+								has_trait = necromancer
+							}
+						}
+					}
+					NOR = {
+						AND = {
+							this = scope:md_attacker
+							scope:md_defender = {
+								OR = {
+									has_character_modifier = master_defence_modifier
+									AND = {
+										has_trait = archmage
+										has_trait_xp = {
+											trait = archmage
+											track = combat_magic
+											value > 99
+										}
+									}
+								}
+							}
+						}
+						AND = {
+							this = scope:md_defender
+							scope:md_attacker = {
+								OR = {
+									has_character_modifier = master_defence_modifier
+									AND = {
+										has_trait = archmage
+										has_trait_xp = {
+											trait = archmage
+											track = combat_magic
+											value > 99
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 				add_character_flag = md_ai_is_defensive
 			}
-			2 = {
+			5 = {
 				trigger = {
-					any_character_artifact = {
-						has_variable = catalyst
+					OR = {
+						has_character_flag = hipercognition_flag
+						any_character_artifact = { has_variable = blackgrimoire }
 					}
+					OR = {
+						has_character_modifier = alchemical_enhancement
+						has_trait_xp = {
+							trait = archmage
+							track = combat_magic
+							value > 34
+						}
+						has_trait_xp = {
+							trait = archmage
+							track = secret_knowledge
+							value > 34
+						}
+						has_trait = necromancer
+					}
+					NOR = {
+						AND = {
+							this = scope:md_attacker
+							scope:md_defender = {
+								OR = {
+									has_character_modifier = master_defence_modifier
+									AND = {
+										has_trait = archmage
+										has_trait_xp = {
+											trait = archmage
+											track = combat_magic
+											value > 99
+										}
+									}
+								}
+							}
+						}
+						AND = {
+							this = scope:md_defender
+							scope:md_attacker = {
+								OR = {
+									has_character_modifier = master_defence_modifier
+									AND = {
+										has_trait = archmage
+										has_trait_xp = {
+											trait = archmage
+											track = combat_magic
+											value > 99
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				add_character_flag = md_ai_is_defensive
+			}
+			30 = {
+				trigger = {
+					has_character_modifier = ultimate_spell_modifier
 				}
 				add_character_flag = md_ai_is_defensive
 			}
@@ -2830,6 +3882,24 @@ clear_mage_duel_variables_effect = {
 			has_character_flag = md_additional_power2
 		}
 		remove_character_flag = md_additional_power2
+	}
+	if = {
+		limit = {
+			has_character_flag = md_used_hipercog_flag
+		}
+		remove_character_flag = md_used_hipercog_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = md_used_shadowstep_flag
+		}
+		remove_character_flag = md_used_shadowstep_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = md_used_blackgrimoire_flag
+		}
+		remove_character_flag = md_used_blackgrimoire_flag
 	}
 	if = {
 		limit = {
@@ -2904,13 +3974,13 @@ select_mage_duel_moves = {
 		}
 		1 = {
 			trigger = {
-				var:pclash > 11
+				var:pclash > 12
 			}
 			add_character_flag = md_desc4
 		}
 		1 = {
 			trigger = {
-				scope:char2.var:dspell > 11
+				scope:char2.var:dspell > 12
 			}
 			add_character_flag = md_desc5
 		}
@@ -3057,11 +4127,11 @@ display_mage_duel_correctly = {
 	if = {
 		limit = {
 			has_variable = pclash
-			var:pclash > 14
+			var:pclash > 18
 		}
 		set_variable = {
 			name = pclash
-			value = 14
+			value = 18
 		}
 	}
 	if = {
@@ -3077,11 +4147,11 @@ display_mage_duel_correctly = {
 	if = {
 		limit = {
 			has_variable = dspell
-			var:dspell > 14
+			var:dspell > 18
 		}
 		set_variable = {
 			name = dspell
-			value = 14
+			value = 18
 		}
 	}
 	if = {
@@ -3098,11 +4168,11 @@ display_mage_duel_correctly = {
 		if = {
 			limit = {
 				has_variable = pclash
-				var:pclash > 14
+				var:pclash > 18
 			}
 			set_variable = {
 				name = pclash
-				value = 14
+				value = 18
 			}
 		}
 		if = {
@@ -3118,11 +4188,11 @@ display_mage_duel_correctly = {
 		if = {
 			limit = {
 				has_variable = dspell
-				var:dspell > 14
+				var:dspell > 18
 			}
 			set_variable = {
 				name = dspell
-				value = 14
+				value = 18
 			}
 		}
 		if = {
@@ -3183,6 +4253,23 @@ md_no_pc_progress_effect = {
 		name = pcprogress
 		value = 0
 	}
+}
+md_tiny_pc_progress_effect = {
+	set_variable = {
+		name = pcprogress
+		value = 1
+	}
+	change_variable = {
+		name = pclash
+		add = 1
+	}
+	scope:char2 = {
+		change_variable = {
+			name = pclash
+			subtract = 1
+		}
+	}
+	custom_tooltip = my_pc_progress1
 }
 md_low_pc_progress_effect = {
 	set_variable = {
@@ -3653,7 +4740,72 @@ md_ultra_pc_progress_effect = {
 		custom_tooltip = md_progress_greater_ct
 	}
 }
-
+md_tiny_doom_spell_progress_effect = {
+	change_variable = {
+		name = dspell
+		add = md_tiny_doom_spell_value
+	}
+	if = {
+		limit = {
+			md_tiny_doom_spell_value = 0
+		}
+		custom_tooltip = my_doom_spell_progress0
+	}
+	else_if = {
+		limit = {
+			md_tiny_doom_spell_value = 1
+		}
+		custom_tooltip = my_doom_spell_progress1
+	}
+	else_if = {
+		limit = {
+			md_tiny_doom_spell_value = 2
+		}
+		custom_tooltip = my_doom_spell_progress2
+	}
+	else_if = {
+		limit = {
+			md_tiny_doom_spell_value = 3
+		}
+		custom_tooltip = my_doom_spell_progress3
+	}
+	else_if = {
+		limit = {
+			md_tiny_doom_spell_value = 4
+		}
+		custom_tooltip = my_doom_spell_progress4
+	}
+	else_if = {
+		limit = {
+			md_tiny_doom_spell_value = 5
+		}
+		custom_tooltip = my_doom_spell_progress5
+	}
+	else_if = {
+		limit = {
+			md_tiny_doom_spell_value = 6
+		}
+		custom_tooltip = my_doom_spell_progress6
+	}
+	if = {
+		limit = {
+			scope:char2 = {	has_character_flag = md_has_full_magic_prot_flag	}
+		}
+		custom_tooltip = my_doom_spell_lesser_progress2
+	}
+	else_if = {
+		limit = {
+			has_character_flag = md_weaken_doom_spell_flag
+		}
+		custom_tooltip = my_doom_spell_lesser_progress
+	}
+	if = {
+		limit = {
+			has_character_flag = md_additional_power2d
+		}
+		custom_tooltip = md_progress_greater_ct
+	}
+}
 md_low_doom_spell_progress_effect = {
 	change_variable = {
 		name = dspell
@@ -3997,7 +5149,10 @@ md_increas_magic_injury_effect = {
 md_tiny_magic_injury = {
 	if = {
 		limit = {
-			has_trait = demon
+			OR = {
+				has_character_modifier = alchemical_enhancement
+				has_trait = demon
+			}
 		}
 		hidden_effect = {
 			random = {
@@ -4038,7 +5193,10 @@ md_tiny_magic_injury = {
 md_low_magic_injury = {
 	if = {
 		limit = {
-			has_trait = demon
+			OR = {
+				has_character_modifier = alchemical_enhancement
+				has_trait = demon
+			}
 		}
 		hidden_effect = {
 			random = {
@@ -4087,7 +5245,10 @@ md_low_magic_injury = {
 md_medium_magic_injury = {
 	if = {
 		limit = {
-			has_trait = demon
+			OR = {
+				has_character_modifier = alchemical_enhancement
+				has_trait = demon
+			}
 		}
 		hidden_effect = {
 			random = {
@@ -4136,7 +5297,10 @@ md_medium_magic_injury = {
 md_high_magic_injury = {
 	if = {
 		limit = {
-			has_trait = demon
+			OR = {
+				has_character_modifier = alchemical_enhancement
+				has_trait = demon
+			}
 		}
 		hidden_effect = {
 			random = {
@@ -4185,7 +5349,10 @@ md_high_magic_injury = {
 md_ultra_magic_injury = {
 	if = {
 		limit = {
-			has_trait = demon
+			OR = {
+				has_character_modifier = alchemical_enhancement
+				has_trait = demon
+			}
 		}
 		hidden_effect = {
 			random = {
@@ -4206,7 +5373,7 @@ md_ultra_magic_injury = {
 		}
 		hidden_effect = {
 			random = {
-				chance = 50
+				chance = 40
 				scope:char2 = {
 					md_increas_magic_injury_effect = yes
 				}
@@ -4242,20 +5409,6 @@ md_low_critical_spell = {
 			random = {
 				chance = 5
 				hidden_effect = {
-					every_character_artifact = {
-						limit = {
-							has_variable = magic1
-						}
-						set_owner = {
-							target = root
-							history = {
-								type = stolen
-								actor = scope:char2
-								recipient = root
-								location = scope:char2.location
-							}
-						}
-					}
 					send_interface_toast = {
 						title = critical_spell_it
 						show_as_tooltip = {
@@ -4275,6 +5428,20 @@ md_low_critical_spell = {
 										killer = root
 									}
 								}
+							}
+						}
+					}
+					every_character_artifact = {
+						limit = {
+							has_variable = magic1
+						}
+						set_owner = {
+							target = root
+							history = {
+								type = stolen
+								actor = scope:char2
+								recipient = root
+								location = scope:char2.location
 							}
 						}
 					}
@@ -4297,22 +5464,8 @@ md_high_critical_spell = {
 		}
 		scope:char2 = {
 			random = {
-				chance = 13
+				chance = 10
 				hidden_effect = {
-					every_character_artifact = {
-						limit = {
-							has_variable = magic1
-						}
-						set_owner = {
-							target = root
-							history = {
-								type = stolen
-								actor = scope:char2
-								recipient = root
-								location = scope:char2.location
-							}
-						}
-					}
 					send_interface_toast = {
 						title = critical_spell_it
 						show_as_tooltip = {
@@ -4332,6 +5485,76 @@ md_high_critical_spell = {
 										killer = root
 									}
 								}
+							}
+						}
+					}
+					every_character_artifact = {
+						limit = {
+							has_variable = magic1
+						}
+						set_owner = {
+							target = root
+							history = {
+								type = stolen
+								actor = scope:char2
+								recipient = root
+								location = scope:char2.location
+							}
+						}
+					}
+				}
+				death = {
+					death_reason = death_duel
+					killer = root
+				}
+			}
+		}
+	}
+}
+md_ultra_critical_spell = {
+	if = {
+		limit = {
+			scope:char2 = {
+				NOT = {	has_character_flag = md_has_full_magic_prot_flag	}
+			}
+		}
+		scope:char2 = {
+			random = {
+				chance = 15
+				hidden_effect = {
+					send_interface_toast = {
+						title = critical_spell_it
+						show_as_tooltip = {
+							death = {
+								death_reason = death_duel
+								killer = root
+							}
+						}
+					}
+					scope:char1 = {
+						send_interface_toast = {
+							title = critical_spell_it
+							scope:char2 = {
+								show_as_tooltip = {
+									death = {
+										death_reason = death_duel
+										killer = root
+									}
+								}
+							}
+						}
+					}
+					every_character_artifact = {
+						limit = {
+							has_variable = magic1
+						}
+						set_owner = {
+							target = root
+							history = {
+								type = stolen
+								actor = scope:char2
+								recipient = root
+								location = scope:char2.location
 							}
 						}
 					}
@@ -4405,7 +5628,7 @@ consider_end_of_duel = {
 		}
 		else_if = {
 			limit = {
-				var:pclash > 13
+				var:pclash > 17
 			}
 			add_character_flag = md_winner
 			scope:char2 = {
@@ -4414,7 +5637,7 @@ consider_end_of_duel = {
 		}
 		else_if = {
 			limit = {
-				var:dspell > 13
+				var:dspell > 17
 			}
 			add_character_flag = md_winner
 			scope:char2 = {
@@ -4423,7 +5646,7 @@ consider_end_of_duel = {
 		}
 		else_if = {
 			limit = {
-				scope:char2.var:dspell > 13
+				scope:char2.var:dspell > 17
 			}
 			add_character_flag = md_loser
 			scope:char2 = {
@@ -4437,7 +5660,7 @@ consider_end_of_duel = {
 			}
 			if = {
 				limit = {
-					var:pclash > 7
+					var:pclash > 9
 				}
 				add_character_flag = md_winner
 				scope:char2 = {
@@ -4446,7 +5669,7 @@ consider_end_of_duel = {
 			}
 			else_if = {
 				limit = {
-					var:pclash < 7
+					var:pclash < 9
 				}
 				add_character_flag = md_loser
 				add_character_flag = md_loser2
@@ -4456,7 +5679,7 @@ consider_end_of_duel = {
 			}
 			else_if = {
 				limit = {
-					var:pclash = 7
+					var:pclash = 9
 				}
 				add_character_flag = md_not_concluded
 				scope:char2 = {
@@ -4468,8 +5691,17 @@ consider_end_of_duel = {
 }
 add_proper_prize_for_md_winner_effect = {
 	add_prestige = massive_prestige_gain
-	#gain_sc_xp2_effect = yes
+	gain_sc_xp2_effect = yes
 	gain_cm_xp20_effect = yes
+	if = {
+		limit = {
+			is_valid_for_legitimacy_change = yes
+			culture = {
+				has_cultural_tradition = mage_rulership_tradition
+			}
+		}
+		add_legitimacy = medium_legitimacy_gain
+	}
 }
 remove_mana_after_md_effect = {
 	if = {
@@ -4513,6 +5745,12 @@ remove_mana_after_md_effect = {
 			has_character_modifier = power_saturated1
 		}
 		remove_character_modifier = power_saturated1
+	}
+	if = {
+		limit = {
+			has_character_modifier = ultimate_spell_modifier
+		}
+		remove_character_modifier = ultimate_spell_modifier
 	}
 }
 
@@ -4645,5 +5883,1767 @@ add_xp_2_grandmaster_inheriting = {
 				}
 			}
 		}
+	}
+}
+
+spawn_witch_hunter_low_chance_effect = {
+	$EMPL$ = { save_scope_as = empl }
+	hidden_effect = {
+		if = {
+			limit = {
+				has_game_rule = high_whunters
+			}
+			random = {
+				chance = 15
+				create_character = {
+					employer = scope:empl
+					template = witch_hunter_character
+					save_scope_as = whunter
+					after_creation = {
+						add_perk = protective_runes_perk
+						add_perk = magical_senses_perk
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = { 1 30 }
+						}
+					}
+				}
+			}
+		}
+		else = {
+			random = {
+				chance = 5
+				create_character = {
+					employer = scope:empl
+					template = witch_hunter_character
+					save_scope_as = whunter
+					after_creation = {
+						add_perk = protective_runes_perk
+						add_perk = magical_senses_perk
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = { 1 30 }
+						}
+					}
+				}
+			}
+		}
+	}
+}
+spawn_witch_hunter_med_chance_effect = {
+	$EMPL$ = { save_scope_as = empl }
+	hidden_effect = {
+		if = {
+			limit = {
+				has_game_rule = high_whunters
+			}
+			random = {
+				chance = 25
+				create_character = {
+					employer = scope:empl
+					template = witch_hunter_character
+					save_scope_as = whunter
+					after_creation = {
+						add_perk = protective_runes_perk
+						add_perk = magical_senses_perk
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = { 1 60 }
+						}
+					}
+				}
+			}
+		}
+		else = {
+			random = {
+				chance = 10
+				create_character = {
+					employer = scope:empl
+					template = witch_hunter_character
+					save_scope_as = whunter
+					after_creation = {
+						add_perk = protective_runes_perk
+						add_perk = magical_senses_perk
+						add_trait_xp = {
+							trait = supernatural_hunter
+							track = witch_hunting
+							value = { 1 60 }
+						}
+					}
+				}
+			}
+		}
+	}
+}
+spawn_witch_hunter_full_chance_effect = {
+	$EMPL$ = { save_scope_as = empl }
+	hidden_effect = {
+		create_character = {
+			employer = scope:empl
+			template = witch_hunter_character
+			save_scope_as = whunter
+			after_creation = {
+				add_perk = protective_runes_perk
+				add_perk = magical_senses_perk
+				add_trait_xp = {
+					trait = supernatural_hunter
+					track = witch_hunting
+					value = { 1 90 }
+				}
+			}
+		}
+		if = {
+			limit = {
+				has_game_rule = high_whunters
+			}
+			scope:whunter = {
+				add_intrigue_skill = 3
+				add_prowess_skill = 3
+			}
+		}
+	}
+}
+
+massive_kill_player_dynasty = {
+	random_ruler = {
+		limit = {
+			is_ai = no
+		}
+		dynasty = {
+			save_scope_as = dyn0
+		}
+	}
+	every_councillor = {
+		limit = {
+			is_ai = yes
+			NOT = {
+				any_scheme = {
+					is_hostile = yes
+				}
+			}
+		}
+		add_gold = 50
+		scope:dyn0 = {
+			random_dynasty_member = {
+				save_scope_as = tar
+			}
+		}
+		start_scheme = {
+			type = murder
+			target = scope:tar
+		}
+	}
+}
+
+consider_demonslayer_nickname = {
+	if = {
+		limit = {
+			has_trait = archmage
+			is_ai = no
+			NOR = {
+				has_character_flag = special_magic_character
+				has_nickname = mage_nickname
+				has_nickname = mage2_nickname
+				has_nickname = mage3_nickname
+				has_nickname = mage4m_nickname
+				has_nickname = mage5m_nickname
+				has_nickname = mage6m_nickname
+				has_nickname = mage4f_nickname
+				has_nickname = mage5f_nickname
+				has_nickname = demonslayer_nickname
+			}
+		}
+		give_nickname = demonslayer_nickname
+	}
+}
+
+select_responsible_person_effect = {
+	if = {
+		limit = {
+			any_relation = {
+				type = guardian
+			}
+		}
+		random_relation = {
+			type = guardian
+			save_scope_as = resper
+		}
+	}
+	else_if = {
+		limit = {
+			is_ruler = no
+			exists = liege
+		}
+		liege = {
+			if = {
+				limit = {
+					employs_court_position = mage_court_position
+				}
+				random_court_position_holder = {
+					type = mage_court_position
+					save_scope_as = resper
+				}
+			}
+			else = {
+				save_scope_as = resper
+			}
+		}
+	}
+	else_if = {
+		limit = {
+			is_ruler = yes
+			is_landed = yes
+		}
+		if = {
+			limit = {
+				employs_court_position = mage_court_position
+			}
+			random_court_position_holder = {
+				type = mage_court_position
+				save_scope_as = resper
+			}
+		}
+		else = {
+			random_councillor = {
+				save_scope_as = resper
+			}
+		}
+	}
+	else_if = {
+		limit = {
+			is_pool_character = no
+		}
+		random_living_character = {
+			limit = {
+				location = root.location
+				NOT = { THIS = ROOT }
+			}
+			save_scope_as = resper
+		}
+	}
+}
+
+heavy_wounds_effect = {
+	if = {
+		limit = {
+			NOR = {
+				has_trait = wounded_1
+				has_trait = wounded_2
+				has_trait = wounded_3
+			}
+		}
+		add_trait = wounded_3
+	}
+	else = {
+		death = natural
+	}
+}
+
+clear_dc_mission_flags = {
+	if = {
+		limit = {
+			has_character_flag = special_champion_mission1
+		}
+		remove_character_flag = special_champion_mission1
+	}
+	if = {
+		limit = {
+			has_character_flag = special_champion_mission2
+		}
+		remove_character_flag = special_champion_mission2
+	}
+	if = {
+		limit = {
+			has_character_flag = special_champion_mission3
+		}
+		remove_character_flag = special_champion_mission3
+	}
+	if = {
+		limit = {
+			has_character_flag = special_champion_mission4
+		}
+		remove_character_flag = special_champion_mission4
+	}
+	if = {
+		limit = {
+			has_character_flag = dc_duel_refused_flag
+		}
+		remove_character_flag = dc_duel_refused_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = good_abduct_plan_dco
+		}
+		remove_character_flag = good_abduct_plan_dco
+	}
+	if = {
+		limit = {
+			has_character_flag = asked_for_gold_dco
+		}
+		remove_character_flag = asked_for_gold_dco
+	}
+	if = {
+		limit = {
+			has_variable = night_attack_q
+		}
+		remove_variable = night_attack_q
+	}
+}
+
+#dark_champion_training_effect = {
+#
+#}
+
+ms_load_intents_for_ai_effect = {
+	random_list = {
+		100 = {
+			modifier = {
+				add = 100
+				OR = {
+					has_trait = lifestyle_mystic
+					has_trait = scholar
+				}
+				NOR = {
+					has_trait = greedy
+					has_trait = paranoid
+				}
+			}
+			modifier = {
+				add = 100
+				can_unlock_arcane_focus_trigger = no
+			}
+			add_character_flag = ms_intent_flag1
+		}
+		100 = {
+			modifier = {
+				add = 100
+				OR = {
+					has_trait = diplomat
+					has_trait = ambitious
+					has_trait = greedy
+				}
+			}
+			modifier = {
+				add = -50
+				has_trait = content
+			}
+			add_character_flag = ms_intent_flag2
+		}
+		100 = {
+			trigger = {
+				OR = {
+					has_trait = archmage
+					has_trait = yaga
+					has_trait = demon
+				}
+			}
+			modifier = {
+				add = 50
+				OR = {
+					has_trait = arrogant
+					has_trait = ambitious
+				}
+			}
+			modifier = {
+				add = 50
+				OR = {
+					any_relation = {
+						type = rival
+						OR = {
+							has_trait = archmage
+							has_focus = arcane_focus
+						}
+					}
+					any_relation = {
+						type = nemesis
+						OR = {
+							has_trait = archmage
+							has_focus = arcane_focus
+						}
+					}
+				}
+			}
+			modifier = {
+				add = -70
+				OR = {
+					has_trait = humble
+					has_trait = shy
+				}
+			}
+			add_character_flag = ms_intent_flag3
+		}
+	}
+}
+ms_clear_flags_effect = {
+	if = {
+		limit = {
+			has_character_flag = ms_intent_flag1
+		}
+		remove_character_flag = ms_intent_flag1
+	}
+	if = {
+		limit = {
+			has_character_flag = ms_intent_flag2
+		}
+		remove_character_flag = ms_intent_flag2
+	}
+	if = {
+		limit = {
+			has_character_flag = ms_intent_flag3
+		}
+		remove_character_flag = ms_intent_flag3
+	}
+}
+
+pay_for_demon_head_effect = {
+	hidden_effect = {
+		send_interface_toast = {
+			title = ev7.85.title
+			add_gold = 300
+		}
+	}
+}
+
+
+assign_speaker_var = {
+	if = {
+		limit = {
+			OR = {
+				has_trait = archmage
+				has_trait = true_witch
+			}
+		}
+		set_variable = {
+			name = speaker1
+			value = 0
+		}
+		if = {
+			limit = {
+				is_legendary_mage_trigger = yes
+			}
+			change_variable = {
+				name = speaker1
+				add = 1
+			}
+		}
+		if = {
+			limit = {
+				OR = {
+					has_trait = archmage
+					has_trait = yaga
+					has_trait = grandmaster_coven
+				}
+			}
+			change_variable = {
+				name = speaker1
+				add = 1
+			}
+		}
+		if = {
+			limit = {
+				learning > 19
+			}
+			change_variable = {
+				name = speaker1
+				add = 1
+			}
+		}
+		if = {
+			limit = {
+				prestige_level > 2
+			}
+			change_variable = {
+				name = speaker1
+				add = 1
+			}
+		}
+		if = {
+			limit = {
+				this = scope:host
+			}
+			change_variable = {
+				name = speaker1
+				add = 1
+			}
+		}
+		if = {
+			limit = {
+				has_nickname = archmage_nickname
+			}
+			change_variable = {
+				name = speaker1
+				add = 2
+			}
+		}
+		if = {
+			limit = {
+				OR = {
+					any_character_artifact = {
+						has_variable = magic1
+					}
+					has_trait = source
+					has_trait = source2
+					has_trait = source3
+					has_trait = source4
+				}
+			}
+			change_variable = {
+				name = speaker1
+				add = 1
+			}
+		}
+	}
+}
+
+remove_speaker_var = {
+	if = {
+		limit = {
+			has_variable = speaker1
+		}
+		remove_variable = speaker1
+	}
+	if = {
+		limit = {
+			has_variable = ms_vote_yes
+		}
+		remove_variable = ms_vote_yes
+	}
+	if = {
+		limit = {
+			has_variable = ms_vote_no
+		}
+		remove_variable = ms_vote_no
+	}
+	if = {
+		limit = {
+			has_character_flag = speaker_flag
+		}
+		remove_character_flag = speaker_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = ms_research_cooperation_flag
+		}
+		remove_character_flag = ms_research_cooperation_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = ms_magic_pact_flag
+		}
+		remove_character_flag = ms_magic_pact_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = ms_want_be_archmage_flag
+		}
+		remove_character_flag = ms_want_be_archmage_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = ms_archmage_tax_flag
+		}
+		remove_character_flag = ms_archmage_tax_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = ms_black_magic_prohibited
+		}
+		remove_character_flag = ms_black_magic_prohibited
+	}
+	if = {
+		limit = {
+			has_character_flag = ms_schemer_flag
+		}
+		remove_character_flag = ms_schemer_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = ms_against_target1_flag
+		}
+		remove_character_flag = ms_against_target1_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = ms_against_target2_flag
+		}
+		remove_character_flag = ms_against_target2_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = ms_grand_spell_flag
+		}
+		remove_character_flag = ms_grand_spell_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = ms_may_lost_hooks_flag
+		}
+		remove_character_flag = ms_may_lost_hooks_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = ms_additional_support_flag
+		}
+		remove_character_flag = ms_additional_support_flag
+	}
+}
+
+select_speaker_effect = {
+	scope:activity = {
+		ordered_attending_character = {
+			limit = {
+				has_variable = speaker1
+			}
+			order_by = var:speaker1
+			check_range_bounds = no
+			position = 0
+			add_character_flag = speaker_flag
+			save_scope_as = speaker0
+		}
+	}
+}
+
+ms_resolve_voting_effects = {
+	if = {
+		limit = {
+			has_character_flag = speaker_flag
+		}
+		save_scope_as = speaker0
+		if = {
+			limit = {
+				var:ms_vote_yes > var:ms_vote_no
+			}
+			scope:activity = {
+				add_activity_log_entry = {
+					key = mage_summit_log_yes
+					
+					show_in_conclusion = yes
+					character = scope:speaker0
+					#scope:speaker0 = {
+					#	custom_tooltip = mage_summit_log_yes_title
+					#}
+					#hidden_effect = {
+					#	set_variable = {
+					#		name = ms_vote_yes
+					#		value = scope:speaker0.var:ms_vote_yes
+					#	}
+					#	set_variable = {
+					#		name = ms_vote_no
+					#		value = scope:speaker0.var:ms_vote_yes
+					#	}
+					#}
+					custom_tooltip = mage_summit_log_yes_title
+					custom_tooltip = mage_summit_log_yes_count
+					custom_tooltip = mage_summit_log_no_count
+					if = {
+						limit = {
+							scope:speaker0 = {
+								has_character_flag = ms_research_cooperation_flag
+							}
+						}
+						every_attending_character = {
+							hidden_effect = {
+								if = {
+									limit = {
+										has_character_modifier = research_cooperation
+									}
+									remove_character_modifier = research_cooperation
+								}
+							}
+							add_character_modifier = {
+								modifier = research_cooperation
+								years = 10
+							}
+							gain_sc_xp2_effect = yes
+						}
+					}
+					else_if = {
+						limit = {
+							scope:speaker0 = {
+								has_character_flag = ms_magic_pact_flag
+							}
+						}
+						custom_tooltip = ev7.105.b_ct2
+						custom_tooltip = ev7.105.b_ct3
+						every_attending_character = {
+							limit = {
+								is_landed = yes
+								NOT = {
+									THIS = ROOT
+								}
+							}
+							custom_tooltip = ev7.105.b_ct
+							custom_description_no_bullet = {
+								text = empty_description1
+							}
+							hidden_effect = {
+								if = {
+									limit = {
+										NOT = {
+											has_character_flag = ms_defence_pact_flag
+										}
+									}
+									add_character_flag = ms_defence_pact_flag
+								}
+							}
+						}
+					}
+					else_if = {
+						limit = {
+							scope:speaker0 = {
+								has_character_flag = ms_want_be_archmage_flag
+							}
+						}
+						scope:speaker0 = {
+							give_nickname = archmage_nickname
+							custom_tooltip = ev7.105.c_ct
+							custom_tooltip = ev7.105.c_ct2
+							add_prestige = massive_prestige_gain
+							if = {
+								limit = {
+									is_valid_for_legitimacy_change = yes
+									culture = {
+										has_cultural_tradition = mage_rulership_tradition
+									}
+								}
+								add_legitimacy = major_legitimacy_gain
+							}
+							hidden_effect = {
+								add_character_flag = ms_is_archmage_flag
+							}
+						}
+					}
+					else_if = {
+						limit = {
+							scope:speaker0 = {
+								has_character_flag = ms_archmage_tax_flag
+							}
+						}
+						scope:activity = {
+							every_attending_character = {
+								limit = {
+									NOT = {
+										THIS = scope:speaker0
+									}
+								}
+								pay_short_term_gold = {
+									target = scope:speaker0
+									gold = archmage_tax_value
+								}
+							}
+						}
+					}
+					else_if = {
+						limit = {
+							scope:speaker0 = {
+								has_character_flag = ms_black_magic_prohibited
+							}
+						}
+						custom_tooltip = ev7.105.e_ct
+						custom_tooltip = ev7.105.e_ct2
+						hidden_effect = {
+							scope:activity = {
+								every_attending_character = {
+									limit = {
+										NOT = {
+											has_character_flag = forbidden_black_magic_flag
+										}
+									}
+									add_character_flag = forbidden_black_magic_flag
+								}
+							}
+						}
+					}
+					else_if = {
+						limit = {
+							scope:speaker0 = {
+								has_character_flag = ms_schemer_flag
+							}
+						}
+						scope:speaker0 = {
+							add_intrigue_skill = 1
+						}
+						scope:activity = {
+							every_attending_character = {
+								hidden_effect = {
+									if = {
+										limit = {
+											has_character_modifier = joint_intrigues
+										}
+										remove_character_modifier = joint_intrigues
+									}
+								}
+								add_character_modifier = {
+									modifier = joint_intrigues
+									years = 10
+								}
+							}
+						}
+					}
+					else_if = {
+						limit = {
+							scope:speaker0 = {
+								has_character_flag = ms_against_target1_flag
+							}
+						}
+						random_living_character = {
+							limit = {
+								has_character_flag = ms_target1_flag
+							}
+							add_character_modifier = {
+								modifier = death_sentence
+								years = 10
+							}
+							save_scope_as = target1
+							hidden_effect = {
+								remove_character_flag = ms_target1_flag
+							}
+						}
+						custom_tooltip = ev7.105.g_ct
+						hidden_effect = {
+							every_attending_character = {
+								limit = {
+									NOT = {
+										THIS = scope:speaker0
+									}
+								}
+								if = {
+									limit = {
+										is_ai = yes
+										NOT = {
+											THIS = scope:target1
+										}
+									}
+									trigger_event = {
+										id = magic_ev7.110
+										days = { 7 14 }
+									}
+								}
+								else = {
+									trigger_event = {
+										id = magic_ev7.110
+										days = { 15 21 }
+									}
+								}
+							}
+						}
+					}
+					else_if = {
+						limit = {
+							scope:speaker0 = {
+								has_character_flag = ms_against_target2_flag
+							}
+						}
+						random_living_character = {
+							limit = {
+								has_character_flag = ms_target2_flag
+							}
+							add_character_modifier = {
+								modifier = excluded_from_magic_community
+								years = 50
+							}
+							hidden_effect = {
+								remove_character_flag = ms_target2_flag
+							}
+						}
+					}
+					else_if = {
+						limit = {
+							scope:speaker0 = {
+								has_character_flag = ms_grand_spell_flag
+							}
+						}
+						custom_tooltip = ev7.105.i_ct
+						custom_tooltip = ev7.105.i_ct2
+						scope:speaker0 = {
+							add_trait_xp = {
+								trait = archmage
+								track = power_saturation
+								value = 100
+							}
+							hidden_effect = {
+								add_character_flag = ready_for_grand_spell_flag
+							}
+						}
+						hidden_effect = {
+							scope:activity = {
+								every_attending_character = {
+									limit = {
+										NOT = {
+											THIS = scope:speaker0
+										}
+										OR = {
+											has_trait = archmage
+											has_trait = true_witch
+											has_focus = arcane_focus
+										}
+									}
+									if = {
+										limit = {
+											can_spend_standard_ps_trigger = yes
+										}
+										send_interface_toast = {
+											title = ev7.105.i_ct
+											spend_standard_ps_effect = yes
+										}
+									}
+									else_if = {
+										limit = {
+											NOR = {
+												has_trait = wounded_1
+												has_trait = wounded_2
+												has_trait = wounded_3
+											}
+										}
+										add_trait = wounded_1
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		else = {
+			scope:activity = {
+				add_activity_log_entry = {
+					key = mage_summit_log_no
+					
+					show_in_conclusion = yes
+					character = scope:speaker0
+					#hidden_effect = {
+					#	set_variable = {
+					#		name = ms_vote_yes
+					#		value = scope:speaker0.var:ms_vote_yes
+					#	}
+					#	set_variable = {
+					#		name = ms_vote_no
+					#		value = 4
+					#	}
+					#}
+					custom_tooltip = mage_summit_log_no_title
+					custom_tooltip = mage_summit_log_yes_count
+					custom_tooltip = mage_summit_log_no_count
+					scope:speaker0 = {
+						add_prestige = minor_prestige_loss
+					}
+				}
+			}
+		}
+	}
+}
+
+mark_as_black_magic_caster = {
+	hidden_effect = {
+		add_character_flag = {
+			flag = black_magic_caster_flag
+			days = 14
+		}
+	}
+}
+
+me_unlock_new_special_project_effect = {
+	random_list = {
+		10 = {
+			trigger = {
+				NOR = {
+					has_character_flag = me_golem_project_done
+					has_character_flag = me_golem_project
+				}
+			}
+			add_character_flag = me_golem_project_proposal
+		}
+		6 = {
+			trigger = {
+				NOR = {
+					has_character_flag = me_immortality_project_done
+					has_character_flag = me_immortality_project
+					is_legendary_mage_trigger = yes
+				}
+				learning > 39
+			}
+			add_character_flag = me_immortality_project_proposal
+		}
+		10 = {
+			trigger = {
+				NOR = {
+					has_character_flag = me_death_project_done
+					has_character_flag = me_death_project
+				}
+				OR = {
+					is_cannibal_trigger = yes
+					has_trait = necromancer
+				}
+			}
+			add_character_flag = me_death_project_proposal
+		}
+		10 = {
+			trigger = {
+				NOR = {
+					has_character_flag = me_ascendency_project_done
+					has_character_flag = me_ascendency_project
+					has_trait = demon
+				}
+				OR = {
+					has_trait = source
+					has_trait = source2
+					has_trait = source3
+					has_trait = source4
+					any_character_artifact = {
+						has_variable = magic_scepter
+					}
+				}
+			}
+			add_character_flag = me_ascendency_project_proposal
+		}
+		10 = {
+			trigger = {
+				NOR = {
+					has_character_flag = me_castle_project_done
+					has_character_flag = me_castle_project
+				}
+				is_landed = yes
+			}
+			add_character_flag = me_castle_project_proposal
+		}
+		10 = {
+			trigger = {
+				NOR = {
+					has_character_flag = me_sing_project_done
+					has_character_flag = me_sing_project
+				}
+				any_character_artifact = {
+					has_variable = singularity
+					NOR = {
+						has_variable = singularity_sleeping
+						has_variable = singularity2
+					}
+				}
+			}
+			add_character_flag = me_sing_project_proposal
+		}
+		10 = {
+			trigger = {
+				NOR = {
+					has_character_flag = me_soul_project_done
+					has_character_flag = me_soul_project
+					has_character_flag = no_soul
+				}
+				#OR = {
+				#	has_character_flag = me_sing_project_done
+				#	has_character_flag = me_castle_project_done
+				#	has_character_flag = me_ascendency_project_done
+				#	has_character_flag = me_death_project_done
+				#	has_character_flag = me_immortality_project_done
+				#	has_character_flag = me_golem_project_done
+				#}
+				is_legendary_mage_trigger = yes
+			}
+			add_character_flag = me_soul_project_proposal
+		}
+	}
+}
+
+me_unlock_new_special_project_effect2 = {
+	random_list = {
+		10 = {
+			trigger = {
+				NOR = {
+					has_character_flag = me_golem_project_done
+					has_character_flag = me_golem_project
+				}
+			}
+			add_character_flag = me_golem_project
+			send_interface_toast = {
+				title = game_concept_magic_special_project
+				custom_tooltip = me_golem_project_ct
+			}
+		}
+		6 = {
+			trigger = {
+				NOR = {
+					has_character_flag = me_immortality_project_done
+					has_character_flag = me_immortality_project
+					is_legendary_mage_trigger = yes
+				}
+				learning > 39
+			}
+			add_character_flag = me_immortality_project
+			send_interface_toast = {
+				title = game_concept_magic_special_project
+				custom_tooltip = me_immortality_project_ct
+			}
+		}
+		10 = {
+			trigger = {
+				NOR = {
+					has_character_flag = me_death_project_done
+					has_character_flag = me_death_project
+				}
+				OR = {
+					is_cannibal_trigger = yes
+					has_trait = necromancer
+				}
+			}
+			add_character_flag = me_death_project
+			send_interface_toast = {
+				title = game_concept_magic_special_project
+				custom_tooltip = me_death_project_ct
+			}
+		}
+		10 = {
+			trigger = {
+				NOR = {
+					has_character_flag = me_ascendency_project_done
+					has_character_flag = me_ascendency_project
+					has_trait = demon
+				}
+				OR = {
+					has_trait = source
+					has_trait = source2
+					has_trait = source3
+					has_trait = source4
+					any_character_artifact = {
+						has_variable = magic_scepter
+					}
+				}
+			}
+			add_character_flag = me_ascendency_project
+			send_interface_toast = {
+				title = game_concept_magic_special_project
+				custom_tooltip = me_ascendency_project_ct
+			}
+		}
+		10 = {
+			trigger = {
+				NOR = {
+					has_character_flag = me_castle_project_done
+					has_character_flag = me_castle_project
+				}
+				is_landed = yes
+			}
+			add_character_flag = me_castle_project
+			send_interface_toast = {
+				title = game_concept_magic_special_project
+				custom_tooltip = me_castle_project_ct
+			}
+		}
+		10 = {
+			trigger = {
+				NOR = {
+					has_character_flag = me_sing_project_done
+					has_character_flag = me_sing_project
+				}
+				any_character_artifact = {
+					has_variable = singularity
+					NOR = {
+						has_variable = singularity_sleeping
+						has_variable = singularity2
+					}
+				}
+			}
+			add_character_flag = me_sing_project
+			send_interface_toast = {
+				title = game_concept_magic_special_project
+				custom_tooltip = me_sing_project_ct
+			}
+		}
+		10 = {
+			trigger = {
+				NOR = {
+					has_character_flag = me_soul_project_done
+					has_character_flag = me_soul_project
+					has_character_flag = no_soul
+				}
+				is_legendary_mage_trigger = yes
+			}
+			add_character_flag = me_soul_project
+			send_interface_toast = {
+				title = game_concept_magic_special_project
+				custom_tooltip = me_soul_project_ct
+			}
+		}
+	}
+}
+
+me_clear_proposal_flags_effect = {
+	if = {
+		limit = {
+			has_character_flag = me_golem_project_proposal
+		}
+		remove_character_flag = me_golem_project_proposal
+	}
+	if = {
+		limit = {
+			has_character_flag = me_immortality_project_proposal
+		}
+		remove_character_flag = me_immortality_project_proposal
+	}
+	if = {
+		limit = {
+			has_character_flag = me_death_project_proposal
+		}
+		remove_character_flag = me_death_project_proposal
+	}
+	if = {
+		limit = {
+			has_character_flag = me_ascendency_project_proposal
+		}
+		remove_character_flag = me_ascendency_project_proposal
+	}
+	if = {
+		limit = {
+			has_character_flag = me_castle_project_proposal
+		}
+		remove_character_flag = me_castle_project_proposal
+	}
+	if = {
+		limit = {
+			has_character_flag = me_sing_project_proposal
+		}
+		remove_character_flag = me_sing_project_proposal
+	}
+	if = {
+		limit = {
+			has_character_flag = me_soul_project_proposal
+		}
+		remove_character_flag = me_soul_project_proposal
+	}
+}
+
+me_clear_progress_flags_effect = {
+	if = {
+		limit = {
+			has_character_flag = magic_epic_book
+		}
+		remove_character_flag = magic_epic_book
+	}
+	if = {
+		limit = {
+			has_character_flag = magic_epic_magic
+		}
+		remove_character_flag = magic_epic_magic
+	}
+	if = {
+		limit = {
+			has_character_flag = magic_epic_project
+		}
+		remove_character_flag = magic_epic_project
+	}
+	if = {
+		limit = {
+			has_variable = magic_epic_q
+		}
+		remove_variable = magic_epic_q
+	}
+	if = {
+		limit = {
+			has_character_flag = me_golem_project_progress
+		}
+		remove_character_flag = me_golem_project_progress
+	}
+	if = {
+		limit = {
+			has_character_flag = me_immortality_project_progress
+		}
+		remove_character_flag = me_immortality_project_progress
+	}
+	if = {
+		limit = {
+			has_character_flag = me_death_project_progress
+		}
+		remove_character_flag = me_death_project_progress
+	}
+	if = {
+		limit = {
+			has_character_flag = me_ascendency_project_progress
+		}
+		remove_character_flag = me_ascendency_project_progress
+	}
+	if = {
+		limit = {
+			has_character_flag = me_castle_project_progress
+		}
+		remove_character_flag = me_castle_project_progress
+	}
+	if = {
+		limit = {
+			has_character_flag = me_sing_project_progress
+		}
+		remove_character_flag = me_sing_project_progress
+	}
+	if = {
+		limit = {
+			has_character_flag = me_golem_male
+		}
+		remove_character_flag = me_golem_male
+	}
+	if = {
+		limit = {
+			has_character_flag = me_golem_female
+		}
+		remove_character_flag = me_golem_female
+	}
+	if = {
+		limit = {
+			has_character_flag = me_soul_project_progress
+		}
+		remove_character_flag = me_soul_project_progress
+	}
+}
+choose_blackgrimoire_chapter_effect = {
+	#if = {
+	#	limit = {
+	#		NOT = {
+	#			has_character_flag = necro_chapter1_flag
+	#		}
+	#	}
+	#	add_character_flag = necro_chapter1_flag
+	#}
+	#else_
+	if = {
+		limit = {
+			NOT = {
+				has_character_flag = necro_chapter2_flag
+			}
+		}
+		add_character_flag = necro_chapter2_flag
+	}
+	else_if = {
+		limit = {
+			NOT = {
+				has_character_flag = necro_chapter3_flag
+			}
+		}
+		add_character_flag = necro_chapter3_flag
+	}
+	else_if = {
+		limit = {
+			NOT = {
+				has_character_flag = necro_chapter4_flag
+			}
+		}
+		add_character_flag = necro_chapter4_flag
+	}
+	else_if = {
+		limit = {
+			NOT = {
+				has_character_flag = necro_chapter5_flag
+			}
+		}
+		add_character_flag = necro_chapter5_flag
+	}
+	else_if = {
+		limit = {
+			NOT = {
+				has_character_flag = necro_chapter6_flag
+			}
+		}
+		add_character_flag = necro_chapter6_flag
+	}
+}
+choose_blackgrimoire_reward_effect = {
+	if = {
+		limit = {
+			has_trait = witch_hunter
+		}
+		send_interface_toast = {
+			title = study_blackgrimoire_decision
+			random_list = {
+				1 = {
+					add_diplomacy_skill = 1
+				}
+				1 = {
+					add_martial_skill = 1
+				}
+				1 = {
+					add_stewardship_skill = 1
+				}
+				1 = {
+					add_intrigue_skill = 1
+				}
+				1 = {
+					add_learning_skill = 1
+				}
+			}
+		}
+	}
+	else_if = {
+		limit = {
+			NOR = {
+				has_trait = witch
+				any_secret = { secret_type = secret_witch }
+			}
+		}
+		
+		send_interface_toast = {
+			title = study_blackgrimoire_decision
+			give_witch_secret_or_trait_effect = yes
+		}
+	}
+	else_if = {
+		limit = {
+			OR = {
+				has_focus = witch_focus
+				has_focus = arcane_focus
+			}
+		}
+		send_interface_toast = {
+			title = study_blackgrimoire_decision
+			custom_tooltip = ev2.47.a_ct
+		}
+		
+		hidden_effect = {
+			add_magic_lifestyle_perk_points = 1
+		}
+	}
+	else_if = {
+		limit = {
+			has_trait = archmage
+		}
+		choose_blackgrimoire_reward_mages_effect = yes
+	}
+	else = {
+		send_interface_toast = {
+			title = study_blackgrimoire_decision
+			random_list = {
+				1 = {
+					add_diplomacy_skill = 1
+				}
+				1 = {
+					add_martial_skill = 1
+				}
+				1 = {
+					add_stewardship_skill = 1
+				}
+				1 = {
+					add_intrigue_skill = 1
+				}
+				1 = {
+					add_learning_skill = 1
+				}
+				1 = {
+					add_character_modifier = {
+						modifier = secret_knowledge_modifier
+						years = 1
+					}
+				}
+			}
+		}
+	}
+}
+choose_blackgrimoire_reward_mages_effect = {
+	random_list = {
+		10 = {
+			trigger = {
+				NOT = {
+					has_character_flag = bless_land_flag
+				}
+			}
+			send_interface_toast = {
+				title = study_blackgrimoire_decision
+				custom_tooltip = ev5.1.0.a_ct
+				gain_sc_xp2_effect = yes
+			}
+			add_character_flag = bless_land_flag
+		}
+		10 = {
+			trigger = {
+				NOT = {
+					has_character_flag = healing_spell_flag
+				}
+			}
+			send_interface_toast = {
+				title = study_blackgrimoire_decision
+				custom_tooltip = healer_p9_perk_eff
+				gain_sc_xp2_effect = yes
+			}
+			add_character_flag = healing_spell_flag
+		}
+		10 = {
+			trigger = {
+				NOT = {
+					has_character_flag = shadowstep_flag
+				}
+			}
+			send_interface_toast = {
+				title = study_blackgrimoire_decision
+				custom_tooltip = ev5.1.0.e_ct
+				gain_sc_xp2_effect = yes
+			}
+			add_character_flag = shadowstep_flag
+		}
+		10 = {
+			trigger = {
+				NOT = {
+					has_character_flag = plague_spell_flag
+				}
+			}
+			send_interface_toast = {
+				title = study_blackgrimoire_decision
+				custom_tooltip = ev5.1.0.f_ct
+				gain_sc_xp2_effect = yes
+			}
+			add_character_flag = plague_spell_flag
+		}
+		10 = {
+			trigger = {
+				NOT = {
+					has_character_flag = hipercognition_flag
+				}
+			}
+			send_interface_toast = {
+				title = study_blackgrimoire_decision
+				custom_tooltip = ev5.1.0.h_ct
+				gain_sc_xp2_effect = yes
+			}
+			add_character_flag = hipercognition_flag
+		}
+		10 = {
+			trigger = {
+				NOR = {
+					has_character_flag = firestorm_spell_flag
+					has_trait = demon
+				}
+			}
+			send_interface_toast = {
+				title = study_blackgrimoire_decision
+				custom_tooltip = ev5.1.0.k_ct
+				gain_sc_xp2_effect = yes
+			}
+			add_character_flag = firestorm_spell_flag
+		}
+		10 = {
+			trigger = {
+				NOR = {
+					has_character_flag = banish_spell_flag
+					AND = {
+						has_trait = archmage
+						has_trait_xp = {
+							trait = archmage
+							track = demonology
+							value > 99
+						}
+					}
+				}
+			}
+			send_interface_toast = {
+				title = study_blackgrimoire_decision
+				custom_tooltip = summoning_demonology3_terrain_cancel_negative_supply
+				gain_sc_xp2_effect = yes
+			}
+			add_character_flag = banish_spell_flag
+		}
+		10 = {
+			trigger = {
+				has_trait = archmage
+				has_trait_xp = {
+					trait = archmage
+					track = secret_knowledge
+					value < 100
+				}
+			}
+			send_interface_toast = {
+				title = study_blackgrimoire_decision
+				gain_sc_xp10_effect = yes
+			}
+		}
+		10 = {
+			trigger = {
+				has_trait = archmage
+				has_trait_xp = {
+					trait = archmage
+					track = demonology
+					value < 100
+				}
+			}
+			send_interface_toast = {
+				title = study_blackgrimoire_decision
+				gain_sc_xp1_effect = yes
+				gain_demonology_standard_effect = yes
+			}
+		}
+		10 = {
+			trigger = {
+				has_trait = archmage
+				has_trait_xp = {
+					trait = archmage
+					track = combat_magic
+					value < 100
+				}
+			}
+			send_interface_toast = {
+				title = study_blackgrimoire_decision
+				gain_sc_xp1_effect = yes
+				gain_cm_xp5_effect = yes
+			}
+		}
+		5 = {
+			trigger = {
+				has_trait = archmage
+				can_be_power_saturated_trigger = yes
+			}
+			send_interface_toast = {
+				title = study_blackgrimoire_decision
+				gain_sc_xp2_effect = yes
+				gain_standard_ps_effect = yes
+			}
+		}
+		5 = {
+			trigger = {
+				NOT = {
+					has_character_modifier = mind_reader_modifier
+				}
+			}
+			send_interface_toast = {
+				title = study_blackgrimoire_decision
+				gain_sc_xp1_effect = yes
+				add_character_modifier = {
+					modifier = mind_reader_modifier
+				}
+			}
+		}
+		1 = {
+			trigger = {
+				NOT = {
+					has_character_modifier = secret_knowledge_modifier
+				}
+			}
+			send_interface_toast = {
+				title = study_blackgrimoire_decision
+				add_character_modifier = {
+					modifier = secret_knowledge_modifier
+					years = 1
+				}
+				gain_sc_xp1_effect = yes
+			}
+		}
+		1 = {
+			send_interface_toast = {
+				title = study_blackgrimoire_decision
+				random_list = {
+					1 = {
+						add_diplomacy_skill = 1
+					}
+					1 = {
+						add_martial_skill = 1
+					}
+					1 = {
+						add_stewardship_skill = 1
+					}
+					1 = {
+						add_intrigue_skill = 1
+					}
+					1 = {
+						add_learning_skill = 1
+					}
+				}
+				gain_sc_xp1_effect = yes
+			}
+		}
+	}
+}
+
+samael_available_options_effect = {
+	if = {
+		limit = {
+			has_character_flag = there_is_bael_flag
+		}
+		remove_character_flag = there_is_bael_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = there_is_belial_flag
+		}
+		remove_character_flag = there_is_belial_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = there_is_astaroth_flag
+		}
+		remove_character_flag = there_is_astaroth_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = there_is_lilith_flag
+		}
+		remove_character_flag = there_is_lilith_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = there_is_moloch_flag
+		}
+		remove_character_flag = there_is_moloch_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = there_is_inq_flag
+		}
+		remove_character_flag = there_is_inq_flag
+	}
+	if = {
+		limit = {
+			has_character_flag = there_is_abdul_flag
+		}
+		remove_character_flag = there_is_abdul_flag
+	}
+	if = {
+		limit = {
+			any_living_character = {
+				has_character_flag = bael_flag
+			}
+		}
+		add_character_flag = there_is_bael_flag
+	}
+	if = {
+		limit = {
+			any_living_character = {
+				has_character_flag = belial
+			}
+		}
+		add_character_flag = there_is_belial_flag
+	}
+	if = {
+		limit = {
+			any_living_character = {
+				has_character_flag = astaroth_flag
+			}
+		}
+		add_character_flag = there_is_astaroth_flag
+	}
+	if = {
+		limit = {
+			any_living_character = {
+				has_character_flag = lilith
+			}
+		}
+		add_character_flag = there_is_lilith_flag
+	}
+	if = {
+		limit = {
+			any_living_character = {
+				has_character_flag = moloch
+			}
+		}
+		add_character_flag = there_is_moloch_flag
+	}
+	if = {
+		limit = {
+			any_living_character = {
+				has_character_modifier = inq_modifier
+			}
+		}
+		add_character_flag = there_is_inq_flag
+	}
+	if = {
+		limit = {
+			any_living_character = {
+				has_character_flag = abdul_dude
+			}
+		}
+		add_character_flag = there_is_abdul_flag
 	}
 }

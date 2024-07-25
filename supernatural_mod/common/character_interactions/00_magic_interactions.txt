@@ -127,6 +127,7 @@
 			#
 			#	}
 			#}
+			mark_as_black_magic_caster = yes
 			send_message_4_magic_sense_effect = yes
 			send_interface_message = {
 				type = event_generic_neutral
@@ -185,7 +186,6 @@
 
 	ai_will_do = {
 		base = 0
-		
 		modifier = {
 			add = 100
 			scope:recipient = {
@@ -229,6 +229,12 @@
 				}
 			}
 		}
+		modifier = {
+			add = -60
+			scope:actor = {
+				has_character_flag = forbidden_black_magic_flag
+			}
+		}
 	}
 }
 
@@ -237,16 +243,17 @@ magic_domination = {
 		NOT = { scope:recipient = scope:actor }
 		scope:actor = {
 			is_imprisoned = no
-			OR = {
-				has_perk = mind_control_p6_perk
-				AND = {
-					has_trait = demon
-					has_trait_xp = {
-						trait = demon
-						value > 49
-					}
-				}
-			}
+			has_perk = mind_control_p6_perk
+			#OR = {
+			#	has_perk = mind_control_p6_perk
+			#	AND = {
+			#		has_trait = demon
+			#		has_trait_xp = {
+			#			trait = demon
+			#			value > 49
+			#		}
+			#	}
+			#}
 		}
 		scope:recipient = {
 			NOR = {
@@ -364,6 +371,7 @@ magic_domination = {
 			#	flag = magic_user
 			#	years = 5
 			#}
+			mark_as_black_magic_caster = yes
 			send_message_4_magic_sense_effect = yes
 			#add_gold=-10
 			scope:recipient = {
@@ -547,6 +555,10 @@ magic_healing = {
 				has_character_modifier = chronic_headaches_modifier
 				has_character_modifier = infected_wound_modifier
 				has_character_modifier = gangrene_modifier
+				has_trait = measles
+				has_trait = dysentery
+				has_trait = ergotism
+				has_trait = scarred
 			}
 		}	
 	}
@@ -625,77 +637,9 @@ magic_healing = {
 		}
 		scope:recipient = {
 					
-					if = { limit = { has_trait = ill }
-						remove_trait = ill
-					}
-					if = { limit = { has_trait = pneumonic }
-						remove_trait = pneumonic
-					}
-					if = { limit = { has_trait = great_pox }
-						remove_trait = great_pox
-					}
-					if = { limit = { has_trait = early_great_pox }
-						remove_trait = early_great_pox
-					}
-					if = { limit = { has_trait = lovers_pox }
-						remove_trait = lovers_pox
-					}
-					if = { limit = { has_trait = leper }
-						remove_trait = leper
-					}
-					if = { limit = { has_trait = wounded_1 }
-						remove_trait = wounded_1
-					}
-					if = { limit = { has_trait = wounded_2 }
-						remove_trait = wounded_2
-					}
-					if = { limit = { has_trait = wounded_3 }
-						remove_trait = wounded_3
-					}
-					if = { limit = { has_trait = maimed }
-						remove_trait = maimed
-					}
-					if = { limit = { has_trait = infirm }
-						remove_trait = infirm
-					}
-					if = { limit = { has_trait = incapable }
-						remove_trait = incapable
-					}
-					if = { limit = { has_trait = gout_ridden }
-						remove_trait = gout_ridden
-					}
-					if = { limit = { has_trait = consumption }
-						remove_trait = consumption
-					}
-					if = { limit = { has_trait = cancer }
-						remove_trait = cancer
-					}
-					if = { limit = { has_trait = typhus }
-						remove_trait = typhus
-					}
-					if = { limit = { has_trait = bubonic_plague }
-						remove_trait = bubonic_plague
-					}
-					if = { limit = { has_trait = smallpox }
-						remove_trait = smallpox
-					}
-					if = { limit = { has_trait = sickly }
-						remove_trait = sickly
-					}
-					if = { limit = { has_trait = blind }
-						remove_trait = blind
-					}
-					if = {	limit = {	has_trait = disfigured	}
-						remove_trait = disfigured
-					}
-					if = {	limit = {	has_character_modifier = chronic_headaches_modifier	}
-						remove_character_modifier = chronic_headaches_modifier
-					}
-					if = {	limit = {	has_character_modifier = infected_wound_modifier	}
-						remove_character_modifier = infected_wound_modifier
-					}
-					if = {	limit = {	has_character_modifier = gangrene_modifier	}
-						remove_character_modifier = gangrene_modifier
+					full_healing_effect = yes
+					if = {	limit = {	has_trait = scarred	}
+						remove_trait = scarred
 					}
 					if = {
 						limit = {
@@ -709,7 +653,6 @@ magic_healing = {
 					}
 		}
 	}
-	
 	auto_accept = yes
 	ai_targets = {
 		ai_recipients = self
@@ -808,6 +751,7 @@ cast_powerfull_curse = {
 			#	flag = magic_user
 			#	years = 5
 			#}
+			mark_as_black_magic_caster = yes
 			send_message_4_magic_sense_effect = yes
 			scope:recipient = {
 				save_scope_as = reci
@@ -825,6 +769,7 @@ cast_powerfull_curse = {
 				if = {
 					limit = {
 						has_game_rule = high_whunters
+						is_ai = no
 					}
 					spawn_witch_hunter_low_chance_effect = { EMPL = scope:actor }
 				}
@@ -946,6 +891,12 @@ cast_powerfull_curse = {
 				}
 			}
 		}
+		modifier = {
+			add = -60
+			scope:actor = {
+				has_character_flag = forbidden_black_magic_flag
+			}
+		}
 	}
 }
 
@@ -953,9 +904,8 @@ banish_demon = {
 	is_shown = {
 		NOT = { scope:recipient = scope:actor }
 		scope:actor = {
-			any_character_artifact = { has_variable = blackgrimoire }
 			is_imprisoned = no
-			has_trait = archmage
+			can_use_banish_spell = yes
 			
 		}
 		scope:recipient = {
@@ -1023,7 +973,7 @@ banish_demon = {
 				#desc = "send_interface_message_text"
 				left_icon = scope:actor
 				right_icon = scope:recipient
-				custom_tooltip = use_magic2_custom_tooltip
+				custom_tooltip = use_magic_custom_tooltip
 				spend_standard_ps_effect = yes
 				gain_sc_xp1_effect = yes
 
@@ -1033,6 +983,14 @@ banish_demon = {
 					hidden_effect = {
 						death = natural
 					}
+				}
+			}
+			hidden_effect = {
+				if = {
+					limit = {
+						has_character_flag = fund_demon_fighting_flag
+					}
+					pay_for_demon_head_effect = yes
 				}
 			}
 		}
@@ -1229,6 +1187,14 @@ consume_child = {
 					add_character_modifier = {
 						modifier = yaga_beauty_modifier
 						years = 1
+					}
+				}
+				if = {
+					limit = {
+						has_character_flag = me_death_project_done2
+					}
+					add_character_modifier = {
+						modifier = lifestealer_modifier
 					}
 				}
 				if = {
@@ -1537,6 +1503,7 @@ consume_child = {
 										has_trait = source
 										has_trait = source2
 										has_trait = source3
+										has_trait = source4
 									}
 								}
 							}
@@ -1549,12 +1516,32 @@ consume_child = {
 						}
 						else_if = {
 							limit = {
+								has_trait = source4
+								scope:actor = {
+									NOR = {
+										has_trait = source
+										has_trait = source2
+										has_trait = source3
+										has_trait = source4
+									}
+								}
+							}
+							scope:actor = {
+								random = {
+									chance = 50
+									add_trait = source4
+								}
+							}
+						}
+						else_if = {
+							limit = {
 								has_trait = source2
 								scope:actor = {
 									NOR = {
 										has_trait = source
 										has_trait = source2
 										has_trait = source3
+										has_trait = source4
 									}
 								}
 							}
@@ -1573,6 +1560,7 @@ consume_child = {
 										has_trait = source
 										has_trait = source2
 										has_trait = source3
+										has_trait = source4
 									}
 								}
 							}
@@ -1924,7 +1912,15 @@ use_singularity = {
 					days = { 7 12 }
 				}
 			}
-			else = {
+			else_if = {
+				limit = {
+					scope:recipient = {
+						any_character_artifact = {
+							has_variable = singularity2
+						}
+						is_imprisoned = no
+					}
+				}
 				scope:actor = {
 					trigger_event = {
 						id = magic_ev6.64
@@ -1932,22 +1928,22 @@ use_singularity = {
 					}
 				}
 			}
-			if = {
-				limit = {
-					scope:actor = {
-						NOT = {
-							has_character_flag = abdul_dude
-						}
-					}
-				}
-				random = {
-					chance = 40
-					trigger_event = {
-						id = magic_ev2.79
-						days = { 21 24 }
-					}
-				}
-			}
+			#if = {
+			#	limit = {
+			#		scope:actor = {
+			#			NOT = {
+			#				has_character_flag = abdul_dude
+			#			}
+			#		}
+			#	}
+			#	random = {
+			#		chance = 40
+			#		trigger_event = {
+			#			id = magic_ev2.79
+			#			days = { 21 24 }
+			#		}
+			#	}
+			#}
 		}
 	}
 	
@@ -2088,9 +2084,13 @@ death_wish = {
 				gain_sc_xp1_effect = yes
 				remove_character_flag = death_wish
 				scope:recipient = {
-					death = {
-						death_reason = death_murder
-						killer = scope:actor
+					send_interface_toast = {
+						title = death_wish
+						left_icon = scope:recipient
+						death = {
+							death_reason = death_murder
+							killer = scope:actor
+						}
 					}
 				}
 			}
@@ -2780,6 +2780,13 @@ demand_submission_cgm_interaction = {
 			desc = DS_IS_ARROGANT
 		}
 		modifier = {
+			add = -40
+			scope:recipient = {
+				has_trait = archmage
+			}
+			desc = DS_IS_MAGE
+		}
+		modifier = {
 			add = 20
 			scope:recipient = {
 				has_trait = craven
@@ -3157,7 +3164,7 @@ command_minion_interaction = {
 						}
 						hidden_effect = {
 							random = {
-								chance = 40
+								chance = 20
 								create_mage_effect = yes
 							}
 						}
@@ -3231,7 +3238,7 @@ command_minion_interaction = {
 						}
 						hidden_effect = {
 							random = {
-								chance = 40
+								chance = 30
 								create_mage_effect = yes
 							}
 						}
@@ -3276,7 +3283,10 @@ command_minion_interaction = {
 								}
 								
 							}
-							create_mage_effect = yes
+							random = {
+								chance = 50
+								create_mage_effect = yes
+							}
 						}
 					}
 					else_if = {
@@ -3309,6 +3319,12 @@ command_minion_interaction = {
 							add_stress = major_stress_gain
 						}
 						
+					}
+					else_if = {
+						limit = {
+							scope:command_minion_dismiss_regency = yes
+						}
+						scope:actor = { end_diarchy = yes }
 					}
 				}
 			}
@@ -3456,6 +3472,17 @@ command_minion_interaction = {
 		}
 		flag = command_minion_entertain
 		localization = COMMAND_MINION_O7
+	}
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				exists = diarch
+				diarch = scope:recipient
+				can_leave_diarchy_trigger = yes
+			}
+		}
+		flag = command_minion_dismiss_regency
+		localization = liege_dismiss_entrenched_regency_interaction
 	}
 	ai_accept = {
 		base = 50
@@ -4544,7 +4571,15 @@ shadowstep_spell = {
 	is_shown = {
 		scope:recipient = scope:actor
 		scope:actor = {
-			has_character_flag = shadowstep_flag
+			OR = {
+				has_character_flag = shadowstep_flag
+				AND = {
+					has_trait = archmage
+					any_equipped_character_artifact = {
+						has_variable = magic_crown
+					}
+				}
+			}
 		}	
 	}
 	is_valid_showing_failures_only = {
@@ -4624,10 +4659,24 @@ shadowstep_spell = {
 					limit = {
 						is_imprisoned = no
 					}
-					add_character_modifier = {
-						modifier = shadow_step_modifier
-						years = 1
+					if = {
+						limit = {
+							any_equipped_character_artifact = {
+								has_variable = magic_crown
+							}
+						}
+						add_character_modifier = {
+							modifier = shadow_step_modifier2
+							years = 1
+						}
 					}
+					else = {
+						add_character_modifier = {
+							modifier = shadow_step_modifier
+							years = 1
+						}
+					}
+					
 					custom_tooltip = shadow_step_prison_ct
 				}
 				else = {
@@ -4654,7 +4703,7 @@ shadowstep_spell = {
 						}
 						save_scope_as = imprisoner
 					}
-					custom_tooltip = escape_from_prison_decision_effect_tooltip	#to removing?
+					#custom_tooltip = escape_from_prison_decision_effect_tooltip	#to removing?
 					trigger_event = {
 						on_action = escape_from_prison
 					}
@@ -4774,14 +4823,16 @@ plague_spell = {
 							modifier = plague_spell_modifier
 							years = 2
 						}
-						if = {
-							limit = {
-								NOT = {	has_trait = great_pox	}
-							}
-							add_trait = great_pox
-						}
+						
+						custom_tooltip = plague_spell_ct2
 					}
-					custom_tooltip = plague_spell_ct
+					if = {
+						limit = {
+							always = no
+						}
+						custom_tooltip = plague_spell_ct	#just to avoid notifications in error log...
+					}
+					
 					trigger_event = magic_ev5.2
 				}
 			}
@@ -5315,6 +5366,13 @@ mana_siphon_spell = {
 			}
 			desc = CLOSE_FAMILY_REASON
 		}
+		modifier = {
+			add = 100
+			scope:recipient = {
+				has_trait = source4
+			}
+			desc = DS_IS_UNSTABLE_SOURCE
+		}
 		modifier = { # Say no to rivals
 			add = -100
 			scope:recipient = {
@@ -5674,6 +5732,12 @@ mage_duel = {
 			}
 			desc = "ACTOR_NEMESIS_TO_ME_REASON"
 		}
+		modifier = {
+			add = 20
+			desc = DEMAND_SUBMISSION_I_AM_HEAD_OF_FAITH
+			scope:actor.faith.religious_head = scope:actor
+			scope:actor.faith = scope:recipient.faith
+		}
 		#modifier = {
 		#	add = 30
 		#	scope:recipient = {
@@ -5778,7 +5842,16 @@ mage_duel = {
 			desc = DS_IS_WRATH
 		}
 		modifier = {
-			add = -150
+			add = -20
+			scope:actor = {
+				any_equipped_character_artifact = {
+					has_variable = catalyst
+				}
+			}
+			desc = DS_HAS_CATALYST
+		}
+		modifier = {
+			add = -100
 			scope:actor = {
 				OR = {
 					is_legendary_mage_trigger = yes
@@ -5980,6 +6053,14 @@ mage_duel = {
 			}
 			scope:actor = {
 				is_legendary_mage_trigger = no
+			}
+		}
+		modifier = {
+			add = -20
+			scope:actor = {
+				any_equipped_character_artifact = {
+					has_variable = catalyst
+				}
 			}
 		}
 		modifier = {
@@ -6225,4 +6306,827 @@ mind_scan = {
 	}
 	
 	auto_accept = yes
+}
+
+use_raw_magic = {
+	
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			OR = {
+				has_trait = source4
+				has_trait = source3
+			}
+			is_imprisoned = no
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = power_needed_custom
+				can_spend_standard_ps_trigger = yes
+			}
+			custom_description = {
+				text = is_incapable_custom
+				NOT = { has_trait = incapable }
+			}
+			custom_description = {
+				text = is_on_mage_duel_custom
+				NOT = {	has_variable = pclash	}
+			}
+		}
+		scope:recipient = {
+			custom_description = {
+			text = magic_protection_custom
+				has_full_magic_prot_trigger = no
+				OR = {
+					has_basic_magic_prot_trigger = no
+					AND = {
+						has_basic_magic_prot_trigger = yes
+						scope:actor = {	can_penetrate_basic_magic_prot_trigger = yes	}
+					}
+				}
+			}
+		}
+	}
+	icon = icon_bad_source
+	common_interaction = no
+	interface_priority = 90
+	popup_on_receive = no
+	category = interaction_category_hostile
+
+	cooldown_against_recipient = { years = 1 } 
+	cooldown = { years = 1 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = no
+	#hidden = yes
+	
+	on_accept = {
+		scope:actor = {
+			save_scope_as = magic_user
+			send_message_4_magic_sense_effect = yes
+			send_interface_message = {
+				type = event_generic_neutral
+				title = use_raw_magic
+				desc = "send_interface_message_text"
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				if = {
+					limit = {
+						NOT = {
+							has_trait = source3
+						}
+					}
+					custom_tooltip = use_raw_magic_ct0
+				}
+				
+				show_as_tooltip = {
+					spend_standard_ps_effect = yes
+				}	
+				
+				scope:recipient = {
+					custom_tooltip = use_raw_magic_ct1
+				}
+				hidden_effect = {
+					random_list = {
+						1 = {	#curse
+							trigger = {
+								scope:recipient = {
+									NOT = {
+										has_character_modifier = cursed_modifier
+									}
+								}
+							}
+							trigger_event = magic_ev7.12
+						}
+						1 = {	#nothing
+							trigger = {
+								scope:actor = {
+									NOT = {
+										has_trait = source3
+									}
+								}
+							}
+							trigger_event = magic_ev7.13
+						}
+						1 = {	#cancer
+							trigger_event = magic_ev7.14
+						}
+						1 = {	#variety
+							trigger_event = magic_ev7.15
+						}
+						1 = {	#dangerous
+							trigger = {
+								scope:actor = {
+									NOT = {
+										has_trait = source3
+									}
+								}
+							}
+							trigger_event = magic_ev7.16
+						}
+						1 = {
+							trigger_event = magic_ev7.139	#wounds / stress / opinion
+						}
+					}
+				}
+			}
+		}
+	}
+	
+	auto_accept = yes
+	
+	ai_targets = {
+		ai_recipients = neighboring_rulers
+		ai_recipients = peer_vassals
+		ai_recipients = vassals
+		ai_recipients = liege
+		ai_recipients = dynasty
+		ai_recipients = spouses
+		ai_recipients = war_enemies
+		ai_recipients = scripted_relations
+		ai_recipients = courtiers
+	}
+
+	ai_frequency = 24
+
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 70
+			scope:recipient = {
+				OR = {
+					has_relation_rival = scope:actor
+					has_relation_nemesis = scope:actor
+					has_relation_bully = scope:actor
+					has_relation_victim = scope:actor
+					#has_relation_potential_rival = scope:actor
+					is_at_war_with = scope:actor
+				}
+			}
+		}
+		modifier = {
+			add = -100
+			scope:recipient = {
+				OR = {
+					has_relation_lover = scope:actor
+					has_relation_friend = scope:actor
+					has_relation_best_friend = scope:actor
+					has_relation_soulmate = scope:actor
+				}
+			}
+		}
+		modifier = {
+			add = -100
+			scope:actor = {
+				has_perk = fate_weaver_p10_perk
+			}
+		}
+	}
+}
+
+start_corruption_interaction = {
+	icon = icon_corrupted
+	common_interaction = yes
+	interface_priority = 90
+	category = interaction_category_hostile
+
+	ignores_pending_interaction_block = yes
+
+	scheme = corruption
+
+	send_name = START_SCHEME
+
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			OR = {
+				any_equipped_character_artifact = {
+					has_variable = magic_crown
+				}
+				AND = {
+					has_trait = demon
+					has_trait_xp = {
+						trait = demon
+						value > 49
+					}
+				}
+			}
+			is_imprisoned = no
+		}
+		scope:recipient = {
+			is_adult = yes
+		}
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			can_start_scheme = {
+				type = corruption
+				target = scope:recipient
+			}
+		}
+		scope:actor = {
+			custom_description = {
+				text = not_archmage_txt
+				OR = {
+					has_trait = archmage
+					has_trait = demon
+				}
+			}
+		}
+		scope:recipient = {
+			NOT = { has_strong_hook = scope:actor }
+	
+			custom_description = {
+				text = is_already_corrupted
+				NOT = {
+					has_trait = corrupted
+				}
+			}
+			custom_description = {
+				text = is_incapable_custom2
+				NOR = {
+					has_trait = incapable
+					is_incapable = yes
+				}
+			}
+			custom_description = {
+				text = has_powerful_magic_protection
+				NOR = {
+					has_full_magic_prot_trigger = yes
+					has_trait = demon
+				}
+			}
+		}
+	}
+
+	desc = {
+		triggered_desc = {
+			trigger = {
+				scope:actor = {
+					can_start_scheme = {
+						type = corruption
+						target = scope:recipient
+					}
+				}
+			}
+			desc = scheme_interaction_tt_corruption_approved
+		}
+	}
+	cooldown_against_recipient = { years = 10 } 
+	#cooldown = { years = 1 } 
+	on_accept = {
+		scope:actor = {
+			stress_impact = {
+				compassionate = major_stress_impact_gain
+				honest = medium_stress_impact_gain
+				just = medium_stress_impact_gain
+			}
+		}
+		hidden_effect = {
+			scope:actor = {
+				send_interface_toast = {
+					title = start_corruption_interaction_notification
+
+					left_icon = scope:actor					
+					right_icon = scope:recipient
+
+					start_scheme = {
+						type = corruption
+						target = scope:recipient
+					}
+
+					show_as_tooltip = {
+						stress_impact = {
+							compassionate = major_stress_impact_gain
+							honest = medium_stress_impact_gain
+							just = medium_stress_impact_gain
+						}
+					}
+				}
+				if = {
+					limit = {
+						has_trait = education_intrigue_5
+					}
+					random_scheme = {
+						limit = {
+							scheme_type = corruption
+							scheme_target = scope:recipient
+						}
+						add_scheme_progress = 3
+					}
+				}
+			}
+		}
+	}
+	
+	auto_accept = yes
+	ai_targets = {
+		ai_recipients = neighboring_rulers
+		#ai_recipients = liege
+	}
+	ai_potential = {
+		NOR = {
+			has_trait = compassionate
+			has_trait = just
+		}
+	}
+	ai_frequency = 36
+
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 20
+			scope:recipient = {
+				highest_held_title_tier < scope:actor.highest_held_title_tier
+			}
+		}
+		modifier = {
+			add = -20
+			scope:recipient = {
+				highest_held_title_tier >= scope:actor.highest_held_title_tier
+			}
+		}
+		modifier = {
+			add = 40
+			scope:recipient = {
+				has_trait = sadistic
+			}
+		}
+		modifier = {
+			add = 30
+			scope:recipient = {
+				has_trait = callous
+			}
+		}
+		modifier = {
+			add = 30
+			scope:recipient = {
+				has_trait = wrathful
+			}
+		}
+		modifier = {
+			add = 30
+			scope:recipient = {
+				has_trait = greedy
+			}
+		}
+		modifier = {
+			add = 30
+			scope:recipient = {
+				has_trait = gluttonous
+			}
+		}
+		modifier = {
+			add = 30
+			scope:recipient = {
+				has_trait = deceitful
+			}
+		}
+		modifier = {
+			add = 30
+			scope:recipient = {
+				has_trait = arbitrary
+			}
+		}
+		modifier = {
+			add = 30
+			scope:recipient = {
+				has_trait = lustful
+			}
+		}
+		modifier = {
+			add = -40
+			scope:recipient = {
+				has_trait = chaste
+			}
+		}
+		modifier = {
+			add = -50
+			scope:recipient = {
+				has_trait = just
+			}
+		}
+		modifier = {
+			add = -50
+			scope:recipient = {
+				has_trait = compassionate
+			}
+		}
+		modifier = {
+			add = -40
+			scope:recipient = {
+				has_trait = humble
+			}
+		}
+		modifier = {
+			add = -40
+			scope:recipient = {
+				has_trait = zealous
+			}
+		}
+		modifier = {
+			add = -50
+			scope:recipient = {
+				has_trait = honest
+			}
+		}
+		modifier = {
+			add = -50
+			scope:recipient = {
+				has_trait = paranoid
+			}
+		}
+		modifier = {
+			add = -50
+			scope:recipient = {
+				has_trait = archmage
+			}
+		}
+		modifier = {
+			add = -50
+			scope:recipient = {
+				has_trait = stubborn
+			}
+		}
+		modifier = {
+			add = -50
+			scope:recipient = {
+				has_trait = forgiving
+			}
+		}
+		modifier = {
+			add = -100
+			scope:recipient = {
+				is_at_war_with = scope:actor
+			}
+		}
+		modifier = {
+			add = -500
+			scope:recipient = {
+				is_ai = no
+			}
+		}
+		modifier = {
+			add = -40
+			scope:actor = {
+				OR = {
+					has_trait = lazy
+					has_trait = content
+				}
+			}
+		}
+	}
+}
+
+special_champion_mission = {
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {	
+			is_imprisoned = no
+			is_adult = yes
+			employs_court_position = dark_champion_court_position
+			any_court_position_holder = {
+				type = dark_champion_court_position
+				has_character_flag = ready_for_special_mission
+			}
+		}
+		scope:recipient = {
+			NOT = {
+				is_imprisoned_by = scope:actor
+			}
+			NAND = {
+				has_court_position = dark_champion_court_position
+				exists = liege
+				liege = scope:actor
+			}
+		}
+	}
+	is_valid_showing_failures_only = {
+		custom_description = {
+			text = dark_champion_is_on_mission
+			scope:actor = {
+				employs_court_position = dark_champion_court_position
+				any_court_position_holder = {
+					type = dark_champion_court_position
+					NOR = {
+						has_character_flag = special_champion_mission1
+						has_character_flag = special_champion_mission2
+						has_character_flag = special_champion_mission3
+						has_character_flag = special_champion_mission4
+					}
+				}
+			}
+		}
+		custom_description = {
+			text = dark_champion_only_during_peace
+			scope:actor = {
+				is_at_war = no
+			}
+		}
+	}
+	icon = icon_dark_champion
+	common_interaction = no
+	interface_priority = 90
+	popup_on_receive = no
+	category = interaction_category_hostile
+	desc = special_champion_mission_desc
+	cooldown_against_recipient = { years = 10 } 
+	cooldown = { months = 6 } 
+
+	#cooldown_against_recipient = { days = 1 } 
+	#cooldown = { days = 1 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = yes
+	
+	on_accept = {
+		scope:actor = {
+			hidden_effect = {
+				random_court_position_holder = {
+					type = dark_champion_court_position
+					save_scope_as = dchampion
+					if = {
+						limit = {
+							has_variable = night_attack_q
+						}
+						remove_variable = night_attack_q
+					}
+				}
+			}
+			send_interface_message = {
+				type = event_generic_neutral
+				title = special_champion_mission
+				left_icon = scope:actor
+				
+				right_icon = scope:recipient
+				
+				if = {
+					limit = {
+						scope:assasination_champion_mission = yes
+					}
+					custom_tooltip = special_champion_mission_o1a
+					scope:recipient = {
+						custom_tooltip = special_champion_mission_o1b
+					}
+					hidden_effect = {
+						scope:dchampion = {
+							add_character_flag = special_champion_mission1
+							#trigger_event = magic_ev7.31
+						}
+						#add_character_flag = special_champion_mission1
+						#trigger_event = magic_ev7.31
+						scope:recipient = {
+							add_character_flag = marked_for_assasination_dc_flag
+						}
+					}
+				}
+				else_if = {
+					limit = {
+						scope:plunder_champion_mission = yes
+					}
+					custom_tooltip = special_champion_mission_o2a
+					scope:recipient = {
+						custom_tooltip = special_champion_mission_o2b
+					}
+					hidden_effect = {
+						scope:dchampion = {
+							add_character_flag = special_champion_mission2
+							#trigger_event = magic_ev7.31
+						}
+					}
+				}
+				else_if = {
+					limit = {
+						scope:abduction_champion_mission = yes
+					}
+					custom_tooltip = special_champion_mission_o3a
+					scope:recipient = {
+						custom_tooltip = special_champion_mission_o3b
+					}
+					hidden_effect = {
+						scope:dchampion = {
+							add_character_flag = special_champion_mission3
+							#trigger_event = magic_ev7.31
+						}
+					}
+				}
+				else_if = {
+					limit = {
+						scope:rescue_champion_mission = yes
+					}
+					custom_tooltip = special_champion_mission_o4a
+					scope:recipient = {
+						custom_tooltip = special_champion_mission_o4b
+					}
+					hidden_effect = {
+						scope:dchampion = {
+							add_character_flag = special_champion_mission4
+							#trigger_event = magic_ev7.31
+						}
+					}
+				}
+				scope:dchampion = {
+					trigger_event = {
+						id = magic_ev7.31
+						days = 1
+					}
+				}
+			}
+		}
+	}
+	options_heading = special_champion_mission_option_title
+	send_option = {
+		flag = assasination_champion_mission
+		localization = special_champion_mission_o1
+	}
+	send_option = {
+		is_shown = {
+			scope:recipient = {
+				is_landed = yes
+			}
+		}
+		flag = plunder_champion_mission
+		localization = special_champion_mission_o2
+	}
+	send_option = {
+		is_shown = {
+			scope:recipient = {
+				is_imprisoned = no
+			}
+		}
+		flag = abduction_champion_mission
+		localization = special_champion_mission_o3
+	}
+	send_option = {
+		is_shown = {
+			scope:recipient = {
+				is_imprisoned = yes
+				NOT = {
+					is_imprisoned_by = scope:actor
+				}
+			}
+		}
+		flag = rescue_champion_mission
+		localization = special_champion_mission_o4
+	}
+
+	auto_accept = yes
+}
+
+soul_transfer_spell = {
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			is_imprisoned = no
+			has_character_flag = me_soul_project_done
+		}
+		scope:recipient = {
+			age >= 16
+			is_landed = yes
+			is_ruler = yes
+			is_ai = yes
+			is_clergy = no
+			faith = {
+				any_faith_playable_ruler = {
+					THIS = scope:recipient
+				}
+			}
+			NOR = {
+				has_government = republic_government
+				has_government = theocracy_government
+				has_government = mercenary_government
+				has_government = holy_order_government
+			}
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = power_needed_custom
+				can_spend_standard_ps_trigger = yes
+			}
+			custom_description = {
+				text = is_incapable_custom
+				NOT = { has_trait = incapable }
+			}
+			custom_description = {
+				text = is_on_mage_duel_custom
+				NOT = {	has_variable = pclash	}
+			}
+			custom_description = {
+				text = has_no_soul_custom
+				NOT = {	has_character_flag = no_soul	}
+			}
+		}
+		scope:recipient = {
+			custom_description = {
+			text = magic_protection_custom
+				has_full_magic_prot_trigger = no
+				OR = {
+					has_basic_magic_prot_trigger = no
+					AND = {
+						has_basic_magic_prot_trigger = yes
+						scope:actor = {	can_penetrate_basic_magic_prot_trigger = yes	}
+					}
+				}
+			}
+		}
+	}
+	icon = icon_magic
+	common_interaction = no
+	interface_priority = 90
+	popup_on_receive = no
+	category = interaction_category_hostile
+
+	cooldown_against_recipient = { years = 1 } 
+	cooldown = { years = 1 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = no
+	#hidden = yes
+	
+	on_accept = {
+		scope:actor = {
+			scope:recipient = {
+				save_scope_as = magic_user
+			}
+			send_message_4_magic_sense_effect = yes
+			hidden_effect = {
+				if = {
+					limit = {
+						has_character_modifier = amp_modifier
+					}
+					remove_character_modifier = amp_modifier
+				}
+				scope:recipient = {
+					if = {
+						limit = {
+							has_trait = incapable
+						}
+						remove_trait = incapable
+					}
+					if = {
+						limit = {
+							has_character_flag = no_soul
+						}
+						remove_character_flag = no_soul
+					}
+					clear_personality_effect = yes
+					clear_perks_effect = yes
+					clear_valid_magic_flags_effect = yes
+					if = {
+						limit = {
+							NOR = {
+								has_trait = witch
+								any_secret = { secret_type = secret_witch }
+							}
+						}
+						give_witch_secret_or_trait_effect = yes
+					}
+				}
+				transfer_personality_to_recipient_effect = yes
+				transfer_perks_to_recipient_effect = yes
+				transfer_mage_xp_effect = yes
+				transfer_valid_magic_flags_effect = yes
+			}
+			send_interface_message = {
+				type = event_generic_neutral
+				title = soul_transfer_spell
+				desc = "send_interface_message_text"
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				
+				custom_tooltip = soul_transfer_spell_ct
+				custom_tooltip = soul_transfer_spell_ct2
+				
+				if = {
+					limit = {
+						scope:soul_transfer_artifacts = yes
+					}
+					every_character_artifact = {
+						set_owner = {
+							target = scope:recipient
+							history = {
+								type = given
+								actor = root
+								recipient = scope:recipient
+								location = scope:recipient.location
+							}
+						}
+					}
+				}
+				set_player_character = scope:recipient
+			}
+			hidden_effect = {
+				add_trait = incapable
+			}
+		}
+	}
+	
+	auto_accept = yes
+	send_option = {
+		flag = soul_transfer_artifacts
+		localization = ST_ALSO_ARTIFACTS
+	}
+	send_options_exclusive = no
 }

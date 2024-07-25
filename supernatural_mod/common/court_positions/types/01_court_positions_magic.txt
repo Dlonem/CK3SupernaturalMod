@@ -284,3 +284,372 @@
 		}
 	}
 }
+dark_champion_court_position = {
+	max_available_positions = 1
+	category = court_position_category_special
+	skill = intrigue
+	
+	is_shown = {
+		OR = {
+			any_character_artifact = {
+				has_variable = magic_crown
+			}
+			AND = {
+				has_trait = demon
+				has_trait_xp = {
+					trait = demon
+					value > 74
+				}
+			}
+		}
+	}
+
+	opinion = {
+		value = 20
+	}
+	
+	# How high the aptitude has to be to reach the 5 different modifier levels
+	aptitude_level_breakpoints = { 20 40 60 80 }
+	
+	# How good is this character in this position? root scope is the holder of the court position
+	aptitude = {
+		value = 1
+		add = {
+			value = intrigue
+			multiply = 1
+			max = 25
+			desc = court_position_skill_intrigue
+		}
+		add = {
+			value = prowess
+			multiply = 1
+			max = 25
+			desc = court_position_skill_prowess
+		}
+		add = {
+			value = martial
+			multiply = 1
+			max = 25
+			desc = court_position_skill_martial
+		}
+		if = {
+			limit = {
+				has_trait = murderer
+			}
+			add = {
+				value = 10
+				desc = court_position_murderer_trait
+			}
+		}
+		if = {
+			limit = {
+				OR = {
+					has_trait = witch
+					any_secret = {
+						secret_type = secret_witch
+					}
+				}
+				
+			}
+			add = {
+				value = 10
+				desc = court_position_witch_trait
+			}
+		}
+		if = {
+			limit = {
+				has_trait = corrupted
+			}
+			add = {
+				value = 30
+				desc = court_position_corrupted_trait
+			}
+		}
+		if = {
+			limit = {
+				has_trait = schemer
+			}
+			add = {
+				value = 10
+				desc = court_position_schemer_trait
+			}
+		}
+		if = {
+			limit = {
+				has_trait = archmage
+			}
+			add = {
+				value = 20
+				desc = court_position_archmage_trait
+			}
+		}
+		if = {
+			limit = {
+				has_trait = demon
+			}
+			add = {
+				value = 20
+				desc = court_position_demon_trait
+			}
+		}
+		if = {
+			limit = {
+				has_trait = lifestyle_blademaster
+			}
+			add = {
+				value = 10
+				desc = court_position_blademaster_1_trait
+			}
+		}
+		if = {
+			limit = {
+				has_trait = berserker
+			}
+			add = {
+				value = 10
+				desc = court_position_berserker_trait
+			}
+		}
+		if = {
+			limit = {
+				has_trait = giant
+			}
+			add = {
+				value = 10
+				desc = court_position_giant_trait
+			}
+		}
+		if = {
+			limit = {
+				has_trait = viking
+			}
+			add = {
+				value = 10
+				desc = court_position_viking_trait
+			}
+		}
+		
+		add = court_position_aptitude_family_business_value
+		add = court_position_aptitude_low_penalty_value
+	}
+
+	valid_position = { }
+	is_powerful_agent = yes
+
+	is_shown_character = {
+		scope:employee = {
+			OR = {
+				is_courtier_of = scope:liege
+				is_vassal_of = scope:liege
+			}
+		}
+	}
+
+	valid_character = {
+		scope:employee = {
+			is_imprisoned = no
+			is_adult = yes
+			NOT = {
+				has_trait = incapable
+			}
+			NOT = {
+				has_relation_rival = scope:liege
+			}
+			NOT = {
+				has_relation_nemesis = scope:liege
+			}
+			OR = {
+				has_trait = callous
+				has_trait = greedy
+				has_trait = sadistic
+				has_trait = arbitrary
+				has_trait = gluttonous
+				has_trait = wrathful
+				has_trait = deceitful
+				has_trait = lustful
+				has_trait = arrogant
+			}
+			OR = {
+				has_trait = murderer
+				has_trait = corrupted
+				has_trait = cannibal
+				has_trait = true_witch
+				has_trait = demon
+				has_trait = archmage
+				has_trait = excommunicated
+				has_trait = golem
+				custom_description = {
+					text = is_your_mminion
+					has_relation_mmaster = scope:liege
+				}
+			}
+		}
+	}
+
+	revoke_cost = {
+		prestige =  {
+			value = minor_court_position_prestige_revoke_cost 
+
+			multiply = 0
+		}
+	}
+
+	salary = {
+		round = no
+		gold = {
+			value = minor_court_position_salary
+			# Set to 0 with Dynasty Perk Inner Circle
+			if = {
+				limit = {
+					scope:liege = {
+						exists = dynasty
+						dynasty = { has_dynasty_perk = fp2_coterie_legacy_1 }
+
+						employs_court_position = chronicler_court_position
+						any_court_position_holder = {
+					        type = chronicler_court_position
+							exists = dynasty
+							house = prev.house
+						}
+					}
+				}
+				multiply = {
+					value = 0.0
+					desc = inner_circle_salary_mod
+					format = "BASE_VALUE_FORMAT_DECIMALS_MINUS_POSITIVE"
+				}
+			}
+			if = {
+				limit = {
+					scope:liege = {
+						employs_court_position = chronicler_court_position
+						any_court_position_holder = {
+					        type = chronicler_court_position
+					        scope:liege = {
+								has_hook_of_type = {
+									type = obligation_hook
+									target = prev
+								}
+							}
+						}
+					}
+				}
+				multiply = {
+					value = 0.5
+					desc = obligation_hook_salary
+				}
+			}
+		}
+	}
+
+	# These modifiers are employed based on what level the aptitude reaches (levels are defined as breakpoints) 
+	scaling_employer_modifiers = {
+		terrible = {
+			dread_baseline_add = 0
+			knight_effectiveness_mult = 0.01
+		}
+		poor = {
+			dread_baseline_add = 2
+			knight_effectiveness_mult = 0.02
+		}
+		average = {
+			dread_baseline_add = 5
+			knight_effectiveness_mult = 0.03
+		}
+		good = {
+			dread_baseline_add = 7
+			knight_effectiveness_mult = 0.04
+		}
+		excellent = {
+			dread_baseline_add = 10
+			knight_effectiveness_mult = 0.05
+		}
+	}
+
+	modifier = {
+		monthly_prestige = minor_court_position_prestige_salary
+		dread_baseline_add = 10
+	}
+
+	on_court_position_received = {
+		basic_gained_court_position_effect = yes
+	}
+	on_court_position_revoked = { 
+		basic_revoked_court_position_effect = yes
+		scope:employee = {
+			if = {
+				limit = {
+					exists = this
+					is_alive = yes
+					has_character_flag = ready_for_special_mission
+				}
+				remove_character_flag = ready_for_special_mission
+			}
+			if = {
+				limit = {
+					exists = this
+					is_alive = yes
+					has_character_flag = dc_during_training_flag
+				}
+				remove_character_flag = dc_during_training_flag
+			}
+			clear_dc_mission_flags = yes
+		}
+	}
+	on_court_position_invalidated = {
+		basic_invalidated_court_position_effect = yes
+		scope:employee = {
+			if = {
+				limit = {
+					exists = this
+					is_alive = yes
+					has_character_flag = ready_for_special_mission
+				}
+				remove_character_flag = ready_for_special_mission
+			}
+			if = {
+				limit = {
+					exists = this
+					is_alive = yes
+					has_character_flag = dc_during_training_flag
+				}
+				remove_character_flag = dc_during_training_flag
+			}
+			clear_dc_mission_flags = yes
+		}
+
+	}
+	# Scripted value to determine whether an AI will hire/fire a position or not. Hires over 0, fires under -50. Look in _court_positions.info for more extensive documentation!
+	candidate_score = {
+		value = 50
+		scope:employee = {
+			# Does the liege have a better candidate that they should be hiring instead?
+			if = {
+				limit = {
+					scope:highest_available_aptitude > scope:employee_aptitude
+				}
+				add = -125
+			}
+			# More likely to pick a courtier with a high aptitude, less likely to pick one with low
+			add = {
+				value = scope:employee_aptitude
+				multiply = 4
+			}
+		}
+
+		add = scope:base_value
+		add = court_position_candidate_score_base_value
+		scope:liege = {
+			if = {
+				limit = {
+					OR = {
+						has_trait = compassionate
+						has_trait = forgiving
+					}
+				}
+				add = -9000
+			}
+		}
+		add = court_position_debt_considerations_value
+	}
+}
