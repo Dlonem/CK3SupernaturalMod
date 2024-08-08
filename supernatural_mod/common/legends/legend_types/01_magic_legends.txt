@@ -1,0 +1,664 @@
+﻿magic_type = {
+	color = { 243 150 0 }
+	
+	on_start = {
+		legend_owner = {
+			add_prestige = legend_prestige_gain
+		}
+		mark_historical_legend_as_done = yes
+		#if = {
+		#	limit = {
+		#		has_legend_chronicle = holy_warrior
+		#		legend_protagonist = {
+		#			is_landed = no
+		#		}
+		#	}
+		#	set_legend_property = {
+		#		name = ancestor
+		#		target = legend_owner
+		#	}
+		#}
+		#legend_protagonist = {
+		#	add_dead_character_flag = {
+		#		flag = ignore_sickness_clothes
+		#		years = 400
+		#	}
+		#}
+	}
+	
+	on_province_spread = {
+		if = {
+			limit = {
+				county.holder = {
+					is_ai = no
+					OR = {
+						NOT = { has_variable = legend_alerted_var }
+						AND = {
+							has_variable = legend_alerted_var
+							NOT = {
+								var:legend_alerted_var = scope:legend
+							}
+						}
+					}
+				}
+				scope:legend.legend_owner = {
+					NOT = { this = prev.county.holder }
+				}
+			}
+			if = {
+				limit = {
+					scope:legend = { legend_quality = famed }
+				}
+				send_interface_message_legend_notification_effect = yes
+			}
+			else = { # If it's a high level one we send a toast
+				send_interface_toast_legend_notification_effect = yes
+			}
+		}
+	}
+	
+	on_legend_stop_promote = {
+		# If you were asked money to promote a legend and you drop it you get called out
+		if = {
+			limit = {
+				scope:legend = {
+					is_target_in_variable_list = {
+						name = accepted_promote_legend_var
+						target = root #former promoter
+					}
+				}
+			}
+			trigger_event = {
+				id = legend_events.1000
+				days = { 1 3 }
+			}
+		}
+	}
+	
+	is_valid_protagonist = {
+		age >= 16
+		is_legendary_mage_trigger = yes
+	}
+
+	ai_protagonist_weight = {
+		value = 0
+		if = {
+			limit = {
+				this = scope:creator
+				prestige_level < 3
+			}
+			add = 6
+		}
+		else_if = {
+			limit = {
+				this = scope:creator
+				prestige_level >= 3
+			}
+			add = 10
+		}
+		if = {
+			limit = {
+				is_parent_of = scope:creator
+				is_alive = no
+			}
+			add = 5
+		}
+		if = {
+			limit = {
+				is_primary_heir_of = scope:creator
+			}
+			add = 5
+		}
+		if = {
+			limit = {
+				is_spouse_of = scope:creator
+				has_relation_soulmate = scope:creator
+			}
+			add = 3
+		}
+		if = {
+			limit = {
+				is_close_family_of = scope:creator
+				has_any_good_relationship_with_root_trigger = yes
+			}
+			add = 1
+		}
+		if = {
+			limit = {
+				OR = {
+					has_trait = brave
+					has_trait = just
+				}
+			}
+			add = 1
+		}
+		if = {
+			limit = {
+				OR = {
+					has_trait = cynical
+					has_trait = scholar
+					has_trait = lifestyle_mystic
+				}
+			}
+			add = 1
+		}
+		if = {
+			limit = {
+				OR = {
+					has_trait = witch
+					any_secret = { secret_type = secret_witch }
+				}
+			}
+			add = 3
+		}
+		if = { # If they already have the trait it makes no sense that they will get it again
+			limit = {
+				has_trait = legend
+			}
+			add = -10
+		}
+	}
+	
+	quality = {
+		famed = {
+			spread_chance = {
+				if = {
+					limit = {
+						exists = scope:legend.legend_owner
+					}
+					value = spread_chance_legends_default_value
+					multiply = spread_chance_legends_mult_value
+					multiply = 1.2
+				}
+				else = {
+					value = 0
+				}
+			}
+
+			max_provinces = 100
+
+			creation_cost = {
+				gold = legend_base_cost
+			}
+
+			owner_cost = {
+				round = no
+				gold = famed_legend_owner_cost
+			}
+			
+			promoter_cost = {
+				round = no
+				gold = famed_legend_promoter_cost
+			}
+			
+			upgrade_cost = {
+				gold = legend_upgrade_cost
+				prestige = legend_prestige_cost
+			}
+
+			removal_duration = {
+				years = { 25 35 }
+			}
+
+			impact = {
+				province_modifier = {
+					county_opinion_add = 5
+					monthly_county_control_growth_add = 0.1
+				}
+				owner_modifier = {
+					monthly_prestige_gain_mult = 0.1
+				}
+				promoter_modifier = {
+					monthly_prestige_gain_mult = 0.02
+					learning = 1
+				}
+				# Effect run when a legend is completed
+				# root = the owner
+				on_complete = {
+					promoted_legend ?= { save_scope_as = promoted_legend } #For the ending event loc
+					scope:protagonist = { save_scope_as = legend_protagonist }
+					remove_legend_notification_variables_effect = yes
+					hidden_effect = {
+						add_character_flag = completed_legendary_mage_legend_flag
+					}
+					if = {
+						limit = { is_valid_for_legitimacy_change = yes }
+						add_legitimacy = major_legitimacy_gain
+					}
+					add_prestige = massive_prestige_gain
+					if = {
+						limit = {
+							exists = dynasty
+						}
+						dynasty = {
+							add_dynasty_prestige = compensate_dynast_prest_value
+						}
+					}
+					#give_legendary_building_heroic_tooltip_effect = yes
+					#legend_ending_rewards_heroic_effect = yes
+					#legend_ending_rewards_famed_heroic_effect = yes
+					#legend_ending_achievements_effect = yes						
+					# Ending event
+					trigger_event = magic_ev7.132
+					
+					#balancing_legend_global_var_effect = yes # Left for testing purposes
+				}
+			}
+			ai_chance = {
+				# root = character with the legend seed
+				create = {
+					value = heroic_legend_create_ai
+				}
+
+				# root = character who can promote
+				# scope:legend = the legend to promote
+				promote = {
+					value = base_legend_promote_ai
+					if = {
+						limit = {
+							OR = {
+								has_trait = witch
+								any_secret = { secret_type = secret_witch }
+							}
+						}
+						multiply = 1.2
+					}
+					if = {
+						limit = {
+							learning > 19
+						}
+						multiply = 1.2
+					}
+				}
+				
+				# root = character who can take a legend
+				# scope:legend = the legend to take ownership
+				take_unowned = 100
+
+				# root = legend owner
+				# scope:legend = the legend
+				upgrade = {
+					value = 1000 # Always upgrade when you can
+				}
+
+				# root = legend owner
+				# scope:legend = the legend
+				complete = {
+					value = base_legend_complete_ai
+				}
+			}
+		}
+		
+		illustrious = {
+			spread_chance = {
+				if = {
+					limit = {
+						exists = scope:legend.legend_owner
+					}
+					value = spread_chance_legends_default_value
+					multiply = spread_chance_legends_mult_value
+				}
+				else = {
+					value = 0
+				}
+			}
+
+			max_provinces = 300
+			
+			creation_cost = {
+				gold = {
+					value = legend_base_cost
+					multiply = 1.5
+				}
+			}
+
+			owner_cost = {
+				round = no
+				gold = illustrious_legend_owner_cost
+			}
+			
+			promoter_cost = {
+				round = no
+				gold = illustrious_legend_promoter_cost
+			}
+			
+			upgrade_cost = {
+				gold = legend_upgrade_cost
+				prestige = legend_prestige_cost
+			}
+
+			removal_duration = {
+				years = { 50 70 }
+			}
+
+			impact = {
+				province_modifier = {
+					county_opinion_add = 10
+					monthly_county_control_growth_add = 0.2
+				}
+				owner_modifier = {
+					monthly_prestige_gain_mult = 0.25
+					diplomacy_per_prestige_level = 1
+				}
+				promoter_modifier = {
+					monthly_prestige_gain_mult = 0.06
+					learning = 2
+				}
+				# Effect run when a legend is completed
+				# root = the owner
+				on_complete = {
+					promoted_legend ?= { save_scope_as = promoted_legend } #For the ending event loc
+					scope:protagonist = { save_scope_as = legend_protagonist }
+					remove_legend_notification_variables_effect = yes
+					hidden_effect = {
+						add_character_flag = completed_legendary_mage_legend_flag
+					}
+					if = {
+						limit = { is_valid_for_legitimacy_change = yes }
+						add_legitimacy = massive_legitimacy_gain
+					}
+					add_prestige = massive_prestige_gain
+					if = {
+						limit = {
+							exists = dynasty
+						}
+						dynasty = {
+							add_dynasty_prestige = compensate_dynast_prest_value
+						}
+					}
+					hidden_effect = {
+						add_character_flag = dicount_from_legend_flag
+						every_vassal_or_below = {
+							limit = {
+								NOR = {
+									has_trait = witch
+									any_secret = { secret_type = secret_witch }
+								}
+								NOR = {
+									has_trait = witch_hunter
+									has_character_modifier = novice_witch_hunter_modifier
+								}
+							}
+							give_witch_secret_or_trait_effect = yes
+						}
+					}
+					custom_tooltip = dicount_from_legend_ct
+					custom_tooltip = popular_witchcraft_ct
+					add_diplomacy_skill = 5
+					#custom_tooltip = {
+					#	text = unlock_legendary_adventure_tt
+					#	add_character_flag = launch_a_legendary_adventure
+					#}
+					#give_legendary_building_heroic_tooltip_effect = yes
+					#legend_ending_rewards_heroic_effect = yes
+					#legend_ending_rewards_illustrious_heroic_effect = yes
+					#legend_ending_achievements_effect = yes
+					# Ending event
+					trigger_event = magic_ev7.132
+					
+					#balancing_legend_global_var_effect = yes # Left for testing purposes
+				}
+			}
+			ai_chance = {
+				# root = character with the legend seed
+				create = {
+					value = heroic_legend_create_ai
+					add = illustrious_legend_create_ai
+				}
+
+				# root = character who can promote
+				# scope:legend = the legend to promote
+				promote = {
+					value = base_legend_promote_ai
+					if = {
+						limit = {
+							OR = {
+								has_trait = witch
+								any_secret = { secret_type = secret_witch }
+							}
+						}
+						multiply = 1.3
+					}
+					if = {
+						limit = {
+							learning > 19
+						}
+						multiply = 1.3
+					}
+				}
+				
+				# root = character who can take a legend
+				# scope:legend = the legend to take ownership
+				take_unowned = 100
+
+				# root = legend owner
+				# scope:legend = the legend
+				upgrade = {
+					value = 1000 # Always upgrade when you can
+				}
+
+				# root = legend owner
+				# scope:legend = the legend
+				complete = {
+					value = base_legend_complete_ai
+				}
+			}
+		}
+		
+		mythical = {
+			spread_chance = {
+				if = {
+					limit = {
+						exists = scope:legend.legend_owner
+					}
+					value = spread_chance_legends_default_value
+					multiply = spread_chance_legends_mult_value
+				}
+				else = {
+					value = 0
+				}
+			}
+
+			max_provinces = 500
+			
+			creation_cost = {
+				gold = {
+					value = legend_base_cost
+					multiply = 2
+				}
+			}
+
+			owner_cost = {
+				round = no
+				gold = mythical_legend_owner_cost
+			}
+			
+			promoter_cost = {
+				round = no
+				gold = mythical_legend_promoter_cost
+			}
+
+			upgrade_cost = {
+				gold = {
+					value = {
+						value = legend_upgrade_cost
+						multiply = 2
+					}
+				}
+				prestige = legend_prestige_cost
+			}
+
+			removal_duration = {
+				years = { 75 100 }
+			}
+
+			impact = {
+				province_modifier = {
+					county_opinion_add = 20
+					monthly_county_control_growth_add = 0.3
+				}
+				owner_modifier = {
+					monthly_prestige_gain_mult = 0.5
+					diplomacy_per_prestige_level = 2
+				}
+				promoter_modifier = {
+					monthly_prestige_gain_mult = 0.1
+					learning = 4
+				}
+				# Effect run when a legend is completed
+				# root = the owner
+				on_complete = {
+					promoted_legend ?= { save_scope_as = promoted_legend } #For the ending event loc
+					scope:protagonist = { save_scope_as = legend_protagonist }
+					remove_legend_notification_variables_effect = yes
+					hidden_effect = {
+						add_character_flag = completed_legendary_mage_legend_flag
+					}
+					if = {
+						limit = { is_valid_for_legitimacy_change = yes }
+						add_legitimacy = massive_legitimacy_gain
+					}
+					add_prestige = massive_prestige_gain
+					if = {
+						limit = {
+							exists = dynasty
+						}
+						dynasty = {
+							add_dynasty_prestige = compensate_dynast_prest_value
+						}
+					}
+					hidden_effect = {
+						add_character_flag = dicount_from_legend_flag
+						every_vassal_or_below = {
+							limit = {
+								NOR = {
+									has_trait = witch
+									any_secret = { secret_type = secret_witch }
+								}
+								NOR = {
+									has_trait = witch_hunter
+									has_character_modifier = novice_witch_hunter_modifier
+								}
+							}
+							give_witch_secret_or_trait_effect = yes
+						}
+					}
+					custom_tooltip = dicount_from_legend_ct
+					custom_tooltip = popular_witchcraft_ct
+					add_diplomacy_skill = 5
+					if = {
+						limit = {
+							exists = house
+						}
+						house = {
+							add_house_modifier = magic_tradition_modifier
+						}
+					}
+					custom_tooltip = get_all_magic_claims_ct
+					hidden_effect = {
+						if = {
+							limit = {
+								NOR = {
+									has_trait = witch
+									any_secret = { secret_type = secret_witch }
+								}
+							}
+							give_witch_secret_or_trait_effect = yes
+						}
+						#every_artifact = {
+						#	limit = {
+						#		has_variable = magic1
+						#		NOR = {
+						#			artifact_owner = ROOT
+						#			ROOT = {
+						#				has_personal_artifact_claim = PREV
+						#			}
+						#		}
+						#	}
+						#	ROOT = {
+						#		add_personal_artifact_claim = PREV
+						#	}
+						#}
+					}
+					turn_into_mage_effect = yes
+					if = {
+						limit = {
+							is_decision_on_cooldown = magic_epic_decision
+						}
+						remove_decision_cooldown = magic_epic_decision
+					}
+					#custom_tooltip = {
+					#	text = unlock_legendary_adventure_tt
+					#	add_character_flag = launch_a_legendary_adventure
+					#}
+					#custom_tooltip = {
+					#	text = unlock_legendary_fealty_tt
+					#	add_character_flag = legend_demand_fealty
+					#}
+					#give_legendary_building_mythical_heroic_tooltip_effect = yes
+					#legend_ending_rewards_heroic_effect = yes
+					#legend_ending_rewards_mythical_heroic_effect = yes
+					#legend_ending_achievements_effect = yes
+					# Ending event
+					trigger_event = magic_ev7.132
+					
+					#balancing_legend_global_var_effect = yes # Left for testing purposes
+				}
+			}
+			ai_chance = {
+				# root = character with the legend seed
+				create = {
+					value = heroic_legend_create_ai
+					add = mythical_legend_create_ai
+				}
+
+				# root = character who can promote
+				# scope:legend = the legend to promote
+				promote = {
+					value = base_legend_promote_ai
+					if = {
+						limit = {
+							OR = {
+								has_trait = witch
+								any_secret = { secret_type = secret_witch }
+							}
+						}
+						multiply = 1.4
+					}
+					if = {
+						limit = {
+							learning > 19
+						}
+						multiply = 1.4
+					}
+				}
+				
+				# root = character who can take a legend
+				# scope:legend = the legend to take ownership
+				take_unowned = 100
+
+				# root = legend owner
+				# scope:legend = the legend
+				upgrade = {
+					value = 1000 # Always upgrade when you can
+				}
+
+				# root = legend owner
+				# scope:legend = the legend
+				complete = {
+					value = base_legend_complete_ai
+				}
+			}
+		}
+	}
+	
+	on_yearly = {
+		scope:legend = { save_scope_as = promoted_legend }
+		trigger_event = {
+			on_action = legend_ongoing_events
+		}
+		#trigger_event = {
+		#	on_action = legend_changing_events
+		#}
+	}
+}

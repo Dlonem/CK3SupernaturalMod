@@ -1055,7 +1055,53 @@ magic_ev4.10 = {
 			}
 		}
 	}
-
+	option = {
+		#Grand Coalition
+		name = ev4.10.0.d
+		trigger = {
+			#OR = {
+			#	scope:recipient.highest_held_title_tier = tier_empire
+			#	scope:recipient.highest_held_title_tier = tier_kingdom
+			#}
+			prestige_level >= very_high_prestige_level
+		}
+		show_as_unavailable = {
+			scope:recipient = {
+				any_held_title = {
+					OR = {
+						tier = tier_empire
+						tier = tier_kingdom
+					}
+				}
+			}
+			NOR = {
+				has_character_flag = starts_grand_coalition_war
+				has_truce = scope:recipient
+				is_allied_to = scope:recipient
+				scope:recipient = {
+					has_strong_hook = ROOT
+				}
+			}
+		}
+		custom_tooltip = ev4.10.0.d_ct
+		hidden_effect = {
+			if = {
+				limit = {
+					NOT = {
+						has_character_flag = starts_grand_coalition_war
+					}
+				}
+				add_character_flag = starts_grand_coalition_war
+			}
+		}
+		trigger_event = {
+			id = magic_ev8.42
+			days = { 20 30 }
+		}
+		ai_chance = {
+			base = 0
+		}
+	}
 	option = {
 		#I'll talk with the witch
 		name = ev4.10.0.a
@@ -1071,6 +1117,9 @@ magic_ev4.10 = {
 				id = magic_ev4.11
 				days = { 12 24 }
 			}
+		}
+		ai_chance = {
+			base = 10
 		}
 	}
 	option = {
@@ -1102,7 +1151,9 @@ magic_ev4.10 = {
 				}
 			}
 		}
-		
+		ai_chance = {
+			base = 5
+		}
 	}
 	option = {
 		#Plan must be prepared
@@ -1111,6 +1162,9 @@ magic_ev4.10 = {
 		trigger_event = {
 			id = magic_ev4.31
 			days = { 20 30 }
+		}
+		ai_chance = {
+			base = 10
 		}
 	}
 }
@@ -1398,6 +1452,9 @@ magic_ev4.13 = {
 			is_alive = yes
 			is_imprisoned = no
 		}
+	}
+	on_trigger_fail = {
+		trigger_event = magic_ev4.12
 	}
 
 	option = {
@@ -2815,6 +2872,9 @@ magic_ev4.31 = {
 			id = magic_ev4.33
 			days = { 3 6 }
 		}
+		ai_chance = {
+			base = 10
+		}
 	}
 	option = {
 		#direct approach
@@ -2828,12 +2888,13 @@ magic_ev4.31 = {
 			}
 		}
 		show_as_unavailable = {
-			scope:recipient = {
-				OR = {
-					has_trait = paranoid
-					has_character_modifier = double_guards_modifier
-				}
-			}
+			#scope:recipient = {
+			#	OR = {
+			#		has_trait = paranoid
+			#		has_character_modifier = double_guards_modifier
+			#	}
+			#}
+			always = yes
 		}
 		custom_tooltip = hunt_witch_lord_ps
 		scope:recipient = {
@@ -2845,6 +2906,13 @@ magic_ev4.31 = {
 		trigger_event = {
 			id = magic_ev4.37
 			days = { 3 6 }
+		}
+		ai_chance = {
+			base = 0
+			modifier = {
+				add = 10
+				has_game_rule = high_whunters
+			}
 		}
 	}
 	option = {
@@ -2891,6 +2959,9 @@ magic_ev4.31 = {
 			}
 		}
 		custom_tooltip = ev4.5.0.a_ct
+		ai_chance = {
+			base = 10
+		}
 	}
 	option = {
 		#war
@@ -2904,6 +2975,9 @@ magic_ev4.31 = {
 		skill = martial
 		add_unpressed_claim = scope:recipient.primary_title
 		custom_tooltip = ev4.5.0.a_ct
+		ai_chance = {
+			base = 10
+		}
 	}
 	option = {
 		#obtaining more information
@@ -2938,6 +3012,9 @@ magic_ev4.31 = {
 					months = { 3 6 }
 				}
 			}
+		}
+		ai_chance = {
+			base = 10
 		}
 	}
 }
@@ -4158,6 +4235,7 @@ magic_ev4.45 = {
 		scope:sssecret = {
 			reveal_to = root
 		}
+		set_spell_id = { ID = 24 }
 		#icon = scope:full_temp_art
 	}
 }
@@ -6399,9 +6477,6 @@ magic_ev4.74 = {
 								any_character_artifact = { has_variable = magic1 }
 								any_character_artifact = { has_variable = dragon_scales }
 								has_trait = source
-								has_trait = source2
-								has_trait = source3
-								has_trait = source4
 								has_perk = magical_experiments_p1_perk
 							}
 						}
@@ -6757,7 +6832,7 @@ magic_ev4.77 = {
 					value < 100
 				}
 			}
-			gain_sc_xp2_effect = yes
+			gain_sc_xp1_effect = yes
 			hidden_effect = {
 				seek_the_power4c_effect = yes
 			}
@@ -7101,6 +7176,7 @@ magic_ev4.81 = {
 				skill = intrigue
 				value = {
 					add = scope:recipient.intrigue
+					add = 3
 					if = {
 						limit = {
 							scope:recipient = {
@@ -7408,16 +7484,43 @@ magic_ev4.85 = {
 	}
 	option = {
 		name = ev4.85.0.a
-		trigger = {
-			NOR = {
-				has_trait = source
-				has_trait = source2
-				has_trait = source3
-				has_trait = source4
-			}
-		}
+		#trigger = {
+		#	NOT = {
+		#		has_trait = source
+		#	}
+		#}
 		show_as_tooltip = {
-			add_trait = source
+			if = {
+				limit = {
+					NOT = {
+						has_trait = source
+					}
+				}
+				add_trait = source
+			}
+			else = {
+				if = {
+					limit = {
+						has_trait_xp = {
+							trait = source
+							track = magic_potential
+							value < 61
+						}
+					}
+					add_trait_xp = {
+						trait = source
+						track = magic_potential
+						value = 20
+					}
+				}
+				else = {
+					add_trait_xp = {
+						trait = source
+						track = magic_potential
+						value = 10
+					}
+				}
+			}
 		}
 		add_character_flag = hecate_option1
 	}
@@ -7454,7 +7557,7 @@ magic_ev4.85 = {
 				add_trait_xp = {
 					trait = archmage
 					track = secret_knowledge
-					value = 25
+					value = 20
 				}
 			}
 			else_if = {
@@ -7520,7 +7623,37 @@ magic_ev4.86 = {
 		name = ev4.86.0.a
 		if = {
 			limit = {	has_character_flag = hecate_option1	}
-			add_trait = source
+			if = {
+				limit = {
+					NOT = {
+						has_trait = source
+					}
+				}
+				add_min_source_trait = yes
+			}
+			else = {
+				if = {
+					limit = {
+						has_trait_xp = {
+							trait = source
+							track = magic_potential
+							value < 61
+						}
+					}
+					add_trait_xp = {
+						trait = source
+						track = magic_potential
+						value = 20
+					}
+				}
+				else = {
+					add_trait_xp = {
+						trait = source
+						track = magic_potential
+						value = 10
+					}
+				}
+			}
 		}
 		else_if = {
 			limit = {	has_character_flag = hecate_option2	}
@@ -7548,7 +7681,7 @@ magic_ev4.86 = {
 				add_trait_xp = {
 					trait = archmage
 					track = secret_knowledge
-					value = 25
+					value = 20
 				}
 			}
 			else_if = {
@@ -7622,14 +7755,44 @@ magic_ev4.86 = {
 		name = ev4.86.0.b
 		trigger = {
 			has_character_flag = hecate_option2
-			NOR = {
-				has_trait = source
-				has_trait = source2
-				has_trait = source3
-				has_trait = source4
+			#NOR = {
+			#	has_trait = source
+			#	has_trait = source2
+			#	has_trait = source3
+			#	has_trait = source4
+			#}
+		}
+		if = {
+			limit = {
+				NOT = {
+					has_trait = source
+				}
+			}
+			add_min_source_trait = yes
+		}
+		else = {
+			if = {
+				limit = {
+					has_trait_xp = {
+						trait = source
+						track = magic_potential
+						value < 61
+					}
+				}
+				add_trait_xp = {
+					trait = source
+					track = magic_potential
+					value = 20
+				}
+			}
+			else = {
+				add_trait_xp = {
+					trait = source
+					track = magic_potential
+					value = 10
+				}
 			}
 		}
-		add_trait = source
 		custom_tooltip = no_soul_custom_tooltip
 		add_character_flag = no_soul
 		trigger_event = {
@@ -7739,7 +7902,37 @@ magic_ev4.86 = {
 					title=ev4.86.0.d1
 					if = {
 						limit = {	has_character_flag = hecate_option1	}
-						add_trait = source
+						if = {
+							limit = {
+								NOT = {
+									has_trait = source
+								}
+							}
+							add_min_source_trait = yes
+						}
+						else = {
+							if = {
+								limit = {
+									has_trait_xp = {
+										trait = source
+										track = magic_potential
+										value < 61
+									}
+								}
+								add_trait_xp = {
+									trait = source
+									track = magic_potential
+									value = 20
+								}
+							}
+							else = {
+								add_trait_xp = {
+									trait = source
+									track = magic_potential
+									value = 10
+								}
+							}
+						}
 					}
 					else_if = {
 						limit = {	has_character_flag = hecate_option2	}
@@ -7951,9 +8144,6 @@ magic_ev4.88 = {
 			has_perk = fate_weaver_p10_perk
 			has_focus = arcane_focus
 			has_trait = source
-			has_trait = source2
-			has_trait = source3
-			has_trait = source4
 		}
 	}
 
@@ -8118,7 +8308,6 @@ magic_ev4.90 = {
 		has_witch_house_trigger = yes
 		NOR = {
 			has_trait = source2
-			has_trait = source3
 			has_trait = yaga
 			any_living_character = {
 				has_trait = yaga
@@ -8196,7 +8385,7 @@ magic_ev4.90 = {
 						name = demonic_knights
 						men_at_arms = {
 							type = demonic_knights
-							stacks = 3
+							stacks = 7
 						}
 						levies = {
 							add = 700
@@ -8272,14 +8461,14 @@ magic_ev4.90 = {
 						name = demonic_knights
 						men_at_arms = {
 							type = demonic_knights
-							stacks = 5
+							stacks = 10
 						}
 						men_at_arms = {
 							type = cultists
-							stacks = 10
+							stacks = 15
 						}
 						levies = {
-							add = 2000
+							add = 3000
 						}
 						inheritable = no
 						uses_supply = no
@@ -8322,16 +8511,13 @@ magic_ev4.91 = {
 			add_trait = scaly
 			if = {
 				limit = {
-					NOR = {
+					NOT = {
 						has_trait = source
-						has_trait = source2
-						has_trait = source3
-						has_trait = source4
 					}
 				}
 				random = {
 					chance = 50
-					add_trait = source
+					add_min_source_trait = yes
 				}
 			}
 			random_list = {

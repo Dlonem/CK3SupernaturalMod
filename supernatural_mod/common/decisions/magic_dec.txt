@@ -56,23 +56,16 @@ forbidden_ritual_decision = {
 	cooldown = { months = 5 }
 	ai_will_do = {
         base = 80
-            modifier = {
-			    add = -75
-                has_trait = source
-            }
-			modifier = {
-			    add = -75
-                has_trait = source2
-            }
-			modifier = {
-			    add = -75
-                has_trait = source3
-            }
-			modifier = {
-			    add = -75
-                has_trait = source4
-            }
-        }
+        modifier = {
+		    add = -75
+            has_trait = source
+			has_trait_xp = {
+				trait = source
+				track = magic_potential
+				value > 19
+			}
+         }
+    }
 
 	effect = {
 		save_scope_as = this0
@@ -159,14 +152,21 @@ magic_triangulation_decision = {
 	is_valid_showing_failures_only = {
 		custom_description = {
 			text = power_needed_custom
-			can_spend_standard_ps_trigger = yes
+			OR = {
+				can_spend_standard_ps_trigger = yes
+				has_trait = archmage
+			}
+			
 		}
 		custom_description = {
 			text = is_incapable_custom
 			NOT = { has_trait = incapable }
 		}
 	}
-	cooldown = { months = 12 }
+	cost = {
+		gold = potion_gold_value
+	}
+	cooldown = { months = 24 }
 	ai_will_do = {
 		base = 50
 		modifier = {
@@ -198,15 +198,24 @@ magic_triangulation_decision = {
 				}
 			}
 		}
+		modifier = {
+			add = -150
+			gold < potion_gold_value
+		}
 	}
 
 	effect = {
 		#trigger_event = magic_ev.9
+		set_spell_id = { ID = 20 }
 		trigger_event = magic_ev4.82
 		#gain_sc_xp1_effect = yes
 		custom_tooltip = magic_triangulation_ct
-		random = {
-			chance = 50
+		if = {
+			limit = {
+				NOT = {
+					has_trait = archmage
+				}
+			}
 			spend_standard_ps_effect = yes
 			metamagic_effect = yes
 		}
@@ -238,11 +247,16 @@ summon_demon_decision = {
 			text = is_on_mage_duel_custom
 			NOT = {	has_variable = pclash	}
 		}
+		custom_description = {
+			text = magic_barrier_exists_custom
+			NOT = {	exists = global_var:us_magic_barrier_var	}
+		}
 	}
 	cooldown = { years = 1 }
 	ai_will_do = { base = 60 }
 
 	effect = {
+		set_spell_id = { ID = 21 }
 		save_scope_as = this0
 		trigger_event = magic_ev.12
 		
@@ -264,7 +278,7 @@ summon_demon_decision = {
 		}
 		show_as_tooltip = {
 			spend_standard_ps_effect = yes
-			gain_sc_xp1_effect = yes
+			gain_demonology_or_sc_standard_effect = yes
 		}
 
 	}
@@ -980,15 +994,59 @@ drink_pot8_decision = {
 	}
 	ai_check_interval = 0
 }
+drink_pot9_decision = {
+	title = drink_pot9_decision
+	desc = pot9_desc
+	selection_tooltip = pot9_desc
+	confirm_text = drink_pot5_decision_confirm
+	picture = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
+	is_shown = {
+		any_character_artifact = { has_variable = pot9 }
+	}
+
+	cooldown = { years = 1 }
+	ai_will_do = { base = 0 }
+
+	effect = {
+		hidden_effect = {
+			if = {
+				limit = {
+					has_character_modifier = elixir_learning_modifier
+				}
+				remove_character_modifier = elixir_learning_modifier
+			}
+		}
+		add_character_modifier = {
+			modifier = elixir_learning_modifier
+			years = 1
+		}
+		
+		random_character_artifact = {
+			limit = {
+				has_variable = pot9
+				}
+			destroy_artifact = this
+		}
+	}
+	ai_check_interval = 0
+}
+
+
 
 esoteric_training_decision = {
 	desc = esoteric_training_decision_desc
 	picture = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	is_shown = {
-		exists = dynasty
-		dynasty = {
-			has_dynasty_perk = witchcraft_legacy_2
+		OR = {
+			AND = {
+				exists = dynasty
+				dynasty = {
+					has_dynasty_perk = witchcraft_legacy_2
+				}
+			}
+			has_trait = supernatural_hunter
 		}
+		
 		is_adult = yes
 	}
 	is_valid_showing_failures_only = {
@@ -1003,102 +1061,117 @@ esoteric_training_decision = {
 		gold = potion_gold_value
 	}
 	effect = {
-		random_list = {
-			10 = {
-				if = {
-					limit = {
-						has_trait = lifestyle_mystic
+		if = {
+			limit = {
+				has_trait = supernatural_hunter
+				is_witch_trigger = no
+			}
+			send_interface_toast = {
+				title = esoteric_training_decision
+				give_witch_secret_or_trait_effect = yes
+			}
+			custom_tooltip = gain_mystic_perk
+			hidden_effect = {
+				add_magic_lifestyle_perk_points=1
+			}
+		}
+		else = {
+			random_list = {
+				10 = {
+					if = {
+						limit = {
+							has_trait = lifestyle_mystic
+						}
+						send_interface_toast = {
+							title = esoteric_training_decision
+							add_trait_xp = {
+								trait = lifestyle_mystic
+								value = 50
+							}
+						}
+						
+					}
+					else = {
+						add_trait_force_tooltip = lifestyle_mystic
+						add_trait_xp = {
+							trait = lifestyle_mystic
+							value = 10
+						}
+					}
+				}
+				10 = {
+					trigger = {
+						has_trait = archmage
+						has_trait_xp = {
+							trait = archmage
+							track = secret_knowledge
+							value < 100
+						}
 					}
 					send_interface_toast = {
 						title = esoteric_training_decision
 						add_trait_xp = {
-							trait = lifestyle_mystic
-							value = 50
+							trait = archmage
+							track = secret_knowledge
+							value = 2
 						}
-					}
-					
-				}
-				else = {
-					add_trait_force_tooltip = lifestyle_mystic
-					add_trait_xp = {
-						trait = lifestyle_mystic
-						value = 10
+						gain_cm_xp1_effect = yes
 					}
 				}
-			}
-			10 = {
-				trigger = {
-					has_trait = archmage
-					has_trait_xp = {
-						trait = archmage
-						track = secret_knowledge
-						value < 100
-					}
-				}
-				send_interface_toast = {
-					title = esoteric_training_decision
-					add_trait_xp = {
-						trait = archmage
-						track = secret_knowledge
-						value = 2
-					}
-					gain_cm_xp1_effect = yes
-				}
-			}
-			10 = {
-				trigger = {
-					NAND = {
-						has_trait = true_witch
-						has_trait = archmage
-					}
-					NOR = {
-						has_trait = supernatural_hunter
-						has_trait = witch_hunter
-						has_character_modifier = novice_witch_hunter_modifier
-					}
-				}
-				if = {
-					limit = {
+				10 = {
+					trigger = {
+						NAND = {
+							has_trait = true_witch
+							has_trait = archmage
+						}
 						NOR = {
-							has_trait = witch
-							any_secret = { secret_type = secret_witch }
+							has_trait = supernatural_hunter
+							has_character_modifier = novice_witch_hunter_modifier
 						}
 					}
-					send_interface_toast = {
-						title = esoteric_training_decision
-						#add_secret = {
-						#	type = secret_witch
-						#	target = root
+					if = {
+						limit = {
+							NOR = {
+								has_trait = witch
+								any_secret = { secret_type = secret_witch }
+							}
+						}
+						send_interface_toast = {
+							title = esoteric_training_decision
+							#add_secret = {
+							#	type = secret_witch
+							#	target = root
+							#}
+							give_witch_secret_or_trait_effect = yes
+						}
+						
+						#if = {
+						#	limit = {
+						#		is_ai = yes
+						#	}
+						#	set_focus = witch_focus
 						#}
-						give_witch_secret_or_trait_effect = yes
+					}
+					custom_tooltip = gain_mystic_perk
+					hidden_effect = {
+						add_magic_lifestyle_perk_points=1
 					}
 					
-					#if = {
-					#	limit = {
-					#		is_ai = yes
-					#	}
-					#	set_focus = witch_focus
-					#}
 				}
-				custom_tooltip = gain_mystic_perk
-				hidden_effect = {
-					add_magic_lifestyle_perk_points=1
-				}
-				
-			}
-			10 = {
-				trigger = {
-					NAND = {
-						has_trait = whole_of_body
-						has_trait = scholar
-						has_trait = theologian
+				10 = {
+					trigger = {
+						NAND = {
+							has_trait = whole_of_body
+							has_trait = scholar
+							has_trait = theologian
+						}
 					}
+					custom_tooltip = gain_learning_perk
+					hidden_effect = {
+						add_learning_lifestyle_perk_points=1
+					}
+					
 				}
-				custom_tooltip = gain_learning_perk
-				hidden_effect = {
-					add_learning_lifestyle_perk_points=1
-				}
-				
 			}
 		}
 	}
@@ -1272,16 +1345,18 @@ magic_transmutation_decision = {
 		base = 10
 		modifier = {
 			add = 20
-			OR = {
-				has_trait = source
-				has_trait = source2
-				has_trait = source3
-				has_trait = source4
-			}
+			#OR = {
+			#	has_trait = source
+			#	has_trait = source2
+			#	has_trait = source3
+			#	has_trait = source4
+			#}
+			has_trait = source
 		}
 	}
 
 	effect = {
+		set_spell_id = { ID = 22 }
 		hidden_effect = {
 			send_message_4_magic_sense_effect = yes
 		}
@@ -1325,19 +1400,39 @@ magic_defence_decision = {
 	}
 
 	effect = {
+		set_spell_id = { ID = 23 }
 		hidden_effect = {
 			send_message_4_magic_sense_effect = yes
 		}
 		custom_tooltip = use_magic_custom_tooltip
 		spend_standard_ps_effect = yes
-		add_character_modifier = {
-			modifier = amp_modifier
-			years = 10
+		if = {
+			limit = {
+				any_character_artifact = {
+					has_variable = catalyst
+				}
+			}
+			custom_tooltip = magic_catalyst_spells_duration_ct
+			add_character_modifier = {
+				modifier = amp_modifier
+				years = 20
+			}
+			add_character_modifier = {
+				modifier = master_defence_modifier
+				years = 20
+			}
 		}
-		add_character_modifier = {
-			modifier = master_defence_modifier
-			years = 10
+		else = {
+			add_character_modifier = {
+				modifier = amp_modifier
+				years = 10
+			}
+			add_character_modifier = {
+				modifier = master_defence_modifier
+				years = 10
+			}
 		}
+		
 		gain_cm_xp1_effect = yes
 		gain_sc_xp1_effect = yes
 		hidden_effect = {
@@ -1466,6 +1561,13 @@ witch_hunting_decision = {
 			random_list = {
 				1 = { trigger_event = magic_ev3.63 }
 				1 = { trigger_event = magic_ev3.65 }
+			}
+			random = {
+				chance = 7
+				trigger_event = {
+					id = magic_ev8.3
+					months = 1
+				}
 			}
 		}
 	}
@@ -1663,42 +1765,85 @@ summon_demonic_knights_decision = {
 				has_trait = demon
 			}
 		}
+		custom_description = {
+			text = magic_barrier_exists_custom
+			NOT = {	exists = global_var:us_magic_barrier_var	}
+		}
 	}
 	cooldown = { years = summon_demonic_knights_decision_cooldown_value }
-	ai_will_do = { base = 50 }
+	ai_will_do = { base = 80 }
 
 	effect = {
+		set_spell_id = { ID = 25 }
 		spend_standard_ps_effect = yes
-		spawn_army = {
-			name = demonic_knights
-			men_at_arms = {
-				type = demonic_knights
-				stacks = 3
-			}
-			#men_at_arms = {
-			#	type = skeletons
-			#	stacks = 6
-			#}
-			#levies = {
-			#	add = 400
-			#}
-			inheritable = no
-			uses_supply = no
-			location = root.location
-		}
 		if = {
 			limit = {
+				has_dark_temple_trigger = yes
 				has_trait = demon
 				has_trait_xp = {
 					trait = demon
-					value < 100
+					value > 99
 				}
 			}
-			add_trait_xp = {
-				trait = demon
-				value = 10
+			spawn_army = {
+				name = demonic_knights
+				men_at_arms = {
+					type = demonic_knights
+					stacks = 10
+				}
+				inheritable = no
+				uses_supply = no
+				location = root.location
 			}
 		}
+		else_if = {
+			limit = {
+				has_dark_temple_trigger = yes
+			}
+			spawn_army = {
+				name = demonic_knights
+				men_at_arms = {
+					type = demonic_knights
+					stacks = 5
+				}
+				inheritable = no
+				uses_supply = no
+				location = root.location
+			}
+		}
+		else = {
+			spawn_army = {
+				name = demonic_knights
+				men_at_arms = {
+					type = demonic_knights
+					stacks = 3
+				}
+				#men_at_arms = {
+				#	type = skeletons
+				#	stacks = 6
+				#}
+				#levies = {
+				#	add = 400
+				#}
+				inheritable = no
+				uses_supply = no
+				location = root.location
+			}
+		}
+		
+		#if = {
+		#	limit = {
+		#		has_trait = demon
+		#		has_trait_xp = {
+		#			trait = demon
+		#			value < 100
+		#		}
+		#	}
+		#	add_trait_xp = {
+		#		trait = demon
+		#		value = 10
+		#	}
+		#}
 	}
 	ai_check_interval = 12
 }
@@ -1709,6 +1854,7 @@ learn_new_spell_decision = {
 		is_imprisoned = no
 		is_adult = yes
 		has_trait = archmage
+		has_mage_academy_trigger = yes
 		NAND = {
 			has_character_flag = bless_land_flag
 			has_character_flag = healing_spell_flag
@@ -1716,11 +1862,11 @@ learn_new_spell_decision = {
 			has_character_flag = plague_spell_flag
 			has_character_flag = hipercognition_flag
 			has_character_flag = firestorm_spell_flag
+			has_character_flag = aura_reading_spell
 		}
-		NOT = {
-			has_trait = source3
-		}
-		has_mage_academy_trigger = yes
+		#NOT = {
+		#	is_the_choosen_one_trigger = yes
+		#}
 	}
 
 	cooldown = { years = 15 }
@@ -1806,6 +1952,18 @@ learn_new_spell_decision = {
 						}
 						add_character_flag = firestorm_spell_flag
 					}
+					5 = {
+						trigger = {
+							NOT = {
+								has_character_flag = aura_reading_spell
+							}
+						}
+						send_interface_toast = {
+							title = learn_new_spell_decision
+							custom_tooltip = aura_reading_spell_got_it
+						}
+						add_character_flag = aura_reading_spell
+					}
 					1 = {
 
 					}
@@ -1860,7 +2018,14 @@ grand_spell_decision = {
 		}
 		OR = {
 			has_character_flag = ready_for_grand_spell_flag
-			has_trait = source3
+			AND = {
+				has_trait = source
+				has_trait_xp = {
+					trait = source
+					track = magic_potential
+					value > 99
+				}
+			}
 		}
 		
 	}
@@ -1882,6 +2047,7 @@ grand_spell_decision = {
 	major = yes
 	cooldown = { years = 5 }
 	effect = {
+		set_spell_id = { ID = 26 }
 		add_trait_xp = {
 			trait = archmage
 			track = power_saturation
@@ -1903,6 +2069,80 @@ grand_spell_decision = {
 		}
 	}
 	ai_check_interval = 12
+}
+change_the_future_decision = {
+	title = change_the_future_title
+	desc = change_the_future_desc
+	selection_tooltip = change_the_future_desc
+	confirm_text = magic_transmutation_decision_confirm
+	picture = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
+	is_shown = {
+		has_character_flag = fighting_planes_flag2		
+	}
+	is_valid_showing_failures_only = {
+		custom_description = {
+			text = power_needed_custom
+			can_spend_standard_ps_trigger = yes
+		}
+		custom_description = {
+			text = is_incapable_custom
+			NOT = { has_trait = incapable }
+		}
+	}
+	major = yes
+	cooldown = { years = 5 }
+	effect = {
+		spend_standard_ps_effect = yes
+		set_spell_id = { ID = 29 }
+		custom_tooltip = grand_spell_decision_ct
+		hidden_effect = {
+			remove_character_flag = fighting_planes_flag2
+			trigger_event = magic_ev8.13
+		}
+	}
+	ai_check_interval = 0
+}
+
+become_fallen_hunter_decision = {
+	title = become_fallen_hunter_decision_title
+	desc = become_fallen_hunter_decision_desc
+	selection_tooltip = become_fallen_hunter_decision_desc
+	confirm_text = become_fallen_hunter_decision_confirm
+	picture = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
+	is_shown = {
+		has_trait = supernatural_hunter
+		any_character_artifact = {
+			has_variable = magic1
+		}
+		is_imprisoned = no
+	}
+	major = yes
+	cooldown = { years = 5 }
+	effect = {
+		remove_trait = supernatural_hunter
+		#add_trait_force_tooltip = witch_hunter2
+		#give_witch_secret_or_trait_effect = yes
+		hidden_effect = {
+			if = {
+				limit = {
+					has_character_modifier = inq_modifier
+				}
+				remove_character_modifier = inq_modifier
+			}
+		}
+	}
+	ai_check_interval = 36
+	ai_will_do = {
+		base = 1
+		modifier = {
+			has_trait = ambitious
+			add = 49
+		}
+		modifier = {
+			has_trait = cynical
+			add = 20
+		}
+	}
 }
 #test_test_decision = {
 #	desc = test_test_decision_desc
@@ -2085,9 +2325,27 @@ grand_spell_decision = {
 #
 #	cooldown = { days = 1 }
 #	effect = {
-#		house = {
-#			set_house_head = root
+#		#turn_into_mage_effect = yes
+#		#random_ruler = {
+#		#	limit = {
+#		#		is_ai = yes
+#		#		is_imprisoned = no
+#		#		NOT = {
+#		#			has_trait = incapable
+#		#		}
+#		#	}
+#		#	add_trait = supernatural_hunter
+#		#	add_character_modifier = {
+#		#		modifier = inq_modifier
+#		#	}
+#		#}
+#		#run_grand_coalition_effect = yes
+#		add_trait = witch_hunter
+#		add_trait_xp = {
+#			trait = supernatural_hunter
+#			value = 100
 #		}
+#		add_prestige_level = 4
 #	}
 #	ai_check_interval = 0
 #}
@@ -2101,15 +2359,17 @@ grand_spell_decision = {
 #
 #	cooldown = { days = 1 }
 #	effect = {
-#		random_artifact = {
+#		if = {
 #			limit = {
-#				has_variable=singularity2
-#				NOR = {
-#					has_variable=singularity
-#					has_variable=singularity_sleeping
-#				}
+#				any_character_artifact = { has_variable = singularity }
 #			}
-#			destroy_artifact = this
+#			add_diplomacy_skill = 1
+#		}
+#		if = {
+#			limit = {
+#				any_character_artifact = { has_variable = singularity_sleeping }
+#			}
+#			add_diplomacy_skill = 2
 #		}
 #	}
 #	ai_check_interval = 0
@@ -2143,6 +2403,24 @@ grand_spell_decision = {
 #				add_special_building = horned_god_house
 #			}
 #		}
+#	}
+#	ai_check_interval = 0
+#}
+
+#asmodeus_debug_decision = {
+#	desc = test_test_decision_desc
+#	picture = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
+#	is_shown = {
+#		is_ai = no
+#		any_living_character = {
+#			
+#		}
+#	}
+#
+#	cooldown = { days = 1 }
+#	effect = {
+#		save_scope_as = this0
+#		ms_asmodeus_demon_effect = yes
 #	}
 #	ai_check_interval = 0
 #}

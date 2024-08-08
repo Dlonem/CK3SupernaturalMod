@@ -792,7 +792,10 @@ magic_ev3.5 = {
 						}
 						NOT = {
 							any_war_participant = {
-								has_character_flag = abdul_dude
+								OR = {
+									has_character_flag = abdul_dude
+									has_character_modifier = inq_modifier
+								}
 							}
 						}
 					}
@@ -1057,7 +1060,7 @@ magic_ev3.6 = {
 					has_trait = corrupted
 				}
 			}
-			add_trait = corrupted
+			add_corrupt_trait = yes
 		}
 		custom_tooltip = no_soul_custom_tooltip
 		trigger_event = {
@@ -2123,7 +2126,6 @@ magic_ev3.23 = {
 		trigger = {
 			has_trait = necromancer
 		}
-		trait = necromancer
 		add_character_flag = book_undeads
 		trigger_event = {
 			id = magic_ev3.24
@@ -2134,12 +2136,7 @@ magic_ev3.23 = {
 		#Power flows
 		name = ev3.23.d
 		trigger = {
-			OR = {
-				has_trait = source
-				has_trait = source2
-				has_trait = source3
-				has_trait = source4
-			}
+			has_trait = source
 		}
 		trait = source
 		add_character_flag = book_flows
@@ -2666,7 +2663,8 @@ magic_ev3.28 = {
 		is_imprisoned = no
 	}
 	immediate = {
-		gain_sc_xp30_effect = yes
+		#gain_sc_xp10_effect = yes
+		gain_sc_xp5_effect = yes
 		hidden_effect = {
 			create_magic_book_artifact_effect = yes
 			scope:new_book = {
@@ -3159,17 +3157,18 @@ magic_ev3.29 = {
 		}
 	}
 	option = {
-		#Psionics
-		name = ev3.29.d
+		#Mind Reader
+		name = ev3.29.m
 		trigger = {
-			NOT = { has_character_modifier = mind_reader_modifier }
-			has_trait = schemer
-			NOT = {
-				has_character_modifier = master_psionic_modifier
+			OR = {
+				has_trait = schemer
+				has_trait = shrewd
+				has_trait = intrigue_court_1
+				has_trait = intrigue_court_2
 			}
+			NOT = { has_character_modifier = mind_reader_modifier }
 		}
-		trait = schemer
-		add_character_flag = psionics_flag
+		add_character_flag = research_mind_reader_flag
 		trigger_event = {
 			id = magic_ev3.30
 			months = { 4 7 }
@@ -3184,6 +3183,7 @@ magic_ev3.29 = {
 				has_character_modifier = master_psionic_modifier
 			}
 		}
+		add_internal_flag = special
 		add_character_flag = psionics_flag
 		trigger_event = {
 			id = magic_ev3.30
@@ -3354,6 +3354,12 @@ magic_ev3.31 = {
 				has_character_flag = psionics_flag
 			}
 			remove_character_flag = psionics_flag
+		}
+		if = {
+			limit = {
+				has_character_flag = research_mind_reader_flag
+			}
+			remove_character_flag = research_mind_reader_flag
 		}
 		if = {
 			limit = {
@@ -3602,6 +3608,7 @@ magic_ev3.34 = {
 			add_stewardship_skill = 1
 			add_learning_skill = 1
 			add_character_modifier = master_alteration_modifier
+			add_1_magic_potential = yes
 		}
 		
 	}
@@ -3669,6 +3676,55 @@ magic_ev3.34 = {
 			add_intrigue_skill = 1
 			add_diplomacy_skill = 1
 			add_character_modifier = master_psionic_modifier
+			add_1_magic_potential = yes
+		}
+	}
+	option = {
+		name = ev2.8.a
+		trigger = {
+			var:magic_epic_q > 0
+			has_character_flag = research_mind_reader_flag
+		}
+		add_stress = medium_stress_loss
+		if = {
+			limit = {
+				var:magic_epic_q = 1
+			}
+			add_prestige = medium_prestige_gain
+			add_intrigue_skill = 1
+		}
+		else_if = {
+			limit = {
+				var:magic_epic_q = 2
+			}
+			add_prestige = major_prestige_gain
+			add_intrigue_skill = 2
+			hidden_effect = {
+				if = {
+					limit = {
+						has_character_modifier = mind_reader_modifier
+					}
+					remove_character_modifier = mind_reader_modifier
+				}
+			}
+			add_character_modifier = mind_reader_modifier
+		}
+		else_if = {
+			limit = {
+				var:magic_epic_q > 2
+			}
+			add_prestige = major_prestige_gain
+			add_intrigue_skill = 2
+			hidden_effect = {
+				if = {
+					limit = {
+						has_character_modifier = mind_reader_modifier
+					}
+					remove_character_modifier = mind_reader_modifier
+				}
+			}
+			add_character_modifier = mind_reader_modifier
+			add_1_magic_potential = yes
 		}
 	}
 	option = {
@@ -3700,6 +3756,7 @@ magic_ev3.34 = {
 			add_prestige = major_prestige_gain
 			add_learning_skill = 2
 			add_character_modifier = master_metamagic_modifier
+			add_1_magic_potential = yes
 		}
 	}
 	option = {
@@ -3734,16 +3791,13 @@ magic_ev3.34 = {
 			add_prowess_skill = 5
 			if = {
 				limit = {
-					NOR = {
+					NOT = {
 						has_trait = source
-						has_trait = source2
-						has_trait = source3
-						has_trait = source4
 					}
 				}
 				random = {
-					chance = 25
-					add_trait = source
+					chance = 20
+					add_min_source_trait = yes
 				}
 			}
 			add_character_modifier = upgraded_body_modifier
@@ -3761,17 +3815,17 @@ magic_ev3.34 = {
 			add_prowess_skill = 5
 			if = {
 				limit = {
-					NOR = {
+					NOT = {
 						has_trait = source
-						has_trait = source2
-						has_trait = source3
-						has_trait = source4
 					}
 				}
 				random = {
 					chance = 50
-					add_trait = source
+					add_min_source_trait = yes
 				}
+			}
+			else = {
+				add_1_magic_potential = yes
 			}
 			#else = {
 			#	random = {
@@ -3849,6 +3903,7 @@ magic_ev3.34 = {
 			add_diplomacy_skill = 2
 			custom_tooltip = ev3.34.g_ct
 			add_character_flag = blorg_flag
+			add_1_magic_potential = yes
 		}
 	}
 	option = {
@@ -3859,14 +3914,7 @@ magic_ev3.34 = {
 		}
 		add_stress = medium_stress_loss
 		gain_huge_ps_effect = yes
-		if = {
-			limit = {
-				NOT = {
-					has_character_modifier = greedy_power_modifier
-				}
-			}
-			add_character_modifier = greedy_power_modifier
-		}
+		
 		if = {
 			limit = {
 				var:magic_epic_q = 1
@@ -3894,6 +3942,15 @@ magic_ev3.34 = {
 			add_learning_skill = 3
 			custom_tooltip = ev3.34.h_ct
 			add_character_flag = mana_siphon_flag
+			add_1_magic_potential = yes
+			if = {
+				limit = {
+					NOT = {
+						has_character_modifier = greedy_power_modifier
+					}
+				}
+				add_character_modifier = greedy_power_modifier
+			}
 		}
 	}
 	option = {
@@ -3965,6 +4022,12 @@ magic_ev3.34 = {
 					has_character_flag = psionics_flag
 				}
 				remove_character_flag = psionics_flag
+			}
+			if = {
+				limit = {
+					has_character_flag = research_mind_reader_flag
+				}
+				remove_character_flag = research_mind_reader_flag
 			}
 			if = {
 				limit = {
@@ -7023,7 +7086,15 @@ magic_ev3.71 = {
 				is_landed = yes
 			}
 			save_scope_as = rruler
-			add_courtier = root
+			if = {
+				limit = {
+					ROOT = {
+						is_ruler = no
+					}
+				}
+				add_courtier = root
+			}
+			
 		}
 		scope:rruler = {
 			send_interface_toast = {
@@ -7178,9 +7249,6 @@ magic_ev3.72 = {
 			NOR = {
 				any_character_artifact = { has_variable = magic1 }
 				has_trait = source
-				has_trait = source2
-				has_trait = source3
-				has_trait = source4
 				has_perk = magical_experiments_p1_perk
 			}
 		}
