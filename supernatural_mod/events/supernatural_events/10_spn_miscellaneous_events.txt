@@ -135,3 +135,115 @@ spn_miscellaneous_events.0001 = {
 		custom_tooltip = spn_miscellaneous_events.0001.h.tt
 	}
 }
+
+spn_miscellaneous_events.0002 = {
+    type = character_event
+    hidden = yes
+
+    trigger = {
+        has_character_flag = vampire_blood_in_system
+    }
+
+    immediate = {
+		if = {
+			limit = {
+				has_character_modifier = ingested_vampire_blood_modifier
+			}
+			remove_character_modifier = ingested_vampire_blood_modifier
+		}
+        remove_character_flag = vampire_blood_in_system
+    }
+}
+
+spn_miscellaneous_events.0003 = {
+    type = character_event
+    hidden = yes
+
+    immediate = {
+		if = {
+			limit = {
+				AND = {
+					has_character_flag = vampire_blood_in_system
+					NOT = { has_character_flag = changed_mind_on_immortality }
+				}
+			}
+			trigger_event = spn_miscellaneous_events.0005
+			trigger_event = spn_initiate.0001
+			#trigger_event = spn_message.0001
+			trigger_event = {
+				id = spn_initiate.9002 #Initiate Secret knowledge when asking for confer
+				days = 1
+			}
+			remove_character_modifier = ingested_vampire_blood_modifier
+			remove_character_flag = vampire_blood_in_system
+		}
+        else_if = { #If they have changed their mind, we don't want anything to happen
+			limit = {
+				has_character_flag = changed_mind_on_immortality
+			}
+			trigger_event = spn_initiate.0002
+		}
+		else = {
+			limit = {
+				NOR = { 
+					has_character_flag = vampire_blood_in_system
+					has_trait =  supernatural_vampire
+				}
+			}
+			trigger_event = spn_miscellaneous_events.0004
+		}
+    }
+}
+
+spn_miscellaneous_events.0004 = {
+    type = character_event
+	title = spn_miscellaneous_events.0004.t
+	desc = spn_miscellaneous_events.0004.desc
+	theme = plague
+	
+	right_portrait = {
+		character = root
+		animation = shock
+	}
+	
+	#left_portrait = {
+	#	character = scope:courtier_from_realm
+	#	animation = shock
+	#}
+
+	option = {
+		name = spn_miscellaneous_events.0004.a
+		custom_tooltip = spn_miscellaneous_events.0004.a.tt	
+		
+		death = {
+			death_reason = spn_broken_neck
+		}
+	}
+}
+
+spn_miscellaneous_events.0005 = {
+    type = character_event
+	title = spn_miscellaneous_events.0005.t
+	desc = spn_miscellaneous_events.0005.desc
+	theme = secret
+	
+	immediate = {
+		debug_log_scopes = yes
+	}
+	
+	left_portrait = {
+		character = scope:spn_vampire_turner # Reference the saved scope for the vampire
+		animation = shock
+	}
+	
+	right_portrait = {
+		character = root
+		animation = shock
+	}
+
+	option = {
+		name = spn_miscellaneous_events.0005.a
+		custom_tooltip = spn_miscellaneous_events.0005.a.tt	
+		
+	}
+}
