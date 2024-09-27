@@ -169,8 +169,10 @@ magic_ev5.1 = {
 			is_the_choosen_one_trigger = no
 		}
 		trait = intellect_good_3
-		custom_tooltip = ev5.1.0.healing_ct
-		add_character_flag = healing_spell_flag
+		#custom_tooltip = ev5.1.0.healing_ct
+		#add_character_flag = healing_spell_flag
+		custom_tooltip = aura_reading_spell_got_it
+		add_character_flag = aura_reading_spell
 		custom_tooltip = ev5.1.0.a_ct
 		add_character_flag = bless_land_flag
 		custom_tooltip = ev5.1.0.e_ct
@@ -193,6 +195,8 @@ magic_ev5.1 = {
 		add_character_flag = hipercognition_flag
 		custom_tooltip = ev5.1.0.k_ct
 		add_character_flag = firestorm_spell_flag
+		custom_tooltip = aura_reading_spell_got_it
+		add_character_flag = aura_reading_spell
 	}
 	option = {
 		#name = ev5.1.0.g
@@ -376,7 +380,7 @@ magic_ev5.2 = {
 		#}
 		if = {
 			limit = {
-				is_landed = yes
+				is_landed_or_landless_administrative = yes
 			}
 			capital_province = {
 				create_epidemic_outbreak = {
@@ -855,8 +859,10 @@ magic_ev5.7 = {
 			is_the_choosen_one_trigger = no
 		}
 		trait = intellect_good_3
-		custom_tooltip = ev5.1.0.healing_ct
-		add_character_flag = healing_spell_flag
+		#custom_tooltip = ev5.1.0.healing_ct
+		#add_character_flag = healing_spell_flag
+		custom_tooltip = aura_reading_spell_got_it
+		add_character_flag = aura_reading_spell
 		custom_tooltip = ev5.1.0.a_ct
 		add_character_flag = bless_land_flag
 		custom_tooltip = ev5.1.0.e_ct
@@ -879,6 +885,8 @@ magic_ev5.7 = {
 		add_character_flag = hipercognition_flag
 		custom_tooltip = ev5.1.0.k_ct
 		add_character_flag = firestorm_spell_flag
+		custom_tooltip = aura_reading_spell_got_it
+		add_character_flag = aura_reading_spell
 	}
 	option = {
 		name = ev5.1.0.h
@@ -2049,10 +2057,15 @@ magic_ev5.23 = {
 					has_variable = magic1
 				}
 			}
-			scope:activity = { activity_special_type_progression_medium = yes }
+			scope:activity = { activity_special_type_progression_major = yes }
 		}
 		else = {
-			scope:activity = { activity_special_type_progression_major = yes }
+			scope:activity = {
+				change_variable = {
+					name = activity_special_type_progression
+					add = 15
+				}
+			}
 		}
 		if = {
 			limit = {
@@ -2072,7 +2085,7 @@ magic_ev5.23 = {
 		}
 		add_character_flag = magic_arti3_selected
 		custom_tooltip = artifacts_searching_tt_positive_tiny
-		scope:activity = { activity_special_type_progression_tiny = yes }
+		scope:activity = { activity_special_type_progression_medium = yes }
 		if = {
 			limit = {
 				scope:arti3.artifact_owner = {
@@ -2671,12 +2684,23 @@ magic_ev5.28 = {
 			remove_mana_after_md_effect = yes
 		}
 	}
-	widget = {
-		gui = "event_window_widget_mage_duel"
-		container = "custom_widgets_container"
-		#container = "description_and_options"
-		#container = "duel_event_content"
+	widgets = {
+		widget = {
+			gui = "event_window_widget_mage_duel"
+			container = "custom_widgets_container"
+			#container = "description_and_options"
+			#container = "duel_event_content"
+		}
+		#widget = {
+		#	gui = "event_window_widget_mage_duel_new"
+		#	container = "custom_widgets_container"
+		#}
+		#widget = {
+		#	gui = "event_window_widget_mage_duel_stats1"
+		#	container = "custom_widgets_container2"
+		#}
 	}
+	
 	option = {
 		#opening - banish
 		name = ev5.28.0.necro
@@ -2686,10 +2710,11 @@ magic_ev5.28 = {
 				NOT = {	has_character_flag = md_has_full_magic_prot_flag	}
 				has_trait = demon
 				NOT = {	has_character_flag = summoned_by_abdul_flag	}
-				NOT = {
+				NOR = {
 					any_character_artifact = {
 						has_variable = magic_scepter
 					}
+					has_character_modifier = touched_divinity_modifier
 				}
 				#is_ai = yes
 			}
@@ -4699,7 +4724,14 @@ magic_ev5.28 = {
 				has_character_flag = md_used_blackgrimoire_flag
 			}
 		}
+		#if = {
+		#	limit = {
+		#		always = yes
+		#	}
+		#	add_internal_flag = special
+		#}
 		add_internal_flag = special
+		#add_internal_flag = test0
 		#md_low_pc_progress_effect = yes
 		md_no_pc_progress_effect = yes
 		#md_ultra_doom_spell_progress_effect = yes
@@ -4911,7 +4943,7 @@ magic_ev5.28 = {
 				culture = {
 					has_cultural_tradition = mage_rulership_tradition
 				}
-				is_landed = yes
+				is_landed_or_landless_administrative = yes
 				any_claim = {
 					holder = scope:char2
 				}
@@ -5255,7 +5287,7 @@ magic_ev5.28 = {
 			culture = {
 				has_cultural_tradition = mage_rulership_tradition
 			}
-			is_landed = yes
+			is_landed_or_landless_administrative = yes
 			OR = {
 				any_claim = {
 					holder = scope:char2
@@ -5808,6 +5840,7 @@ magic_ev5.28 = {
 				has_character_flag = md_loser
 			}
 			remove_character_flag = md_loser
+			show_duel_conclusion_effect = yes
 			clear_mage_duel_variables_effect = yes
 			scope:char2 = {
 				clear_mage_duel_variables_effect = yes
@@ -5957,6 +5990,12 @@ magic_ev5.29 = {
 		}
 	}
 	after = {
+		if = {
+			limit = {
+				this = scope:md_attacker
+			}
+			show_duel_conclusion_effect2 = yes
+		}
 		clear_mage_duel_variables_effect = yes
 		remove_character_flag = md_not_concluded
 		if = {
@@ -6001,6 +6040,7 @@ magic_ev5.30 = {
 		}
 		custom_tooltip = ev5.30.desc_ct
 		remove_mana_after_md_effect = yes
+		show_duel_conclusion_effect3 = yes
 	}
 	widget = {
 		gui = "event_window_widget_mage_duel"
@@ -6542,7 +6582,7 @@ magic_ev5.37 = {
 							has_trait = true_witch
 							has_trait = archmage
 						}
-						is_landed = yes
+						is_landed_or_landless_administrative = yes
 					}
 				}
 				random_living_character = {
@@ -6556,7 +6596,7 @@ magic_ev5.37 = {
 							has_trait = true_witch
 							has_trait = archmage
 						}
-						is_landed = yes
+						is_landed_or_landless_administrative = yes
 					}
 					trigger_event = {
 						id = magic_ev5.40
@@ -6625,7 +6665,7 @@ magic_ev5.38 = {
 							has_trait = true_witch
 							has_trait = archmage
 						}
-						is_landed = yes
+						is_landed_or_landless_administrative = yes
 					}
 				}
 				random_living_character = {
@@ -6639,7 +6679,7 @@ magic_ev5.38 = {
 							has_trait = true_witch
 							has_trait = archmage
 						}
-						is_landed = yes
+						is_landed_or_landless_administrative = yes
 					}
 					trigger_event = {
 						id = magic_ev5.40
@@ -7776,7 +7816,7 @@ magic_ev5.56 = {
 			if = {
 				limit = {
 					scope:yaga0 = {
-						is_landed = yes
+						is_landed_or_landless_administrative = yes
 					}
 				}
 				scope:yaga0 = {
@@ -7872,6 +7912,7 @@ magic_ev5.57 = {
 				add_magic_lifestyle_perk_points = 1
 			}
 			gain_huge_ps_effect = yes
+			add_2_magic_potential = yes
 		}
 		else_if = {
 			limit = {
@@ -8024,7 +8065,7 @@ magic_ev5.59 = {
 	type = character_event
 	trigger = {
 		is_alive = yes
-		is_landed = yes
+		is_landed_or_landless_administrative = yes
 		any_held_title = {
 			tier = tier_kingdom
 		}
@@ -8058,7 +8099,7 @@ magic_ev5.59 = {
 			}
 			random_ruler = {
 				limit = {
-					is_landed = yes
+					is_landed_or_landless_administrative = yes
 					is_ai = no
 				}
 				save_scope_as = rrruler

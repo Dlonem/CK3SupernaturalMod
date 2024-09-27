@@ -1455,8 +1455,14 @@ magic_ciris_delay_value = {
 		}
 		add = 199
 	}
-	else = {
+	else_if = {
+		limit = {
+			has_game_rule = never_magic_endings_delay
+		}
 		add = 79
+	}
+	else = {
+		add = 9
 	}
 }
 source_potential_from_mother = {
@@ -1471,21 +1477,6 @@ source_potential_from_mother = {
 					has_trait = source
 				}
 				add = "has_trait_xp(source|magic_potential)"
-			}
-			if = {
-				limit = {
-					OR = {
-						has_trait = yaga
-						has_trait = source2
-					}
-				}
-				add = 5
-			}
-			else_if = {
-				limit = {
-					has_trait = source
-				}
-				add = 1
 			}
 		}
 	}
@@ -1503,21 +1494,6 @@ source_potential_from_father = {
 				}
 				add = "has_trait_xp(source|magic_potential)"
 			}
-			if = {
-				limit = {
-					OR = {
-						has_trait = yaga
-						has_trait = source2
-					}
-				}
-				add = 5
-			}
-			else_if = {
-				limit = {
-					has_trait = source
-				}
-				add = 1
-			}
 		}
 	}
 }
@@ -1534,12 +1510,7 @@ init_source_potential1 = {
 		round = yes
 	}
 	divide = 2
-	
-	#add = -10
-
 	round = yes
-	min = 0
-	max = 90
 }
 init_source_potential2 = {
 	value = 0
@@ -1554,30 +1525,94 @@ init_source_potential2 = {
 		round = yes
 	}
 	divide = 2
-	
-	#add = -10
-
 	round = yes
-	min = 0
-	max = 90
 }
 init_source_potential3 = {
 	value = 0
 	add = source_potential_from_mother
-	
-	#add = -10
-
 	round = yes
-	min = 0
-	max = 80
 }
 init_source_potential4 = {
 	value = 0
 	add = source_potential_from_father
-	
-	#add = -10
-
 	round = yes
-	min = 0
-	max = 80
+}
+lower_smp_cap = {
+	value = 0
+	if = {
+		limit = {
+			exists = this.mother
+			this.mother = {
+				OR = {
+					has_trait = yaga
+					has_trait = source2
+					has_trait = demon
+					is_the_choosen_one_trigger = yes
+				}
+			}
+		}
+		add = 5
+	}
+	if = {
+		limit = {
+			exists = this.real_father
+			this.real_father = {
+				OR = {
+					has_trait = yaga
+					has_trait = source2
+					has_trait = demon
+					is_the_choosen_one_trigger = yes
+				}
+			}
+		}
+		add = 5
+	}
+	if = {
+		limit = {
+			exists = this.mother
+			exists = this.real_father
+			this.mother = {
+				OR = {
+					has_trait = yaga
+					has_trait = source2
+					has_trait = demon
+					is_the_choosen_one_trigger = yes
+				}
+			}
+			this.real_father = {
+				OR = {
+					has_trait = yaga
+					has_trait = source2
+					has_trait = demon
+					is_the_choosen_one_trigger = yes
+				}
+			}
+		}
+		add = 5
+	}
+	if = {
+		limit = {
+			exists = dynasty
+			dynasty = {
+				has_dynasty_perk = witchcraft_legacy_5
+			}
+		}
+		add = 5
+	}
+}
+
+upper_smp_cap = {
+	value = lower_smp_cap
+	add = 60
+}
+reduce_under_smp_cap_top = {
+	value = "has_trait_xp(source|magic_potential)"
+	subtract = upper_smp_cap
+	multiply = -1
+}
+reduce_under_smp_cap_bottom = {
+	value = "has_trait_xp(source|magic_potential)"
+	subtract = upper_smp_cap
+	add = 20
+	multiply = -1
 }

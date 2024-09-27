@@ -748,6 +748,7 @@ on_death = {
 		on_action_death_merlin_killed
 		on_action_death_cyro_conclusion
 		on_action_death_magic_barrier
+		on_action_death_flying_castle
 	}
 	events = {
 		magic_ev4.47	#Darkblade upgrade
@@ -755,6 +756,39 @@ on_death = {
 		magic_ev6.75	#Al-Hazred died
 		magic_ev7.36	#DC killed the target (maybe)
 		magic_ev7.39	#DC died
+	}
+}
+on_action_lilith_death = {
+	trigger = {
+		has_character_flag = lilith
+	}
+	effect = {
+		every_living_character = {
+			limit = {
+				has_character_modifier = joy_with_lilith_modifier
+			}
+			remove_character_modifier = joy_with_lilith_modifier
+		}
+	}
+}
+on_action_death_flying_castle = {
+	trigger = {
+		has_character_flag = me_castle_project_done
+	}
+	effect = {
+		if = {
+			limit = {
+				exists = var:province_with_flying_castle
+			}
+			var:province_with_flying_castle = {
+				if = {
+					limit = {
+						has_province_modifier = flying_castle_modifier
+					}
+					remove_province_modifier = flying_castle_modifier
+				}
+			}
+		}
 	}
 }
 on_action_death_magic_barrier = {
@@ -1079,8 +1113,8 @@ on_game_start_after_lobby = {
 
 on_game_start_after_lobby = {
 	events = {
-		delay = { years = magic_ciris_delay_value }
-		magic_ev7.137
+		#delay = { years = magic_ciris_delay_value }
+		magic_ev7.1379
 	}
 }
 
@@ -1092,7 +1126,7 @@ on_travel_plan_movement = {
 }
 witch_hunter_trap_on_action = {
 	trigger = {
-		is_landed = yes
+		is_landed_or_landless_administrative = yes
 		is_adult = yes
 		has_character_modifier = tracked_by_witch_hunter_modifier
 	}
@@ -1156,6 +1190,66 @@ on_war_started = {
 		mage_war_on_action
 		magic_defence_pact_on_action
 		mage_war2_on_action
+		yaga_liege_war_on_action
+	}
+}
+yaga_liege_war_on_action = {
+	trigger = {
+		scope:defender = {
+			any_vassal_or_below = {
+				is_ai = yes
+				has_trait = yaga
+				is_at_war = no
+				is_imprisoned = no
+				is_landed_or_landless_administrative = yes
+			}
+			NOT = {
+				has_trait = yaga
+			}
+		}
+		scope:attacker = {
+			NOT = {
+				has_trait = yaga
+			}
+		}
+	}
+	effect = {
+		scope:war = {
+			if = {
+				limit = {
+					casus_belli = {
+						any_target_title = {
+							OR = {
+								holder ?= {
+									has_trait = yaga
+								}
+								any_de_jure_county_holder = {
+									has_trait = yaga
+								}
+							}
+						}
+					}
+				}
+				scope:defender = {
+					random_vassal_or_below = {
+						limit = {
+							is_ai = yes
+							has_trait = yaga
+							is_at_war = no
+							is_imprisoned = no
+							is_landed_or_landless_administrative = yes
+						}
+						save_scope_as = my_yaga
+					}
+				}
+				if = {
+					limit = {
+						exists = scope:my_yaga
+					}
+					add_defender = scope:my_yaga
+				}
+			}
+		}
 	}
 }
 mage_war_on_action = {
@@ -1299,6 +1393,8 @@ mage_war2_on_action = {
 			NOR = {
 				has_trait = craven
 				has_trait = incapable
+				has_relation_mmaster = scope:defender
+				has_relation_mminion = scope:defender
 			}
 		}
 	}
@@ -1312,6 +1408,8 @@ mage_war2_on_action = {
 				NOR = {
 					has_trait = craven
 					has_trait = incapable
+					has_relation_mmaster = scope:defender
+					has_relation_mminion = scope:defender
 				}
 			}
 			save_scope_as = mwhunter
@@ -1359,3 +1457,4 @@ magic_defence_pact_on_action = {
 		magic_ev7.108
 	}
 }
+

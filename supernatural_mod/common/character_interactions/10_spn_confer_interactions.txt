@@ -1,5 +1,5 @@
 ﻿spn_offer_vampire_blood = { #Offers Vampire Blood
-	category = interaction_category_vampire
+	category = interaction_category_uncategorized
 	common_interaction = yes
 	icon = vampire_blood
 	desc = spn_offer_vampire_blood_interaction_desc
@@ -61,7 +61,7 @@
 	ai_max_reply_days = 5
 
 	ai_accept = {
-		base = -10
+		base = -25
 
 		#MAIN
 		modifier = { #Different faith, no pluralism.
@@ -75,7 +75,7 @@
 				}
 			}
 			add = {
-				value = -40
+				value = -15
 				if = {
 					limit = {
 						scope:recipient.faith = {
@@ -96,7 +96,7 @@
 							}
 						}
 					}
-					add = -40
+					add = -30
 				}
 			}
 		}
@@ -111,44 +111,6 @@
 					NOT = {
 						scope:actor.faith = { has_doctrine = doctrine_pluralism_pluralistic }
 					}
-					faith = { has_doctrine = doctrine_pluralism_pluralistic }
-				}
-			}
-			add = {
-				value = -20
-				if = {
-					limit = {
-						scope:recipient.faith = {
-							faith_hostility_level = {
-								target = scope:actor.faith
-								value >= faith_hostile_level
-							}
-						}
-					}
-					add = -20
-				}
-				if = {
-					limit = {
-						scope:recipient.faith = {
-							faith_hostility_level = {
-								target = scope:actor.faith
-								value >= faith_evil_level
-							}
-						}
-					}
-					add = -20
-				}
-			}
-		}
-		
-		modifier = { #Different faith, both have pluralism.
-			desc = offer_vassalization_interaction_aibehavior_differentfaith_tt
-			trigger = {
-				scope:recipient = {
-					NOT = {
-						faith = scope:actor.faith
-					}
-					scope:actor.faith = { has_doctrine = doctrine_pluralism_pluralistic }
 					faith = { has_doctrine = doctrine_pluralism_pluralistic }
 				}
 			}
@@ -178,6 +140,44 @@
 				}
 			}
 		}
+		
+		modifier = { #Different faith, both have pluralism.
+			desc = offer_vassalization_interaction_aibehavior_differentfaith_tt
+			trigger = {
+				scope:recipient = {
+					NOT = {
+						faith = scope:actor.faith
+					}
+					scope:actor.faith = { has_doctrine = doctrine_pluralism_pluralistic }
+					faith = { has_doctrine = doctrine_pluralism_pluralistic }
+				}
+			}
+			add = {
+				value = -5
+				if = {
+					limit = {
+						scope:recipient.faith = {
+							faith_hostility_level = {
+								target = scope:actor.faith
+								value >= faith_hostile_level
+							}
+						}
+					}
+					add = -5
+				}
+				if = {
+					limit = {
+						scope:recipient.faith = {
+							faith_hostility_level = {
+								target = scope:actor.faith
+								value >= faith_evil_level
+							}
+						}
+					}
+					add = -5
+				}
+			}
+		}
 
 		modifier = { #We just fought against each other.
 			desc = offer_vassalization_interaction_aibehavior_recent_war_tt
@@ -188,7 +188,7 @@
 					}
 				}
 			}
-			add = -40
+			add = -50
 		}
 
 		modifier = { #I fought an independence war against you.
@@ -199,7 +199,7 @@
 					var:independence_war_former_liege = scope:actor
 				}
 			}
-			add = -100
+			add = -70
 		}
 
 		modifier = { #Wide difference in rank
@@ -212,7 +212,7 @@
 					}
 				}
 			}
-			add = 25
+			add = 20
 		}
 
 		modifier = { #Holds dejure liege title.
@@ -250,7 +250,7 @@
 					}
 				}
 			}
-			add = -25
+			add = -15
 		}
 
 		modifier = { #Military Power
@@ -261,7 +261,9 @@
 						value = scope:recipient.max_military_strength
 						divide = { value = scope:actor.max_military_strength min = 1 }
 						}
-					multiply = 20
+					multiply = 5
+					min = -25
+					max = 25
 				}
 		}
 
@@ -275,17 +277,20 @@
 					NOT = { has_relation_best_friend = scope:actor }
 				}
 			}
-			add = 10
+			add = 20
 		}
 
-		modifier = { #Best Friend modifier.
+		modifier = { # Lovers and Best Friends are more likely to accept
 			desc = offer_vassalization_interaction_aibehavior_best_friend_tt
 			trigger = {
 				scope:recipient = {
-					has_relation_best_friend = scope:actor
+					OR = {
+						has_relation_lover = scope:actor
+						has_relation_best_friend = scope:actor
+					}
 				}
 			}
-			add = 20
+			add = 40
 		}
 
 		modifier = { #Is a child of actor
@@ -295,7 +300,7 @@
 					is_child_of = scope:actor
 				}
 			}
-			add = 50
+			add = 30
 		}
 
 		modifier = { #Is a close family member of actor
@@ -316,7 +321,7 @@
 					is_spouse_of = scope:actor
 				}
 			}
-			add = 25
+			add = 45
 		}
 
 		modifier = { #Rivalry modifier.
@@ -327,7 +332,7 @@
 					NOT = { has_relation_nemesis = scope:actor }
 				}
 			}
-			add = -10
+			add = -25
 		}
 
 		modifier = { #Nemesis modifier.
@@ -337,7 +342,7 @@
 					has_relation_nemesis = scope:actor
 				}
 			}
-			add = -1000
+			add = -100
 		}
 
 		modifier = { #Same Dynasty modifier.
@@ -347,7 +352,7 @@
 					dynasty = scope:actor.dynasty
 				}
 			}
-			add = 5
+			add = 10
 		}
 
 		modifier = { #Cultural modifiers.
@@ -361,7 +366,7 @@
 		}
 		
 		modifier = { #Cultural Group modifiers.
-			add = -30
+			add = -15
 			desc = offer_vassalization_interaction_aibehavior_culture_group_tt
 			trigger = {
 				scope:actor = {
@@ -380,7 +385,7 @@
 					age > 16
 				}
 			}
-			add = -5
+			add = -15
 		}
 
 		modifier = { #Illegitimacy modifier.
@@ -399,7 +404,7 @@
 					has_trait = disinherited
 				}
 			}
-			add = -10
+			add = 10
 		}
 
 		modifier = { #Claimant modifier.
@@ -411,7 +416,7 @@
 					}
 				}
 			}
-			add = -15
+			add = -10
 		}
 
 		#OPINION INFLUENCE
@@ -436,11 +441,34 @@
 			}
 			desc = COWED_REASON
 		}
+		
+		# Supernatural hunters are less likely to accept
+		modifier = {
+			desc = INTIMIDATED_REASON	#AI_SUPERNATURAL_HUNTER_REJECTION
+			trigger = {
+				scope:recipient = {
+					has_trait = supernatural_hunter
+				}
+			}
+			add = -75
+		}
+
+		# Health is a one of the most important factors (that and opinion/trust)
+		modifier = {
+			desc = health_status_tt
+			add = {
+				value = health
+				subtract = { value = 4.5 }  # Baseline adjustment to normalize the range
+				multiply = { value = -10 }  # Adjust to match the desired range
+				min = -30 # Ensure the value stays within the bounds of -30 to +30
+				max = 30
+			}
+		}
 
 		opinion_modifier = { #Compare Opinion modifier.
 			who = scope:recipient
 			opinion_target = scope:actor
-			multiplier = 0.35
+			multiplier = 0.65
 		}
 	}
 
@@ -508,18 +536,13 @@
 	}
 	
 	ai_will_do = {
-		base = 0
+		base = -10
 
-		modifier = { #AI only sends if opinion over 30
-			trigger = {
-				scope:actor = {
-					opinion = {
-						target = scope:recipient
-						value >= 30
-					}
-				}
-			}
-			add = 15
+		# Do I like recipient & are they trustworthy
+		opinion_modifier = {
+			who = scope:actor
+			opinion_target = scope:recipient
+			multiplier = 0.4
 		}
 
 		modifier = { #AI only sends if opinion less than 30
@@ -527,7 +550,7 @@
 				scope:actor = {
 					opinion = {
 						target = scope:recipient
-						value < 30
+						value < 35
 					}
 				}
 			}
@@ -541,7 +564,7 @@
 					NOT = { has_relation_best_friend = scope:actor }
 				}
 			}
-			add = 5
+			add = 10
 		}
 
 		modifier = { #Best Friend modifier.
@@ -559,7 +582,7 @@
 					is_child_of = scope:actor
 				}
 			}
-			add = 50
+			add = 20
 		}
 
 		modifier = { #Is a close family member of actor
@@ -578,7 +601,7 @@
 					is_spouse_of = scope:actor
 				}
 			}
-			add = 50
+			add = 30
 		}
 
 		modifier = { #Same Dynasty modifier.
@@ -593,7 +616,7 @@
 }
 
 spn_turn_into_vampire = { #Turn Character Into Vampire
-	category = interaction_category_vampire
+	category = interaction_category_uncategorized
 	common_interaction = yes
 	icon = vampire_turn
 	desc = spn_turn_into_vampire_interaction_desc
@@ -655,7 +678,7 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 	ai_max_reply_days = 5
 
 	ai_accept = {
-		base = 0
+		base = -25
 
 		#MAIN
 		modifier = { #Different faith, no pluralism.
@@ -782,7 +805,7 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 					}
 				}
 			}
-			add = -40
+			add = -60
 		}
 
 		modifier = { #I fought an independence war against you.
@@ -793,7 +816,7 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 					var:independence_war_former_liege = scope:actor
 				}
 			}
-			add = -100
+			add = -80
 		}
 
 		modifier = { #Wide difference in rank
@@ -806,7 +829,7 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 					}
 				}
 			}
-			add = 25
+			add = 20
 		}
 
 		modifier = { #Holds dejure liege title.
@@ -844,7 +867,7 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 					}
 				}
 			}
-			add = -25
+			add = -15
 		}
 
 		modifier = { #Military Power
@@ -855,7 +878,9 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 						value = scope:recipient.max_military_strength
 						divide = { value = scope:actor.max_military_strength min = 1 }
 						}
-					multiply = 20
+					multiply = 5
+					min = -25
+					max = 25
 				}
 		}
 
@@ -869,17 +894,20 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 					NOT = { has_relation_best_friend = scope:actor }
 				}
 			}
-			add = 10
+			add = 20
 		}
 
-		modifier = { #Best Friend modifier.
+		modifier = { # Lovers and Best Friends are more likely to accept
 			desc = offer_vassalization_interaction_aibehavior_best_friend_tt
 			trigger = {
 				scope:recipient = {
-					has_relation_best_friend = scope:actor
+					OR = {
+						has_relation_soulmate = scope:actor
+						has_relation_best_friend = scope:actor
+					}
 				}
 			}
-			add = 20
+			add = 30
 		}
 
 		modifier = { #Is a child of actor
@@ -889,7 +917,7 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 					is_child_of = scope:actor
 				}
 			}
-			add = 50
+			add = 40
 		}
 
 		modifier = { #Is a close family member of actor
@@ -921,7 +949,7 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 					NOT = { has_relation_nemesis = scope:actor }
 				}
 			}
-			add = -10
+			add = -25
 		}
 
 		modifier = { #Nemesis modifier.
@@ -931,7 +959,7 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 					has_relation_nemesis = scope:actor
 				}
 			}
-			add = -1000
+			add = -100
 		}
 
 		modifier = { #Same Dynasty modifier.
@@ -974,7 +1002,7 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 					age > 16
 				}
 			}
-			add = -5
+			add = -15
 		}
 
 		modifier = { #Illegitimacy modifier.
@@ -1031,10 +1059,33 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 			desc = COWED_REASON
 		}
 
+		# Supernatural hunters are less likely to accept
+		modifier = {
+			desc = INTIMIDATED_REASON	#AI_SUPERNATURAL_HUNTER_REJECTION
+			trigger = {
+				scope:recipient = {
+					has_trait = supernatural_hunter
+				}
+			}
+			add = -75
+		}
+
+		# Health is a one of the most important factors (that and opinion/trust)
+		modifier = {
+			desc = health_status_tt
+			add = {
+				value = health
+				subtract = { value = 4 }  # Baseline adjustment to normalize the range
+				multiply = { value = -10 }  # Adjust to match the desired range
+				min = -40 # Ensure the value stays within the bounds of -30 to +30
+				max = 40
+			}
+		}
+
 		opinion_modifier = { #Compare Opinion modifier.
 			who = scope:recipient
 			opinion_target = scope:actor
-			multiplier = 0.35
+			multiplier = 0.75
 		}
 	}
 
@@ -1101,18 +1152,13 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 	}
 	
 	ai_will_do = {
-		base = 0
+		base = -20
 
-		modifier = { #AI only sends if opinion over 30
-			trigger = {
-				scope:actor = {
-					opinion = {
-						target = scope:recipient
-						value >= 30
-					}
-				}
-			}
-			add = 15
+		# Do I like recipient & are they trustworthy
+		opinion_modifier = {
+			who = scope:actor
+			opinion_target = scope:recipient
+			multiplier = 0.4
 		}
 
 		modifier = { #AI only sends if opinion less than 30
@@ -1137,13 +1183,12 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 			add = 5
 		}
 
-		modifier = { #Best Friend modifier.
-			trigger = {
-				scope:recipient = {
-					has_relation_best_friend = scope:actor
-				}
+		modifier = {
+			OR = {
+				has_relation_best_friend = scope:recipient
+				has_relation_soulmate = scope:recipient
 			}
-			add = 10
+			add = 30
 		}
 
 		modifier = { #Is a child of actor
@@ -1152,7 +1197,7 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 					is_child_of = scope:actor
 				}
 			}
-			add = 50
+			add = 15
 		}
 
 		modifier = { #Is a close family member of actor
@@ -1162,7 +1207,7 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 					is_close_family_of = scope:actor
 				}
 			}
-			add = 15
+			add = 10
 		}
 
 		modifier = { #Is your spouse
@@ -1171,7 +1216,7 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 					is_spouse_of = scope:actor
 				}
 			}
-			add = 50
+			add = 25
 		}
 
 		modifier = { #Same Dynasty modifier.
@@ -1186,7 +1231,7 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 }
 
 spn_turn_into_lycan = { #Turn Character Into A Werewolf
-	category = interaction_category_werewolf
+	category = interaction_category_uncategorized
 	common_interaction = yes
 	icon = werewolf
 	desc = spn_turn_into_lycan_interaction_desc
@@ -1890,7 +1935,7 @@ spn_turn_into_lycan = { #Turn Character Into A Werewolf
 }
 
 spn_turn_into_hybrid = { #Turn Character Into Hybrid
-	category = interaction_category_hybrid
+	category = interaction_category_uncategorized
 	common_interaction = yes
 	icon = vampwolf
 	desc = spn_turn_into_hybrid_interaction_desc
@@ -2589,7 +2634,7 @@ spn_turn_into_hybrid = { #Turn Character Into Hybrid
 }
 
 spn_turn_into_hunter = { #Train Character as a Hunter
-	category = interaction_category_hunter
+	category = interaction_category_uncategorized
 	common_interaction = yes
 	icon = hunter
 	desc = spn_turn_into_hunter_interaction_desc
@@ -3292,7 +3337,7 @@ spn_turn_into_hunter = { #Train Character as a Hunter
 }
 
 spn_ask_to_turn_into_vampire = { #Ask Character to Turn You Into Vampire
-	category = interaction_category_vampire
+	category = interaction_category_uncategorized
 	common_interaction = yes
 	icon = vampire_teeth
 	desc = spn_ask_to_turn_into_vampire_interaction_desc
@@ -3671,7 +3716,7 @@ spn_ask_to_turn_into_vampire = { #Ask Character to Turn You Into Vampire
 }
 
 spn_ask_to_not_turn_into_vampire = { #Ask Character to Not Turn You Into Vampire
-	category = interaction_category_vampire
+	category = interaction_category_uncategorized
 	common_interaction = yes
 	icon = vampire_no_turn
 	desc = spn_ask_to_not_turn_into_vampire_interaction_desc
@@ -3786,7 +3831,7 @@ spn_ask_to_not_turn_into_vampire = { #Ask Character to Not Turn You Into Vampire
 }
 
 spn_ask_to_turn_into_lycan = { #Ask Character to Turn You Into A Werewolf
-	category = interaction_category_werewolf
+	category = interaction_category_uncategorized
 	common_interaction = yes
 	icon = werewolf
 	desc = spn_ask_to_turn_into_lycan_interaction_desc
@@ -4220,7 +4265,7 @@ spn_ask_to_turn_into_lycan = { #Ask Character to Turn You Into A Werewolf
 }
 
 spn_ask_to_turn_into_hybrid = { #Ask Character to Turn You Into Hybrid
-	category = interaction_category_hybrid
+	category = interaction_category_uncategorized
 	common_interaction = yes
 	icon = vampwolf
 	desc = spn_ask_to_turn_into_hybrid_interaction_desc
@@ -4669,7 +4714,7 @@ spn_ask_to_turn_into_hybrid = { #Ask Character to Turn You Into Hybrid
 }
 
 spn_ask_to_turn_into_hunter = { #Ask Character to Train You As a Hunter
-	category = interaction_category_hunter
+	category = interaction_category_uncategorized
 	common_interaction = yes
 	icon = hunter
 	desc = spn_ask_to_turn_into_hunter_interaction_desc

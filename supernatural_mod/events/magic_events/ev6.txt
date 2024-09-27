@@ -75,9 +75,15 @@ magic_ev6.2 = {
 			add_character_modifier = joy_with_lilith_modifier
 		}
 		set_relation_lover = scope:target
-		trigger_event = {
-			id = magic_ev.45
-			days = { 10 20 }
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	days = { 10 20 }
+		#}
+		scope:target = {
+			trigger_event = {
+				id = magic_ev.58
+				days = { 10 20 }
+			}
 		}
 	}
 	option = {
@@ -572,7 +578,7 @@ magic_ev6.5 = {
 					}
 					ms_nyx_demon_effect = yes
 				}
-				40 = {
+				20 = {
 					trigger = {
 						has_character_flag = demon_child_accesible
 					}
@@ -1085,7 +1091,7 @@ magic_ev6.10 = {
 			expose_scheme = yes
 		}
 		hidden_effect = {
-			scope:mscheme.scheme_target = {
+			scope:mscheme.scheme_target_character = {
 				send_interface_toast = {
 					title = spymaster_task.1101.exposure_tt
 					add_opinion = {
@@ -1201,7 +1207,7 @@ magic_ev6.11 = {
 							is_hostile = yes
 						}
 						save_scope_as = mscheme
-						scheme_target = {
+						scheme_target_character = {
 							save_scope_as = mstarget
 						}
 					}
@@ -1231,7 +1237,7 @@ magic_ev6.11 = {
 					random_living_character = {
 						limit = {
 							any_scheme = {
-								any_scheme_agent = {
+								any_scheme_agent_character = {
 									this = scope:recipient
 								}
 							}
@@ -1239,12 +1245,12 @@ magic_ev6.11 = {
 						save_scope_as = mschemeowner2
 						random_scheme = {
 							limit = {
-								any_scheme_agent = {
+								any_scheme_agent_character = {
 									this = scope:recipient
 								}
 							}
 							save_scope_as = mscheme2
-							scheme_target = {
+							scheme_target_character = {
 								save_scope_as = mstarget
 							}
 						}
@@ -1292,7 +1298,7 @@ magic_ev6.11 = {
 			if = {
 				limit = {
 					exists = scope:mscheme
-					scope:mscheme.scheme_target = root
+					scope:mscheme.scheme_target_character = root
 				}
 				add_opinion = {
 					target = scope:mscheme.scheme_owner
@@ -1302,7 +1308,7 @@ magic_ev6.11 = {
 			else_if = {
 				limit = {
 					exists = scope:mscheme2
-					scope:mscheme2.scheme_target = root
+					scope:mscheme2.scheme_target_character = root
 				}
 				add_opinion = {
 					target = scope:mscheme2.scheme_owner
@@ -1329,7 +1335,7 @@ magic_ev6.11 = {
 			expose_scheme = yes
 		}
 		hidden_effect = {
-			scope:mscheme.scheme_target = {
+			scope:mscheme.scheme_target_character = {
 				send_interface_toast = {
 					title = spymaster_task.1101.exposure_tt
 					add_opinion = {
@@ -1358,7 +1364,7 @@ magic_ev6.11 = {
 			expose_scheme = yes
 		}
 		hidden_effect = {
-			scope:mscheme2.scheme_target = {
+			scope:mscheme2.scheme_target_character = {
 				send_interface_toast = {
 					title = spymaster_task.1101.exposure_tt
 					add_opinion = {
@@ -1953,7 +1959,7 @@ magic_ev6.25 = {
 		custom_tooltip = ev6.25.0.a_ct2
 		start_scheme = {
 			type = abduct
-			target = scope:created_witch
+			target_character = scope:created_witch
 		}
 	}
 	option = {
@@ -2619,7 +2625,7 @@ magic_ev6.36 = {
 	lower_right_portrait = scope:liege0
 	trigger = {
 		is_imprisoned = no
-		is_landed = yes
+		is_landed_or_landless_administrative = yes
 		culture = {
 			has_cultural_tradition = mage_rulership_tradition
 		}
@@ -2822,10 +2828,29 @@ magic_ev6.37 = {
 				}
 			}
 			else = {
-				start_scheme = {
-					type = steal_back_artifact
-					target = scope:war_target0
-					artifact = scope:thering0
+				#start_scheme = {
+				#	type = steal_back_artifact
+				#	target_character = scope:war_target0
+				#	artifact = scope:thering0
+				#}
+				begin_scheme_with_agents_effect = {
+					SCHEME_TYPE = steal_back_artifact
+					TARGET_TYPE = target_character
+					TARGET_SCOPE = scope:war_target0
+					# Success.
+					AGENT_1 = agent_thief
+					AGENT_2 = agent_thief
+					# Speed.
+					AGENT_3 = agent_infiltrator
+					AGENT_4 = agent_infiltrator
+					# Secrecy.
+					AGENT_5 = agent_lookout
+				}
+				scope:new_scheme ?= {
+					set_variable = {
+						name = target_artifact
+						value = scope:thering0
+					}
 				}
 			}
 		}
@@ -3490,7 +3515,7 @@ magic_ev6.52 = {
 		if = {
 			limit = {
 				is_imprisoned = no
-				is_landed = yes
+				is_landed_or_landless_administrative = yes
 			}
 			random_neighboring_and_across_water_top_liege_realm_owner = {
 				limit = {
@@ -4240,7 +4265,7 @@ magic_ev6.65 = {
 				}
 				start_scheme = {
 					type = murder
-					target = scope:child0
+					target_character = scope:child0
 				}
 			}
 		}
@@ -4825,7 +4850,7 @@ magic_ev6.71 = {
 
 	trigger = {
 		is_alive = yes
-		is_landed = yes
+		is_landed_or_landless_administrative = yes
 		NOT = {
 			any_held_county = {
 				exists = title_province
@@ -5257,17 +5282,12 @@ magic_ev6.75 = {
 		}
 		if = {
 			limit = {
-				any_ruler = {
-					is_ai = no
-					is_legendary_mage_trigger = yes
+				exists = scope:killer
+				scope:killer = {
+					has_trait = archmage
 				}
 			}
-			random_ruler = {
-				limit = {
-					is_ai = no
-					is_legendary_mage_trigger = yes
-				}
-				#give_nickname = archmage_nickname
+			scope:killer = {
 				send_interface_toast = {
 					title = ev6.75.title
 					custom_tooltip = ev6.75.ct
@@ -5278,6 +5298,36 @@ magic_ev6.75 = {
 						}
 						dynasty = {
 							add_dynasty_prestige = compensate_dynast_prest_value
+						}
+					}
+				}
+			}
+		}
+		else = {
+			if = {
+				limit = {
+					any_ruler = {
+						is_ai = no
+						is_legendary_mage_trigger = yes
+					}
+				}
+				random_ruler = {
+					limit = {
+						is_ai = no
+						is_legendary_mage_trigger = yes
+					}
+					#give_nickname = archmage_nickname
+					send_interface_toast = {
+						title = ev6.75.title
+						custom_tooltip = ev6.75.ct
+						add_prestige = massive_prestige_gain
+						if = {
+							limit = {
+								exists = dynasty
+							}
+							dynasty = {
+								add_dynasty_prestige = compensate_dynast_prest_value
+							}
 						}
 					}
 				}
