@@ -20,7 +20,14 @@
 	}
 
 	can_be_picked = {
-		has_focus = witch_focus
+		#OR = {
+		#	has_trait = witch
+		#	any_secret = { secret_type = secret_witch }
+		#}
+		OR = {
+			has_focus=witch_focus
+			has_trait = true_witch
+		}
 	}
 
 	effect = {
@@ -33,7 +40,6 @@
 		#	id = trait_specific_ongoing.1004
 		#	days = { 1 3 }
 		#}
-		
 		random_list = {
 			20 = {
 				trigger = {
@@ -83,17 +89,24 @@
 		}
 		
 		hidden_effect = {
-			random = {
-				chance = 95
-				trigger_event = {
-					id = magic_ev2.59
-					months = { 6 120 }
+			if = {
+				limit = {
+					NOT = {
+						has_trait = true_witch
+					}
+				}
+				random = {
+					chance = 95
+					trigger_event = {
+						id = magic_ev2.59
+						months = { 4 110 }
+					}
 				}
 			}
 		}
 	}
 }
-
+#precognition
 oneiromancy_perk = {
 	lifestyle = magic_lifestyle
 	tree = witch
@@ -107,12 +120,17 @@ oneiromancy_perk = {
 		#	has_trait = witch
 		#	any_secret = { secret_type = secret_witch }
 		#}
-		has_focus=witch_focus
+		OR = {
+			has_focus=witch_focus
+			has_trait = true_witch
+		}
 	}
 
 	character_modifier = {
-		murder_scheme_resistance_mult = 0.15
-		abduct_scheme_resistance_mult = 0.20
+		#murder_scheme_resistance_mult = 0.1
+		#abduct_scheme_resistance_mult = 0.1
+		murder_enemy_scheme_phase_duration_add = 2
+		abduct_enemy_scheme_phase_duration_add = 2
 		#prowess = 3
 	}
 
@@ -128,7 +146,10 @@ wisdom_of_nature_perk = {
 	position = { 3 0 }
 	icon = node_magic
 	can_be_picked = { 
-		has_focus=witch_focus
+		OR = {
+			has_focus=witch_focus
+			has_trait = true_witch
+		}
 	}
 	
 	auto_selection_weight = {
@@ -154,6 +175,7 @@ wisdom_of_nature_perk = {
 						has_trait = yaga
 						is_ai = yes
 					}
+					has_trait = true_witch
 				}
 			}
 			trigger_event = {
@@ -183,7 +205,10 @@ love_potions_perk = {
 	parent = wisdom_of_nature_perk
 
 	can_be_picked = {
-		has_focus=witch_focus
+		OR = {
+			has_focus=witch_focus
+			has_trait = true_witch
+		}
 	}
 	
 	character_modifier = {
@@ -191,7 +216,8 @@ love_potions_perk = {
 		#courting_scheme_power_mult = 0.20
 		attraction_opinion = 20
 		#owned_personal_scheme_success_chance_add = 5
-		personal_scheme_power_add = 20
+		#personal_scheme_power_add = 20
+		personal_scheme_phase_duration_add = -2
 	}
 	
 	effect = {
@@ -215,8 +241,9 @@ mistical_insight_perk = {
 	}
 
 	character_modifier = {
-		monthly_lifestyle_xp_gain_mult = 0.10
-		hostile_scheme_power_add = 5
+		monthly_lifestyle_xp_gain_mult = 0.05
+		#hostile_scheme_power_add = 5
+		hostile_scheme_phase_duration_add = -2
 		#cultural_head_fascination_mult = 0.05
 	}
 }
@@ -236,7 +263,10 @@ magical_senses_perk = {
 		#	has_trait = witch
 		#	any_secret = { secret_type = secret_witch }
 		#}
-		has_focus=witch_focus
+		OR = {
+			has_focus=witch_focus
+			has_trait = true_witch
+		}
 	}
 
 	effect = {
@@ -256,7 +286,7 @@ magical_senses_perk = {
 					is_ai = no
 				}
 				random = {
-					chance = 25
+					chance = 35
 					trigger_event = {
 						id = magic_ev5.34
 						months = { 6 48 }
@@ -279,6 +309,8 @@ true_witch_perk = {
 	
 	effect = {
 		add_trait_force_tooltip = true_witch
+		custom_tooltip = unlocks_artifacts_search_ct
+		custom_tooltip = additional_sc_for_mage_ct
 		if = {
 			limit = {
 				has_trait = grandmaster_coven
@@ -288,34 +320,24 @@ true_witch_perk = {
 				value = 20
 			}
 		}
-
-		
-		if = {
-			limit = {
-				has_character_modifier = power_saturated1 
-			}
-			remove_character_modifier = power_saturated1
-			add_character_modifier = power_saturated2
-		}
-		
-		if = { #This grants one point of power saturation
-			limit = {
-				NOR = {
-					has_character_modifier = power_saturated1
-					has_character_modifier = power_saturated2
-				}
-			}
-			add_character_modifier = power_saturated1
-		}
-		
 		if = {
 			limit = {
 				NOT = {
 					has_character_modifier = yaga_modifier
 				}
 			}
-			set_focus = no
-			hidden_effect = {
+		set_focus = no
+		hidden_effect = {
+			#if = {
+			#	limit = {
+			#		has_trait = archmage
+			#	}
+			#	add_trait_xp = {
+			#		trait = archmage
+			#		track = secret_knowledge
+			#		value = 5
+			#	}
+			#}
 			if = {
 					limit = {
 						is_ai = yes
@@ -342,27 +364,33 @@ true_witch_perk = {
 							}
 						}
 						70 = {
-
-						}
-					}
-				}
-				if = {
-					limit = {
-						dynasty = {
-							NOT = {
-								has_variable = used_magic_book
+							trigger_event = {
+								id = magic_ev8.39
+								years = { 1 5 }
 							}
 						}
 					}
-					random = {
-						chance = 80
-						trigger_event = {
-							id = magic_ev4.57
-							years = { 1 5 }
-						}
-					}
 				}
+				#if = {
+				#	limit = {
+				#		exists = dynasty
+				#		dynasty = {
+				#			NOT = {
+				#				has_variable = used_magic_book
+				#			}
+				#		}
+				#	}
+				#	#necronomicon special
+				#	random = {
+				#		chance = 80
+				#		trigger_event = {
+				#			id = magic_ev4.57
+				#			years = { 1 5 }
+				#		}
+				#	}
+				#}
 			}
 		}
+		
 	}
 }

@@ -14,7 +14,8 @@
 		always = yes
 	}
 	target_titles = all
-	target_title_tier = kingdom
+	#target_title_tier = all
+	#target_title_tier = kingdom
 	target_de_jure_regions_above = yes
 	ignore_effect = change_title_holder
 
@@ -171,7 +172,10 @@
 		scope:defender = {
 			every_character_artifact = {
 				limit = {
-					has_variable = magic1
+					OR = {
+						has_variable = magic1
+						has_variable = singularity
+					}
 				}
 				set_owner = {
 					target = scope:attacker
@@ -338,4 +342,523 @@
 	
 	max_defender_score_from_occupation = 0
 	max_attacker_score_from_occupation = 150
+}
+
+against_the_witch_war = {
+	icon = major_religious_war
+	group = event
+	#ai_only_against_neighbors = yes
+	allow_hostages = no
+
+	allowed_for_character = {
+		always = yes
+	}
+	allowed_against_character = {
+		always = yes
+	}
+
+	on_declaration = {
+		on_declared_war = yes
+		
+		hidden_effect = {
+			if = {
+				limit = {
+					scope:attacker = {
+						is_ai = yes
+					}
+				}
+				if = {
+					limit = {
+						NOT = {
+							exists = global_var:magic_grand_coalition_start
+						}
+					}
+					set_global_variable = magic_grand_coalition_start
+				}
+				
+				random_ruler = {
+					limit = {
+						is_landed_or_landless_administrative = yes
+						is_ai = yes
+						primary_title = { is_mercenary_company = no }	
+						highest_held_title_tier = 2
+					}
+					create_title_and_vassal_change = {
+						type = conquest
+						save_scope_as = change
+						add_claim_on_loss = no
+					}
+					random_held_title = {
+						limit = {
+							tier = tier_county
+							title_province = prev.capital_province
+						}
+						change_title_holder_include_vassals = {
+							holder = scope:attacker
+							change = scope:change
+						}
+					}
+					resolve_title_and_vassal_change = scope:change
+				}
+			}
+		}
+		every_ruler = {
+			limit = {
+				is_ruler = yes
+				is_landed_or_landless_administrative = yes
+				is_independent_ruler = yes
+				is_at_war = no
+				NOR = {
+					THIS = scope:attacker
+					THIS = scope:defender
+					has_truce = scope:defender
+					is_allied_to = scope:defender
+				}
+			}
+			trigger_event = magic_ev8.41
+		}
+	}
+	valid_to_start = {
+		always = no
+	}
+
+	on_victory_desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					scope:defender = { is_local_player = yes	is_witch_trigger = yes }
+				}
+				desc = against_the_witch_war_defender
+			}
+			triggered_desc = {
+				trigger = {
+					scope:defender = { is_local_player = yes }
+				}
+				desc = against_the_witch_war_defender2
+			}
+			desc = against_the_witch_war_desc
+		}
+	}
+
+	on_victory = {
+		scope:attacker = {
+
+			show_pow_release_message_effect = yes
+			
+			# Legitimacy
+			add_legitimacy_attacker_victory_effect = yes
+
+			#EP2 accolade glory gain for winning against higher ranked enemy
+			accolade_attacker_war_end_glory_gain_med_effect = yes
+		}
+
+		# Prestige for the attacker's war allies
+		add_from_contribution_attackers = {
+			prestige = medium_prestige_value
+			opinion = {
+				modifier = contributed_in_war
+			}
+		}
+
+		# Prestige for the defender's war allies
+		add_from_contribution_defenders = {
+			prestige = medium_prestige_value
+			opinion = {
+				modifier = contributed_in_war
+			}
+		}
+		scope:defender = {
+			if = {
+				limit = {
+					exists = house
+				}
+				house = {
+					save_scope_as = my_house
+					if = {
+						limit = {
+							has_house_modifier = witch_coven
+						}
+						remove_house_modifier = witch_coven
+					}
+							
+				}
+			}
+			every_character_artifact = {
+				limit = {
+					OR = {
+						has_variable = magic1
+						has_variable = singularity
+					}
+				}
+				set_owner = {
+					target = scope:attacker
+					history = {
+						type = stolen
+						actor = scope:defender
+						recipient = scope:attacker
+						location = scope:defender.location
+					}
+				}
+				hidden_effect = {
+					if = {
+						limit = {
+							exists = scope:my_house
+							NOT = {
+								scope:my_house = {
+									has_house_artifact_claim = prev
+								}
+							}
+						}
+						scope:my_house = {
+							add_house_artifact_claim = prev
+						}
+					}
+				}
+			}
+			if = {
+				limit = {
+					exists = player_heir
+					player_heir = {
+						is_adult = yes
+					}
+				}
+				scope:attacker = {
+					imprison = {
+						target = scope:defender.player_heir
+						type = dungeon
+					}
+				}
+			}
+			if = {
+				limit = {
+					is_witch_trigger = yes
+				}
+				death = {
+					killer = scope:attacker
+					death_reason = death_burned_witch
+				}
+			}
+			if = {
+				limit = {
+					exists = scope:my_house
+				}
+				scope:my_house = {
+					every_house_member = {
+						limit = {
+							is_adult = yes
+							is_imprisoned = no
+							NOR = {
+								THIS = scope:attacker
+								has_trait = witch_hunter
+							}
+							trigger_if = {
+								limit = {
+									is_ruler = yes
+								}
+								is_independent_ruler = no
+							}
+						}
+						scope:attacker = {
+							imprison = {
+								target = PREV
+								type = dungeon
+							}
+						}
+					}
+				}
+			}
+		}
+		# Truce
+		add_truce_attacker_victory_effect = yes
+		hidden_effect = {
+			if = {
+				limit = {
+					NOT = {
+						exists = global_var:magic_grand_coalition_done
+					}
+				}
+				set_global_variable = magic_grand_coalition_done
+			}
+			if = {
+				limit = {
+					exists = global_var:magic_grand_coalition_start
+				}
+				remove_global_variable = magic_grand_coalition_start
+			}
+		}
+	}
+
+	on_white_peace_desc = {
+		desc = debug_artifact_war_white_peace_desc
+	}
+
+	on_white_peace = {
+		scope:attacker = { show_pow_release_message_effect = yes }
+		custom_tooltip = grand_coalition_may_strike_again_ct
+		#EP2 accolade glory gain for doing ok against higher ranked enemy
+		scope:defender = {
+			accolade_defender_war_end_glory_gain_low_effect = yes
+			#hidden_effect = {
+			#	if = {
+			#		limit = {
+			#			exists = dynasty
+			#			dynasty = {
+			#				has_variable = grand_coalition_target
+			#			}
+			#		}
+			#		dynasty = {
+			#			remove_variable = grand_coalition_target
+			#			set_variable = grand_coalition_target2
+			#		}
+			#	}
+			#}
+			
+		}
+
+		# Prestige loss for the attacker
+		scope:attacker = {
+			add_prestige = {
+				value = minor_prestige_value
+				multiply = -1.0
+			}
+		}
+
+		# Prestige for the attacker's war allies
+		add_from_contribution_attackers = {
+			prestige = medium_prestige_value
+			opinion = {
+				modifier = contributed_in_war
+			}
+		}
+
+		# Prestige for the defender's war allies
+		add_from_contribution_defenders = {
+			prestige = medium_prestige_value
+			opinion = {
+				modifier = contributed_in_war
+			}
+		}
+
+		# Truce
+		add_truce_white_peace_effect = yes
+
+		hidden_effect = {
+			#if = {
+			#	limit = {
+			#		NOT = {
+			#			exists = global_var:magic_grand_coalition_done
+			#		}
+			#	}
+			#	set_global_variable = magic_grand_coalition_done
+			#}
+			if = {
+				limit = {
+					exists = global_var:magic_grand_coalition_start
+				}
+				remove_global_variable = magic_grand_coalition_start
+			}
+			scope:defender = {
+				if = {
+					limit = {
+						has_character_flag = may_has_wh_coalition_war_flag
+					}
+					remove_character_flag = may_has_wh_coalition_war_flag
+				}
+				add_character_flag = {
+					flag = may_has_wh_coalition_war_flag
+					years = 6
+				}
+			}
+			scope:attacker = {
+				if = {
+					limit = {
+						has_character_flag = starts_grand_coalition_war
+					}
+					remove_character_flag = starts_grand_coalition_war
+				}
+			}
+		}
+	}
+
+	on_defeat_desc = {
+		desc = debug_artifact_war_white_peace_desc
+	}
+
+	on_defeat = {
+		# Legitimacy
+		add_legitimacy_attacker_defeat_effect = yes
+		
+		#EP2 accolade glory gain for winning against higher ranked enemy
+		scope:defender = {
+			accolade_defender_war_end_glory_gain_med_effect = yes
+			#hidden_effect = {
+			#	if = {
+			#		limit = {
+			#			exists = dynasty
+			#			dynasty = {
+			#				has_variable = grand_coalition_target
+			#			}
+			#		}
+			#		dynasty = {
+			#			remove_variable = grand_coalition_target
+			#			set_variable = grand_coalition_target2
+			#		}
+			#	}
+			#}
+
+			add_prestige_level = 1
+			if = {
+				limit = { is_valid_for_legitimacy_change = yes }
+				add_legitimacy = massive_legitimacy_gain
+			}
+			imprison = {
+				target = scope:attacker
+				type = dungeon
+			}
+		}
+
+		scope:attacker = {
+			show_pow_release_message_effect = yes
+		}
+
+		# Prestige loss for the attacker
+		scope:attacker = {
+			pay_short_term_gold_reparations_effect = {
+				GOLD_VALUE = 3
+			}
+			add_prestige = {
+				value = major_prestige_value
+				multiply = -1.0
+			}
+		}
+
+		# Prestige for Defender
+		scope:defender = {
+			add_prestige_war_defender_effect = {
+				PRESTIGE_VALUE = massive_prestige_gain
+			}
+		}
+
+		# Prestige for the attacker's war allies
+		add_from_contribution_attackers = {
+			prestige = medium_prestige_value
+			opinion = {
+				modifier = contributed_in_war
+			}
+		}
+
+		# Prestige for the defender's war allies
+		add_from_contribution_defenders = {
+			prestige = major_prestige_value
+			opinion = {
+				modifier = contributed_in_war
+			}
+		}
+
+		# Truce
+		add_truce_attacker_defeat_effect = yes
+		hidden_effect = {
+			if = {
+				limit = {
+					NOT = {
+						exists = global_var:magic_grand_coalition_done
+					}
+				}
+				set_global_variable = magic_grand_coalition_done
+			}
+			if = {
+				limit = {
+					exists = global_var:magic_grand_coalition_start
+				}
+				remove_global_variable = magic_grand_coalition_start
+			}
+		}
+		if = {
+			limit = {
+				scope:attacker = {
+					is_ai = yes
+				}
+			}
+			every_religion_global = {
+				every_faith = {
+					limit = {
+						has_doctrine = doctrine_witchcraft_accepted
+					}
+					hidden_effect = {
+						remove_doctrine = doctrine_witchcraft_accepted
+					}
+					add_doctrine = doctrine_witchcraft_virtuous
+				}
+				every_faith = {
+					limit = {
+						has_doctrine = doctrine_witchcraft_shunned
+					}
+					hidden_effect = {
+						remove_doctrine = doctrine_witchcraft_shunned
+						every_faith_character = {
+							limit = {
+								any_secret = { secret_type = secret_witch }
+							}
+							random_secret = {
+								limit = { secret_type = secret_witch }
+								remove_secret = yes
+							}
+							if = {
+								limit = {
+									NOT = { has_trait = witch }
+								}
+								add_trait = witch
+							}
+						}
+					}
+					add_doctrine = doctrine_witchcraft_accepted
+				}
+				every_faith = {
+					limit = {
+						has_doctrine = doctrine_witchcraft_crime
+					}
+					hidden_effect = {
+						remove_doctrine = doctrine_witchcraft_crime
+					}
+					add_doctrine = doctrine_witchcraft_shunned
+				}
+			}
+		}
+	}
+	on_invalidated_desc = msg_religious_war_invalidation_region_message
+	
+	on_invalidated = {
+		#scope:attacker = { clean_scandinavian_adventurer_effect = yes }
+	}
+	on_primary_attacker_death = inherit
+	on_primary_defender_death = inherit
+
+	transfer_behavior = transfer
+
+	attacker_allies_inherit = yes
+	defender_allies_inherit = yes
+
+	war_name = "STOP_THE_WITCH_WAR"
+	cb_name_no_target = "STOP_THE_WITCH_WAR"
+
+	interface_priority = 1000
+
+	ticking_war_score_targets_entire_realm = yes
+	max_defender_score_from_occupation = 90
+	max_attacker_score_from_occupation = 150
+	attacker_ticking_warscore = 0
+	attacker_wargoal_percentage = 0.8
+
+	attacker_capital_gives_war_score = yes
+	defender_capital_gives_war_score = no
+	imprisonment_by_attacker_give_war_score = yes
+	imprisonment_by_defender_give_war_score = yes
+
+	max_ai_diplo_distance_to_title = 3000
+
+	should_show_war_goal_subview = no
+
+	ai_score = {
+		value = artifact_war_ai_score_value
+	}
 }

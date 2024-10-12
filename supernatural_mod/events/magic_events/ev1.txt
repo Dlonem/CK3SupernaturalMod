@@ -16,7 +16,7 @@ magic_ev.99 = {
 		}
 	}
 	immediate = {
-		random_ruler = {
+		random_living_character = {
 			limit = {
 				is_ai = no
 			}
@@ -25,16 +25,16 @@ magic_ev.99 = {
 		if = {
 			limit = {
 				has_game_rule = user_magic_arts
-				any_ruler = {
-					is_ai = no
+				any_player = {
+					#is_ai = no
 					NOT = {
 						any_character_artifact = { has_variable = magic1 }
 					}
 				}
 			}
-			random_ruler = {
+			random_player = {
 				limit = {
-					is_ai = no
+					#is_ai = no
 					NOT = {
 						any_character_artifact = { has_variable = magic1 }
 					}
@@ -115,7 +115,7 @@ magic_ev.99 = {
 				}
 				random_ruler = {
 					limit = {
-						is_landed = yes	
+						is_landed_or_landless_administrative = yes	
 						primary_title = { is_mercenary_company = no }	
 						highest_held_title_tier>1
 						exists = dynasty		
@@ -124,11 +124,7 @@ magic_ev.99 = {
 								has_variable=ev1used
 							}
 						}
-						any_ruler = {
-							is_ai = no
-							NOT = { THIS = PREV }
-							in_diplomatic_range = PREV
-						}
+						in_diplomatic_range = scope:player0
 					}
 					random_list = {
 						#necro
@@ -199,7 +195,7 @@ magic_ev.99 = {
 			else = {
 				random_ruler = {
 					limit = {
-						is_landed = yes	
+						is_landed_or_landless_administrative = yes	
 						primary_title = { is_mercenary_company = no }	
 						highest_held_title_tier>1
 						exists = dynasty		
@@ -377,7 +373,7 @@ magic_ev.97 = {
 					}
 					random_ruler = {
 						limit = {
-							is_landed = yes
+							is_landed_or_landless_administrative = yes
 							
 							capital_province = {
 								#geographical_region = dlc_ep1_arthurian_heartlands_region
@@ -390,7 +386,7 @@ magic_ev.97 = {
 				else = {
 					random_ruler = {
 						limit = {
-							is_landed = yes
+							is_landed_or_landless_administrative = yes
 						}
 						create_merlin_effect = yes
 					}
@@ -536,21 +532,22 @@ magic_ev.92 = {
 		dynasty={
 			set_variable=ev1used
 		}
-		
-		if = {
-			limit = {
-				NOT = {
-					any_county = {
-						exists = title_province
-						title_province = {
-							has_building_or_higher = houska
+		hidden_effect = {
+			if = {
+				limit = {
+					NOT = {
+						any_county = {
+							exists = title_province
+							title_province = {
+								has_building_or_higher = houska
+							}
 						}
 					}
 				}
+				create_houska = yes
 			}
-			create_houska = yes
+			create_extra_coven = yes
 		}
-		create_extra_coven = yes
 	}	
 }
 #hells scepter
@@ -764,6 +761,15 @@ magic_ev.2 = {
 					days = { 1 666 }
 				}
 			}
+			if = {
+				limit = {
+					is_ai = no
+				}
+				trigger_event = {
+					id = magic_ev8.40
+					years = 10
+				}
+			}
 		}
 	}
 	option={
@@ -834,7 +840,20 @@ magic_ev.3 = {
 							remove_character_modifier = cursed_modifier
 						}
 					}
-					add_character_modifier = { modifier = cursed_modifier years = 6 }
+					if = {
+						limit = {
+							exists = scope:actor
+							scope:actor = {
+								any_character_artifact = {
+									has_variable = catalyst
+								}
+							}
+						}
+						add_character_modifier = { modifier = cursed_modifier years = 10 }
+					}
+					else = {
+						add_character_modifier = { modifier = cursed_modifier years = 5 }
+					}
 					send_interface_toast = {
 						title=ev3.2.a_cursed
 					}
@@ -867,7 +886,20 @@ magic_ev.3 = {
 							remove_character_modifier = cursed_modifier
 						}
 					}
-					add_character_modifier = { modifier = cursed_modifier years = 6 }
+					if = {
+						limit = {
+							exists = scope:actor
+							scope:actor = {
+								any_character_artifact = {
+									has_variable = catalyst
+								}
+							}
+						}
+						add_character_modifier = { modifier = cursed_modifier years = 10 }
+					}
+					else = {
+						add_character_modifier = { modifier = cursed_modifier years = 5 }
+					}
 					send_interface_toast = {
 						title=ev3.2.a_cursed
 					}
@@ -908,7 +940,20 @@ magic_ev.3 = {
 						remove_character_modifier = cursed_modifier
 					}
 				}
-				add_character_modifier = { modifier = cursed_modifier years = 6 }
+				if = {
+					limit = {
+						exists = scope:actor
+						scope:actor = {
+							any_character_artifact = {
+								has_variable = catalyst
+							}
+						}
+					}
+					add_character_modifier = { modifier = cursed_modifier years = 10 }
+				}
+				else = {
+					add_character_modifier = { modifier = cursed_modifier years = 5 }
+				}
 				send_interface_toast = {
 					title=ev3.2.a_cursed
 				}
@@ -950,7 +995,20 @@ magic_ev.3 = {
 						remove_character_modifier = cursed_modifier
 					}
 				}
-				add_character_modifier = { modifier = cursed_modifier years = 6 }
+				if = {
+					limit = {
+						exists = scope:actor
+						scope:actor = {
+							any_character_artifact = {
+								has_variable = catalyst
+							}
+						}
+					}
+					add_character_modifier = { modifier = cursed_modifier years = 10 }
+				}
+				else = {
+					add_character_modifier = { modifier = cursed_modifier years = 5 }
+				}
 				send_interface_toast = {
 					title=ev3.2.a_cursed
 				}
@@ -1222,17 +1280,17 @@ magic_ev.44 = {
 			}
 			if = {
 				limit = {
-					is_landed = yes
+					is_landed_or_landless_administrative = yes
 				}
 				start_scheme = {
 					type = abduct
-					target = scope:magic_user
+					target_character = scope:magic_user
 				}
 			}
 			else = {
 				start_scheme = {
 					type = murder
-					target = scope:magic_user
+					target_character = scope:magic_user
 				}
 			}
 			
@@ -1242,85 +1300,85 @@ magic_ev.44 = {
 			base = 50
 		}
 	}
-	option = {
-		name = ev4b.0.d
-		trigger = {
-			NOT = {
-				has_trait = supernatural_hunter
-			}
-			scope:magic_user = {
-				has_character_flag = black_magic_caster_flag
-			}
-			has_character_flag = forbidden_black_magic_flag
-		}
-		scope:magic_user = {
-			every_secret = {
-				limit = {
-					secret_type = secret_witch
-					NOT = {
-						is_known_by = root
-					}
-				}
-				reveal_to = root
-			}
-			if = {
-				limit = {
-					is_landed = yes
-				}
-				primary_title = {
-					save_scope_as = ptitle
-				}
-			}
-		}
-		if = {
-			limit = {
-				exists = scope:ptitle
-				NOT = {
-					has_claim_on = scope:ptitle
-				}
-			}
-			add_unpressed_claim = scope:ptitle
-		}
-		every_living_character = {
-			limit = {
-				has_character_flag = forbidden_black_magic_flag
-				NOR = {
-					has_opinion_modifier = {
-						modifier = use_black_magic_opinion
-						target = root
-					}
-					THIS = scope:magic_user
-				}
-			}
-			add_opinion = {
-				target = scope:magic_user
-				modifier = use_black_magic_opinion
-				opinion = -50
-			}
-		}
-		clear_saved_scope = magic_user
-		ai_chance = {
-			base = 1
-			modifier = {
-				add = 10
-				has_trait = just
-			}
-			modifier = {
-				add = -10
-				has_trait = arbitrary
-			}
-			modifier = {
-				add = 10
-				scope:magic_user = {
-					is_landed = yes
-				}
-				OR = {
-					has_trait = greedy
-					has_trait = ambitious
-				}
-			}
-		}
-	}
+	#option = {
+	#	name = ev4b.0.d
+	#	trigger = {
+	#		NOT = {
+	#			has_trait = supernatural_hunter
+	#		}
+	#		scope:magic_user = {
+	#			has_character_flag = black_magic_caster_flag
+	#		}
+	#		has_character_flag = forbidden_black_magic_flag
+	#	}
+	#	scope:magic_user = {
+	#		every_secret = {
+	#			limit = {
+	#				secret_type = secret_witch
+	#				NOT = {
+	#					is_known_by = root
+	#				}
+	#			}
+	#			reveal_to = root
+	#		}
+	#		if = {
+	#			limit = {
+	#				is_landed = yes
+	#			}
+	#			primary_title = {
+	#				save_scope_as = ptitle
+	#			}
+	#		}
+	#	}
+	#	if = {
+	#		limit = {
+	#			exists = scope:ptitle
+	#			NOT = {
+	#				has_claim_on = scope:ptitle
+	#			}
+	#		}
+	#		add_unpressed_claim = scope:ptitle
+	#	}
+	#	every_living_character = {
+	#		limit = {
+	#			has_character_flag = forbidden_black_magic_flag
+	#			NOR = {
+	#				has_opinion_modifier = {
+	#					modifier = use_black_magic_opinion
+	#					target = scope:magic_user
+	#				}
+	#				THIS = scope:magic_user
+	#			}
+	#		}
+	#		add_opinion = {
+	#			target = scope:magic_user
+	#			modifier = use_black_magic_opinion
+	#			opinion = -50
+	#		}
+	#	}
+	#	clear_saved_scope = magic_user
+	#	ai_chance = {
+	#		base = 1
+	#		modifier = {
+	#			add = 10
+	#			has_trait = just
+	#		}
+	#		modifier = {
+	#			add = -10
+	#			has_trait = arbitrary
+	#		}
+	#		modifier = {
+	#			add = 10
+	#			scope:magic_user = {
+	#				is_landed = yes
+	#			}
+	#			OR = {
+	#				has_trait = greedy
+	#				has_trait = ambitious
+	#			}
+	#		}
+	#	}
+	#}
 }
 
 #lifestealing
@@ -1394,6 +1452,7 @@ magic_ev.5 = {
 		#		flag = magic_user
 		#		years = 5
 		#}
+		set_spell_id = { ID = 28 }
 		stress_impact = {
 			compassionate = major_stress_gain
 			ambitious = minor_stress_loss
@@ -1444,6 +1503,7 @@ magic_ev.5 = {
 		stress_impact = {
 			compassionate = massive_stress_loss
 		}
+		set_spell_id = { ID = 28 }
 		add_character_modifier = lifestolen_modifier
 		scope:potential_sacrifice = {
 			add_character_modifier = lifestealer_modifier
@@ -1608,7 +1668,7 @@ magic_ev.7 = {
 			type = secret_murder
 			target = scope:potential_sacrifice
 		}
-		send_message_4_magic_sense_effect =yes
+		#send_message_4_magic_sense_effect =yes
 		stress_impact = {
 			just = medium_stress_gain
 			compassionate = medium_stress_gain
@@ -1672,7 +1732,7 @@ magic_ev.7 = {
 			type = secret_murder
 			target = scope:potential_sacrifice2
 		}
-		send_message_4_magic_sense_effect =yes
+		#send_message_4_magic_sense_effect =yes
 		stress_impact = {
 			just = medium_stress_gain
 			compassionate = medium_stress_gain
@@ -1886,7 +1946,7 @@ magic_ev.8 = {
 			}
 		}
 
-		send_message_4_magic_sense_effect = yes
+		#send_message_4_magic_sense_effect = yes
 		ai_chance = {
 			base = 20
 		}
@@ -1923,7 +1983,7 @@ magic_ev.8 = {
 			}
 		}
 
-		send_message_4_magic_sense_effect =yes
+		#send_message_4_magic_sense_effect =yes
 		ai_chance = {
 			base = 10
 			modifier = {
@@ -1944,7 +2004,7 @@ magic_ev.8 = {
 		}
 		remove_trait = pregnant
 
-		send_message_4_magic_sense_effect =yes
+		#send_message_4_magic_sense_effect =yes
 		ai_chance = {
 			base = 5
 			modifier = {
@@ -1986,7 +2046,7 @@ magic_ev.8 = {
 		#	}
 		#}
 		add_trait = blind
-		send_message_4_magic_sense_effect =yes
+		#send_message_4_magic_sense_effect =yes
 		ai_chance = {
 			base = 1
 		}
@@ -2021,7 +2081,7 @@ magic_ev.8 = {
 		#	}
 		#}
 		add_trait = blind
-		send_message_4_magic_sense_effect =yes
+		#send_message_4_magic_sense_effect =yes
 		ai_chance = {
 			base = 1
 		}
@@ -2044,10 +2104,10 @@ magic_ev.8 = {
 					has_trait = corrupted
 				}
 			}
-			add_trait = corrupted
+			add_corrupt_trait = yes
 		}
 		custom_tooltip = no_soul_custom_tooltip
-		send_message_4_magic_sense_effect =yes
+		#send_message_4_magic_sense_effect =yes
 		trigger_event = {
 			id = magic_ev2.11
 			years = { 18 22 }
@@ -2129,7 +2189,7 @@ magic_ev.81 = {
 			change_development_level = -7
 		}
 
-		send_message_4_magic_sense_effect = yes
+		#send_message_4_magic_sense_effect = yes
 		ai_chance = {
 			base = 20
 		}
@@ -2155,7 +2215,7 @@ magic_ev.81 = {
 			}
 			add_trait = murderer
 		}
-		send_message_4_magic_sense_effect = yes
+		#send_message_4_magic_sense_effect = yes
 		ai_chance = {
 			base = 20
 		}
@@ -2209,7 +2269,7 @@ magic_ev.81 = {
 			}
 		}
 		
-		send_message_4_magic_sense_effect = yes
+		#send_message_4_magic_sense_effect = yes
 		ai_chance = {
 			base = 20
 		}
@@ -2391,10 +2451,29 @@ magic_ev.9 = {
 		
 		add_personal_artifact_claim = scope:artif
 		add_character_flag = claimviatriang
-		start_scheme = {
-			type = steal_back_artifact
-			target = scope:potential_magician
-			artifact = scope:artif
+		#start_scheme = {
+		#	type = steal_back_artifact
+		#	target_character = scope:potential_magician
+		#	artifact = scope:artif
+		#}
+		begin_scheme_with_agents_effect = {
+			SCHEME_TYPE = steal_back_artifact
+			TARGET_TYPE = target_character
+			TARGET_SCOPE = scope:potential_magician
+			# Success.
+			AGENT_1 = agent_thief
+			AGENT_2 = agent_thief
+			# Speed.
+			AGENT_3 = agent_infiltrator
+			AGENT_4 = agent_infiltrator
+			# Secrecy.
+			AGENT_5 = agent_lookout
+		}
+		scope:new_scheme ?= {
+			set_variable = {
+				name = target_artifact
+				value = scope:artif
+			}
 		}
 		ai_chance = {
 			base = 90
@@ -2452,7 +2531,7 @@ magic_ev.9 = {
 		#}
 		start_scheme = {
 			type = murder
-			target = scope:potential_magician
+			target_character = scope:potential_magician
 		}
 		ai_chance = {
 			base = 90
@@ -2489,13 +2568,13 @@ magic_ev.9 = {
 				NOT = {
 					any_scheme = {
 						scheme_type = befriend
-						scheme_target = scope:potential_magician
+						scheme_target_character = scope:potential_magician
 					}
 				}
 			}
 			start_scheme = {
 				type = befriend
-				target = scope:potential_magician
+				target_character = scope:potential_magician
 			}
 		}
 		ai_chance = {
@@ -2772,13 +2851,18 @@ magic_ev.11 = {
 	left_portrait = root
 
 	trigger = {
-		OR = {
-			has_trait = source
-			has_trait = source2
-			has_trait = source3
-			has_trait = source4
+		#OR = {
+		#	has_trait = source
+		#	has_trait = source2
+		#	has_trait = source3
+		#	has_trait = source4
+		#}
+		has_trait = source
+		has_trait_xp = {
+			trait = source
+			track = magic_potential
+			value > 19
 		}
-		
 		can_be_power_saturated_trigger = yes
 		NOT = {
 			has_character_modifier = magic_flu_modifier
@@ -2803,60 +2887,67 @@ magic_ev.11 = {
 		name = ev11.0.a
 		trait = source
 		trigger = {
-			NOR = {
-				has_trait = source2
-				has_trait = source3
-				has_trait = source4
-			}
+			has_trait = source
 		}
 		add_stress = minor_stress_loss
-	}
-	option = {
-		name = ev11.0.a
-		trait = source2
-		trigger = {
-			has_trait = source2
-			NOR = {
-				has_trait = source
-				has_trait = source3
-				has_trait = source4
-			}
-		}
-		add_stress = minor_stress_loss
-	}
-	option = {
-		name = ev11.0.a
-		trait = source4
-		trigger = {
-			has_trait = source4
-			NOR = {
-				has_trait = source
-				has_trait = source2
-				has_trait = source3
-			}
-		}
-	}
-	option = {
-		name = ev11.0.a
-		trait = source3
-		trigger = {
-			has_trait = source3
-		}
-		exclusive = yes
-		add_stress = minor_stress_loss
-		gain_sc_xp1_effect = yes
-		gain_cm_xp1_effect = yes
 		if = {
 			limit = {
-				is_ai = yes
-				OR = {
-					has_focus = witch_focus
-					has_focus = arcane_focus
+				has_trait_xp = {
+					trait = source
+					track = magic_potential
+					value > 99
 				}
 			}
-			add_magic_lifestyle_perk_points = 1
+			gain_sc_xp1_effect = yes
+			gain_cm_xp1_effect = yes
 		}
 	}
+	#option = {
+	#	name = ev11.0.a
+	#	trait = source2
+	#	trigger = {
+	#		has_trait = source2
+	#		NOR = {
+	#			has_trait = source
+	#			has_trait = source3
+	#			has_trait = source4
+	#		}
+	#	}
+	#	add_stress = minor_stress_loss
+	#}
+	#option = {
+	#	name = ev11.0.a
+	#	trait = source4
+	#	trigger = {
+	#		has_trait = source4
+	#		NOR = {
+	#			has_trait = source
+	#			has_trait = source2
+	#			has_trait = source3
+	#		}
+	#	}
+	#}
+	#option = {
+	#	name = ev11.0.a
+	#	trait = source3
+	#	trigger = {
+	#		has_trait = source3
+	#	}
+	#	exclusive = yes
+	#	add_stress = minor_stress_loss
+	#	gain_sc_xp1_effect = yes
+	#	gain_cm_xp1_effect = yes
+	#	if = {
+	#		limit = {
+	#			is_ai = yes
+	#			OR = {
+	#				has_focus = witch_focus
+	#				has_focus = arcane_focus
+	#			}
+	#		}
+	#		add_magic_lifestyle_perk_points = 1
+	#	}
+	#}
 }
 
 #summon demon confirmation
@@ -3153,6 +3244,10 @@ magic_ev.13 = {
 		}
 		ai_chance = {
 			base = 10
+			modifier = {
+				add = 300
+				learning > 20
+			}
 		}
 	}
 	option = {
@@ -3231,7 +3326,7 @@ magic_ev.14 = {
 					}
 					ms_moloch_demon_effect = yes
 				}
-				4 = {
+				2 = {
 					#child?
 					trigger = {
 						any_living_character = {
@@ -3260,6 +3355,7 @@ magic_ev.14 = {
 								has_character_flag = ms_met_hecate
 								has_trait = archmage
 							}
+							has_character_flag = fighting_planes_flag
 						}
 					}
 					ms_hecate_demon_effect = yes
@@ -3299,6 +3395,29 @@ magic_ev.14 = {
 					}
 					ms_asmodeus_demon_effect = yes
 				}
+				10 = {
+					#Blob/Leviathan
+					trigger = {
+						is_ai = no
+						has_trait = archmage
+						has_trait_xp = {
+							trait = archmage
+							track = secret_knowledge
+							value > 19
+						}
+						has_character_flag = no_complications
+						any_living_character = {
+							has_character_flag = blob_flag
+							count = 0
+						}
+						NOT = {
+							any_culture_global = {
+								has_variable = blob_exists
+							}
+						}
+					}
+					ms_blob_demon_effect = yes
+				}
 			}
 		}
 	}
@@ -3308,24 +3427,24 @@ magic_ev.14 = {
 #minor demon // casual negotiations
 magic_ev.15 = {
 	title = ev15.0.title
-
-	desc = {
-		first_valid = {
-			triggered_desc = {
-				trigger = {
-
-				}
-				desc = ev15.0.desc
-			}
-			triggered_desc = {
-				trigger = {
-
-				}
-				desc = ev15.0.desc
-			}
-			desc = ev15.0.desc
-		}
-	}
+	desc = ev15.0.desc
+	#desc = {
+	#	first_valid = {
+	#		triggered_desc = {
+	#			trigger = {
+	#
+	#			}
+	#			desc = ev15.0.desc
+	#		}
+	#		triggered_desc = {
+	#			trigger = {
+	#
+	#			}
+	#			desc = ev15.0.desc
+	#		}
+	#		desc = ev15.0.desc
+	#	}
+	#}
 	theme = witchcraft
 	left_portrait = root
 	right_portrait = scope:demon
@@ -3336,10 +3455,16 @@ magic_ev.15 = {
 	option = {
 		name = ev15.0.a
 		trigger_event = magic_ev.16
+		ai_chance = {
+			base = 20
+		}
 	}
 	option = {
 		name = ev15.0.b
 		trigger_event = magic_ev.17
+		ai_chance = {
+			base = 20
+		}
 	}
 	option = {
 		name = ev15.0.d
@@ -3387,7 +3512,9 @@ magic_ev.15 = {
 				}
 			}
 		}
-		
+		ai_chance = {
+			base = 0
+		}
 	}
 	option = {
 		name = ev15.0.e
@@ -3411,11 +3538,17 @@ magic_ev.15 = {
 				add_character_flag = special_magic_character
 			}
 		}
+		ai_chance = {
+			base = 10
+		}
 	}
 	option = {
 		name = ev15.0.c
 		add_stress = -30
 		trigger_event = magic_ev.18
+		ai_chance = {
+			base = 0
+		}
 	}
 }
 
@@ -3563,6 +3696,9 @@ magic_ev.16 = {
 		custom_tooltip = ev16.0.a_ct
 		
 		trigger_event = magic_ev.18
+		ai_chance = {
+			base = 20
+		}
 	}
 	option = {
 		name = ev16.0.b
@@ -3592,7 +3728,7 @@ magic_ev.16 = {
 				name = undead_army_loc
 				men_at_arms = {
 					type = skeletons
-					stacks = 1
+					stacks = 2
 				}
 				inheritable = no
 				uses_supply = no
@@ -3607,7 +3743,7 @@ magic_ev.16 = {
 				name = undead_army_loc
 				men_at_arms = {
 					type = skeletons
-					stacks = 2
+					stacks = 3
 				}
 				inheritable = no
 				uses_supply = no
@@ -3622,7 +3758,7 @@ magic_ev.16 = {
 				name = undead_army_loc
 				men_at_arms = {
 					type = skeletons
-					stacks = 3
+					stacks = 4
 				}
 				inheritable = no
 				uses_supply = no
@@ -3637,7 +3773,7 @@ magic_ev.16 = {
 				name = undead_army_loc
 				men_at_arms = {
 					type = skeletons
-					stacks = 4
+					stacks = 5
 				}
 				inheritable = no
 				uses_supply = no
@@ -3649,17 +3785,40 @@ magic_ev.16 = {
 				name = undead_army_loc
 				men_at_arms = {
 					type = skeletons
-					stacks = 5
+					stacks = 6
 				}
 				inheritable = no
 				uses_supply = no
 				location = root.capital_province
 			}
 		}
-		
+		if = {
+			limit = {
+				is_ai = yes
+			}
+			spawn_army = {
+				name = undead_army_loc
+				men_at_arms = {
+					type = skeletons
+					stacks = 2
+				}
+				inheritable = no
+				uses_supply = no
+				location = root.capital_province
+			}
+		}
 
 		trigger_event = magic_ev.18
-
+		ai_chance = {
+			base = 10
+			modifier = {
+				add = 40
+				OR = {
+					has_trait = necromancer
+					has_trait = corrupted
+				}
+			}
+		}
 	}
 
 	option = {
@@ -3669,7 +3828,9 @@ magic_ev.16 = {
 		}
 		add_character_modifier = gift_from_hell_modifier
 		trigger_event = magic_ev.18
-
+		ai_chance = {
+			base = 20
+		}
 	}
 }
 
@@ -3702,6 +3863,9 @@ magic_ev.17 = {
 		name = ev17.0.a
 		add_gold = demon_gold_value
 		trigger_event = magic_ev.18
+		ai_chance = {
+			base = 20
+		}
 	}
 	
 	option = {
@@ -3833,7 +3997,9 @@ magic_ev.17 = {
 		}
 		trigger_event = magic_ev.18
 		}
-
+		ai_chance = {
+			base = 0
+		}
 	}
 
 	option = {
@@ -3967,6 +4133,9 @@ magic_ev.17 = {
 		}
 		trigger_event = magic_ev.18
 		}
+		ai_chance = {
+			base = 0
+		}
 	}
 }
 
@@ -4036,7 +4205,7 @@ magic_ev.19 = {
 						NOT = { this = scope:this0 }
 						any_held_title = { is_neighbor_to_realm = scope:this0 }
 						is_ai = yes
-						is_landed = yes
+						is_landed_or_landless_administrative = yes
 					}
 					save_scope_as = target
 				}
@@ -4070,7 +4239,7 @@ magic_ev.19 = {
 					limit = {
 						NOT = { this = scope:this0 }
 						is_ai = yes
-						is_landed = yes
+						is_landed_or_landless_administrative = yes
 					}
 					save_scope_as = target
 				}
@@ -4090,13 +4259,18 @@ magic_ev.19 = {
 				limit = {
 					exists = primary_heir
 				}
-				set_random_rivalry_reason = { TARGET = primary_heir }
+				set_random_rivalry_reason = { TARGET = primary_heir RELATION = rival }
 			}
 			
 			set_relation_mminion = scope:target
 			add_trait_xp = {
 				trait = demon
-				value = { 25 50 }
+				value = { 25 60 }
+			}
+			add_trait_xp = {
+				trait = source
+				track = magic_potential
+				value = { 20 45 }
 			}
 			if = {
 				limit = {
@@ -4136,7 +4310,7 @@ magic_ev.19 = {
 			}
 			start_scheme = {
 				type = murder
-				target = scope:this0
+				target_character = scope:this0
 			}
 		}
 		scope:target = {
@@ -4163,7 +4337,7 @@ magic_ev.19 = {
 			}
 			start_scheme = {
 				type = abduct
-				target = scope:this0
+				target_character = scope:this0
 			}
 		}
 	}
@@ -4658,7 +4832,7 @@ magic_ev.24 = {
 				remove_trait = physique_good_1
 			}
 			custom_tooltip = ev24.0.d_ct
-			add_trait_force_tooltip = physique_good_3
+			add_trait_force_tooltip = physique_good_2
 		}
 		else_if = {
 			limit = { has_trait = physique_good_2 }
@@ -4669,7 +4843,7 @@ magic_ev.24 = {
 			add_trait_force_tooltip = physique_good_3
 		}
 		else = {
-			add_trait_force_tooltip = physique_good_2
+			add_trait_force_tooltip = physique_good_1
 		}
 	}
 	after = {
@@ -4687,7 +4861,7 @@ magic_ev.25 = {
 		scope:this0 = {
 			is_alive = yes
 			is_imprisoned = no
-			is_landed = yes
+			is_landed_or_landless_administrative = yes
 		}
 		scope:belial = {
 			is_alive = yes
@@ -5268,6 +5442,26 @@ magic_ev.38 = {
 		trigger = {
 			NOT = { has_trait = intellect_good_3 }
 		}
+		hidden_effect = {
+			if = {
+				limit = {
+					has_trait = intellect_bad_1
+				}
+				remove_trait = intellect_bad_1
+			}
+			else_if = {
+				limit = {
+					has_trait = intellect_bad_2
+				}
+				remove_trait = intellect_bad_2
+			}
+			if = {
+				limit = {
+					has_trait = intellect_bad_3
+				}
+				remove_trait = intellect_bad_3
+			}
+		}
 		if = {
 			limit = {
 				has_trait = intellect_good_2
@@ -5284,10 +5478,10 @@ magic_ev.38 = {
 			hidden_effect = {
 				remove_trait = intellect_good_1
 			}
-			add_trait_force_tooltip = intellect_good_3
+			add_trait_force_tooltip = intellect_good_2
 		}
 		else = {
-			add_trait_force_tooltip = intellect_good_2
+			add_trait_force_tooltip = intellect_good_1
 		}
 		trigger_event = magic_ev.18
 		#hidden_effect = {
@@ -5543,9 +5737,15 @@ magic_ev.42 = {
 		add_character_modifier = joy_with_lilith_modifier
 		set_relation_lover = scope:target
 		#set_random_lover_reason = { TARGET = scope:target }
-		trigger_event = {
-			id = magic_ev.45
-			days = { 10 20 }
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	days = { 10 20 }
+		#}
+		scope:target = {
+			trigger_event = {
+				id = magic_ev.58
+				days = { 10 20 }
+			}
 		}
 	}
 }
@@ -5656,13 +5856,185 @@ magic_ev.43 = {
 		trigger_event = magic_ev.18
 	}
 }
+#Lilith on the board - new system
+magic_ev.58 = {
+	hidden = yes
+	trigger = {
+		is_alive = yes
+	}
+	immediate = {
+		set_immortal_age = 18
+		if = {
+			limit = {
+				NOT = {
+					exists = scope:target
+				}
+			}
+			save_scope_as = target
+		}
+					if = { limit = { has_trait = disfigured }
+						remove_trait = disfigured
+					}
+					if = { limit = { has_trait = inbred }
+						remove_trait = inbred
+					}
+					if = { limit = { has_trait = impotent }
+						remove_trait = impotent
+					}
+					if = { limit = { has_trait = bleeder }
+						remove_trait = bleeder
+					}
+					if = { limit = { has_trait = wheezing }
+						remove_trait = wheezing
+					}
+					if = { limit = { has_trait = infertile }
+						remove_trait = infertile
+					}
+					if = { limit = { has_trait = one_legged }
+						remove_trait = one_legged
+					}
+					if = { limit = { has_trait = one_eyed }
+						remove_trait = one_eyed
+					}
+					if = { limit = { has_trait = lunatic_genetic }
+						remove_trait = lunatic_genetic
+					}
+					if = { limit = { has_trait = lunatic_1 }
+						remove_trait = lunatic_1
+					}
+					if = { limit = { has_trait = ill }
+						remove_trait = ill
+					}
+					if = { limit = { has_trait = pneumonic }
+						remove_trait = pneumonic
+					}
+					if = { limit = { has_trait = great_pox }
+						remove_trait = great_pox
+					}
+					if = { limit = { has_trait = early_great_pox }
+						remove_trait = early_great_pox
+					}
+					if = { limit = { has_trait = lovers_pox }
+						remove_trait = lovers_pox
+					}
+					if = { limit = { has_trait = leper }
+						remove_trait = leper
+					}
+					if = { limit = { has_trait = wounded_1 }
+						remove_trait = wounded_1
+					}
+					if = { limit = { has_trait = wounded_2 }
+						remove_trait = wounded_2
+					}
+					if = { limit = { has_trait = wounded_3 }
+						remove_trait = wounded_3
+					}
+					if = { limit = { has_trait = maimed }
+						remove_trait = maimed
+					}
+					if = { limit = { has_trait = infirm }
+						remove_trait = infirm
+					}
+					if = { limit = { has_trait = incapable }
+						remove_trait = incapable
+					}
+					if = { limit = { has_trait = gout_ridden }
+						remove_trait = gout_ridden
+					}
+					if = { limit = { has_trait = consumption }
+						remove_trait = consumption
+					}
+					if = { limit = { has_trait = cancer }
+						remove_trait = cancer
+					}
+					if = { limit = { has_trait = typhus }
+						remove_trait = typhus
+					}
+					if = { limit = { has_trait = bubonic_plague }
+						remove_trait = bubonic_plague
+					}
+					if = { limit = { has_trait = smallpox }
+						remove_trait = smallpox
+					}
+					if = { limit = { has_trait = sickly }
+						remove_trait = sickly
+					}
+					if = { limit = { has_trait = blind }
+						remove_trait = blind
+					}
+					if = {
+						limit = {
+							is_imprisoned = no
+							trigger_if = {
+								limit = { exists = scope:owner }
+								NOT = {
+									any_scheme = {
+										scheme_type = seduce
+										scheme_target_character = scope:owner
+									}
+								}
+							}
+						}
+						if = {
+							limit = {
+								exists = scope:owner
+							}
+							if = {
+								limit = {
+									scope:owner = {
+										OR = {
+											is_alive = no
+											has_character_flag = failed_lilith_flag
+											AND = {
+												is_alive = yes
+												NOR = {
+													has_relation_lover = ROOT
+													has_relation_soulmate = ROOT
+												}
+											}
+										}
+									}
+								}
+								if = {
+									limit = {
+										scope:owner = {
+											is_alive = yes
+										}
+									}
+									if = {
+										limit = {
+											scope:owner = {
+												has_character_modifier = joy_with_lilith_modifier
+											}
+										}
+										remove_character_modifier = joy_with_lilith_modifier
+									}
+								}
+								lilith_find_new_owner_effect = yes
+							}
+							else = {
+								run_lilith_events_effect = yes
+							}
+						}
+						else = {
+							lilith_find_new_owner_effect = yes
+						}
+					}
+					trigger_event = {
+						id = magic_ev.58
+						months = { 7 48 }
+						#months = 1
+					}
+	}
+}
 
-#Lilith on the board
+#Lilith on the board - old system (disabled)
 magic_ev.45 = {
 	hidden = yes
 	#type = empty
 	scope=none
 	trigger = {
+		always = no
 		scope:target = {
 			is_alive = yes
 		}
@@ -5784,12 +6156,12 @@ magic_ev.45 = {
 					OR = {
 						AND = {
 							any_relation ={
-								is_landed = yes
+								is_landed_or_landless_administrative = yes
 								type = lover
 								count = 0
 							}
 							any_relation ={
-								is_landed = yes
+								is_landed_or_landless_administrative = yes
 								type = soulmate
 								count = 0
 							}
@@ -5798,7 +6170,7 @@ magic_ev.45 = {
 							is_alive = no
 						}
 						scope:owner = {
-							is_landed = no
+							is_landed_or_landless_administrative = no
 						}
 						scope:owner = {
 							AND = {
@@ -5826,7 +6198,7 @@ magic_ev.45 = {
 					scope:target = {
 						start_scheme = {
 							type = murder
-							target = scope:owner
+							target_character = scope:owner
 						}
 					}
 				}
@@ -5835,7 +6207,7 @@ magic_ev.45 = {
 					limit = {
 						is_attracted_to_women = yes
 						is_imprisoned = no
-						is_landed = yes
+						is_landed_or_landless_administrative = yes
 					}
 					add_courtier = scope:target
 					save_scope_as = owner
@@ -5848,7 +6220,7 @@ magic_ev.45 = {
 				}
 				start_scheme = {
 					type = seduce
-					target = scope:owner
+					target_character = scope:owner
 				}
 				trigger_event = {
 					id = magic_ev.45
@@ -5949,25 +6321,6 @@ magic_ev.45 = {
 									#I wanna be your queen
 									trigger_event = magic_ev.54
 								}
-								#5 = {
-								#	trigger = {
-								#		OR = {
-								#			is_consort_of = scope:target
-								#			is_spouse_of = scope:target
-								#		}
-								#	}
-								#	scope:target = {
-								#		start_scheme = {
-								#			type = murder
-								#			target = scope:owner
-								#		}
-								#	}
-								#	#Im bored so I'll kill you...
-								#	trigger_event = {
-								#		id = magic_ev.45
-								#		months = { 18 28 }
-								#	}
-								#}
 								8 = {
 									#I'll kill my husband
 									trigger = {
@@ -5978,7 +6331,7 @@ magic_ev.45 = {
 									scope:target = {
 										start_scheme = {
 											type = murder
-											target = scope:target.primary_partner
+											target_character = scope:target.primary_partner
 										}
 									}
 									trigger_event = {
@@ -6067,7 +6420,7 @@ magic_ev.45 = {
 									scope:target = {
 										start_scheme = {
 											type = seduce
-											target = scope:potential_targ
+											target_character = scope:potential_targ
 										}
 									}
 									trigger_event = {
@@ -6105,7 +6458,7 @@ magic_ev.45 = {
 											}
 											start_scheme = {
 												type = murder
-												target = scope:owner
+												target_character = scope:owner
 											}
 										}
 									}
@@ -6145,7 +6498,7 @@ magic_ev.46 = {
 		name = ev46.0.a
 		add_character_flag = {
 			flag = feast4lilith
-			years = 3
+			years = 5
 		}
 		#hidden_effect = {
 		#	remove_decision_cooldown = host_feast_decision
@@ -6159,10 +6512,10 @@ magic_ev.46 = {
 	}
 	option = {
 		name = ev46.0.b
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 20 }
-		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 20 }
+		#}
 		scope:target = {
 			add_opinion = {
 				modifier = lover_let_me_down_opinion
@@ -6170,10 +6523,10 @@ magic_ev.46 = {
 			}
 			hidden_effect = {
 				random = {
-					chance = 50
+					chance = 25
 					start_scheme = {
 						type = murder
-						target = scope:owner
+						target_character = scope:owner
 					}
 				}
 			}
@@ -6183,6 +6536,12 @@ magic_ev.46 = {
 			limit = { has_character_modifier = joy_with_lilith_modifier }
 			remove_character_modifier = joy_with_lilith_modifier
 		}
+		hidden_effect = {
+			add_character_flag = {
+				flag = failed_lilith_flag
+				years = 6
+			}
+		}
 	}
 	option = {
 		name = ev46.0.c
@@ -6190,10 +6549,10 @@ magic_ev.46 = {
 			has_trait = lustful
 		}
 		trait = lustful
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 20 }
-		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 20 }
+		#}
 		had_sex_with_effect = {
 			CHARACTER = scope:target
 			PREGNANCY_CHANCE = pregnancy_chance
@@ -6206,10 +6565,10 @@ magic_ev.46 = {
 			has_trait = rakish
 		}
 		trait = rakish
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 20 }
-		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 20 }
+		#}
 		had_sex_with_effect = {
 			CHARACTER = scope:target
 			PREGNANCY_CHANCE = pregnancy_chance
@@ -6232,21 +6591,21 @@ magic_ev.47 = {
 			scope:target = {
 				start_scheme = {
 					type = murder
-					target = scope:owner
+					target_character = scope:owner
 				}
 			}
 			
-			trigger_event = {
-				id = magic_ev.45
-				months = { 20 25 }
-			}
+			#trigger_event = {
+			#	id = magic_ev.45
+			#	months = { 20 25 }
+			#}
 		}
-		else = {
-			trigger_event = {
-				id = magic_ev.45
-				months = { 15 25 }
-			}
-		}
+		#else = {
+		#	trigger_event = {
+		#		id = magic_ev.45
+		#		months = { 15 25 }
+		#	}
+		#}
 	}	
 }
 
@@ -6277,6 +6636,12 @@ magic_ev.48 = {
 			list = rivs
 			save_scope_as = riv
 		}
+		if = {
+			limit = {
+				exists = scope:towner
+			}
+			clear_saved_scope = towner
+		}
 	}
 
 	option = {
@@ -6295,10 +6660,10 @@ magic_ev.48 = {
 	}
 	option = {
 		name = ev48.0.b
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 20 }
-		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 20 }
+		#}
 		add_opinion = {
 			modifier = lover_let_me_down_opinion
 			years = 2
@@ -6306,19 +6671,24 @@ magic_ev.48 = {
 		}
 		hidden_effect = {
 			random = {
-				chance = 50
+				chance = 25
 				scope:target = {
 					start_scheme = {
 						type = murder
-						target = scope:owner
+						target_character = scope:owner
 					}
 				}
 			}
 		}
-		#add_stress = minor_stress_gain
 		if = {
 			limit = { has_character_modifier = joy_with_lilith_modifier }
 			remove_character_modifier = joy_with_lilith_modifier
+		}
+		hidden_effect = {
+			add_character_flag = {
+				flag = failed_lilith_flag
+				years = 6
+			}
 		}
 	}
 	option = {
@@ -6327,10 +6697,10 @@ magic_ev.48 = {
 			has_trait = lustful
 		}
 		trait = lustful
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 20 }
-		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 20 }
+		#}
 		had_sex_with_effect = {
 			CHARACTER = scope:target
 			PREGNANCY_CHANCE = pregnancy_chance
@@ -6343,10 +6713,10 @@ magic_ev.48 = {
 			has_trait = rakish
 		}
 		trait = rakish
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 20 }
-		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 20 }
+		#}
 		had_sex_with_effect = {
 			CHARACTER = scope:target
 			PREGNANCY_CHANCE = pregnancy_chance
@@ -6514,15 +6884,16 @@ magic_ev.50 = {
 		animation = anger
 	}
 
-	immediate = {
+	#immediate = {
+	#	
+	#}
+
+	option = {
+		name = ev50.0.a
 		death = {
 			death_reason = death_murder
 			killer = scope:target
 		}
-	}
-
-	option = {
-		name = ev50.0.a
 		hidden_effect = {
 			scope:target = {
 				add_secret = {
@@ -6571,10 +6942,10 @@ magic_ev.51 = {
 	option = {
 		name = ev51.0.a
 		add_stress = minor_stress_loss
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 20 }
-		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 20 }
+		#}
 	}
 }
 
@@ -6632,10 +7003,10 @@ magic_ev.52 = {
 		clear_saved_scope = owner
 		save_scope_as = owner
 		clear_saved_scope = towner
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 20 }
-		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 20 }
+		#}
 	}
 	#after = {
 	#	
@@ -6694,10 +7065,10 @@ magic_ev.53 = {
 				set_relation_lover = scope:target
 				#set_random_lover_reason = { TARGET = scope:target }
 			}
-			trigger_event = {
-				id = magic_ev.45
-				months = { 15 20 }
-			}
+			#trigger_event = {
+			#	id = magic_ev.45
+			#	months = { 15 20 }
+			#}
 		}
 		scope:target = {
 			every_secret = {
@@ -6706,6 +7077,12 @@ magic_ev.53 = {
 					secret_target = scope:owner
 				}
 				reveal_to = root
+			}
+		}
+		hidden_effect = {
+			add_character_flag = {
+				flag = failed_lilith_flag
+				years = 6
 			}
 		}
 	}
@@ -6746,17 +7123,17 @@ magic_ev.54 = {
 		#}
 		#trigger_event = magic_ev.55
 		marry = scope:target
-		trigger_event = {
-			id = magic_ev.45
-			months = { 22 25 }
-		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 22 25 }
+		#}
 	}
 	option = {
 		name = ev54.0.b
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 20 }
-		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 20 }
+		#}
 		scope:target = {
 			add_opinion = {
 				modifier = lover_let_me_down_opinion
@@ -6764,10 +7141,10 @@ magic_ev.54 = {
 			}
 			hidden_effect = {
 				random = {
-					chance = 50
+					chance = 25
 					start_scheme = {
 						type = murder
-						target = scope:owner
+						target_character = scope:owner
 					}
 				}
 			}
@@ -6778,6 +7155,12 @@ magic_ev.54 = {
 			limit = { has_character_modifier = joy_with_lilith_modifier }
 			remove_character_modifier = joy_with_lilith_modifier
 		}
+		hidden_effect = {
+			add_character_flag = {
+				flag = failed_lilith_flag
+				years = 6
+			}
+		}
 	}
 	option = {
 		name = ev54.0.c
@@ -6785,10 +7168,10 @@ magic_ev.54 = {
 			has_trait = lustful
 		}
 		trait = lustful
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 20 }
-		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 20 }
+		#}
 		had_sex_with_effect = {
 			CHARACTER = scope:target
 			PREGNANCY_CHANCE = pregnancy_chance
@@ -6801,10 +7184,10 @@ magic_ev.54 = {
 			has_trait = rakish
 		}
 		trait = rakish
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 20 }
-		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 20 }
+		#}
 		had_sex_with_effect = {
 			CHARACTER = scope:target
 			PREGNANCY_CHANCE = pregnancy_chance
@@ -6863,10 +7246,10 @@ magic_ev.55 = {
 			NOT = { has_trait = sadistic }
 		}
 		add_stress = minor_stress_gain
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 25 }
-		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 25 }
+		#}
 	}
 	option = {
 		name = ev55.0.a
@@ -6874,10 +7257,10 @@ magic_ev.55 = {
 			has_trait = sadistic
 		}
 		trait = sadistic
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 25 }
-		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 25 }
+		#}
 	}
 	option = {
 		name = ev55.0.b
@@ -6891,7 +7274,7 @@ magic_ev.55 = {
 					chance = 50
 					start_scheme = {
 						type = murder
-						target = scope:owner
+						target_character = scope:owner
 					}
 				}
 			}
@@ -6900,10 +7283,16 @@ magic_ev.55 = {
 			limit = { has_character_modifier = joy_with_lilith_modifier }
 			remove_character_modifier = joy_with_lilith_modifier
 		}
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 25 }
+		hidden_effect = {
+			add_character_flag = {
+				flag = failed_lilith_flag
+				years = 6
+			}
 		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 25 }
+		#}
 	}
 }
 
@@ -6926,9 +7315,13 @@ magic_ev.56 = {
 			target = scope:target
 			gold = 200
 		}
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 30 }
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 30 }
+		#}
+		stress_impact = {
+			greedy = major_stress_gain
+			generous = minor_stress_loss
 		}
 	}
 	option = {
@@ -6943,19 +7336,28 @@ magic_ev.56 = {
 					chance = 50
 					start_scheme = {
 						type = murder
-						target = scope:owner
+						target_character = scope:owner
 					}
 				}
 			}
+		}
+		stress_impact = {
+			greedy = minor_stress_loss
 		}
 		if = {
 			limit = { has_character_modifier = joy_with_lilith_modifier }
 			remove_character_modifier = joy_with_lilith_modifier
 		}
-		trigger_event = {
-			id = magic_ev.45
-			months = { 15 30 }
+		hidden_effect = {
+			add_character_flag = {
+				flag = failed_lilith_flag
+				years = 6
+			}
 		}
+		#trigger_event = {
+		#	id = magic_ev.45
+		#	months = { 15 30 }
+		#}
 	}
 }
 

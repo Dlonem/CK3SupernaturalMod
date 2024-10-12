@@ -48,10 +48,22 @@ start_murder_interaction = {
 		scope:actor = {
 			can_start_scheme = {
 				type = murder
-				target = scope:recipient
+				target_character = scope:recipient
 			}
 		}
 		scope:recipient = { NOT = { has_strong_hook = scope:actor } }
+		trigger_if = {
+			limit = {
+				scope:actor = {
+					is_landless_adventurer = yes
+				}
+			}
+			#Has to be used instead of diplo range checks in laamp to landed interactions
+			ep3_laamp_diplo_range_trigger = {
+				TARGET = scope:recipient
+				LAAMP = scope:actor
+			}
+		}
 	}
 
 	desc = {
@@ -60,12 +72,36 @@ start_murder_interaction = {
 				scope:actor = {
 					can_start_scheme = {
 						type = murder
-						target = scope:recipient
+						target_character = scope:recipient
 					}
 				}
 			}
 			desc = scheme_interaction_tt_murder_approved
 		}
+	}
+
+	# Scheme Starter Packages
+	options_heading = schemes.t.agent_packages
+	send_options_exclusive = yes
+	## Balanced agents.
+	send_option = {
+		flag = agent_focus_balance
+		current_description = start_murder_interaction.tt.agent_focus_balance
+	}
+	## Focused on Success Chance.
+	send_option = {
+		flag = agent_focus_success
+		current_description = start_murder_interaction.tt.agent_focus_success
+	}
+	## Focused on Speed.
+	send_option = {
+		flag = agent_focus_speed
+		current_description = start_murder_interaction.tt.agent_focus_speed
+	}
+	## Focused on Secrecy.
+	send_option = {
+		flag = agent_focus_secrecy
+		current_description = start_murder_interaction.tt.agent_focus_secrecy
 	}
 
 	on_accept = {
@@ -76,27 +112,95 @@ start_murder_interaction = {
 				just = medium_stress_impact_gain
 			}
 		}
-		hidden_effect = {
-			scope:actor = {
-				send_interface_toast = {
-					title = start_murder_interaction_notification
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = start_murder_interaction_notification
 
-					left_icon = scope:actor					
-					right_icon = scope:recipient
+				left_icon = scope:actor					
+				right_icon = scope:recipient
 
-					start_scheme = {
-						type = murder
-						target = scope:recipient
-					}
-
-					show_as_tooltip = {
-						stress_impact = {
-							compassionate = major_stress_impact_gain
-							honest = medium_stress_impact_gain
-							just = medium_stress_impact_gain
-						}
+				# Success.
+				if = {
+					limit = { scope:agent_focus_success ?= yes }
+					begin_scheme_with_agents_effect = {
+						SCHEME_TYPE = murder
+						TARGET_TYPE = target_character
+						TARGET_SCOPE = scope:recipient
+						# Success.
+						AGENT_1 = agent_assassin
+						AGENT_2 = agent_assassin
+						AGENT_3 = agent_thug
+						# Speed.
+						AGENT_4 = agent_infiltrator
+						# Secrecy.
+						AGENT_5 = agent_alibi
 					}
 				}
+				# Speed.
+				else_if = {
+					limit = { scope:agent_focus_speed ?= yes }
+					begin_scheme_with_agents_effect = {
+						SCHEME_TYPE = murder
+						TARGET_TYPE = target_character
+						TARGET_SCOPE = scope:recipient
+						# Speed.
+						AGENT_1 = agent_infiltrator
+						AGENT_2 = agent_infiltrator
+						AGENT_3 = agent_footpad
+						# Success.
+						AGENT_4 = agent_assassin
+						# Secrecy.
+						AGENT_5 = agent_alibi
+					}
+				}
+				# Secrecy.
+				else_if = {
+					limit = { scope:agent_focus_secrecy ?= yes }
+					begin_scheme_with_agents_effect = {
+						SCHEME_TYPE = murder
+						TARGET_TYPE = target_character
+						TARGET_SCOPE = scope:recipient
+						# Secrecy.
+						AGENT_1 = agent_alibi
+						AGENT_2 = agent_alibi
+						AGENT_3 = agent_lookout
+						# Success.
+						AGENT_4 = agent_assassin
+						# Speed.
+						AGENT_5 = agent_infiltrator
+					}
+				}
+				# Balanced.
+				else = {
+					begin_scheme_with_agents_effect = {
+						SCHEME_TYPE = murder
+						TARGET_TYPE = target_character
+						TARGET_SCOPE = scope:recipient
+						# Success.
+						AGENT_1 = agent_assassin
+						AGENT_2 = agent_assassin
+						# Speed.
+						AGENT_3 = agent_infiltrator
+						AGENT_4 = agent_footpad
+						# Secrecy.
+						AGENT_5 = agent_alibi
+					}
+				}
+			}
+			# Plus any on_start modifiers we may need.
+			if = {
+				limit = { var:feast_events_ewan_0001_bonus_value ?= scope:recipient }
+				# Hand over the modifier.
+				random_scheme = {
+					limit = {
+						scheme_type = murder
+						scheme_target_character = scope:recipient
+					}
+					add_scheme_modifier = { type = feast_learnt_habits_modifier }
+				}
+				# Remove the variable now that we're done with it.
+				remove_variable = feast_events_ewan_0001_bonus_value
 			}
 		}
 	}
@@ -107,7 +211,7 @@ start_murder_interaction = {
 }
 
 start_abduct = {
-	icon = icon_hostile
+	icon = icon_scheme_abduct
 	interface_priority = 70
 	category = interaction_category_hostile
 
@@ -172,10 +276,23 @@ start_abduct = {
 		scope:actor = {
 			can_start_scheme = {
 				type = abduct
-				target = scope:recipient
+				target_character = scope:recipient
 			}
 		}
 		scope:recipient = { NOT = { has_strong_hook = scope:actor } }
+		#limit range for landless adventurers
+		trigger_if = {
+			limit = {
+				scope:actor = {
+					is_landless_adventurer = yes
+				}
+			}
+			#Has to be used instead of diplo range checks in laamp to landed interactions
+			ep3_laamp_diplo_range_trigger = {
+				TARGET = scope:recipient
+				LAAMP = scope:actor
+			}
+		}
 	}
 
 	desc = {
@@ -184,12 +301,36 @@ start_abduct = {
 				scope:actor = {
 					can_start_scheme = {
 						type = abduct
-						target = scope:recipient
+						target_character = scope:recipient
 					}
 				}
 			}
 			desc = scheme_interaction_tt_abduct_approved
 		}
+	}
+
+	# Scheme Starter Packages
+	options_heading = schemes.t.agent_packages
+	send_options_exclusive = yes
+	## Balanced agents.
+	send_option = {
+		flag = agent_focus_balance
+		current_description = start_abduct.tt.agent_focus_balance
+	}
+	## Focused on Success Chance.
+	send_option = {
+		flag = agent_focus_success
+		current_description = start_abduct.tt.agent_focus_success
+	}
+	## Focused on Speed.
+	send_option = {
+		flag = agent_focus_speed
+		current_description = start_abduct.tt.agent_focus_speed
+	}
+	## Focused on Secrecy.
+	send_option = {
+		flag = agent_focus_secrecy
+		current_description = start_abduct.tt.agent_focus_secrecy
 	}
 
 	on_accept = {
@@ -200,28 +341,158 @@ start_abduct = {
 				just = minor_stress_impact_gain
 			}
 		}
-		hidden_effect = {
-			scope:actor = {
-				send_interface_toast = {
-					title = start_abduct_notification
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = start_abduct_notification
 
-					left_icon = scope:actor					
-					right_icon = scope:recipient
+				left_icon = scope:actor					
+				right_icon = scope:recipient
 
-					start_scheme = {
-						type = abduct
-						target = scope:recipient
+				# Success.
+				if = {
+					limit = { scope:agent_focus_success ?= yes }
+					begin_scheme_with_agents_effect = {
+						SCHEME_TYPE = abduct
+						TARGET_TYPE = target_character
+						TARGET_SCOPE = scope:recipient
+						# Success.
+						AGENT_1 = agent_thug
+						AGENT_2 = agent_thug
+						AGENT_3 = agent_muscle
+						# Speed.
+						AGENT_4 = agent_footpad
+						# Secrecy.
+						AGENT_5 = agent_lookout
 					}
-
-					show_as_tooltip = {
-						stress_impact = {
-							compassionate = medium_stress_impact_gain
-							honest = minor_stress_impact_gain
-							just = minor_stress_impact_gain
-						}
+				}
+				# Speed.
+				else_if = {
+					limit = { scope:agent_focus_speed ?= yes }
+					begin_scheme_with_agents_effect = {
+						SCHEME_TYPE = abduct
+						TARGET_TYPE = target_character
+						TARGET_SCOPE = scope:recipient
+						# Speed.
+						AGENT_1 = agent_footpad
+						AGENT_2 = agent_footpad
+						AGENT_3 = agent_infiltrator
+						# Success.
+						AGENT_4 = agent_thug
+						# Secrecy.
+						AGENT_5 = agent_lookout
+					}
+				}
+				# Secrecy.
+				else_if = {
+					limit = { scope:agent_focus_secrecy ?= yes }
+					begin_scheme_with_agents_effect = {
+						SCHEME_TYPE = abduct
+						TARGET_TYPE = target_character
+						TARGET_SCOPE = scope:recipient
+						# Secrecy.
+						AGENT_1 = agent_lookout
+						AGENT_2 = agent_lookout
+						AGENT_3 = agent_decoy
+						# Success.
+						AGENT_4 = agent_thug
+						# Speed.
+						AGENT_5 = agent_footpad
+					}
+				}
+				# Balanced.
+				else = {
+					begin_scheme_with_agents_effect = {
+						SCHEME_TYPE = abduct
+						TARGET_TYPE = target_character
+						TARGET_SCOPE = scope:recipient
+						# Success.
+						AGENT_1 = agent_thug
+						AGENT_2 = agent_muscle
+						# Speed.
+						AGENT_3 = agent_footpad
+						AGENT_4 = agent_infiltrator
+						# Secrecy.
+						AGENT_5 = agent_lookout
 					}
 				}
 			}
+		}
+	}
+
+	ai_targets = { ai_recipients = liege }
+	ai_frequency = 60
+
+	ai_potential = {
+		liege ?= { has_diarchy_active_parameter = diarchy_is_co_rulership }
+		is_diarch = yes
+		is_ruler = yes
+		ai_diarch_would_maim_execute_superior_if_got_chance_trigger = { LIEGE = liege }
+	}
+
+	ai_will_do = {
+		# They shouldn't always do this.
+		base = -100
+
+		# Obvious factor.
+		opinion_modifier = {
+			opinion_target = scope:recipient
+			multiplier = -1
+		}
+		ai_value_modifier = { ai_honor = -1 }
+		# Traits.
+		## Disloyal.
+		modifier = {
+			add = 100
+			has_trait = disloyal
+		}
+		## Ambitious.
+		modifier = {
+			add = 75
+			has_trait = ambitious
+		}
+		## Arrogant.
+		modifier = {
+			add = 25
+			has_trait = arrogant
+		}
+		## Fickle.
+		modifier = {
+			add = 25
+			has_trait = fickle
+		}
+		## Callous.
+		modifier = {
+			add = 25
+			has_trait = callous
+		}
+		## Compassionate.
+		modifier = {
+			add = -50
+			has_trait = compassionate
+		}
+		## Humble.
+		modifier = {
+			add = -50
+			has_trait = humble
+		}
+		## Content.
+		modifier = {
+			add = -100
+			has_trait = content
+		}
+		## Loyal.
+		modifier = {
+			add = -300
+			has_trait = loyal
+		}
+		# Time as a diarch — the longer they've been waiting, the more eager they are.
+		modifier = {
+			add = {
+				value = years_as_diarch
+				multiply = 2
+			}
+			always = yes
 		}
 	}
 	
@@ -246,7 +517,7 @@ end_scheme = {
 }
 
 befriend_interaction = {
-	icon = icon_personal
+	icon = icon_scheme_befriend
 	category = interaction_category_friendly
 
 	interface_priority = 90
@@ -277,7 +548,20 @@ befriend_interaction = {
 		scope:actor = {
 			can_start_scheme = {
 				type = befriend
-				target = scope:recipient
+				target_character = scope:recipient
+			}
+		}
+		#limit range for landless adventurers
+		trigger_if = {
+			limit = {
+				scope:actor = {
+					is_landless_adventurer = yes
+				}
+			}
+			#Has to be used instead of diplo range checks in laamp to landed interactions
+			ep3_laamp_diplo_range_trigger = {
+				TARGET = scope:recipient
+				LAAMP = scope:actor
 			}
 		}
 	}
@@ -289,7 +573,7 @@ befriend_interaction = {
 					NOT = { is_at_war_with = scope:recipient }
 					can_start_scheme = {
 						type = befriend
-						target = scope:recipient
+						target_character = scope:recipient
 					}
 				}
 			}
@@ -298,63 +582,63 @@ befriend_interaction = {
 	}
 
 	on_accept = {
-		hidden_effect = {
-			scope:actor = {
-				send_interface_toast = {
-					title = befriend_interaction_notification
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = befriend_interaction_notification
 
-					left_icon = scope:actor					
-					right_icon = scope:recipient
+				left_icon = scope:actor					
+				right_icon = scope:recipient
 
-					start_scheme = {
-						type = befriend
-						target = scope:recipient
-					}
+				begin_scheme_basic_effect = {
+					SCHEME_TYPE = befriend
+					TARGET_TYPE = target_character
+					TARGET_SCOPE = scope:recipient
 				}
 			}
-			if = { #Stubborness effect
-				limit = {
-					scope:recipient = {
-						has_trait = stubborn
-					}
+		}
+		if = { #Stubborness effect
+			limit = {
+				scope:recipient = {
+					has_trait = stubborn
 				}
-				scope:actor = {
-					random_scheme = {
-						limit = {
-							scheme_type = befriend
-							scheme_target = scope:recipient
-						}
-						scheme_target = {
-							random_list = {
-								20 = {
-									set_variable = {
-										name = recipient_stubborness_scheme
-										value = -5
-									}
+			}
+			scope:actor = {
+				random_scheme = {
+					limit = {
+						scheme_type = befriend
+						scheme_target_character = scope:recipient
+					}
+					scheme_target_character = {
+						random_list = {
+							20 = {
+								set_variable = {
+									name = recipient_stubborness_scheme
+									value = -5
 								}
-								20 = {
-									set_variable = {
-										name = recipient_stubborness_scheme
-										value = -10
-									}
+							}
+							20 = {
+								set_variable = {
+									name = recipient_stubborness_scheme
+									value = -10
 								}
-								20 = {
-									set_variable = {
-										name = recipient_stubborness_scheme
-										value = -15
-									}
+							}
+							20 = {
+								set_variable = {
+									name = recipient_stubborness_scheme
+									value = -15
 								}
-								20 = {
-									set_variable = {
-										name = recipient_stubborness_scheme
-										value = -20
-									}
+							}
+							20 = {
+								set_variable = {
+									name = recipient_stubborness_scheme
+									value = -20
 								}
-								20 = {
-									set_variable = {
-										name = recipient_stubborness_scheme
-										value = -25
-									}
+							}
+							20 = {
+								set_variable = {
+									name = recipient_stubborness_scheme
+									value = -25
 								}
 							}
 						}
@@ -390,6 +674,7 @@ befriend_interaction = {
 					scheme_type = courting
 					scheme_type = elope
 					scheme_type = learn_language
+					scheme_type = teach_governor
 				}
 			}
 			AND = { # No one cares about City barons
@@ -422,7 +707,7 @@ befriend_interaction = {
 			}
 			scope:recipient = {
 				is_independent_ruler = yes
-				is_landed = yes
+				is_playable_character = yes
 				primary_title.tier < scope:actor.primary_title.tier
 				OR = {
 					faith.religion = scope:actor.faith.religion
@@ -626,9 +911,8 @@ befriend_interaction = {
 	}
 }
 
-
 seduce_interaction = {
-	icon = icon_personal
+	icon = icon_scheme_seduce
 	category = interaction_category_friendly
 	interface_priority = 90
 	scheme = seduce
@@ -680,7 +964,7 @@ seduce_interaction = {
 			NOT = {
 				scope:recipient = {
 					is_lowborn = yes
-					is_landed = no
+					is_playable_character = no
 					NOR = {
 						is_courtier_of = scope:actor
 						is_foreign_court_or_pool_guest_of = scope:actor
@@ -782,7 +1066,7 @@ seduce_interaction = {
 			NOT = { is_at_war_with = scope:recipient }
 			can_start_scheme = {
 				type = seduce
-				target = scope:recipient
+				target_character = scope:recipient
 			}
 		}
 		trigger_if = {
@@ -791,28 +1075,39 @@ seduce_interaction = {
 			}
 			scope:recipient = { primary_spouse = { NOT = { has_strong_hook = scope:actor } } }
 		}
+		#limit range for landless adventurers
+		trigger_if = {
+			limit = {
+				scope:actor = {
+					is_landless_adventurer = yes
+				}
+			}
+			#Has to be used instead of diplo range checks in laamp to landed interactions
+			ep3_laamp_diplo_range_trigger = {
+				TARGET = scope:recipient
+				LAAMP = scope:actor
+			}
+		}
 	}
 
 	desc = scheme_interaction_tt_seduce_approved
 
 	on_accept = {
-		seduce_interaction_stress_effect = yes
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = seduce_interaction_notification
 
-		hidden_effect = {
-			scope:actor = {
-				send_interface_toast = {
-					title = seduce_interaction_notification
+				left_icon = scope:actor					
+				right_icon = scope:recipient
 
-					left_icon = scope:actor					
-					right_icon = scope:recipient
-
-					start_scheme = {
-						type = seduce
-						target = scope:recipient
-					}
-
-					show_as_tooltip = { seduce_interaction_stress_effect = yes }
+				begin_scheme_basic_effect = {
+					SCHEME_TYPE = seduce
+					TARGET_TYPE = target_character
+					TARGET_SCOPE = scope:recipient
 				}
+
+				seduce_interaction_stress_effect = yes
 			}
 		}
 		scope:actor = {
@@ -830,16 +1125,7 @@ seduce_interaction = {
 		NOR = {
 			has_trait = celibate
 			has_trait = chaste
-			any_scheme = {
-				OR = {
-					scheme_type = befriend
-					scheme_type = sway
-					scheme_type = seduce
-					scheme_type = courting
-					scheme_type = elope
-					scheme_type = learn_language
-				}
-			}
+			scheme_generic_ai_blocker_trigger = yes
 			primary_title = {
 				is_mercenary_company = yes
 			}
@@ -1109,7 +1395,7 @@ seduce_interaction = {
 		modifier = {
 			factor = 1.5
 			scope:recipient = {
-				is_landed = yes
+				is_playable_character = yes
 			}
 		}
 
@@ -1178,7 +1464,7 @@ seduce_interaction = {
 		modifier = { # Barons tend to not seduce anyone landed above them
 			factor = 0.1
 			scope:actor = {
-				is_landed = yes
+				is_playable_character = yes
 				primary_title = {
 					tier = tier_barony
 				}
@@ -1186,13 +1472,13 @@ seduce_interaction = {
 			scope:recipient = {
 				OR = {
 					AND = {
-						is_landed = yes
+						is_playable_character = yes
 						primary_title = {
 							tier > tier_barony
 						}
 					}
 					any_spouse = {
-						is_landed = yes
+						is_playable_character = yes
 						primary_title = {
 							tier > tier_barony
 						}
@@ -1249,7 +1535,7 @@ seduce_interaction = {
 }
 
 court_interaction = {
-	icon = icon_personal
+	icon = icon_scheme_romance
 	category = interaction_category_friendly
 
 	send_name = START_SCHEME
@@ -1262,12 +1548,12 @@ court_interaction = {
 		ai_recipients = spouses
 		ai_recipients = neighboring_rulers
 	}
-	
+
 	ai_targets = {
 		ai_recipients = vassals
 		max = 5
 	}
-	
+
 	ai_targets = {
 		ai_recipients = peer_vassals
 		max = 5
@@ -1277,12 +1563,12 @@ court_interaction = {
 		ai_recipients = family
 		max = 5
 	}
-	
+
 	ai_targets = {
 		ai_recipients = realm_characters
 		max = 30
 	}
-	
+
 	ai_target_quick_trigger = {
 		adult = yes
 		attracted_to_owner = yes
@@ -1391,7 +1677,20 @@ court_interaction = {
 			NOT = { is_at_war_with = scope:recipient }
 			can_start_scheme = {
 				type = courting
-				target = scope:recipient
+				target_character = scope:recipient
+			}
+		}
+		#limit range for landless adventurers
+		trigger_if = {
+			limit = {
+				scope:actor = {
+					is_landless_adventurer = yes
+				}
+			}
+			#Has to be used instead of diplo range checks in laamp to landed interactions
+			ep3_laamp_diplo_range_trigger = {
+				TARGET = scope:recipient
+				LAAMP = scope:actor
 			}
 		}
 	}
@@ -1411,42 +1710,42 @@ court_interaction = {
 				}
 			}
 		}
-		hidden_effect = {
-			scope:actor = {
-				send_interface_toast = {
-					title = court_interaction_notification
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = court_interaction_notification
 
-					left_icon = scope:actor					
-					right_icon = scope:recipient
+				left_icon = scope:actor					
+				right_icon = scope:recipient
 
-					start_scheme = {
-						type = courting
-						target = scope:recipient
-					}
+				begin_scheme_basic_effect = {
+					SCHEME_TYPE = courting
+					TARGET_TYPE = target_character
+					TARGET_SCOPE = scope:recipient
+				}
 
-					show_as_tooltip = {
-						# If you already have a soulmate, they get very mad
-						every_relation = {
-							type = soulmate
-							limit = { soulmate_relation_is_exclusive_trigger = yes }
+				show_as_tooltip = {
+					# If you already have a soulmate, they get very mad
+					every_relation = {
+						type = soulmate
+						limit = { soulmate_relation_is_exclusive_trigger = yes }
 
-							add_opinion = {
-								modifier = betrayed_our_promise
-								target = scope:actor
-							}
+						add_opinion = {
+							modifier = betrayed_our_promise
+							target = scope:actor
 						}
 					}
 				}
 			}
-			scope:recipient = {
-				if = {
-					limit = {
-						is_ai = no
-					}
-					add_character_flag = {
-						flag = courting_cooldown
-						years = 5
-					}
+		}
+		scope:recipient = {
+			if = {
+				limit = {
+					is_ai = no
+				}
+				add_character_flag = {
+					flag = courting_cooldown
+					years = 5
 				}
 			}
 		}
@@ -1477,16 +1776,7 @@ court_interaction = {
 		NOR = {
 			has_trait = celibate
 			has_trait = chaste
-			any_scheme = {
-				OR = {
-					scheme_type = befriend
-					scheme_type = sway
-					scheme_type = seduce
-					scheme_type = courting
-					scheme_type = elope
-					scheme_type = learn_language
-				}
-			}
+			scheme_generic_ai_blocker_trigger = yes
 			AND = { # No one cared about City barons
 				is_lowborn = yes
 				primary_title.tier <= tier_barony
@@ -1612,9 +1902,9 @@ court_interaction = {
 			factor = 3
 			scope:recipient = {
 				OR = {
-					is_landed = yes
+					is_playable_character = yes
 					any_spouse = {
-						is_landed = yes
+						is_playable_character = yes
 					}
 				}
 			}
@@ -1710,7 +2000,20 @@ sway_interaction = {
 		scope:actor = {
 			can_start_scheme = {
 				type = sway
-				target = scope:recipient
+				target_character = scope:recipient
+			}
+		}
+		#limit range for landless adventurers
+		trigger_if = {
+			limit = {
+				scope:actor = {
+					is_landless_adventurer = yes
+				}
+			}
+			#Has to be used instead of diplo range checks in laamp to landed interactions
+			ep3_laamp_diplo_range_trigger = {
+				TARGET = scope:recipient
+				LAAMP = scope:actor
 			}
 		}
 	}
@@ -1718,18 +2021,18 @@ sway_interaction = {
 	desc = scheme_interaction_tt_sway_approved
 
 	on_accept = {
-		hidden_effect = {
-			scope:actor = {
-				send_interface_toast = {
-					title = sway_interaction_notification
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = sway_interaction_notification
 
-					left_icon = scope:actor					
-					right_icon = scope:recipient
+				left_icon = scope:actor					
+				right_icon = scope:recipient
 
-					start_scheme = {
-						type = sway
-						target = scope:recipient
-					}
+				begin_scheme_basic_effect = {
+					SCHEME_TYPE = sway
+					TARGET_TYPE = target_character
+					TARGET_SCOPE = scope:recipient
 				}
 			}
 		}
@@ -1738,18 +2041,7 @@ sway_interaction = {
 	ai_potential = {
 		primary_title.tier >= tier_county
 		NOR = {
-			has_trait = shy
-			has_trait = callous
-			any_scheme = {
-				OR = {
-					scheme_type = befriend
-					scheme_type = sway
-					scheme_type = seduce
-					scheme_type = courting
-					scheme_type = elope
-					scheme_type = learn_language
-				}
-			}
+			scheme_generic_ai_blocker_trigger = yes
 			primary_title = {
 				is_mercenary_company = yes
 			}
@@ -1793,7 +2085,7 @@ sway_interaction = {
 			}
 			scope:recipient = {
 				is_independent_ruler = yes
-				is_landed = yes
+				is_playable_character = yes
 				primary_title.tier < scope:actor.primary_title.tier
 				OR = {
 					faith.religion = scope:actor.faith.religion
@@ -1876,11 +2168,6 @@ sway_interaction = {
 		}
 
 		modifier = {
-			factor = 2
-			scope:recipient.liege = scope:actor
-		}
-
-		modifier = {
 			factor = 0.5
 			NOT = { scope:recipient.faith = scope:actor.faith }
 		}
@@ -1945,6 +2232,19 @@ sway_interaction = {
 				}
 			}
 		}
+		modifier = { # Try to make your tax collectors like you
+			factor = 10
+			scope:actor = {
+				government_has_flag = government_is_clan
+			}
+			scope:recipient = {
+				is_tax_collector = yes
+				opinion = {
+					target = scope:actor
+					value <= 50
+				}
+			}
+		}
 
 		modifier = { # No point in swaying if opinion is already at 100
 			factor = 0
@@ -1956,13 +2256,17 @@ sway_interaction = {
 			}
 		}
 
-		modifier = { # If they are unlanded, they have to be a realm priest or spymaster
+		modifier = { # If they are unlanded, they have to be a realm priest or spymaster, or in the case for clan rulers, a tax collector
 			factor = 0
 			scope:recipient = {
 				is_ruler = no
 				NOR = {
 					is_theocratic_lessee = yes
 					has_council_position = councillor_spymaster
+					AND = {
+						is_tax_collector = yes
+						scope:actor = { government_has_flag = government_is_clan }
+					}
 				}
 			}
 		}
@@ -1987,7 +2291,7 @@ sway_interaction = {
 			factor = 0
 			scope:recipient = {
 				is_independent_ruler = yes
-				is_landed = yes
+				is_playable_character = yes
 				primary_title.tier >= tier_kingdom
 			}
 		}
@@ -1995,7 +2299,7 @@ sway_interaction = {
 }
 
 learn_language_interaction = {
-	icon = icon_culture
+	icon = icon_scheme_learn_language
 	category = interaction_category_friendly
 	common_interaction = yes
 
@@ -2037,7 +2341,20 @@ learn_language_interaction = {
 		scope:actor = {
 			can_start_scheme = {
 				type = learn_language
-				target = scope:recipient
+				target_character = scope:recipient
+			}
+		}
+		#limit range for landless adventurers
+		trigger_if = {
+			limit = {
+				scope:actor = {
+					is_landless_adventurer = yes
+				}
+			}
+			#Has to be used instead of diplo range checks in laamp to landed interactions
+			ep3_laamp_diplo_range_trigger = {
+				TARGET = scope:recipient
+				LAAMP = scope:actor
 			}
 		}
 	}
@@ -2045,18 +2362,18 @@ learn_language_interaction = {
 	desc = scheme_interaction_tt_learn_language_approved
 
 	on_accept = {
-		hidden_effect = {
-			scope:actor = {
-				send_interface_toast = {
-					title = learn_language_interaction_notification
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = learn_language_interaction_notification
 
-					left_icon = scope:actor					
-					right_icon = scope:recipient
+				left_icon = scope:actor					
+				right_icon = scope:recipient
 
-					start_scheme = {
-						type = learn_language
-						target = scope:recipient
-					}
+				begin_scheme_basic_effect = {
+					SCHEME_TYPE = learn_language
+					TARGET_TYPE = target_character
+					TARGET_SCOPE = scope:recipient
 				}
 			}
 		}
@@ -2067,16 +2384,7 @@ learn_language_interaction = {
 		NOR = {
 			has_trait = lazy
 			has_trait = paranoid
-			any_scheme = {
-				OR = {
-					scheme_type = befriend
-					scheme_type = sway
-					scheme_type = seduce
-					scheme_type = courting
-					scheme_type = elope
-					scheme_type = learn_language
-				}
-			}
+			scheme_generic_ai_blocker_trigger = yes
 			primary_title = {
 				is_mercenary_company = yes
 			}
