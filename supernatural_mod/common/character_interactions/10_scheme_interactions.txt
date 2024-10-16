@@ -1,0 +1,291 @@
+﻿#Character interactions relating to schemes
+
+start_abduct = {
+	icon = icon_scheme_abduct
+	interface_priority = 70
+	category = interaction_category_hostile
+
+	send_name = START_SCHEME
+
+	scheme = abduct
+	ignores_pending_interaction_block = yes
+	
+	is_shown = {
+		scope:actor = {
+			OR = {
+				has_perk = kidnapper_perk  # Scheme unlocked by the Kidnapper Perk
+				domicile ?= { has_domicile_parameter = camp_unlocks_abduct_scheme }
+				has_perk = master_shadows_perk
+				AND = {
+					any_character_struggle = {
+						involvement = involved
+						has_struggle_phase_parameter = unlocks_abduct_for_all
+						is_secondary_character_involvement_involved_trigger = {
+							CHAR = scope:recipient
+						}
+					}
+				}
+			}
+		}
+
+		NOR = {
+			scope:recipient = scope:actor
+			scope:recipient = { is_imprisoned_by = scope:actor }
+		}
+		#exists = scope:recipient.court_owner
+		
+		NAND = { # Game Rules!
+			has_game_rule = no_players_multiplayer_murder_schemes
+			scope:actor = {
+				is_ai = no
+			}
+			scope:recipient = {
+				is_ai = no
+			}
+		}
+		
+		NAND = {
+			has_game_rule = no_player_families_multiplayer_murder_schemes
+			scope:actor = {
+				is_ai = no
+			}
+			scope:recipient = {
+				OR = {
+					is_ai = no
+					any_close_family_member = {
+						AND = {
+							is_ai = no
+							NOT = { this = scope:actor }
+						}
+					}
+				}
+			}
+		}
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			can_start_scheme = {
+				type = abduct
+				target_character = scope:recipient
+			}
+		}
+		scope:recipient = { NOT = { has_strong_hook = scope:actor } }
+		#limit range for landless adventurers
+		trigger_if = {
+			limit = {
+				scope:actor = {
+					is_landless_adventurer = yes
+				}
+			}
+			#Has to be used instead of diplo range checks in laamp to landed interactions
+			ep3_laamp_diplo_range_trigger = {
+				TARGET = scope:recipient
+				LAAMP = scope:actor
+			}
+		}
+	}
+
+	desc = {
+		triggered_desc = {
+			trigger = {
+				scope:actor = {
+					can_start_scheme = {
+						type = abduct
+						target_character = scope:recipient
+					}
+				}
+			}
+			desc = scheme_interaction_tt_abduct_approved
+		}
+	}
+
+	# Scheme Starter Packages
+	options_heading = schemes.t.agent_packages
+	send_options_exclusive = yes
+	## Balanced agents.
+	send_option = {
+		flag = agent_focus_balance
+		current_description = start_abduct.tt.agent_focus_balance
+	}
+	## Focused on Success Chance.
+	send_option = {
+		flag = agent_focus_success
+		current_description = start_abduct.tt.agent_focus_success
+	}
+	## Focused on Speed.
+	send_option = {
+		flag = agent_focus_speed
+		current_description = start_abduct.tt.agent_focus_speed
+	}
+	## Focused on Secrecy.
+	send_option = {
+		flag = agent_focus_secrecy
+		current_description = start_abduct.tt.agent_focus_secrecy
+	}
+
+	on_accept = {
+		scope:actor = {
+			stress_impact = {
+				compassionate = medium_stress_impact_gain
+				honest = minor_stress_impact_gain
+				just = minor_stress_impact_gain
+			}
+		}
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = start_abduct_notification
+
+				left_icon = scope:actor					
+				right_icon = scope:recipient
+
+				# Success.
+				if = {
+					limit = { scope:agent_focus_success ?= yes }
+					begin_scheme_with_agents_effect = {
+						SCHEME_TYPE = abduct
+						TARGET_TYPE = target_character
+						TARGET_SCOPE = scope:recipient
+						# Success.
+						AGENT_1 = agent_thug
+						AGENT_2 = agent_thug
+						AGENT_3 = agent_muscle
+						# Speed.
+						AGENT_4 = agent_footpad
+						# Secrecy.
+						AGENT_5 = agent_lookout
+					}
+				}
+				# Speed.
+				else_if = {
+					limit = { scope:agent_focus_speed ?= yes }
+					begin_scheme_with_agents_effect = {
+						SCHEME_TYPE = abduct
+						TARGET_TYPE = target_character
+						TARGET_SCOPE = scope:recipient
+						# Speed.
+						AGENT_1 = agent_footpad
+						AGENT_2 = agent_footpad
+						AGENT_3 = agent_infiltrator
+						# Success.
+						AGENT_4 = agent_thug
+						# Secrecy.
+						AGENT_5 = agent_lookout
+					}
+				}
+				# Secrecy.
+				else_if = {
+					limit = { scope:agent_focus_secrecy ?= yes }
+					begin_scheme_with_agents_effect = {
+						SCHEME_TYPE = abduct
+						TARGET_TYPE = target_character
+						TARGET_SCOPE = scope:recipient
+						# Secrecy.
+						AGENT_1 = agent_lookout
+						AGENT_2 = agent_lookout
+						AGENT_3 = agent_decoy
+						# Success.
+						AGENT_4 = agent_thug
+						# Speed.
+						AGENT_5 = agent_footpad
+					}
+				}
+				# Balanced.
+				else = {
+					begin_scheme_with_agents_effect = {
+						SCHEME_TYPE = abduct
+						TARGET_TYPE = target_character
+						TARGET_SCOPE = scope:recipient
+						# Success.
+						AGENT_1 = agent_thug
+						AGENT_2 = agent_muscle
+						# Speed.
+						AGENT_3 = agent_footpad
+						AGENT_4 = agent_infiltrator
+						# Secrecy.
+						AGENT_5 = agent_lookout
+					}
+				}
+			}
+		}
+	}
+
+	ai_targets = { ai_recipients = liege }
+	ai_frequency = 60
+
+	ai_potential = {
+		liege ?= { has_diarchy_active_parameter = diarchy_is_co_rulership }
+		is_diarch = yes
+		is_ruler = yes
+		ai_diarch_would_maim_execute_superior_if_got_chance_trigger = { LIEGE = liege }
+	}
+
+	ai_will_do = {
+		# They shouldn't always do this.
+		base = -100
+
+		# Obvious factor.
+		opinion_modifier = {
+			opinion_target = scope:recipient
+			multiplier = -1
+		}
+		ai_value_modifier = { ai_honor = -1 }
+		# Traits.
+		## Disloyal.
+		modifier = {
+			add = 100
+			has_trait = disloyal
+		}
+		## Ambitious.
+		modifier = {
+			add = 75
+			has_trait = ambitious
+		}
+		## Arrogant.
+		modifier = {
+			add = 25
+			has_trait = arrogant
+		}
+		## Fickle.
+		modifier = {
+			add = 25
+			has_trait = fickle
+		}
+		## Callous.
+		modifier = {
+			add = 25
+			has_trait = callous
+		}
+		## Compassionate.
+		modifier = {
+			add = -50
+			has_trait = compassionate
+		}
+		## Humble.
+		modifier = {
+			add = -50
+			has_trait = humble
+		}
+		## Content.
+		modifier = {
+			add = -100
+			has_trait = content
+		}
+		## Loyal.
+		modifier = {
+			add = -300
+			has_trait = loyal
+		}
+		# Time as a diarch — the longer they've been waiting, the more eager they are.
+		modifier = {
+			add = {
+				value = years_as_diarch
+				multiply = 2
+			}
+			always = yes
+		}
+	}
+	
+	auto_accept = yes
+}
