@@ -2,7 +2,7 @@
 	
 	skill = diplomacy
 	desc = befriend_desc_general
-	icon = icon_scheme_personal
+	icon = icon_scheme_befriend
 	
 	allow = {
 		can_use_befriend_scheme_trigger = { TARGET = scope:target }
@@ -41,6 +41,7 @@
 
 	
 	valid = {
+		is_incapable = no
 		scope:target = {
 			is_adult = yes
 			is_imprisoned = no
@@ -97,6 +98,17 @@
 			desc = YOU_SPEAK_THE_LANGUAGE
 			scope:owner = { knows_language_of_culture = scope:target.culture }
 		}
+		
+		# Their friend told you what they like
+		modifier = {
+			add = 15
+			desc = "SCHEME_WBANQUET_FRIEND_INSIGHT"
+			scope:owner = {
+				exists = var:wbanquet_friend_insight_var
+				var:wbanquet_friend_insight_var = scope:target
+			}
+		}
+		
 		#Owner Traits
 		modifier = {
 			add = 2
@@ -116,6 +128,11 @@
 		modifier = {
 			add = 8
 			scope:owner = { has_trait = education_diplomacy_4 }
+			desc = "SCHEME_BEFRIEND_MY_EDUCATION"
+		}
+		modifier = {
+			add = 10
+			scope:owner = { has_trait = education_diplomacy_5 }
 			desc = "SCHEME_BEFRIEND_MY_EDUCATION"
 		}
 		modifier = {
@@ -151,17 +168,39 @@
 		}
 		modifier = {
 			add = 4
-			scope:owner = { has_trait = lifestyle_reveler }
+			scope:owner = {
+				has_trait = lifestyle_reveler
+				has_trait_xp = {
+					trait = lifestyle_reveler
+					value < 50
+				}
+			}
 			desc = "SCHEME_BEFRIEND_MY_REVELRY"
 		}
 		modifier = {
 			add = 6
-			scope:owner = { has_trait = lifestyle_reveler }
+			scope:owner = {
+				has_trait = lifestyle_reveler
+				has_trait_xp = {
+					trait = lifestyle_reveler
+					value >= 50
+				}
+				has_trait_xp = {
+					trait = lifestyle_reveler
+					value < 100
+				}
+			}
 			desc = "SCHEME_BEFRIEND_MY_REVELRY"
 		}
 		modifier = {
 			add = 8
-			scope:owner = { has_trait = lifestyle_reveler }
+			scope:owner = {
+				has_trait = lifestyle_reveler
+				has_trait_xp = {
+					trait = lifestyle_reveler
+					value = 100
+				}
+			}
 			desc = "SCHEME_BEFRIEND_MY_REVELRY"
 		}
 		modifier = {
@@ -207,18 +246,40 @@
 		}
 		modifier = {
 			add = 4
-			scope:target = { has_trait = lifestyle_reveler }
-			desc = "SCHEME_BEFRIEND_THEIR_LIFESTYLE"
+			scope:target = {
+				has_trait = lifestyle_reveler
+				has_trait_xp = {
+					trait = lifestyle_reveler
+					value < 50
+				}
+			}
+			desc = "SCHEME_BEFRIEND_MY_REVELRY"
 		}
 		modifier = {
 			add = 6
-			scope:target = { has_trait = lifestyle_reveler }
-			desc = "SCHEME_BEFRIEND_THEIR_LIFESTYLE"
+			scope:target = {
+				has_trait = lifestyle_reveler
+				has_trait_xp = {
+					trait = lifestyle_reveler
+					value >= 50
+				}
+				has_trait_xp = {
+					trait = lifestyle_reveler
+					value < 100
+				}
+			}
+			desc = "SCHEME_BEFRIEND_MY_REVELRY"
 		}
 		modifier = {
 			add = 8
-			scope:target = { has_trait = lifestyle_reveler }
-			desc = "SCHEME_BEFRIEND_THEIR_LIFESTYLE"
+			scope:target = {
+				has_trait = lifestyle_reveler
+				has_trait_xp = {
+					trait = lifestyle_reveler
+					value = 100
+				}
+			}
+			desc = "SCHEME_BEFRIEND_MY_REVELRY"
 		}
 		modifier = {
 			add = scope:target.var:recipient_stubborness_scheme
@@ -469,6 +530,8 @@
 				}
 			}
 		}
+		# Diarchs are better at schemes within their liege's realm
+		diarch_scheming_within_realm_bonus_modifier = yes
 		#Religious Heads
 		modifier = {
 			add = -50
@@ -517,6 +580,7 @@
 				is_close_or_extended_family_of = scope:owner
 			}
 		}
+
 		# Dynasty Kin Personal Scheme Success Chance on Dynasty Perk
 		modifier = {
 			add = kin_legacy_4_success_chance

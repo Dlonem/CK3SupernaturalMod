@@ -74,11 +74,14 @@ magical_experiments_p1_perk = {
 				OR = {
 					any_character_artifact = { has_variable = magic1 }
 					has_trait = source
-					has_trait = source2
+					#has_trait = source2
+					#has_trait = source3
+					#has_trait = source4
+					has_character_flag = arcane_unlocked_flag
 					has_power_place_trigger = yes
 				}
 			}
-			add = 2000
+			add = 4000
 		}
 	}
 
@@ -144,16 +147,23 @@ magical_experiments_p1_perk = {
 				random = {
 					chance = 80
 					trigger_event = {
-						id = magic_ev2.58
+						id = magic_ev2.58	#create mage
 						years = { 2 15 }
 					}
 				}
 			}
-			random = {
-				chance = 99
-				trigger_event = {
-					id = magic_ev2.59
-					months = { 6 95 }
+			if = {
+				limit = {
+					NOT = {
+						has_trait = archmage
+					}
+				}
+				random = {
+					chance = 99
+					trigger_event = {
+						id = magic_ev2.59	#witch cooperation
+						months = { 6 95 }
+					}
 				}
 			}
 		}
@@ -179,7 +189,9 @@ mage_tower_p2_perk = {
 				OR = {
 					any_character_artifact = { has_variable = magic1 }
 					has_trait = source
-					has_trait = source2
+					#has_trait = source2
+					#has_trait = source4
+					has_character_flag = arcane_unlocked_flag
 					has_power_place_trigger = yes
 				}
 			}
@@ -217,7 +229,10 @@ magic_triangulation_p5_perk = {
 
 
 	can_be_picked = {
-		has_focus=arcane_focus
+		OR = {
+			has_focus = arcane_focus
+			has_trait = archmage
+		}
 	}
 
 	effect = {
@@ -301,13 +316,34 @@ healer_p9_perk = {
 			}
 			custom_tooltip = ev5.1.0.k_ct
 		}
+		else_if = {
+			limit = {
+				has_character_flag = aura_reading_spell
+			}
+			custom_tooltip = aura_reading_spell_got_it
+		}
 		else = {
 			custom_tooltip = healer_p9_perk_eff3
 		}
-		
-		trigger_event = {
-			id = magic_ev5.1
-			days = 1
+		if = {
+			limit = {
+				NOT = {
+					has_trait = archmage
+				}
+			}
+			trigger_event = {
+				id = magic_ev5.1
+				days = 1
+			}
+		}
+		hidden_effect = {
+			random = {
+				chance = 40
+				trigger_event = {
+					id = magic_ev8.50	#a challenge to mage duel
+					years = { 10 30 }
+				}
+			}
 		}
 	}
 }
@@ -374,6 +410,22 @@ forbidden_ritual_p7_perk = {
 				value = 10
 			}
 		}
+		hidden_effect = {
+			if = {
+				limit = {
+					NOT = {
+						has_trait = archmage
+					}
+				}
+				random = {
+					chance = 65
+					trigger_event = {
+						id = magic_ev7.75
+						years = { 1 4 }
+					}
+				}
+			}
+		}
 	}
 }
 
@@ -389,10 +441,22 @@ mage_p4_perk = {
 		has_focus = arcane_focus
 	}
 
+	trait = archmage
 
 	effect = {
+		custom_tooltip = archmage_perk_tt
 		add_trait_force_tooltip = archmage
-		#custom_tooltip = mage_p4_perk_ctt
+		custom_tooltip = mage_p4_perk_ctt
+		custom_tooltip = mtriangulation_discount_ct
+		if = {
+			limit = {
+				is_valid_for_legitimacy_change = yes
+				culture = {
+					has_cultural_tradition = mage_rulership_tradition
+				}
+			}
+			add_legitimacy = medium_legitimacy_gain
+		}
 		if = {
 			limit = {
 				has_trait = grandmaster_coven
@@ -417,6 +481,29 @@ mage_p4_perk = {
 			}
 			if = {
 				limit = {
+					exists = dynasty
+					dynasty = {
+						has_dynasty_perk = witchcraft_legacy_3
+					}
+				}
+				send_interface_toast = {
+					title = witchcraft_legacy_3
+					add_trait_xp = {
+						trait = archmage
+						track = secret_knowledge
+						value = 10
+					}
+				}
+			}
+			#else = {
+			#	add_trait_xp = {
+			#		trait = archmage
+			#		track = secret_knowledge
+			#		value = 5
+			#	}
+			#}
+			if = {
+				limit = {
 					has_character_modifier = power_saturated1
 				}
 				remove_character_modifier = power_saturated1
@@ -429,57 +516,139 @@ mage_p4_perk = {
 				remove_character_modifier = power_saturated2
 				gain_standard_ps_effect = yes
 			}
+			#mind reading
+			#random = {
+			#	chance = 50
+			#	trigger_event = {
+			#		id = magic_ev2.8
+			#		years = { 8 40 }
+			#	}
+			#}
+			
+			#nicknames
 			random = {
-				chance = 50
+				chance = 70
 				trigger_event = {
-					id = magic_ev2.8
-					years = { 8 40 }
+					id = magic_ev6.69
+					years = { 7 14 }
 				}
 			}
 			if = {
 				limit = {
 					is_ai = no
 				}
-				random = {
-					chance = 80
-					trigger_event = {
-						id = magic_ev2.24
-						years = { 5 15 }
+				#magical threats
+				random_list = {
+					20 = {
+						#magic flu
+						trigger_event = {
+							id = magic_ev6.38
+							years = { 5 30 }
+						}
+					}
+					20 = {
+						#dominated?
+						trigger_event = {
+							id = magic_ev6.39
+							years = { 5 20 }
+						}
+					}
+					20 = {
+						if = {
+							limit = {
+								has_trait = source
+							}
+							#weak source
+							trigger_event = {
+								id = magic_ev6.41
+								years = { 12 30 }
+							}
+						}
+						else = {
+							#corruption
+							trigger_event = {
+								id = magic_ev6.40
+								years = { 5 30 }
+							}
+						}
+					}
+					10 = {
+						#regular mage spawn
+						trigger_event = {
+							id = magic_ev2.58
+							years = { 25 60 }
+						}
+					}
+					30 = {
+
 					}
 				}
-				random = {
-					chance = 80
-					trigger_event = {
-						id = magic_ev2.58
-						years = { 15 25 }
+				if = {
+					limit = {
+						is_ai = no
 					}
-				}
-				trigger_event = {
-					id = magic_ev2.58
-					years = 100
-				}
-			}
-			#trigger_event = {
-			#	id = magic_ev3.74
-			#	years = { 80 100 }
-			#}
-			if = {
-				limit = {
-					exists = dynasty
-					dynasty = {
-						NOT = {
-							has_variable = used_magic_book
+					#errant-knight
+					random = {
+						chance = 80
+						trigger_event = {
+							id = magic_ev2.24
+							years = { 5 15 }
 						}
 					}
 				}
-				random = {
-					chance = 80
+				if = {
+					limit = {
+						is_ai = no
+					}
+					#regular mage spawn
+					random = {
+						chance = 80
+						trigger_event = {
+							id = magic_ev2.58
+							years = { 15 25 }
+						}
+					}
+					#regular mage spawn
 					trigger_event = {
-						id = magic_ev4.57
-						years = { 1 5 }
+						id = magic_ev2.58
+						years = 100
 					}
 				}
+				
+				
+				if = {
+					limit = {
+						is_landed_or_landless_administrative = yes
+					}
+					#additional knowledge
+					random = {
+						chance = 60
+						trigger_event = {
+							id = magic_ev7.135
+							years = { 10 14 }
+						}
+					}
+				}
+				
 			}
+			#if = {
+			#	limit = {
+			#		exists = dynasty
+			#		dynasty = {
+			#			NOT = {
+			#				has_variable = used_magic_book
+			#			}
+			#		}
+			#	}
+			#	#necronomicon special
+			#	random = {
+			#		chance = 70
+			#		trigger_event = {
+			#			id = magic_ev4.57
+			#			years = { 1 5 }
+			#		}
+			#	}
+			#}
 		}
 	}
 }

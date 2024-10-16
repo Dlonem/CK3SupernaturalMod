@@ -62,6 +62,22 @@ is_legendary_mage_trigger = {
 		value > 99
 	}
 }
+is_the_choosen_one_trigger = {
+	has_trait = source
+	has_trait_xp = {
+		trait = source
+		track = magic_potential
+		value > 99
+	}
+}
+has_unstable_source_trigger = {
+	has_trait = source
+	has_trait_xp = {
+		trait = source
+		track = instability
+		value > 29
+	}
+}
 
 has_basic_magic_prot_trigger = {
 	OR = {
@@ -97,6 +113,9 @@ has_basic_magic_prot_trigger = {
 				NOT = { scope:actor = this }
 			}
 		}
+	}
+	NOT = {
+		is_imprisoned_by = scope:actor
 	}
 }
 has_basic_magic_prot_trigger2 = {
@@ -134,6 +153,9 @@ has_basic_magic_prot_trigger2 = {
 			}
 		}
 	}
+	NOT = {
+		is_imprisoned_by = scope:owner
+	}
 }
 has_any_basic_magic_prot_trigger = {
 	OR = {
@@ -165,6 +187,7 @@ has_any_basic_magic_prot_trigger = {
 }
 can_penetrate_basic_magic_prot_trigger = {
 	OR = {
+		has_character_modifier = touched_divinity_modifier
 		is_legendary_mage_trigger = yes
 		any_equipped_character_artifact = {	has_variable = catalyst	}
 	}
@@ -301,7 +324,7 @@ has_physical_contanct2 = {
 }
 
 has_power_place_trigger = {
-	#is_landed = yes
+	#is_landed_or_landless_administrative = yes
 	#primary_title = { is_mercenary_company = no }
 	#any_held_title = {
 	#	tier = tier_county
@@ -391,9 +414,9 @@ can_unlock_arcane_focus_trigger = {
 		any_character_artifact = { has_variable = magic_ring }
 		any_character_artifact = { has_variable = singularity2 }
 		has_trait = source
-		has_trait = source2
-		has_trait = source3
-		has_trait = source4
+		#has_trait = source2
+		#has_trait = source3
+		#has_trait = source4
 		has_perk = magical_experiments_p1_perk
 		has_character_flag = arcane_unlocked_flag
 		has_power_place_trigger = yes
@@ -450,12 +473,20 @@ me_can_take_spells_option_trigger = {
 			}
 		}
 		AND = {
-			OR = {
-				has_trait = schemer
-				has_character_modifier = mind_reader_modifier
-			}
+			has_character_modifier = mind_reader_modifier
 			NOT = {
 				has_character_modifier = master_psionic_modifier
+			}
+		}
+		AND = {
+			OR = {
+				has_trait = schemer
+				has_trait = shrewd
+				has_trait = intrigue_court_1
+				has_trait = intrigue_court_2
+			}
+			NOT = {
+				has_character_modifier = mind_reader_modifier
 			}
 		}
 		AND = {
@@ -540,6 +571,12 @@ me_have_unlocked_special_project = {
 				has_character_flag = me_soul_project_done
 			}
 		}
+		AND = {
+			has_character_flag = me_time_travel_project
+			NOT = {
+				has_character_flag = me_time_travel_project_done
+			}
+		}
 	}
 }
 me_may_unlocks_special_project = {
@@ -554,7 +591,7 @@ me_may_unlocks_special_project = {
 				has_character_flag = me_immortality_project
 				is_legendary_mage_trigger = yes
 			}
-			learning > 39
+			learning > 49
 		}
 		AND = {
 			NOR = {
@@ -574,9 +611,9 @@ me_may_unlocks_special_project = {
 			}
 			OR = {
 				has_trait = source
-				has_trait = source2
-				has_trait = source3
-				has_trait = source4
+				#has_trait = source2
+				#has_trait = source3
+				#has_trait = source4
 				any_character_artifact = {
 					has_variable = magic_scepter
 				}
@@ -587,7 +624,7 @@ me_may_unlocks_special_project = {
 				has_character_flag = me_castle_project_done
 				has_character_flag = me_castle_project
 			}
-			is_landed = yes
+			is_landed_or_landless_administrative = yes
 		}
 		AND = {
 			NOR = {
@@ -617,6 +654,14 @@ me_may_unlocks_special_project = {
 			#	has_character_flag = me_immortality_project_done
 			#	has_character_flag = me_golem_project_done
 			#}
+		}
+		AND = {
+			may_unlock_time_travel_sp_trigger = yes
+			is_ai = no
+			NOR = {
+				has_character_flag = me_time_travel_project_done
+				has_character_flag = me_time_travel_project
+			}
 		}
 	}
 }
@@ -649,5 +694,12 @@ requires_magic_healing_trigger = {
 		has_trait = measles
 		has_trait = dysentery
 		has_trait = ergotism
+	}
+}
+may_unlock_time_travel_sp_trigger = {
+	NOT = {
+		any_culture_global = {
+			has_variable = has_time_traveler
+		}
 	}
 }
