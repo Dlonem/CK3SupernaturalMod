@@ -1,4 +1,4 @@
-﻿spn_offer_vampire_blood = { #Offers Vampire Blood
+﻿spn_offer_vampire_blood = { # Offers Vampire Blood
 	category = interaction_category_uncategorized
 	common_interaction = yes
 	icon = vampire_blood
@@ -2633,7 +2633,7 @@ spn_turn_into_hybrid = { #Turn Character Into Hybrid
 	}
 }
 
-spn_turn_into_hunter = { #Train Character as a Hunter
+spn_turn_into_hunter = { # Train Character as a Hunter
 	category = interaction_category_uncategorized
 	common_interaction = yes
 	icon = hunter
@@ -2644,21 +2644,21 @@ spn_turn_into_hunter = { #Train Character as a Hunter
         ai_recipients = children
         ai_recipients = family
         ai_recipients = dynasty
-        max = 10
+        max = 5
     }
     ai_targets = {
         ai_recipients = neighboring_rulers
         ai_recipients = peer_vassals
         ai_recipients = liege
-        max = 3
+        max = 1
     }
     ai_targets = {
         ai_recipients = courtiers
-        max = 3
+        max = 1
     }
     ai_targets = {
         ai_recipients = vassals
-        max = 5
+        max = 1
     }
 
 	ai_target_quick_trigger = {
@@ -2671,11 +2671,12 @@ spn_turn_into_hunter = { #Train Character as a Hunter
 	is_shown = {
 		NOT = { scope:recipient = scope:actor}
 		scope:recipient = {
-			NOR = { has_trait = supernatural_hunter
-					has_trait = supernatural_werewolf
-					has_trait = supernatural_vampire
-					has_trait = supernatural_hybrid
-				}
+			NOR = { 
+				has_trait = supernatural_hunter
+				has_trait = supernatural_werewolf
+				has_trait = supernatural_vampire
+				has_trait = supernatural_hybrid
+			}
 		}
 		scope:actor = {
 			has_trait = supernatural_hunter
@@ -3073,142 +3074,21 @@ spn_turn_into_hunter = { #Train Character as a Hunter
 
 	on_accept = {
 		scope:recipient = {
-			if = {
-				limit = {
-					OR = {
-						has_game_rule = spn_no_confer_death 
-						AND = {
-							OR = {
-								has_game_rule = spn_ai_only_confer_death
-								has_game_rule = spn_ai_only_higher_confer_death
-								has_game_rule = spn_ai_only_lower_confer_death
-							}
-							scope:actor = {
-								is_ai = no
-							}
-						}
-					}
-				}
-
-				trigger_event = spn_initiate.3001 #Initiate Hunter Event
-				trigger_event = spn_message.3001 #Send Messages of Event
-				
-				spn_assign_hunter_trainer = { CHARACTER = scope:actor }
-
-				trigger_event = {
-					id = spn_initiate.9001 #Initiate Secret knowledge for conferring character
-					days = 1
-				}
-			}
-			else = {
-				random_list = {
-					60 = { #Live
-						modifier = { #Lower
-							OR = { 
-								has_game_rule = spn_yes_lower_confer_death 
-								has_game_rule = spn_ai_only_lower_confer_death 
-							}
-							add = { 
-								value = health 
-								subtract = { value = 1.5 } 
-								multiply = { value = 10 } 
-							}
-						}
-						modifier = { #Normal
-							OR = { 
-								has_game_rule = spn_yes_confer_death 
-								has_game_rule = spn_ai_only_confer_death 
-							}
-							add = { 
-								value = health 
-								subtract = { value = 3 } 
-								multiply = { value = 10 } 
-							}
-						}
-						modifier = { #Higher
-							OR = { 
-								has_game_rule = spn_yes_higher_confer_death 
-								has_game_rule = spn_ai_only_higher_confer_death 
-							}
-							add = { 
-								value = health 
-								subtract = { value = 4.5 } 
-								multiply = { value = 10 } 
-							}
-						}
-
-						trigger_event = spn_initiate.3001 #Initiate Hunter
-						trigger_event = spn_message.3001 #Send Messages
-						
-						spn_assign_hunter_trainer = { CHARACTER = scope:actor }
-
-						trigger_event = {
-							id = spn_initiate.9001 #Initiate Secret knowledge for conferring character
-							days = 1
-						}
-			
-						show_as_tooltip = {
-							if = { 
-								limit = { 					
-									NOR = {
-										has_game_rule = spn_no_confer_death 
-										AND = {
-											has_game_rule = spn_ai_only_confer_death
-											scope:actor = {
-												is_ai = no
-											}
-										}
-									} 
-								}
-								custom_tooltip = spn_msg_tooltip_train_live_desc
-							}
-						}
-					}
-					40 = { #Die
-						modifier = { #Lower
-							OR = { 
-								has_game_rule = spn_yes_lower_confer_death 
-								has_game_rule = spn_ai_only_lower_confer_death 
-							}
-							add = { 
-								value = health 
-								subtract = { value = 1.5 } 
-								multiply = { value = -10 } 
-							}
-						}
-						modifier = { #Normal
-							OR = { 
-								has_game_rule = spn_yes_confer_death 
-								has_game_rule = spn_ai_only_confer_death 
-							}
-							add = { 
-								value = health 
-								subtract = { value = 3 } 
-								multiply = { value = -10 } 
-							}
-						}
-						modifier = { #Higher
-							OR = { 
-								has_game_rule = spn_yes_higher_confer_death 
-								has_game_rule = spn_ai_only_higher_confer_death 
-							}
-							add = { 
-								value = health 
-								subtract = { value = 4.5 } 
-								multiply = { value = -10 } 
-							}
-						}
-
-						death = { death_reason = spn_death_during_hunter_training }
-						scope:actor = { trigger_event = spn_message.9001 } #Send Messages
-					}
-				}
-			}
-
 			show_as_tooltip = {
-				scope:recipient = {
-					custom_tooltip = spn_msg_tooltip_confer_hunter_desc
-				}
+				custom_tooltip = spn_msg_tooltip_confer_hunter_desc
+				custom_tooltip = spn_msg_tooltip_hunter_desc
+			}
+			
+			trigger_event = {
+				id = spn_train_hunter.0001
+				days = 1
+			}
+		}
+		
+		scope:actor = {
+			trigger_event = {
+				id = spn_train_hunter.0005
+				days = 1
 			}
 		}
 
@@ -5024,101 +4904,21 @@ spn_ask_to_turn_into_hunter = { #Ask Character to Train You As a Hunter
 
 	on_accept = {
 		scope:actor = {
-			if = {
-				limit = { 
-					OR = { 
-						has_game_rule = spn_no_confer_death
-					}
-				} 
-				trigger_event = spn_initiate.3001 #Initiate Hunter
-
-				spn_assign_hunter_trainer = { CHARACTER = scope:recipient }
-
-				trigger_event = {
-					id = spn_initiate.9002 #Initiate Secret knowledge when asking for confer
-					days = 1
-				}
-			}
-			else = {
-				random_list = {
-					50 = { #Live
-						modifier = { #Lower
-							has_game_rule = spn_yes_lower_confer_death 
-							add = { 
-								value = health 
-								subtract = { value = 1.5 } 
-								multiply = { value = 10 } 
-							}
-						}
-						modifier = { #Normal
-							has_game_rule = spn_yes_confer_death 
-							add = { 
-								value = health 
-								subtract = { value = 3 } 
-								multiply = { value = 10 } 
-							}
-						}
-						modifier = { #Higher
-							has_game_rule = spn_yes_higher_confer_death
-							add = { 
-								value = health 
-								subtract = { value = 4.5 } 
-								multiply = { value = 10 } 
-							}
-						}
-
-						trigger_event = spn_initiate.3001 #Initiate Hunter
-
-						spn_assign_hunter_trainer = { CHARACTER = scope:recipient }
-			
-						trigger_event = {
-							id = spn_initiate.9002 #Initiate Secret knowledge when asking for confer
-							days = 1
-						}
-						
-						show_as_tooltip = {
-							if = { 
-								limit = { NOT = { has_game_rule = spn_no_confer_death } }
-								custom_tooltip = spn_msg_tooltip_train_live_desc
-							}
-						}
-					}
-					50 = { #Die
-						modifier = { #Lower
-							has_game_rule = spn_yes_lower_confer_death 
-							add = { 
-								value = health 
-								subtract = { value = 1.5 } 
-								multiply = { value = -10 } 
-							}
-						}
-						modifier = { #Normal
-							has_game_rule = spn_yes_confer_death 
-							add = { 
-								value = health 
-								subtract = { value = 3 } 
-								multiply = { value = -10 } 
-							}
-						}
-						modifier = { #Higher
-							has_game_rule = spn_yes_higher_confer_death
-							add = { 
-								value = health 
-								subtract = { value = 4.5 } 
-								multiply = { value = -10 } 
-							}
-						}
-
-						death = { death_reason = spn_death_during_hunter_training }
-						scope:actor = { trigger_event = spn_message.9001 } #Send Messages
-					}
-				}
-			}
-
 			show_as_tooltip = {
-				scope:actor = {
-					custom_tooltip = spn_msg_tooltip_ask_hunter_desc
-				}
+				custom_tooltip = spn_msg_tooltip_confer_hunter_desc
+				custom_tooltip = spn_msg_tooltip_hunter_desc
+			}
+			
+			trigger_event = {
+				id = spn_train_hunter.0001
+				days = 1
+			}
+		}
+		
+		scope:recipient = {
+			trigger_event = {
+				id = spn_train_hunter.0005
+				days = 1
 			}
 		}
 
