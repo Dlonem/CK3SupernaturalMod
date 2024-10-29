@@ -1,0 +1,1644 @@
+﻿namespace = spn_hunters
+
+spn_hunters.0001 = { # Someone spotted a witch
+	type = character_event
+	theme = realm
+	override_background = {
+		reference = market
+	}
+	
+	title = spn_hunters.0001.t
+	desc = spn_hunters.0001.desc
+	
+	right_portrait = {
+		character = root
+		animation = fear
+	}
+	left_portrait = {
+		character = scope:witch
+		animation = anger
+	}
+	
+	cooldown = { days = 730 }
+	
+	trigger = {
+		basic_is_valid_for_yearly_events_trigger = yes
+		faith = { NOT = { has_doctrine = doctrine_witchcraft_accepted } }
+		capital_province = {
+			geographical_region = world_europe
+		}
+	}
+	
+	weight_multiplier = {
+		base = 1
+		modifier = {
+			has_trait = zealous
+			add = 0.75
+		}
+	}
+	
+	immediate = {
+		random_courtier_or_guest = {
+			limit = { has_council_position = councillor_court_chaplain }
+			save_scope_as = court_chaplain
+		}
+		create_character = {
+			gender = female
+			culture = this.culture
+			location = root.capital_province
+			template = witch_character
+			save_scope_as = witch
+		}
+	}
+	
+	option = { # Looks to be the beginning of a Witch hunt!
+		name = spn_hunters.0001.a
+		# debug_log = "WAM_Debug: a ruler hunted for a witch in spn_hunters.0001"
+		trigger_event = {
+			id = spn_hunters.0002
+			days = { 12 15 }
+		}
+		remove_short_term_gold = 5
+		
+		if = {
+			limit = { exists = scope:court_chaplain }
+			scope:court_chaplain = {
+				add_opinion = {
+					target = root
+					modifier = pious_opinion
+					opinion = 5
+				}
+			}
+		}
+		
+		stress_impact = { cynical = minor_stress_gain }
+		
+		ai_chance = {
+			base = 50
+			ai_value_modifier = {
+				ai_zeal = 0.5
+			}
+			modifier = {
+				add = -20
+				has_trait = cynical
+			}
+			modifier = {
+				add = 20
+				has_trait = zealous
+			}
+		}
+	}
+	option = { # It sounds too dangerous. You should find someone more qualified.
+		name = spn_hunters.0001.b
+		# debug_log = "WAM_Debug: a ruler left a witch alive in spn_hunters.0001"
+		if = {
+			limit = { exists = scope:court_chaplain }
+			scope:court_chaplain = {
+				add_opinion = {
+					target = root
+					modifier = pious_opinion
+					opinion = -5
+				}
+			}
+		}
+		stress_impact = { 
+			brave = medium_stress_gain
+			craven = minor_stress_loss
+		}
+		hidden_effect = {
+			scope:witch = {
+				death = { death_reason = death_vanished	}
+			}
+		}
+		
+		ai_chance = {
+			base = 50
+			ai_value_modifier = {
+				ai_zeal = -0.5
+			}
+			modifier = {
+				add = 20
+				has_trait = craven
+			}
+			modifier = {
+				add = 10
+				has_trait = shy
+			}
+			modifier = {
+				add = -20
+				has_trait = brave
+			}
+		}
+	}
+	
+	option = { # Sounds like the kind of nonsense you hear from a drunken lot.
+		name = spn_hunters.0001.c
+		# debug_log = "WAM_Debug: a ruler left a witch alive in spn_hunters.0001"
+		custom_tooltip = spn_hunters.0001.c.tt
+		
+		trigger = {
+			NOT = {
+				has_trait = supernatural_hunter 
+			}
+		}
+		
+		if = {
+			limit = { exists = scope:court_chaplain }
+			scope:court_chaplain = {
+				add_opinion = {
+					target = root
+					modifier = pious_opinion
+					opinion = 5
+				}
+			}
+		}
+		stress_impact = {
+			zealous = medium_stress_gain
+			zealous = minor_stress_loss
+		}
+		hidden_effect = {
+			scope:witch = {
+				death = { death_reason = death_vanished	}
+			}
+		}
+		
+		ai_chance = {
+			base = 50
+			ai_value_modifier = {
+				ai_zeal = -0.5
+			}
+			modifier = {
+				add = 20
+				has_trait = cynical
+			}
+			modifier = {
+				add = -15
+				has_trait = zealous
+			}
+		}
+	}
+	
+    option = { # I'll find your witch, but I expect to be paid.
+        name = spn_hunters.0001.d
+		
+        trigger = { has_trait = supernatural_hunter }
+		
+        trigger_event = {
+            id = spn_hunters.0002
+            days = { 8 13 }
+        }
+		
+		custom_tooltip = spn_hunters.0001.d.tt
+		add_gold = {
+			value = { 15 35 }
+		}
+
+        ai_chance = {
+            base = 70
+            modifier = { 
+				add = 30 
+				has_trait = greedy 
+			}
+			modifier = {
+				add = 10 
+				stewardship > 25
+			}
+        }
+    }
+
+    option = { # You came to the right person. Let the professional take over.
+        name = spn_hunters.0001.e
+
+        trigger = { has_perk = witch_hunter_perk }
+
+        trigger_event = {
+            id = spn_hunters.0002
+            days = { 7 10 }
+        }
+
+		add_character_modifier = {
+			modifier = enhanced_hunter_focus_modifier
+			years = 1  # Buff lasts one year
+		}
+
+        ai_chance = {
+            base = 80
+            modifier = { 
+				add = 20 
+				has_trait = diligent 
+			}
+			modifier = {
+				add = 10 
+				martial > 20
+			}			
+        }
+    }
+}
+
+spn_hunters.0002 = { # Witch Spotted (Part 2)
+	type = character_event
+	theme = realm
+	override_background = {
+		reference = wilderness_scope
+	}
+	
+	title = spn_hunters.0001.t
+	desc = spn_hunters.0002.desc
+	
+	right_portrait = {
+		character = root
+		animation = personality_compassionate
+	}
+	left_portrait = {
+		character = scope:witch
+		animation = wam_bonfire
+	}
+	
+	option = { # Attempt to follow her tracks
+		name = spn_hunters.0002.a
+		
+		random_list = {
+			60 = { # Chance of picking up witch's tracks
+				custom_tooltip = spn_hunters.0002.aa.t
+				trigger_event = spn_hunters.0003
+				
+				modifier = { add = 3 has_trait = brave }
+				modifier = { add = 5 has_trait = ambitious }
+				modifier = { add = 5 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 15 } }
+				modifier = { add = 10 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 35 } }
+				modifier = { add = 15 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 55 } }
+				modifier = { add = 20 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 85 } }
+			}
+			
+			30 = { # Chance of losing witch's tracks
+				custom_tooltip = spn_hunters.0002.ab.t
+				trigger_event = {
+					id = spn_hunters.00021
+					days = 5
+				}
+				
+				modifier = { add = 5 has_trait = impatient }
+				modifier = { add = 10 has_trait = lazy }
+				modifier = { add = -5 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 15 } }
+				modifier = { add = -10 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 35 } }
+				modifier = { add = -15 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 55 } }
+				modifier = { add = -20 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 85 } }
+			}
+			
+			10 = { # Chance of dying 
+				custom_tooltip = spn_hunters.0002.ac.t
+				death = {
+					death_reason = spn_death_by_powerful_curse
+					killer = scope:witch
+				}
+				
+				modifier = { add = 1 has_trait = lazy }
+				modifier = { add = 3 has_trait = brave }
+				modifier = { add = -2 has_trait = paranoid }
+				modifier = { add = -2 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 15 } }
+				modifier = { add = -3 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 35 } }
+				modifier = { add = -4 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 55 } }
+				modifier = { add = -5 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 85 } }
+			}
+		}
+		
+		ai_chance = {
+			base = 40
+			ai_value_modifier = {
+				ai_zeal = 0.5
+			}
+			modifier = {
+				add = -10
+				has_trait = craven
+			}
+			modifier = {
+				add = 10
+				learning > 15
+			}
+			modifier = {
+				add = 10
+				has_trait = ambitious
+			}
+			modifier = {
+				add = 10
+				has_trait = brave
+			}
+		}
+	}
+	option = { # Follow the magic
+		name = spn_hunters.0002.b
+		custom_tooltip = spn_hunters.0002.b.tt
+		
+        trigger = { has_perk = witch_hunter_perk }
+        trigger_event = {
+            id = spn_hunters.0003
+            days = { 7 10 }
+        }
+		
+		add_trait_xp = {
+			trait = supernatural_hunter
+			track = witch_hunting
+			value = { 3 8 }
+		}
+		
+		ai_chance = {
+			base = 60
+			ai_value_modifier = {
+				ai_zeal = -0.5
+			}
+			modifier = {
+				add = 20
+				has_trait = cynical
+			}
+			modifier = {
+				add = -20
+				has_trait = zealous
+			}
+		}
+	}
+	option = { # Turn back
+		name = spn_hunters.0002.c
+		custom_tooltip = spn_hunters.0002.c.tt
+		
+		add_character_modifier = {
+			modifier = turned_back_witch_hunt_modifier
+			years = 1
+		}
+		
+		ai_chance = {
+			base = 50
+			ai_value_modifier = {
+				ai_zeal = -0.5
+			}
+			modifier = {
+				add = 15
+				has_trait = fickle
+			}
+			modifier = {
+				add = -15
+				has_trait = brave
+			}
+			modifier = {
+				add = -10
+				has_trait = zealous
+			}
+		}
+	}
+}
+
+spn_hunters.00021 = {
+	type = character_event
+	theme = learning
+	override_background = {
+		reference = wilderness_scope
+	}
+	
+	title = spn_hunters.00021.t
+	desc = spn_hunters.00021.desc
+	
+	right_portrait = {
+		character = root
+		animation = sad
+	}
+	
+	option = { # Hopefully someone else gets her..
+		name = spn_hunters.00021.a	
+		
+		stress_impact = {
+			compassionate = medium_stress_impact_gain			
+			just = minor_stress_gain
+			sadistic = medium_stress_impact_loss
+		}
+		
+		add_character_modifier = {
+			modifier = tried_to_witch_hunt_modifier
+			years = 1
+		}
+		
+		ai_chance = {
+			base = 50
+			ai_value_modifier = {
+				ai_zeal = 0.5
+			}
+			modifier = {
+				add = -20
+				has_trait = cynical
+			}
+			modifier = {
+				add = 20
+				has_trait = zealous
+			}
+		}
+	}
+	
+}
+
+spn_hunters.0003 = { # Decide on the fate of the witch
+	type = character_event
+	theme = realm
+	override_background = {
+		reference = wilderness_scope
+	}
+	
+	title = spn_hunters.0001.t
+	desc = spn_hunters.0003.desc
+	
+	right_portrait = {
+		character = root
+		animation = personality_compassionate
+	}
+	left_portrait = {
+		character = scope:witch
+		animation = fear
+	}
+	
+	option = { # Burn her
+		name = spn_hunters.0003.a
+		
+		scope:witch = {
+			death = { death_reason = death_burned }
+		}
+		
+		add_gold = {
+			value = { 10 25 }
+		}	
+
+		if = {
+			limit = {
+				has_trait = supernatural_hunter
+			}
+			add_trait_xp = {
+				trait = supernatural_hunter
+				track = witch_hunting
+				value = { 15 25 }
+			}
+		}
+
+		if = {
+			limit = {
+				NOT = {
+					has_trait = supernatural_hunter
+				}
+			}
+			add_character_flag = supernatural_embrace_hunter
+			trigger_event = {
+				id = spn_initiate.3001
+			}
+			add_trait_xp = {
+				trait = supernatural_hunter
+				track = witch_hunting
+				value = { 10 20 }
+			}
+		}
+		
+
+		
+		stress_impact = {
+			compassionate = medium_stress_impact_gain			
+			just = minor_stress_gain
+			supernatural_hunter = medium_stress_impact_loss
+		}
+		
+		ai_chance = {
+			base = 50
+			ai_value_modifier = {
+				ai_zeal = 0.5
+			}
+			modifier = {
+				add = -20
+				has_trait = cynical
+			}
+			modifier = {
+				add = 20
+				has_trait = zealous
+			}
+		}
+	}
+	option = { # Don't kill her
+		name = spn_hunters.0003.b
+		# debug_log = "WAM_Debug: a ruler left a witch alive in spn_hunters.0001"
+		custom_tooltip = spn_hunters.0003.b.tt
+		
+		stress_impact = { 
+			supernatural_hunter = medium_stress_gain
+			trusting = minor_stress_impact_loss
+		}
+		
+		ai_chance = {
+			base = 50
+			ai_value_modifier = {
+				ai_zeal = -0.5
+			}
+			modifier = {
+				add = 20
+				has_trait = just
+			}
+			modifier = {
+				add = -20
+				has_trait = zealous
+			}
+		}
+	}
+	
+	option = { # Learn withcraft
+		name = spn_hunters.0003.c
+		# debug_log = "WAM_Debug: a ruler left a witch alive in spn_hunters.0001"
+		custom_tooltip = spn_hunters.0003.c.tt
+		
+		trigger = {
+			NOT = { 
+				has_trait = supernatural_hunter 
+			}
+		}
+		
+		add_trait_force_tooltip = witch
+		
+		stress_impact = { 
+			zealous = medium_stress_gain
+			trusting = minor_stress_impact_loss
+		}
+		
+		ai_chance = {
+			base = 30
+			ai_value_modifier = {
+				ai_zeal = -0.5
+			}
+			modifier = {
+				add = 20
+				learning > 25
+			}
+			modifier = {
+				add = -20
+				has_trait = zealous
+			}
+		}
+	}	
+}
+
+spn_hunters.0010 = { # Hunter: Monster Sighting
+	type = character_event
+	theme = realm
+	override_background = {
+		reference = tavern
+	}
+	
+	title = spn_hunters.0010.t
+	desc = spn_hunters.0010.desc
+	
+    immediate = {
+        create_character = {
+            gender_female_chance = 50  # Randomly male or female
+			dynasty = none
+			age = { 16 25 }
+            culture = root.location.culture  # Matches player character’s culture (optional)
+			faith = root.location.faith
+            location = root.capital_province  # Places them in the same province
+            trait = drunkard   # Example trait for tavern setting (optional)
+            save_scope_as = random_person  # Save for use in the portrait
+        }
+    }
+	
+	right_portrait = {
+		character = root
+		animation = personality_compassionate
+	}
+	left_portrait = {
+		character = scope:random_person
+		animation = happiness
+	}
+	
+	option = { # Go over and talk to them
+		name = spn_hunters.0010.a
+		custom_tooltip = spn_hunters.0010.a.tt			
+
+		trigger_event = {
+			id = spn_hunters.0011
+			days = { 1 3 }
+		}
+		
+		stress_impact = {
+			arbitrary = minor_stress_loss
+			shy = minor_stress_gain
+		}
+		
+		ai_chance = {
+			base = 50
+			ai_value_modifier = {
+				ai_zeal = 0.5
+			}
+			modifier = {
+				add = 10
+				has_trait = cynical
+			}
+			modifier = {
+				add = 10
+				has_trait = arbitrary
+			}
+			modifier = {
+				add = -10
+				has_trait = shy
+			}
+			modifier = {
+				add = -5
+				has_trait = stubborn
+			}
+			modifier = {
+				add = 5
+				diplomacy > 10
+			}
+		}
+	}
+	
+	option = { # Pay their tab and head over to talk
+		name = spn_hunters.0010.b
+		custom_tooltip = spn_hunters.0010.b.tt
+		
+		trigger = {
+			NOT = { 
+				has_trait = supernatural_hunter 
+			}
+		}
+		
+		trigger_event = {
+			id = spn_hunters.0012
+			days = { 1 3 }
+		}
+		
+		remove_short_term_gold = {
+			value = { 5 20 }
+		}
+		
+		stress_impact = {
+			greedy = minor_stress_gain
+			gregarious = minor_stress_impact_loss
+		}
+		
+		ai_chance = {
+			base = 50
+			ai_value_modifier = {
+				ai_zeal = -0.5
+			}
+			modifier = {
+				add = -15
+				has_trait = greedy
+			}
+			modifier = {
+				add = 15
+				has_trait = gregarious
+			}
+			modifier = {
+				add = -10
+				has_trait = shy
+			}
+			modifier = {
+				add = 10
+				has_trait = diligent
+			}
+			modifier = {
+				add = -10
+				has_trait = avaricious
+			}
+			modifier = {
+				add = 5
+				diplomacy > 10
+			}
+		}
+	}
+	
+	option = { # Go over and talk to them (Hunter)
+		name = spn_hunters.0010.c
+		custom_tooltip = spn_hunters.0010.c.tt
+		
+		trigger = {
+			has_trait = supernatural_hunter
+		}
+		
+		trigger_event = {
+			id = spn_hunters.0012
+			days = { 1 3 }
+		}
+		
+		stress_impact = { 
+			supernatural_hunter = minor_stress_loss
+			shy = minor_stress_impact_gain
+		}
+		
+		ai_chance = {
+			base = 60
+			ai_value_modifier = {
+				ai_zeal = -0.5
+			}
+			modifier = {
+				add = -20
+				has_trait = craven
+			}
+			modifier = {
+				add = 10
+				has_trait = gregarious
+			}
+			modifier = {
+				add = 10
+				has_trait = brave
+			}
+			modifier = {
+				add = 10
+				prowess > 10
+			}
+		}
+	}	
+	
+	option = { # Pay your tab and leave
+		name = spn_hunters.0010.d
+		custom_tooltip = spn_hunters.0010.d.tt
+		
+		remove_short_term_gold = {
+			value = { 2 10 }
+		}
+		
+		stress_impact = { 
+			gregarious = minor_stress_gain
+			shy = minor_stress_impact_loss
+		}
+		
+		ai_chance = {
+			base = 30
+			ai_value_modifier = {
+				ai_zeal = -0.5
+			}
+			modifier = {
+				add = 20
+				diplomacy < 13
+			}
+			modifier = {
+				add = 12
+				has_trait = shy
+			}
+			modifier = {
+				add = 15
+				has_trait = craven
+			}
+			modifier = {
+				add = 10
+				has_trait = content
+			}
+			modifier = {
+				add = 5
+				has_trait = arbitrary
+			}
+		}
+	}
+}
+
+spn_hunters.0011 = { # Hunter: Tavern Talk 
+    type = character_event
+    theme = realm
+    override_background = {
+        reference = tavern
+    }
+
+    title = spn_hunters.0010.t
+    desc = spn_hunters.0011.desc
+
+    right_portrait = {
+        character = root
+        animation = personality_compassionate
+    }
+    left_portrait = {
+        character = scope:random_person
+        animation = anger
+    }
+
+    option = { # It sounds like they're describing a vampire
+        name = spn_hunters.0011.a
+        custom_tooltip = spn_hunters.0011.a.tt
+
+        trigger_event = {
+            id = spn_hunters.0013
+			days = { 1 3 }
+        }
+
+        ai_chance = {
+            base = 50
+
+			modifier = {
+				add = 15
+				has_trait = arrogant
+			}
+			modifier = {
+				add = 15
+				learning < 12
+			}
+        }
+    }
+
+    option = { # It sounds like they're describing a werewolf
+        name = spn_hunters.0011.b
+        custom_tooltip = spn_hunters.0011.b.tt
+
+        trigger_event = {
+            id = spn_hunters.0014
+			days = { 1 3 }
+        }
+
+        ai_chance = {
+            base = 50
+
+			modifier = {
+				add = 15
+				has_trait = shrewd
+			}
+			modifier = {
+				add = 15
+				learning >= 15
+			}
+			modifier = {
+				add = 10
+				has_trait = supernatural_hunter
+			}
+        }
+    }
+
+    option = { # Stop wasting your time on some drunk ramblings
+        name = spn_hunters.0011.c
+        custom_tooltip = spn_hunters.0011.c.tt
+
+        trigger = { 
+            NOT = { has_trait = supernatural_hunter }
+        } # This prevents hunters from seeing this option
+
+        ai_chance = {
+            base = 50
+
+            modifier = {
+                add = 10
+                has_trait = stubborn
+            }
+			modifier = {
+				add = 10
+				has_trait = arrogant
+			}
+			modifier = {
+				add = 10
+				has_trait = content
+			}
+			modifier = {
+				add = -10
+				has_trait = patient
+			}
+        }
+    }
+}
+
+
+spn_hunters.0012 = { # Hunter: Tavern Talk 
+	type = character_event
+	theme = realm
+	override_background = {
+		reference = tavern
+	}
+	
+	title = spn_hunters.0010.t
+	desc = spn_hunters.0012.desc
+	
+	right_portrait = {
+		character = root
+		animation = personality_compassionate
+	}
+	left_portrait = {
+		character = scope:random_person
+		animation = fear
+	}
+	
+	option = { # It sounds like they're describing a vampire
+		name = spn_hunters.0012.a
+		custom_tooltip = spn_hunters.0012.a.tt			
+
+		trigger_event = {
+			id = spn_hunters.0013
+			days = { 1 3 }
+		}
+		
+		ai_chance = {
+			base = 50
+
+			modifier = {
+				add = 15
+				has_trait = arrogant
+			}
+			modifier = {
+				add = 15
+				learning < 12
+			}
+		}
+	}
+	
+	option = { # It sounds like they're describing a werewolf
+		name = spn_hunters.0012.b
+		custom_tooltip = spn_hunters.0012.b.tt
+		
+		trigger = {
+			NOT = { 
+				has_trait = supernatural_hunter 
+			}
+		}
+		
+		trigger_event = {
+			id = spn_hunters.0014
+		}
+		
+		stress_impact = { 
+			trusting = minor_stress_impact_loss
+		}
+		
+		ai_chance = {
+			base = 50
+
+			modifier = {
+				add = 20
+				has_trait = just
+			}
+			modifier = {
+				add = 20
+				learning > 18
+			}
+		}
+	}
+	
+	option = { # You recognize the creature they are describing, a werewolf!
+		name = spn_hunters.0012.c
+		custom_tooltip = spn_hunters.0012.c.tt
+		
+		trigger = {
+			has_trait = supernatural_hunter
+		}
+		
+		trigger_event = {
+			id = spn_hunters.0014
+			days = { 1 3 }
+		}
+		
+		stress_impact = { 
+			supernatural_hunter = minor_stress_loss
+			trusting = minor_stress_impact_loss
+		}
+		
+		ai_chance = {
+			base = 70
+
+			modifier = {
+				add = -20
+				has_trait = arrogant
+			}
+
+		}
+	}	
+	
+	option = { # You realize you have better things to do
+		name = spn_hunters.0012.d
+		custom_tooltip = spn_hunters.0012.d.tt
+		
+		add_short_term_gold = {
+			value = { 5 25 }
+		}
+		
+		stress_impact = { 
+			greedy = minor_stress_loss
+			honest = minor_stress_impact_gain
+		}
+		
+		ai_chance = {
+			base = 50
+
+			modifier = {
+				add = 10
+				stewardship > 20
+			}
+			modifier = {
+				add = 20
+				has_trait = greedy
+			}
+			modifier = {
+				add = 10
+				has_trait = fickle
+			}
+			modifier = {
+				add = 10
+				has_trait = arrogant
+			}
+		}
+	}	
+}
+
+spn_hunters.0013 = { # Hunter: Tavern Talk 
+	type = character_event
+	theme = martial
+	override_background = {
+		reference = tavern
+	}
+	
+	title = spn_hunters.0010.t
+	desc = spn_hunters.0013.desc
+	
+	immediate = {
+		spn_create_local_lycan_effect = { FROMCHAR = root }
+		scope:spn_created_lycan = { 
+			add_character_flag = {
+				flag = supernatural_embrace_werewolf
+			}
+			trigger_event = spn_initiate.1001 #Initialize Werewolf
+			
+			hidden_effect = {
+				add_trait_xp = {
+					trait = supernatural_werewolf
+					track = lycanthropy
+					value = { 5 40 }
+				}
+			}
+			save_scope_as = spn_new_created_werewolf 
+		}
+	}
+	
+	right_portrait = {
+		character = root
+		animation = personality_compassionate
+	}
+	left_portrait = {
+		character = scope:spn_new_created_werewolf
+		animation = anger
+	}
+	
+	option = { # Engage the creature anyways
+		name = spn_hunters.0013.a
+		custom_tooltip = spn_hunters.0013.a.tt			
+
+		random_list = {
+			50 = { # Chance of killing the monster
+				custom_tooltip = spn_hunters.0013.aa.t
+
+				if = {
+					limit = {
+						has_trait = supernatural_hunter
+					}
+					add_trait_xp = {
+						trait = supernatural_hunter
+						track = monster_hunting
+						value = { 15 35 }
+					}
+				}
+
+				if = {
+					limit = {
+						NOT = {
+							has_trait = supernatural_hunter
+						}
+					}
+					add_character_flag = supernatural_embrace_hunter
+					trigger_event = {
+						id = spn_initiate.3001
+					}
+					add_trait_xp = {
+						trait = supernatural_hunter
+						track = monster_hunting
+						value = { 15 25 }
+					}
+				}
+
+				scope:spn_new_created_werewolf = {
+					death = {
+						death_reason = spn_death_attacking
+						killer = root
+					}				
+				}
+				
+				modifier = { add = 6 prowess > 7 }
+				modifier = { add = 12 prowess > 12 }
+				modifier = { add = 18 prowess > 18 }
+				modifier = { add = 5 has_trait = ambitious }
+				modifier = { add = 8 has_trait = strong }
+				modifier = { add = 10 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 25 } }
+				modifier = { add = 15 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 45 } }
+				modifier = { add = 20 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 65 } }
+				modifier = { add = 25 has_trait_xp = { trait = supernatural_hunter track = monster_huntingg value >= 85 } }
+			}
+			
+			30 = { # Chance of monster getting away
+				custom_tooltip = spn_hunters.0013.ab.t
+				
+				increase_wounds_no_death_effect = { REASON = battle }
+				add_trait_xp = {
+					trait = supernatural_hunter
+					track = monster_hunting
+					value = { 5 10 }
+				}
+
+				hidden_effect = {
+					scope:spn_new_created_werewolf = {
+						death = { death_reason = death_vanished	}
+					}
+				}
+				
+				modifier = { add = 5 has_trait = intellect_bad_1 }
+				modifier = { add = 10 has_trait = lazy }
+				modifier = { add = -6 prowess > 10 }
+				modifier = { add = -10 prowess > 15 }
+				modifier = { add = -14 prowess > 25 }
+				modifier = { add = -10 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 25 } }
+				modifier = { add = -15 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 45 } }
+				modifier = { add = -20 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 65 } }
+				modifier = { add = -25 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 85 } }
+			}
+			
+			10 = { # Chance of getting forcibly turned
+				custom_tooltip = spn_hunters.0013.ac.t
+				
+				add_character_flag = {
+					flag = supernatural_embrace_werewolf
+				}
+
+				trigger_event = spn_initiate.1001 #Initialize Werewolf
+				add_trait_force_tooltip = supernatural_werewolf				
+				spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_werewolf }
+				
+				modifier = { add = 15 has_trait = intellect_bad_1 }
+				modifier = { add = 5 has_trait = brave }
+				modifier = { add = 10 has_trait = weak }
+				modifier = { add = 5 martial < 10 }
+				modifier = { add = 8 prowess < 17 }
+				modifier = { add = -5 has_trait = paranoid }
+				modifier = { add = -100 has_trait = supernatural_hunter }
+			}
+			
+			10 = { # Chance of getting killed
+				custom_tooltip = spn_hunters.0013.ad.t
+				death = {
+					death_reason = spn_death_clawed
+					killer = scope:spn_new_created_werewolf
+				}
+				
+				modifier = { add = 5 prowess > 15 }
+				modifier = { add = 5 has_trait = lazy }
+				modifier = { add = 3 has_trait = brave }
+				modifier = { add = 5 has_trait = weak }
+				modifier = { add = 5 has_trait = intellect_bad_1 }
+				modifier = { add = 5 has_trait = impatient }
+				modifier = { add = -4 has_trait = paranoid }
+				modifier = { add = -2 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 25 } }
+				modifier = { add = -3 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 45 } }
+				modifier = { add = -4 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 65 } }
+				modifier = { add = -5 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 85 } }
+			}
+		}
+		
+		ai_chance = {
+			base = 50
+
+			modifier = {
+				add = 20
+				has_trait = supernatural_hunter
+			}
+			modifier = {
+				add = 10
+				has_trait = strong
+			}
+			modifier = {
+				add = 10
+				has_trait = brave
+			}
+			modifier = {
+				add = -10
+				has_trait = craven
+			}
+			modifier = {
+				add = 10
+				has_trait = callous
+			}
+			modifier = {
+				add = 10
+				prowess > 20
+			}
+			modifier = {
+				add = -15
+				prowess < 5
+			}
+			modifier = {
+				add = 10
+				prowess > 15
+			}
+			modifier = {
+				add = 10
+				has_trait = arrogant
+			}
+		}
+	}
+	
+	option = { # Try to de-escalate the situation and ask for them to turn you into werewolf
+		name = spn_hunters.0013.b
+		custom_tooltip = spn_hunters.0013.b.tt
+		
+		trigger = {
+			NOT = {
+				has_trait = supernatural_hunter
+			}
+		}
+		
+		stress_impact = { 
+			supernatural_hunter = medium_stress_gain
+			trusting = minor_stress_impact_loss
+		}
+		
+		random_list = {
+		
+			40 = {
+			custom_tooltip = spn_hunters.0013.e.tt
+			}
+			40 = {
+				increase_wounds_no_death_effect = { REASON = battle }
+			}
+			20 = {
+				add_character_flag = {
+					flag = supernatural_embrace_werewolf
+				}
+				trigger_event = spn_initiate.1001 #Initialize Werewolf
+				spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_werewolf }
+				add_trait_force_tooltip = supernatural_werewolf			
+			}
+		
+		}
+		
+		ai_chance = {
+			base = 50
+
+			modifier = {
+				add = 10
+				has_trait = diplomat
+			}
+			modifier = {
+				add = 10
+				has_trait = ambitious
+			}
+			modifier = {
+				add = -15
+				has_trait = zealous
+			}
+			modifier = {
+				add = 5
+				has_trait = greedy
+			}
+			modifier = {
+				add = -5
+				has_trait = cynical
+			}
+			modifier = {
+				add = 10
+				has_trait = arrogant
+			}
+		}
+	}
+	
+	option = { # Attempt to flee and run away ignoring the laughter from the patrons
+		name = spn_hunters.0013.c
+		custom_tooltip = spn_hunters.0013.c.tt
+		
+		stress_impact = { 
+			supernatural_hunter = medium_stress_gain
+			trusting = minor_stress_impact_loss
+		}
+		
+		remove_short_term_gold = {
+			value = { 10 45 }
+		}
+		
+		ai_chance = {
+			base = 50
+			ai_value_modifier = {
+				ai_zeal = -0.5
+			}
+			modifier = {
+				add = 20
+				has_trait = just
+			}
+			modifier = {
+				add = -20
+				has_trait = zealous
+			}
+		}
+	}	
+
+}
+
+spn_hunters.0014 = { # Hunter: Tavern Talk 
+	type = character_event
+	theme = intrigue
+	override_background = {
+		reference = tavern
+	}
+	
+	title = spn_hunters.0010.t
+	desc = spn_hunters.0014.desc
+	
+	immediate = {
+		spn_create_local_lycan_effect = { FROMCHAR = root }
+		scope:spn_created_lycan = { 
+			add_character_flag = {
+				flag = supernatural_embrace_werewolf
+			}
+			trigger_event = spn_initiate.1001 #Initialize Werewolf
+
+			hidden_effect = {
+				add_trait_xp = {
+					trait = supernatural_werewolf
+					track = lycanthropy
+					value = { 5 40 }
+				}
+			}
+			save_scope_as = spn_new_created_werewolf 
+		}
+	}
+	
+	right_portrait = {
+		character = root
+		animation = personality_compassionate
+	}
+	left_portrait = {
+		character = scope:spn_new_created_werewolf 
+		animation = shock
+	}
+	
+	option = { # You choose to engage the monster quickly
+		name = spn_hunters.0014.a
+		custom_tooltip = spn_hunters.0014.a.tt			
+
+		random_list = {
+			65 = { # Chance of killing the monster
+				custom_tooltip = spn_hunters.0014.aa.t
+
+				if = {
+					limit = {
+						has_trait = supernatural_hunter
+					}
+					add_trait_xp = {
+						trait = supernatural_hunter
+						track = monster_hunting
+						value = { 15 35 }
+					}
+				}
+
+				if = {
+					limit = {
+						NOT = {
+							has_trait = supernatural_hunter
+						}
+					}
+					add_character_flag = supernatural_embrace_hunter
+					trigger_event = {
+						id = spn_initiate.3001
+					}
+					add_trait_xp = {
+						trait = supernatural_hunter
+						track = monster_hunting
+						value = { 15 25 }
+					}
+				}
+
+				scope:spn_new_created_werewolf = {
+					death = {
+						death_reason = spn_death_attacking
+						killer = root
+					}				
+				}
+				
+				modifier = { add = 6 prowess > 7 }
+				modifier = { add = 12 prowess > 12 }
+				modifier = { add = 18 prowess > 18 }
+				modifier = { add = 5 has_trait = ambitious }
+				modifier = { add = 8 has_trait = strong }
+				modifier = { add = 10 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 15 } }
+				modifier = { add = 15 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 35 } }
+				modifier = { add = 20 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 55 } }
+				modifier = { add = 25 has_trait_xp = { trait = supernatural_hunter track = monster_huntingg value >= 75 } }
+			}
+			
+			20 = { # Chance of monster getting away
+				custom_tooltip = spn_hunters.0014.ab.t
+				
+				increase_wounds_no_death_effect = { REASON = battle }
+				add_trait_xp = {
+					trait = supernatural_hunter
+					track = monster_hunting
+					value = { 5 10 }
+				}
+
+				hidden_effect = {
+					scope:spn_new_created_werewolf = {
+						death = { death_reason = death_vanished	}
+					}
+				}
+				
+				modifier = { add = 5 has_trait = intellect_bad_1 }
+				modifier = { add = 10 has_trait = lazy }
+				modifier = { add = -6 prowess > 10 }
+				modifier = { add = -10 prowess > 15 }
+				modifier = { add = -14 prowess > 25 }
+				modifier = { add = -10 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 15 } }
+				modifier = { add = -15 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 35 } }
+				modifier = { add = -20 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 55 } }
+				modifier = { add = -25 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 75 } }
+			}
+			
+			10 = { # Chance of getting forcibly turned
+				custom_tooltip = spn_hunters.0014.ac.t
+				
+				add_character_flag = {
+					flag = supernatural_embrace_werewolf
+				}
+
+				trigger_event = spn_initiate.1001 #Initialize Werewolf
+				spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_werewolf }
+				add_trait_force_tooltip = supernatural_werewolf				
+				
+				modifier = { add = 15 has_trait = intellect_bad_1 }
+				modifier = { add = -5 health >= 5.0 }
+				modifier = { add = 5 health < 5.0 }
+				modifier = { add = 5 has_trait = brave }
+				modifier = { add = 10 has_trait = weak }
+				modifier = { add = 5 martial < 10 }
+				modifier = { add = 8 prowess < 17 }
+				modifier = { add = -5 has_trait = paranoid }
+				modifier = { add = -100 has_trait = supernatural_hunter }
+			}
+			
+			5 = { # Chance of getting killed
+				custom_tooltip = spn_hunters.0014.ad.t
+				death = {
+					death_reason = spn_death_clawed
+					killer = scope:spn_new_created_werewolf
+				}
+				
+				modifier = { add = 5 prowess < 15 }
+				modifier = { add = 5 has_trait = lazy }
+				modifier = { add = 3 has_trait = brave }
+				modifier = { add = 5 has_trait = weak }
+				modifier = { add = 5 has_trait = intellect_bad_1 }
+				modifier = { add = 5 has_trait = impatient }
+				modifier = { add = -4 has_trait = paranoid }
+				modifier = { add = -2 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 15 } }
+				modifier = { add = -3 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 35 } }
+				modifier = { add = -4 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 55 } }
+				modifier = { add = -5 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 75 } }
+			}
+		}
+		
+		ai_chance = {
+			base = 50
+
+			modifier = {
+				add = 20
+				has_trait = supernatural_hunter
+			}
+			modifier = {
+				add = 10
+				has_trait = strong
+			}
+			modifier = {
+				add = 10
+				has_trait = brave
+			}
+			modifier = {
+				add = -10
+				has_trait = craven
+			}
+			modifier = {
+				add = 10
+				has_trait = callous
+			}
+			modifier = {
+				add = 10
+				prowess > 20
+			}
+			modifier = {
+				add = -15
+				prowess < 5
+			}
+			modifier = {
+				add = 10
+				prowess > 15
+			}
+			modifier = {
+				add = 10
+				has_trait = arrogant
+			}
+		}
+	}
+	
+	option = { # Try to de-escalate the situation, and request to become a werewolf
+		name = spn_hunters.0014.b
+		custom_tooltip = spn_hunters.0014.b.tt
+		
+		trigger = {
+			NOT = {
+				has_trait = supernatural_hunter
+			}
+		}
+		
+		stress_impact = { 
+			supernatural_hunter = medium_stress_gain
+			trusting = minor_stress_impact_loss
+		}
+		
+		random_list = {
+		
+			40 = {
+				custom_tooltip = spn_hunters.0013.e.tt
+			}
+			20 = {
+				increase_wounds_no_death_effect = { REASON = battle }
+			}
+			40 = {
+				add_character_flag = {
+					flag = supernatural_embrace_werewolf
+				}
+				trigger_event = spn_initiate.1001 #Initialize Werewolf
+				spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_werewolf }
+				add_trait_force_tooltip = supernatural_werewolf
+
+				modifier = { add = 5 diplomacy > 10 }
+				modifier = { add = 5 diplomacy > 15 }
+				modifier = { add = 5 has_trait = trusting }
+			}
+		
+		}
+		
+		ai_chance = {
+			base = 50
+
+			modifier = {
+				add = 10
+				has_trait = diplomat
+			}
+			modifier = {
+				add = 10
+				has_trait = ambitious
+			}
+			modifier = {
+				add = -15
+				has_trait = zealous
+			}
+			modifier = {
+				add = 5
+				has_trait = greedy
+			}
+			modifier = {
+				add = -5
+				has_trait = cynical
+			}
+			modifier = {
+				add = 10
+				has_trait = arrogant
+			}
+		}
+	}
+	
+	option = { # Quickly change your mind, and leave 
+		name = spn_hunters.0014.c
+		custom_tooltip = spn_hunters.0014.c.tt
+		
+		stress_impact = { 
+			supernatural_hunter = medium_stress_gain
+			trusting = minor_stress_impact_loss
+		}
+		
+		ai_chance = {
+			base = 60
+
+			modifier = {
+				add = -10
+				has_trait = brave
+			}
+			modifier = {
+				add = -20
+				has_trait = zealous
+			}
+			modifier = {
+				add = 20
+				has_trait = craven
+			}
+			modifier = {
+				add = -10
+				has_trait = vengeful
+			}
+			modifier = {
+				add = -15
+				has_trait = supernatural_hunter
+			}
+			modifier = {
+				add = -10
+				has_trait = callous
+			}
+			modifier = {
+				add = 10
+				prowess < 5
+			}
+		}
+	}
+	
+}
