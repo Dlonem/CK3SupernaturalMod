@@ -10,7 +10,7 @@
 		is_imprisoned = no
 	}
 	cost={
-		renown=200
+		renown=abdicate_decision_renown_cost_value
 	}
 	effect = {
 		hidden_effect = {
@@ -30,7 +30,12 @@
 				}
 			}
 		}
-		
+		if = {
+			limit = {
+				has_trait = incapable
+			}
+			custom_tooltip = abdicate_decision_ct
+		}
 		depose=yes
 		# Add effects of the decision here.
 		every_held_title = {
@@ -59,7 +64,7 @@ forbidden_ritual_decision = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
 	desc = forbidden_ritual_decision_desc
-
+	decision_group_type = magic_decisions
 	is_shown = {
 		has_perk = forbidden_ritual_p7_perk
 		is_imprisoned = no
@@ -131,7 +136,7 @@ magic_triangulation_decision = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
 	desc = magic_triangulation_decision_desc
-
+	decision_group_type = magic_decisions
 	is_shown = {
 		OR = {
 			has_perk = warlock_perk
@@ -197,35 +202,48 @@ magic_triangulation_decision = {
 	}
 	cooldown = { months = 24 }
 	ai_will_do = {
-		base = 50
+		base = 80
 		modifier = {
 			add = -150
+			any_character_artifact = {
+				has_variable = magic1
+			}
+			NOR = {
+				has_trait = greedy
+				has_trait = ambitious
+			}
+		}
+		modifier = {
+			add = 20
+			OR = {
+				has_trait = greedy
+				has_trait = ambitious
+			}
+		}
+		modifier = {
+			add = -75
 			OR = {
 				any_relation = {
 					type = rival
-					any_character_artifact = { has_variable = magic1 }
+					any_character_artifact = {
+						has_variable = magic1
+					}
 				}
 				any_relation = {
 					type = nemesis
-					any_character_artifact = { has_variable = magic1 }
-				}
-				any_relation = {
-					type = friend
-					any_character_artifact = { has_variable = magic1 }
-				}
-				any_relation = {
-					type = best_friend
-					any_character_artifact = { has_variable = magic1 }
-				}
-				any_relation = {
-					type = lover
-					any_character_artifact = { has_variable = magic1 }
-				}
-				any_relation = {
-					type = soulmate
-					any_character_artifact = { has_variable = magic1 }
+					any_character_artifact = {
+						has_variable = magic1
+					}
 				}
 			}
+		}
+		modifier = {
+			add = -150
+			has_trait = generous
+		}
+		modifier = {
+			add = -150
+			has_trait = lazy
 		}
 		modifier = {
 			add = -150
@@ -249,7 +267,7 @@ magic_triangulation_decision = {
 			metamagic_effect = yes
 		}
 	}
-	ai_check_interval = 36
+	ai_check_interval = 24
 }
 
 summon_demon_decision = {
@@ -264,7 +282,7 @@ summon_demon_decision = {
 		is_imprisoned = no
 		NOT = {	has_character_flag = merlin_dude	}
 	}
-
+	decision_group_type = magic_decisions
 	is_valid_showing_failures_only = {
 		custom_description = {
 			text = power_needed_custom
@@ -283,7 +301,9 @@ summon_demon_decision = {
 			NOT = {	exists = global_var:us_magic_barrier_var	}
 		}
 	}
-	cooldown = { years = 1 }
+	cooldown = {
+		months = 12
+	}
 	ai_will_do = { base = 60 }
 
 	effect = {
@@ -321,12 +341,12 @@ study_blackgrimoire_decision = {
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
+	decision_group_type = magic_decisions
 	is_shown = {
 		any_character_artifact = { has_variable = blackgrimoire }
 		is_imprisoned = no
 		is_adult = yes
 		#NOT = {
-		#	has_trait = supernatural_hunter
 		#	has_trait = witch_hunter
 		#}
 		#OR = {
@@ -376,7 +396,7 @@ study_blackgrimoire_decision = {
 				}
 			}
 			random_list = {
-				90 = {
+				80 = {
 					trigger = {
 						NAND = {
 							#has_character_flag = necro_chapter1_flag
@@ -388,6 +408,14 @@ study_blackgrimoire_decision = {
 						}
 					}
 					trigger_event = magic_ev7.124
+				}
+				10 = {
+					trigger = {
+						NOT = {
+							has_character_flag = used_magic_book_flag2
+						}
+					}
+					trigger_event = magic_ev9.75
 				}
 				9 = {
 					trigger = {
@@ -427,6 +455,7 @@ create_potion_decision = {
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
+	decision_group_type = magic_decisions
 	is_shown = {
 		OR = {
 			AND = {
@@ -445,13 +474,28 @@ create_potion_decision = {
 			NOT = { has_trait = incapable }
 		}
 	}
-	cooldown = { years = 4 }
+	cooldown = { years = create_potion_decision_cooldown }
 	ai_will_do = { base = 50 }
 	cost = {
-		gold = potion_gold_value
+		gold = potion_gold_value2
 	}
 	effect = {
-		trigger_event = magic_ev2.41
+		if = {
+			limit = {
+				has_trait = archmage
+				has_trait_xp = {
+					trait = archmage
+					track = alchemy
+					value > 99
+				}
+			}
+			trigger_event = magic_ev9.66
+		}
+		else = {
+			trigger_event = magic_ev2.41
+		}
+		
+		gain_al_xp_small_effect = yes
 		custom_tooltip = create_potion_decision_ct
 	}
 	ai_check_interval = 24
@@ -463,6 +507,7 @@ drink_pot1_decision = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
 	is_shown = {
+		is_ai = yes
 		any_character_artifact = { has_variable = pot1 }
 	}
 	is_valid_showing_failures_only = {
@@ -641,6 +686,7 @@ drink_pot2_decision = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
 	is_shown = {
+		is_ai = yes
 		any_character_artifact = { has_variable = pot2 }
 	}
 	is_valid_showing_failures_only = {
@@ -648,7 +694,6 @@ drink_pot2_decision = {
 			text = you_are_saturated
 			can_be_power_saturated_trigger = yes
 		}
-		
 	}
 	cooldown = { days = 1 }
 	ai_will_do = {
@@ -681,6 +726,7 @@ drink_pot3_decision = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
 	is_shown = {
+		is_ai = yes
 		any_character_artifact = { has_variable = pot3 }
 	}
 	is_valid_showing_failures_only = {
@@ -878,6 +924,7 @@ drink_pot4_decision = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
 	is_shown = {
+		is_ai = yes
 		any_character_artifact = { has_variable = pot4 }
 	}
 
@@ -904,6 +951,7 @@ drink_pot5_decision = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
 	is_shown = {
+		is_ai = yes
 		any_character_artifact = { has_variable = pot5 }
 	}
 	is_valid_showing_failures_only = {
@@ -938,6 +986,7 @@ drink_pot6_decision = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
 	is_shown = {
+		is_ai = yes
 		any_character_artifact = { has_variable = pot6 }
 	}
 
@@ -971,6 +1020,7 @@ drink_pot7_decision = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
 	is_shown = {
+		is_ai = yes
 		any_character_artifact = { has_variable = pot7 }
 	}
 
@@ -1012,6 +1062,7 @@ drink_pot8_decision = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
 	is_shown = {
+		is_ai = yes
 		any_character_artifact = { has_variable = pot8 }
 	}
 
@@ -1054,6 +1105,7 @@ drink_pot9_decision = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
 	is_shown = {
+		is_ai = yes
 		any_character_artifact = { has_variable = pot9 }
 	}
 
@@ -1085,12 +1137,12 @@ drink_pot9_decision = {
 }
 
 
-
 esoteric_training_decision = {
 	desc = esoteric_training_decision_desc
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
+	decision_group_type = magic_decisions
 	is_shown = {
 		OR = {
 			AND = {
@@ -1127,7 +1179,7 @@ esoteric_training_decision = {
 			}
 			send_interface_toast = {
 				title = esoteric_training_decision
-				give_witch_secret_or_trait_effect = yes
+				give_witch_secret_or_trait_effect2 = yes
 			}
 			custom_tooltip = gain_mystic_perk
 			hidden_effect = {
@@ -1201,7 +1253,7 @@ esoteric_training_decision = {
 							#	type = secret_witch
 							#	target = root
 							#}
-							give_witch_secret_or_trait_effect = yes
+							give_witch_secret_or_trait_effect2 = yes
 						}
 						
 						#if = {
@@ -1281,11 +1333,17 @@ study_singularity_decision = {
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
+	decision_group_type = magic_decisions
 	is_shown = {
-		any_character_artifact = { has_variable = singularity has_variable = singularity_sleeping }
+		#any_character_artifact = { has_variable = singularity has_variable = singularity_sleeping }
+		any_character_artifact = { has_artifact_modifier = singularity_modifier1	}
 		is_imprisoned = no
 		is_adult = yes
-		NOT = { has_character_flag = sing_end }
+		NOR = {
+			has_character_flag = sing_end
+			has_character_flag = me_as_project_may_be_random_flag
+			any_character_artifact = { has_variable = msscroll	}
+		}
 		#NOT = {
 		#	any_living_character = {
 		#		has_character_flag = sing_end
@@ -1314,7 +1372,7 @@ study_singularity_decision = {
 			}
 		}
 	}
-	cooldown = { years = 10 }
+	cooldown = { years = 15 }
 	cost = {
 		gold = demon_gold_value
 	}
@@ -1324,10 +1382,22 @@ study_singularity_decision = {
 
 	effect = {
 		#custom_tooltip = press_court_mage_decision_ct
-		trigger_event = {
-			id = magic_ev2.66
-			days = 2
+		if = {
+			limit = {
+				has_character_flag = singularity_solved
+			}
+			trigger_event = {
+				id = magic_ev2.73
+				days = 2
+			}
 		}
+		else = {
+			trigger_event = {
+				id = magic_ev2.66
+				days = 2
+			}
+		}
+		
 		
 	}
 	ai_check_interval = 0
@@ -1338,6 +1408,7 @@ magic_epic_decision = {
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
+	decision_group_type = magic_decisions
 	is_shown = {
 		#OR = {
 		#	has_trait = archmage
@@ -1396,11 +1467,17 @@ magic_transmutation_decision = {
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
+	decision_group_type = magic_decisions
 	is_shown = {
 		has_trait = archmage
 		is_imprisoned = no
 		is_adult = yes
-		has_character_flag = magic_transmutation
+		has_trait_xp = {
+			trait = archmage
+			track = alchemy
+			value > 99
+		}
+		#has_character_flag = magic_transmutation
 	}
 
 	is_valid_showing_failures_only = {
@@ -1448,6 +1525,7 @@ magic_defence_decision = {
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
+	decision_group_type = magic_decisions
 	is_shown = {
 		has_trait = archmage
 		is_imprisoned = no
@@ -1526,6 +1604,7 @@ travel_to_stars_decision = {
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
+	decision_group_type = magic_decisions
 	is_shown = {
 		has_trait = archmage
 		is_imprisoned = no
@@ -1571,6 +1650,7 @@ call_witch_hunter_decision = {
 	is_shown = {
 		is_imprisoned = no
 		is_adult = yes
+		is_landed_or_landless_administrative = yes
 		trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = root }
 		NOR = {
 			has_trait = witch
@@ -1656,106 +1736,12 @@ witch_hunting_decision = {
 	ai_check_interval = 0
 }
 
-#full_protection_decision = {
-#	desc = full_protection_decision_desc
-#	picture = {
-#		reference = "gfx/interface/illustrations/decisions/decision_invite_knights.dds"
-#	}
-#	is_shown = {
-#		is_imprisoned = no
-#		is_adult = yes
-#		any_targeting_scheme = {
-#			is_scheme_exposed = yes
-#		}
-#	}
-#
-#	#is_valid_showing_failures_only = {
-#	#	
-#	#}
-#	cost = {
-#		gold = demon_gold_value
-#		prestige = half_demon_gold_value
-#	}
-#	cooldown = { years = 1 }
-#	ai_will_do = {
-#		base = 0
-#	}
-#
-#	effect = {
-#		#gain_sc_xp1_effect = yes
-#		hidden_effect = {
-#			if = {
-#				limit = {
-#					has_character_modifier = double_guards_modifier
-#				}
-#				remove_character_modifier = double_guards_modifier
-#			}
-#		}
-#		add_character_modifier = {
-#			modifier = double_guards_modifier
-#			years = 3
-#		}
-#		#scheme_type = murder
-#		every_targeting_scheme = {
-#			limit = {
-#				scheme_type = steal_back_artifact
-#				is_scheme_exposed = yes
-#			}
-#			hidden_effect = {
-#				save_scope_as = hostile_scheme
-#				scheme_owner = {
-#					send_interface_toast = {
-#						title = full_protection_decision
-#						left_icon = THIS
-#						right_icon = ROOT
-#						show_as_tooltip = {
-#							scope:hostile_scheme = {
-#								end_scheme = yes
-#							}
-#						}
-#					}
-#				}
-#			}
-#			end_scheme = yes
-#		}
-#		if = {
-#			limit = {
-#					has_trait = paranoid
-#					has_trait = trusting
-#				}
-#			}
-#			#add_stress = minor_stress_loss
-#			stress_impact = {
-#				paranoid = minor_stress_loss
-#				trusting = minor_stress_gain
-#			}
-#		}
-#		else = {
-#			#add_stress = minor_stress_gain
-#			if = {
-#				limit = {
-#					number_of_personality_traits < 4
-#					NOR = {
-#						has_trait = paranoid
-#						has_trait = trusting
-#					}
-#				}
-#				random = {
-#					chance = 5
-#					add_trait = paranoid
-#				}
-#			}
-#		}
-#		
-#	}
-#	ai_check_interval = 0
-#}
-
 prepare_scrying_decision = {
 	desc = prepare_scrying_decision_desc
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
+	decision_group_type = magic_decisions
 	is_shown = {
 		has_perk = oneiromancy_perk
 		is_adult = yes
@@ -1764,7 +1750,18 @@ prepare_scrying_decision = {
 
 
 	cost = {
-		gold = potion_gold_value
+		gold = {
+			value = potion_gold_value
+			if = {
+				limit = {
+					is_landless_adventurer = yes
+					domicile ?= {
+						has_domicile_building_or_higher = fortune_tellers_tent_01
+					}
+				}
+				multiply = 0
+			}
+		}
 	}
 
 	cooldown = { years = 5 }
@@ -1859,6 +1856,7 @@ summon_demonic_knights_decision = {
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_invite_knights.dds"
 	}
+	decision_group_type = magic_decisions
 	is_shown = {
 		is_imprisoned = no
 		is_adult = yes
@@ -1979,6 +1977,7 @@ learn_new_spell_decision = {
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_misc.dds"
 	}
+	decision_group_type = magic_decisions
 	is_shown = {
 		is_imprisoned = no
 		is_adult = yes
@@ -2102,12 +2101,13 @@ learn_new_spell_decision = {
 	}
 	ai_check_interval = 24
 }
+
 return_to_witchcraft_decision = {
 	title = return_to_witchcraft_decision_title
 	desc = return_to_witchcraft_decision_desc
 	selection_tooltip = return_to_witchcraft_decision_desc
 	confirm_text = return_to_witchcraft_decision_title
-	
+	decision_group_type = magic_decisions
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
@@ -2132,75 +2132,84 @@ return_to_witchcraft_decision = {
 
 	cooldown = { days = 1 }
 	effect = {
-		give_witch_secret_or_trait_effect = yes
+		give_witch_secret_or_trait_effect2 = yes
 	}
 	ai_check_interval = 0
 }
 grand_spell_decision = {
 	title = grand_spell_decision_title
-	desc = grand_spell_decision_desc
-	selection_tooltip = grand_spell_decision_desc
+	desc = grand_spell_decision_desc2
+	selection_tooltip = grand_spell_decision_desc2
 	confirm_text = grand_spell_decision_title
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
 
 	is_shown = {
-		OR = {
-			has_trait = witch
-			any_secret = { secret_type = secret_witch }
+		#OR = {
+		#	has_trait = witch
+		#	any_secret = { secret_type = secret_witch }
+		#}
+		#OR = {
+		#	has_character_flag = ready_for_grand_spell_flag
+		#	AND = {
+		#		has_trait = source
+		#		has_trait_xp = {
+		#			trait = source
+		#			track = magic_potential
+		#			value > 99
+		#		}
+		#	}
+		#}
+		has_trait = archmage
+		has_trait_xp = {
+			trait = archmage
+			track = secret_knowledge
+			value > 74
 		}
-		OR = {
-			has_character_flag = ready_for_grand_spell_flag
-			AND = {
-				has_trait = source
-				has_trait_xp = {
-					trait = source
-					track = magic_potential
-					value > 99
-				}
-			}
-		}
-		
 	}
 	is_valid_showing_failures_only = {
-		custom_description = {
-			text = power_needed_custom2
-			has_trait = archmage
-			has_trait_xp = {
-				trait = archmage
-				track = power_saturation
-				value > 99
-			}
-		}
+		#custom_description = {
+		#	text = power_needed_custom2
+		#	has_trait = archmage
+		#	has_trait_xp = {
+		#		trait = archmage
+		#		track = power_saturation
+		#		value > 99
+		#	}
+		#}
 		custom_description = {
 			text = is_incapable_custom
 			NOT = { has_trait = incapable }
 		}
 	}
-	decision_group_type = major
+	#decision_group_type = major
+	decision_group_type = magic_decisions
 	cooldown = { years = 5 }
 	effect = {
-		set_spell_id = { ID = 26 }
-		add_trait_xp = {
-			trait = archmage
-			track = power_saturation
-			value = -100
-		}
+		
+		#add_trait_xp = {
+		#	trait = archmage
+		#	track = power_saturation
+		#	value = -100
+		#}
 		#custom_tooltip = ev7.11.0.d_ct
-		gain_sc_xp5_effect = yes
+		#gain_sc_xp5_effect = yes
 		custom_tooltip = grand_spell_decision_ct
+		#custom_tooltip = ev9.92.0.c_ct
 		hidden_effect = {
 			#remove_character_flag = ready_for_grand_spell_flag
-			trigger_event = magic_ev7.129
+			#trigger_event = magic_ev7.129
+			
+			trigger_event = magic_ev9.92
 		}
 	}
 	ai_will_do = {
-		base = 50
-		modifier = {
-			add = -50
-			has_character_flag = abdul_dude
-		}
+		base = 0
+		#modifier = {
+		#	add = -50
+		#	has_character_flag = abdul_dude
+		#}
 	}
 	ai_check_interval = 12
 }
@@ -2209,6 +2218,7 @@ change_the_future_decision = {
 	desc = change_the_future_desc
 	selection_tooltip = change_the_future_desc
 	confirm_text = magic_transmutation_decision_confirm
+	decision_group_type = magic_decisions
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
@@ -2244,6 +2254,7 @@ become_fallen_hunter_decision = {
 	desc = become_fallen_hunter_decision_desc
 	selection_tooltip = become_fallen_hunter_decision_desc
 	confirm_text = become_fallen_hunter_decision_confirm
+	decision_group_type = magic_decisions
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
 	}
@@ -2259,7 +2270,7 @@ become_fallen_hunter_decision = {
 	effect = {
 		remove_trait = supernatural_hunter
 		#add_trait_force_tooltip = witch_hunter2
-		give_witch_secret_or_trait_effect = yes
+		give_witch_secret_or_trait_effect2 = yes
 		hidden_effect = {
 			if = {
 				limit = {
@@ -2283,36 +2294,229 @@ become_fallen_hunter_decision = {
 	}
 }
 
-#test_test_decision = {
-#	desc = test_test_decision_desc
-#	picture = {
-#		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
-#	}
-#	is_shown = {
-#		is_ai = no
-#	}
-#
-#	cooldown = { days = 1 }
-#	effect = {
-#		#random_ruler = {
-#		#	save_scope_as = recipient
-#		#}
-#		#configure_start_mage_duel_effect = {
-#		#	MD_ATTACKER = ROOT
-#		#	MD_DEFENDER = scope:recipient
-#		#}
-#		if = {
-#			limit = {
-#				is_ruler = yes
-#			}
-#			add_prestige_level = 4
-#		}
-#		turn_into_mage_effect = yes
-#		create_crown_shadows_artifact_effect = { OWNER = root }
-#	}
-#	ai_check_interval = 0
-#}
 
+spread_the_cult_decision = {
+	title = spread_the_cult_decision_title
+	desc = spread_the_cult_decision_desc
+	selection_tooltip = spread_the_cult_decision_desc
+	confirm_text = spread_the_cult_decision_title
+	
+	picture = {
+		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
+	}
+	is_shown = {
+		government_has_flag = government_is_landless_adventurer
+		domicile ?= { has_domicile_parameter = camp_unlocks_spread_cult }
+		has_ep3_dlc_trigger = yes
+		exists = location
+		location = {
+			is_sea_province = no
+		}
+	}
+	is_valid_showing_failures_only = {
+		custom_description = {
+			text = dark_cult_already_exists_custom
+			location ?= {
+				NOT = {
+					has_province_modifier = witch_dark_cult_modifier
+				}
+			}
+		}
+	}
+	cooldown = { months = 12 }
+	effect = {
+		custom_tooltip = spread_the_cult_decision_ct1
+		custom_tooltip = spread_the_cult_decision_ct2
+		hidden_effect_new_object = {
+			random_list = {
+				2 = {	#yeah
+					send_interface_toast = {
+						title = spread_the_cult_decision_title
+						location = {
+							add_province_modifier = {
+								modifier = witch_dark_cult_modifier
+								years = 10
+							}
+						}
+						#domicile ?= {
+						#	change_provisions = {
+						#		value = {
+						#			value = root.location.gather_provisions_forage_base_value
+						#			multiply = 0.5
+						#		}
+						#	}
+						#}
+						custom_tooltip = witch_dark_cult_custom_tooltip
+						stress_impact = {
+							heresiarch = minor_stress_loss
+						}
+					}
+					hidden_effect = {
+						domicile ?= {
+							if = {
+								limit = {
+									NOT = {
+										exists = var:my_cult_list
+									}
+								}
+								set_variable = my_cult_list
+							}
+							if = {
+								limit = {
+									NOT = {
+										is_target_in_variable_list = {
+											name = my_cult_list
+											target = root.location
+										}
+									}
+								}
+								add_to_variable_list = {
+									name = my_cult_list
+									target = root.location
+									years = 10
+								}
+							}
+						}
+					}
+				}
+				1 = {	#nope
+					send_interface_toast = {
+						title = spread_the_cult_decision_title
+						custom_tooltip = ev3.52.a_2
+						stress_impact = {
+							heresiarch = minor_stress_gain
+						}
+					}
+				}
+				1 = {	#nope except heresiarch
+					trigger = {
+						NOT = {
+							has_trait = heresiarch
+						}
+					}
+					send_interface_toast = {
+						title = spread_the_cult_decision_title
+						custom_tooltip = ev3.52.a_2
+					}
+				}
+				2 = {	#complication
+					trigger = {
+						exists = location
+						exists = location.province_owner
+					}
+					trigger_event = magic_ev9.2
+				}
+				2 = {	#patron
+					trigger = {
+						location ?= {
+							province_owner ?= {
+								is_ai = yes
+								is_witch_trigger = no
+								is_adult = yes
+								is_imprisoned = no
+								NOR = {
+									has_trait = zealous
+									is_contact_of = root
+								}
+							}
+						}
+					}
+					trigger_event = magic_ev9.3
+				}
+				2 = {	#heresiarch
+					trigger = {
+						employs_court_position = cult_priest_camp_officer
+						court_position:cult_priest_camp_officer = {
+							NOT = {
+								has_trait = heresiarch
+							}
+						}
+						NOT = {
+							has_trait = heresiarch
+						}
+					}
+					trigger_event = magic_ev9.4
+				}
+			}
+		}
+	}
+	ai_check_interval = 0
+}
+
+
+test_test_decision = {
+	desc = test_test_decision_desc
+	picture = {
+		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
+	}
+	is_shown = {
+		always = no
+	}
+
+	cooldown = { days = 1 }
+	effect = {
+		if = {
+			limit = {
+				NOT = {
+					has_trait = archmage
+				}
+			}
+			turn_into_mage_effect = yes
+			add_learning_skill = 30
+			add_martial_skill = 30
+			add_trait_xp = {
+				trait = archmage
+				track = secret_knowledge
+				value = 100
+			}
+			add_trait_xp = {
+				trait = archmage
+				track = power_saturation
+				value = 100
+			}
+			add_trait_xp = {
+				trait = archmage
+				track = alchemy
+				value = 100
+			}
+			add_trait_xp = {
+				trait = archmage
+				track = demonology
+				value = 100
+			}
+			every_artifact = {
+				limit = {
+					has_variable = magic1
+					NOR = {
+						artifact_owner = ROOT
+						ROOT = {
+							has_personal_artifact_claim = PREV
+						}
+					}
+				}
+				ROOT = {
+					add_personal_artifact_claim = PREV
+				}
+			}
+			add_character_flag = ms_met_lilith
+		}
+		else = {
+			#remove_decision_cooldown = study_singularity_decision
+			#remove_decision_cooldown = magic_epic_decision
+			#add_character_flag = me_golem_project
+			primary_spouse = {
+				remove_trait = gallivanter
+			}
+		}
+		
+
+		#configure_start_mage_duel_effect = {
+		#	MD_ATTACKER = root
+		#	MD_DEFENDER = scope:artif.artifact_owner
+		#}
+	}
+	ai_check_interval = 0
+}
 #spawns_horned_god_temple = {
 #	title = building_horned_god_house
 #	desc = building_horned_god_house_desc

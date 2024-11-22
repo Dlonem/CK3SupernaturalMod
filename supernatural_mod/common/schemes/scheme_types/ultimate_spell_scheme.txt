@@ -1,0 +1,219 @@
+﻿ultimate_spell_cast = {
+	# Basic Setup
+	skill = learning
+	desc = ultimate_spell_cast_desc
+	success_desc = "MURDER_SUCCESS_DESC"
+	discovery_desc = "MURDER_DISCOVERY_DESC"
+	icon = icon_ultimate_spell
+	illustration = "gfx/interface/illustrations/event_scenes/temple.dds"
+	category = personal
+	target_type = character
+	#target_type = nothing
+	is_secret = no
+	cooldown = { days = 1 }
+
+	# Parameters
+	speed_per_skill_point = t2_spsp_owner_value
+	speed_per_target_skill_point = 0
+	base_progress_goal = t2_base_phase_length_value
+	#maximum_secrecy = 95
+	base_maximum_success = 0
+	#base_maximum_success = 0
+	#phases_per_agent_charge = 1
+	success_chance_growth_per_skill_point = t2_scgpsp_value
+	
+	# Core Triggers
+	allow = {
+		age >= 14
+		is_imprisoned = no
+	}
+	valid = {
+		is_incapable = no
+		is_imprisoned = no
+	}
+
+	# Agents
+	agent_leave_threshold = -50
+	agent_join_chance = {
+		base = -25
+		
+		ai_agent_join_chance_basic_suite_modifier = yes
+		#ai_agent_join_chance_hostile_grievous_modifier = yes
+	}
+	agent_groups_owner_perspective = { courtiers guests scripted_relations vassals hooked_characters neighboring_rulers dynasty family }
+	#agent_groups_target_character_perspective = { self }
+	valid_agent = { is_valid_agent_standard_trigger = yes }
+
+	odds_prediction = {
+		add = 0
+		min = 0
+	}
+
+	# Base Chances
+	base_success_chance = {
+		base = -50
+		
+	}
+	#base_secrecy = {
+	#	add = secrecy_base_value
+	#	add = countermeasure_apply_secrecy_maluses_value
+	#}
+
+	# On Actions
+	on_start = {
+		#set_variable = {
+		#	name = apply_countermeasures
+		#	value = flag:calculating
+		#}
+		#add_scheme_starting_opportunities_intrigue_effect = yes
+		# Fallback agents — a balanced config if you start the scheme from script.
+		if = {
+			limit = {
+				scheme_owner = {
+					NOT = { has_variable = agents_added }
+				}
+			}
+			add_agent_slot = agent_spellweaver
+			add_agent_slot = agent_spellweaver
+			add_agent_slot = agent_spellweaver
+			add_agent_slot = agent_magic_source
+			add_agent_slot = agent_magic_assistant
+			#random_scheme_agent_slot = {
+			#	#position = 0
+			#	limit = {
+			#		is_filled = no
+			#		#save_temporary_scope_as = slot_temp
+			#		is_agent_slot_type = agent_spellweaver
+			#	}
+			#	save_scope_as = mage_slot
+			#}
+
+			if = {
+				limit = {
+					scheme_owner = {
+						any_character_artifact = {
+							has_variable = blackgrimoire
+						}
+					}
+				}
+				add_scheme_modifier = { type = ultimate_spell_blackgrimoire_modifier }
+			}
+			if = {
+				limit = {
+					scheme_owner = {
+						any_character_artifact = {
+							has_variable = catalyst
+						}
+					}
+				}
+				add_scheme_modifier = { type = ultimate_spell_catalyst_modifier }
+			}
+			if = {
+				limit = {
+					scheme_owner = {
+						has_character_modifier = master_magic_modifier
+					}
+				}
+				add_scheme_modifier = { type = ultimate_spell_master_modifier }
+			}
+			if = {
+				limit = {
+					scheme_owner = {
+						is_the_choosen_one_trigger = yes
+					}
+				}
+				add_scheme_modifier = { type = ultimate_spell_chosen_modifier }
+			}
+			if = {
+				limit = {
+					scheme_owner = {
+						has_character_modifier = mage_council_support_modifier
+					}
+				}
+				add_scheme_modifier = { type = ultimate_spell_council_modifier }
+			}
+			if = {
+				limit = {
+					scheme_owner = {
+						has_character_modifier = hecate_support_modifier
+					}
+				}
+				add_scheme_modifier = { type = ultimate_spell_hecate_modifier }
+			}
+			#random_ruler = {
+			#	limit = {
+			#		is_adult = yes
+			#	}
+			#	allow_in_scheme = ROOT
+			#	force_add_to_agent_slot = {
+			#		agent_slot = scope:mage_slot
+			#		years = 1
+			#	}
+			#}
+			#scheme_owner = {
+			#	#allow_in_scheme = ROOT
+			#	force_add_to_agent_slot = {
+			#		agent_slot = scope:mage_slot
+			#		years = 1
+			#	}
+			#}
+		}
+		else = {
+			scheme_owner = { remove_variable = agents_added }
+		}
+		#every_living_character = {
+		#	limit = {
+		#		OR = {
+		#			has_trait = archmage
+		#			has_trait = true_witch
+		#		}
+		#		is_adult = yes
+		#		is_imprisoned = no
+		#	}
+		#	
+		#	save_scope_as = mage
+		#	ROOT = {
+		#		random_scheme_agent_slot = {
+		#			#position = 0
+		#			limit = {
+		#				is_filled = no
+		#				#save_temporary_scope_as = slot_temp
+		#				#is_agent_slot_type = agent_spellweaver
+		#			}
+		#			save_scope_as = mage_slot
+		#		}
+		#	}
+		#	allow_in_scheme = ROOT
+		#	scope:mage = {
+		#		force_add_to_agent_slot = {
+		#			agent_slot = scope:mage_slot
+		#			years = 1
+		#		}
+		#	}
+		#}
+		scheme_owner = {
+			send_interface_toast = {
+				title = ultimate_spell_cast
+				custom_tooltip = ultimate_spell_cast_start_ct
+			}
+		}
+	}
+	on_phase_completed = {
+		#suppress_scheme_follow_up_event_till_input_given_effect = yes
+		#murder_scheme_prep_effect = yes
+		#cap_schemes_and_fire_reminders_effect = yes
+	}
+	on_hud_click  = {
+		conclude_ultimate_spell_effect = yes
+	}
+	on_monthly = {
+		scheme_owner = {
+			trigger_event = {
+				on_action = ultimate_spell_ongoing
+			}
+		}
+	}
+	#on_invalidated = {
+	#	
+	#}
+}

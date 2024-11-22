@@ -7,6 +7,7 @@
 		magic_ev2.71
 		#magic_ev5.25	#xp demon system
 		spn_xp_sys.1000 #Supernaturals gain XP for their trait tracks
+		magic_ev9.1		#cult caravan conversion
 		#magic_ev.95
 		#delay = { days = { 1 36 } }
 	}
@@ -332,10 +333,10 @@ on_action_demon_inherited = {
 	trigger = {
 		AND = {
 			scope:mother = {
-				has_trait = demon
+				is_or_will_be_a_demon_trigger = yes
 			}
 			scope:real_father = {
-				has_trait = demon
+				is_or_will_be_a_demon_trigger = yes
 			}
 		}
 	}
@@ -368,7 +369,8 @@ on_action_demon_inherited = {
 				}
 				set_source4child = yes
 			}
-			add_character_flag = may_be_demon_in_the_future_flag
+			#add_character_flag = may_be_demon_in_the_future_flag
+			add_trait = demon0
 			trigger_event = {
 				id = magic_ev3.75
 				years = { 20 21 }
@@ -749,6 +751,7 @@ on_death = {
 		on_action_death_cyro_conclusion
 		on_action_death_magic_barrier
 		on_action_death_flying_castle
+		on_action_abaddon_death
 	}
 	events = {
 		magic_ev4.47	#Darkblade upgrade
@@ -768,6 +771,25 @@ on_action_lilith_death = {
 				has_character_modifier = joy_with_lilith_modifier
 			}
 			remove_character_modifier = joy_with_lilith_modifier
+		}
+	}
+}
+on_action_abaddon_death = {
+	trigger = {
+		has_character_flag = demon_child
+	}
+	effect = {
+		if = {
+			limit = {
+				NOT = {
+					exists = global_var:abaddon_cooldown
+				}
+			}
+			set_global_variable = {
+				name = abaddon_cooldown
+				value = 1
+				days = 18250
+			}
 		}
 	}
 }
@@ -1107,7 +1129,7 @@ on_action_death_merlin_killed = {
 }
 on_game_start_after_lobby = {
 	events = {
-		magic_ev4.50
+		magic_ev4.50	#game rules - add witch trait/secret
 	}
 }
 
@@ -1458,3 +1480,74 @@ magic_defence_pact_on_action = {
 	}
 }
 
+on_travel_plan_movement = {
+	on_actions = {
+		on_action_visited_place_of_power
+	}
+}
+on_action_visited_place_of_power = {
+	trigger = {
+		is_ai = no
+		OR = {
+			has_focus = witch_focus
+			has_focus = arcane_focus
+			has_trait = true_witch
+			has_trait = archmage
+		}
+		NAND = {
+			has_character_flag = visited_witch_house_flag
+			has_character_flag = visited_horned_god_house_flag
+			has_character_flag = visited_mage_house_flag
+		}
+	}
+	effect = {
+		if = {
+			limit = {
+				exists = location
+				location = {
+					OR = {
+						has_building_or_higher = witch_house
+						has_building_or_higher = horned_god_house
+						has_building_or_higher = mage_house
+					}
+				}
+			}
+			if = {
+				limit = {
+					location = {
+						has_building_or_higher = witch_house
+					}
+					NOT = {
+						has_character_flag = visited_witch_house_flag
+					}
+				}
+				vistited_place_of_power_effect = yes
+				add_character_flag = visited_witch_house_flag
+			}
+			else_if = {
+				limit = {
+					location = {
+						has_building_or_higher = horned_god_house
+					}
+					NOT = {
+						has_character_flag = visited_horned_god_house_flag
+					}
+				}
+				vistited_place_of_power_effect = yes
+				add_character_flag = visited_horned_god_house_flag
+			}
+			else_if = {
+				limit = {
+					location = {
+						has_building_or_higher = mage_house
+					}
+					NOT = {
+						has_character_flag = visited_mage_house_flag
+					}
+				}
+				vistited_place_of_power_effect = yes
+				add_character_flag = visited_mage_house_flag
+			}
+		}
+	}
+}

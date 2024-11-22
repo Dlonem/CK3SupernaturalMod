@@ -1175,7 +1175,7 @@ magic_ev5.12 = {
 			}
 		}
 		custom_tooltip = artifacts_searching_tt_positive_medium
-		scope:activity = { activity_special_type_progression_medium = yes }
+		scope:activity = { activity_special_type_progression_major = yes }
 	}
 }
 
@@ -1352,6 +1352,9 @@ magic_ev5.14 = {
 		NOT = {
 			has_character_flag = observed_by_whunters
 		}
+	}
+	cooldown = {
+		years = 5
 	}
 	option = {
 		name = ev5.14.0.a
@@ -2185,10 +2188,20 @@ magic_ev5.24 = {
 				root.location.county = {
 					add_county_modifier = {
 						modifier = uncontrolled_urban_fires_modifier
-						years = 5
+						years = 4
 					}
-					change_county_control = massive_county_control_loss
-					change_development_progress = major_development_progress_loss
+					change_county_control = major_county_control_loss
+					change_development_progress = medium_development_progress_loss
+				}
+			}
+			if = {
+				limit = {
+					exists = root.location
+				}
+				root.location = {
+					every_army_in_location = {
+						deplete_army_by_percentage = 0.33
+					}
 				}
 			}
 		}
@@ -2632,8 +2645,8 @@ magic_ev5.28 = {
 		else_if = {
 			limit = {
 				has_character_flag = md_winner
-				var:dspell < 14
-				var:pclash < 14
+				var:dspell < 20
+				var:pclash < 20
 			}
 			if = {
 				limit = {
@@ -2654,8 +2667,8 @@ magic_ev5.28 = {
 			limit = {
 				has_character_flag = md_loser
 				scope:char2 = {
-					var:dspell < 14
-					var:pclash < 14
+					var:dspell < 20
+					var:pclash < 20
 				}
 			}
 			if = {
@@ -5065,7 +5078,7 @@ magic_ev5.28 = {
 		name = ev5.28.0.z2
 		trigger = {
 			has_character_flag = md_winner
-			var:dspell < 14
+			var:dspell < 20
 		}
 		add_proper_prize_for_md_winner_effect = yes
 		add_dread = medium_dread_gain
@@ -5152,7 +5165,7 @@ magic_ev5.28 = {
 		name = ev5.28.0.z3
 		trigger = {
 			has_character_flag = md_winner
-			var:dspell < 14
+			var:dspell < 20
 			scope:char2 = {
 				any_character_artifact = {
 					has_variable=magic1
@@ -5214,7 +5227,7 @@ magic_ev5.28 = {
 		name = ev5.28.0.z3b
 		trigger = {
 			has_character_flag = md_winner
-			var:dspell < 14
+			var:dspell < 20
 			any_character_war = {
 				OR = {
 					AND = {
@@ -5283,7 +5296,7 @@ magic_ev5.28 = {
 		name = ev5.28.0.z3bb
 		trigger = {
 			has_character_flag = md_winner
-			var:dspell < 14
+			var:dspell < 20
 			culture = {
 				has_cultural_tradition = mage_rulership_tradition
 			}
@@ -6350,6 +6363,7 @@ magic_ev5.34 = {
 		animation = personality_bold
 	}
 	trigger = {
+		is_landed_or_landless_administrative = yes
 		NOT = {
 			any_living_character = {
 				exists = house
@@ -6960,6 +6974,7 @@ magic_ev5.44 = {
 	lower_right_portrait = scope:rrruler
 	immediate = {
 		random_neighboring_top_liege_realm_owner = {
+			limit = { NOT = { THIS = ROOT } }
 			save_scope_as = rrruler
 		}
 		if = {
@@ -6969,6 +6984,7 @@ magic_ev5.44 = {
 				}
 			}
 			random_neighboring_and_across_water_realm_same_rank_owner = {
+				limit = { NOT = { THIS = ROOT } }
 				save_scope_as = rrruler
 			}
 		}
@@ -6979,6 +6995,7 @@ magic_ev5.44 = {
 				}
 			}
 			random_neighboring_and_across_water_top_liege_realm_owner = {
+				limit = { NOT = { THIS = ROOT } }
 				save_scope_as = rrruler
 			}
 		}
@@ -6989,7 +7006,13 @@ magic_ev5.44 = {
 				}
 			}
 			liege = {
-				save_scope_as = rrruler
+				if = {
+					limit = {
+						exists = this
+						NOT = { THIS = ROOT }
+					}
+					save_scope_as = rrruler
+				}
 			}
 		}
 		if = {
@@ -6999,6 +7022,42 @@ magic_ev5.44 = {
 				}
 			}
 			random_vassal_or_below = {
+				limit = { NOT = { THIS = ROOT } }
+				save_scope_as = rrruler
+			}
+		}
+		if = {
+			limit = {
+				NOT = {
+					exists = scope:rrruler
+				}
+				#is_landed = yes
+				#is_landless_administrative = yes
+				is_landless_adventurer = yes
+			}
+			location = {
+				random_character_in_location = {
+					limit = {
+						NOT = { THIS = ROOT }
+						#1030_appropriate_noble_trigger = yes
+						is_landed_or_landless_administrative = yes	
+						is_adult = yes	
+					}
+					save_scope_as = rrruler
+				}
+			}
+		}
+		if = {
+			limit = {
+				NOT = {
+					exists = scope:rrruler
+				}
+			}
+			random_ruler = {
+				limit = {
+					NOT = { THIS = ROOT }
+					in_diplomatic_range = ROOT
+				}
 				save_scope_as = rrruler
 			}
 		}
@@ -8115,7 +8174,7 @@ magic_ev5.59 = {
 		}
 		scope:demon = {
 			set_sexuality = bisexual
-			give_witch_secret_or_trait_effect = yes
+			give_witch_secret_or_trait_effect2 = yes
 			add_character_flag = abraxas
 			add_trait_xp = {
 				trait = source
@@ -8266,7 +8325,7 @@ magic_ev5.60 = {
 					}
 				}
 				random_courtier = {
-					add_trait = demon
+					make_demon_effect = yes
 					add_trait = source
 					set_source4demon = yes
 				}

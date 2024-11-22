@@ -130,16 +130,18 @@
 			#}
 			#mark_as_black_magic_caster = yes
 			send_message_4_magic_sense_effect = yes
-			hidden_effect = {
-				
-			}
-			send_interface_message = {
-				type = event_toast_effect_neutral
-				title = cast_curse
-				desc = "send_interface_message_text"
-				left_icon = scope:actor
-				right_icon = scope:recipient
-				custom_tooltip = use_magic_custom_tooltip
+			
+			#send_interface_message = {
+			#	type = event_toast_effect_neutral
+			#	title = cast_curse
+			#	desc = "send_interface_message_text"
+			#	left_icon = scope:actor
+			#	right_icon = scope:recipient
+			#	
+			#	
+			#}
+
+			custom_tooltip = use_magic_custom_tooltip
 				#tooltip="tooltip0"
 				stress_impact = {
 					compassionate = medium_stress_impact_gain
@@ -165,8 +167,6 @@
 					}
 					
 				}
-				
-			}
 		}
 	}
 	
@@ -398,7 +398,7 @@ magic_domination = {
 				right_icon = scope:recipient
 				custom_tooltip = use_magic_custom_tooltip
 				gain_sc_xp1_effect = yes
-
+				custom_tooltip = command_minion_interaction_unlocked_ct
 				stress_impact = {
 					compassionate = medium_stress_impact_gain
 					honest = medium_stress_impact_gain
@@ -535,44 +535,110 @@ magic_healing = {
 	is_shown = {
 		#NOT = { scope:recipient = scope:actor }
 		scope:actor = {
-			has_character_flag = healing_spell_flag
+			can_use_healing_spell = yes
 			is_imprisoned = no
 			NOT = {
 				has_character_flag = abdul_dude
 			}
 		}
-		scope:recipient = {
-			OR = {
-				has_trait = ill
-				has_trait = pneumonic
-				has_trait = great_pox
-				has_trait = early_great_pox
-				has_trait = lovers_pox
-				has_trait = leper
-				has_trait = wounded_1
-				has_trait = wounded_2
-				has_trait = wounded_3
-				has_trait = maimed
-				has_trait = infirm
-				has_trait = incapable
-				has_trait = gout_ridden
-				has_trait = consumption
-				has_trait = cancer
-				has_trait = typhus
-				has_trait = bubonic_plague
-				has_trait = smallpox
-				has_trait = sickly
-				has_trait = blind
-				has_trait = disfigured
-				has_character_modifier = chronic_headaches_modifier
-				has_character_modifier = infected_wound_modifier
-				has_character_modifier = gangrene_modifier
-				has_trait = measles
-				has_trait = dysentery
-				has_trait = ergotism
-				has_trait = scarred
+		OR = {
+			scope:recipient = {
+				OR = {
+					has_trait = ill
+					has_trait = pneumonic
+					has_trait = great_pox
+					has_trait = early_great_pox
+					has_trait = lovers_pox
+					has_trait = leper
+					has_trait = wounded_1
+					has_trait = wounded_2
+					has_trait = wounded_3
+					has_trait = maimed
+					has_trait = infirm
+					has_trait = incapable
+					has_trait = gout_ridden
+					has_trait = consumption
+					has_trait = cancer
+					has_trait = typhus
+					has_trait = bubonic_plague
+					has_trait = smallpox
+					has_trait = sickly
+					has_trait = blind
+					has_trait = disfigured
+					has_character_modifier = chronic_headaches_modifier
+					has_character_modifier = infected_wound_modifier
+					has_character_modifier = gangrene_modifier
+					has_trait = measles
+					has_trait = dysentery
+					has_trait = ergotism
+					has_trait = scarred
+				}
 			}
-		}	
+			AND = {
+				scope:actor = {
+					any_character_artifact = {
+						has_artifact_modifier = artifact_ring_of_life_modifier
+					}
+				}
+				scope:recipient = {
+					OR = {
+						has_trait = ill
+						has_trait = pneumonic
+						has_trait = great_pox
+						has_trait = early_great_pox
+						has_trait = lovers_pox
+						has_trait = leper
+						has_trait = wounded_1
+						has_trait = wounded_2
+						has_trait = wounded_3
+						has_trait = maimed
+						has_trait = infirm
+						has_trait = incapable
+						has_trait = gout_ridden
+						has_trait = consumption
+						has_trait = cancer
+						has_trait = typhus
+						has_trait = bubonic_plague
+						has_trait = smallpox
+						has_trait = sickly
+						has_trait = blind
+						has_trait = disfigured
+						has_character_modifier = chronic_headaches_modifier
+						has_character_modifier = infected_wound_modifier
+						has_character_modifier = gangrene_modifier
+						has_trait = measles
+						has_trait = dysentery
+						has_trait = ergotism
+						has_trait = scarred
+						has_trait = depressed_genetic
+						has_trait = lunatic_genetic
+						has_trait = beauty_bad_1
+						has_trait = beauty_bad_2
+						has_trait = beauty_bad_3
+						has_trait = intellect_bad_1
+						has_trait = intellect_bad_2
+						has_trait = intellect_bad_3
+						has_trait = physique_bad_1
+						has_trait = physique_bad_2
+						has_trait = physique_bad_3
+						has_trait = clubfooted
+						has_trait = hunchbacked
+						has_trait = lisping
+						has_trait = stuttering
+						has_trait = dwarf
+						has_trait = spindly
+						has_trait = scaly
+						has_trait = wheezing
+						has_trait = infertile
+						has_trait = dull
+						has_trait = weak
+						has_trait = inbred
+						has_trait = one_legged
+					}
+				}
+			}
+		}
+		
 	}
 	is_valid_showing_failures_only = {
 		scope:actor = {
@@ -657,9 +723,18 @@ magic_healing = {
 			}
 		}
 		scope:recipient = {
-					
 					full_healing_effect = yes
-					if = {	limit = {	has_trait = scarred	}
+					if = {
+						limit = {
+							scope:actor = {
+								any_character_artifact = {
+									has_artifact_modifier = artifact_ring_of_life_modifier
+								}
+							}
+						}
+						extra_healing_effect = yes
+					}
+					if = {	limit = {	scope:magic_healing_removes_scars = yes	}
 						remove_trait = scarred
 					}
 					if = {
@@ -673,6 +748,16 @@ magic_healing = {
 						}
 					}
 		}
+	}
+	send_options_exclusive = no
+	send_option = {
+		is_shown = {
+			scope:recipient = {
+				has_trait = scarred
+			}
+		}
+		flag = magic_healing_removes_scars
+		localization = MAGIC_HEALING_SCARS
 	}
 	auto_accept = yes
 	ai_targets = {
@@ -1751,23 +1836,14 @@ use_singularity = {
 	is_shown = {
 		NOT = { scope:recipient = scope:actor }
 		scope:actor = {
-			OR = {
-				AND = {
-					any_character_artifact = {
-						has_variable = singularity
-						NOT = {
-							has_variable = singularity_sleeping
-						}
-					}
-					has_character_flag = singularity_solved2
-				}
-				AND = {
-					any_character_artifact = {
-						has_variable = singularity2
-					}
-					has_trait = archmage
+			any_character_artifact = {
+				has_variable = singularity
+				OR = {
+					has_artifact_modifier = singularity_modifier5
+					has_artifact_modifier = singularity_modifierX
 				}
 			}
+			has_trait = archmage
 			is_imprisoned = no
 		}
 		scope:recipient = {
@@ -1825,63 +1901,122 @@ use_singularity = {
 		}
 		
 		custom_tooltip = use_singularity_ct
+		custom_tooltip = use_singularity_agains_army_ct
 		scope:target.title_province = {
 			add_province_modifier = {
 				modifier = magical_radiation_modifier
 				years = 50
+			}
+			if = {
+				limit = {
+					NOT = {
+						has_province_modifier = magic_damaged_walls_modifier
+					}
+				}
+				add_province_modifier = {
+					modifier = magic_damaged_walls_modifier
+					years = 10
+				}
 			}
 		}
 		#custom_tooltip = use_singularity_ct2
 		
 		
 		
-		hidden_effect = {
+		hidden_effect_new_object = {
+			scope:target.title_province = {
+				every_army_in_location = {
+					deplete_army_by_percentage = 0.99
+				}
+				every_character_in_location = {
+					limit = {
+						exists = location
+						location = scope:target.title_province
+						has_full_magic_prot_trigger = no
+					}
+					random_list = {
+						80 = {
+							death = {
+								death_reason = death_murder
+								killer = scope:actor
+							}
+						}
+						5 = {
+							add_trait = incapable
+						}
+						5 = {
+							add_trait = cancer
+							add_trait = wounded_2
+							add_trait = infertile
+						}
+						3 = {
+							add_trait = cancer
+							add_trait = wounded_1
+							add_trait = disfigured
+							add_trait = infertile
+						}
+						2 = {
+							add_trait = cancer
+							add_trait = wounded_1
+							add_trait = lunatic_1
+							add_trait = infertile
+						}
+						5 = {
+							add_trait = cancer
+							add_trait = wounded_1
+							add_trait = blind
+							add_trait = infertile
+						}
+					}
+				}
+			}
 			scope:actor = {
 				save_scope_as = magic_user
 				send_message_4all_magic_sense_effect = yes
 			}
-			every_living_character = {
-				limit = {
-					exists = location
-					location = scope:target.title_province
-					has_full_magic_prot_trigger = no
-				}
-				random_list = {
-					80 = {
-						death = {
-							death_reason = death_murder
-							killer = scope:actor
-						}
-					}
-					5 = {
-						add_trait = incapable
-					}
-					5 = {
-						add_trait = cancer
-						add_trait = wounded_2
-						add_trait = infertile
-					}
-					3 = {
-						add_trait = cancer
-						add_trait = wounded_1
-						add_trait = disfigured
-						add_trait = infertile
-					}
-					2 = {
-						add_trait = cancer
-						add_trait = wounded_1
-						add_trait = lunatic_1
-						add_trait = infertile
-					}
-					5 = {
-						add_trait = cancer
-						add_trait = wounded_1
-						add_trait = blind
-						add_trait = infertile
-					}
-				}
-				
-			}
+			
+			#every_living_character = {
+			#	limit = {
+			#		exists = location
+			#		location = scope:target.title_province
+			#		has_full_magic_prot_trigger = no
+			#	}
+			#	random_list = {
+			#		80 = {
+			#			death = {
+			#				death_reason = death_murder
+			#				killer = scope:actor
+			#			}
+			#		}
+			#		5 = {
+			#			add_trait = incapable
+			#		}
+			#		5 = {
+			#			add_trait = cancer
+			#			add_trait = wounded_2
+			#			add_trait = infertile
+			#		}
+			#		3 = {
+			#			add_trait = cancer
+			#			add_trait = wounded_1
+			#			add_trait = disfigured
+			#			add_trait = infertile
+			#		}
+			#		2 = {
+			#			add_trait = cancer
+			#			add_trait = wounded_1
+			#			add_trait = lunatic_1
+			#			add_trait = infertile
+			#		}
+			#		5 = {
+			#			add_trait = cancer
+			#			add_trait = wounded_1
+			#			add_trait = blind
+			#			add_trait = infertile
+			#		}
+			#	}
+			#	
+			#}
 			every_ruler = {
 				limit = {
 					is_ai = no
@@ -3331,6 +3466,14 @@ command_minion_interaction = {
 					}
 					else_if = {
 						limit = {
+							scope:command_minion_patron = yes
+						}
+						scope:actor = {
+							add_contact = scope:recipient
+						}
+					}
+					else_if = {
+						limit = {
 							scope:command_minion_prisoners = yes
 						}
 						scope:recipient = {
@@ -3554,6 +3697,21 @@ command_minion_interaction = {
 		}
 		flag = command_minion_prisoners
 		localization = COMMAND_MINION_O8
+	}
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				is_landless_adventurer = yes
+			}
+			scope:recipient = {
+				is_landed_or_landless_administrative = yes
+				NOT = {
+					is_contact_of = root
+				}
+			}
+		}
+		flag = command_minion_patron
+		localization = COMMAND_MINION_O9
 	}
 	ai_accept = {
 		base = 50
@@ -5358,6 +5516,7 @@ firestorm_spell = {
 				scope:recipient = {
 					custom_tooltip = fire_storm_spell_ct0
 					custom_tooltip = fire_storm_spell_ct2
+					custom_tooltip = fire_storm_spell_ct3
 					if = {
 						limit = {
 							OR = {
@@ -5581,21 +5740,25 @@ mana_siphon_spell = {
 						compassionate = major_stress_gain
 					}
 					gain_standard_ps_effect = yes
-					add_2_magic_potential = yes
+					add_trait_xp = {
+						trait = source
+						track = magic_potential
+						value = 4
+					}
 					scope:recipient = {
 						add_stress = massive_stress_gain
 						spend_standard_ps_effect = yes
 						add_trait_xp = {
 							trait = source
 							track = magic_potential
-							value = -10
+							value = -4
 						}
 						if = {
 							limit = {
 								has_trait = maimed
 							}
 							random = {
-								chance = 20
+								chance = 50
 								death = {
 									death_reason = death_murder
 									killer = scope:actor
@@ -5671,26 +5834,30 @@ mana_siphon_spell = {
 			}
 		}
 		is_valid = {
-			scope:actor = {
-				custom_description = {
-					text = your_source_is_powerful
-					has_trait_xp = {
-						trait = source
-						track = magic_potential
-						value < 80
-					}
-				}
+			custom_description = {
+				text = your_smp_is_higher
+				scope:actor.my_smp_value <= scope:recipient.my_smp_value
 			}
-			scope:recipient = {
-				custom_description = {
-					text = target_source_is_too_weak
-					has_trait_xp = {
-						trait = source
-						track = magic_potential
-						value > 20
-					}
-				}
-			}
+			#scope:actor = {
+			#	custom_description = {
+			#		text = your_source_is_powerful
+			#		has_trait_xp = {
+			#			trait = source
+			#			track = magic_potential
+			#			value < 80
+			#		}
+			#	}
+			#}
+			#scope:recipient = {
+			#	custom_description = {
+			#		text = target_source_is_too_weak
+			#		has_trait_xp = {
+			#			trait = source
+			#			track = magic_potential
+			#			value > 20
+			#		}
+			#	}
+			#}
 		}
 		localization = MANA_SIPHON_O3
 	}
@@ -7596,7 +7763,7 @@ soul_transfer_spell = {
 								any_secret = { secret_type = secret_witch }
 							}
 						}
-						give_witch_secret_or_trait_effect = yes
+						give_witch_secret_or_trait_effect2 = yes
 					}
 				}
 				transfer_personality_to_recipient_effect = yes
@@ -7651,10 +7818,7 @@ aura_reading = {
 	is_shown = {
 		scope:actor = {
 			is_imprisoned = no
-			OR = {
-				has_character_modifier = master_magic_modifier
-				has_character_flag = aura_reading_spell
-			}
+			has_access_to_aura_reading_trigger = yes
 		}
 	}
 	is_valid_showing_failures_only = {
@@ -7678,6 +7842,7 @@ aura_reading = {
 					can_spend_standard_ps_trigger = yes
 					OR = {
 						has_character_modifier = master_magic_modifier
+						has_character_modifier = magic_eyes_modifier
 						scope:actor = scope:recipient
 					}
 				}
@@ -7705,16 +7870,18 @@ aura_reading = {
 			if = {
 				limit = {
 					scope:actor = scope:recipient
-					NOT = {
+					NOR = {
 						has_character_modifier = master_magic_modifier
+						has_character_modifier = magic_eyes_modifier
 					}
 				}
 				custom_tooltip = no_cost_4_this_spell_ct
 			}
 			else_if = {
 				limit = {
-					NOT = {
+					NOR = {
 						has_character_modifier = master_magic_modifier
+						has_character_modifier = magic_eyes_modifier
 					}
 				}
 				spend_standard_ps_effect = yes
@@ -7736,6 +7903,7 @@ aura_reading = {
 						NOR = {
 							scope:actor = scope:recipient
 							has_character_modifier = master_magic_modifier
+							has_character_modifier = magic_eyes_modifier
 						}
 					}
 					metamagic_effect = yes
@@ -8053,4 +8221,949 @@ cyro_proposal_interaction = {
 		}
 	}
 	auto_accept = no
+}
+
+tornado_spell = {
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			has_character_flag = tornado_spell_flag
+			is_imprisoned = no
+		}	
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = is_incapable_custom
+				NOT = { has_trait = incapable }
+			}
+			custom_description = {
+				text = is_on_mage_duel_custom
+				NOT = {	has_variable = pclash	}
+			}
+		}
+		
+		scope:actor = {
+			custom_description = {
+				text = power_needed_custom
+				OR = {
+					can_spend_standard_ps_trigger = yes
+					AND = {
+						can_spend_standard_ps_trigger = no
+						has_trait = yaga
+					}
+				}
+				
+			}
+		}
+	}
+	icon = icon_magic
+	common_interaction = no
+	interface_priority = 90
+	popup_on_receive = no
+	category = interaction_category_hostile
+
+	#cooldown_against_recipient = { years = 5 } 
+	#cooldown = { years = 1 }
+	cooldown = { days = 1 } 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = no
+	#hidden = yes
+	
+	on_accept = {
+		scope:actor = {
+			#set_spell_id = { ID = 30 }
+			#save_scope_as = magic_user
+			#send_message_4_magic_sense_effect = yes
+			
+			custom_tooltip = use_magic_custom_tooltip
+			show_as_tooltip = {
+				gain_cm_xp1_effect = yes
+				spend_standard_ps_effect = yes
+			}
+			
+			
+			stress_impact = {
+				compassionate = major_stress_impact_gain
+			}
+			scope:recipient = {
+				custom_tooltip = tornado_spell_ct
+			}
+			hidden_effect = {
+				trigger_event = magic_ev9.65
+			}
+			#send_interface_message = {
+			#	type = event_toast_effect_neutral
+			#	title = tornado_spell
+			#	#desc = "send_interface_message_text"
+			#	left_icon = scope:actor
+			#	right_icon = scope:recipient
+			#	custom_tooltip = use_magic_custom_tooltip
+			#	show_as_tooltip = {
+			#		gain_cm_xp1_effect = yes
+			#		spend_standard_ps_effect = yes
+			#	}
+			#	
+			#	
+			#	stress_impact = {
+			#		compassionate = major_stress_impact_gain
+			#	}
+			#
+			#	scope:recipient = {
+			#		custom_tooltip = tornado_spell_ct
+			#	}
+			#	hidden_effect = {
+			#		trigger_event = magic_ev9.65
+			#	}
+			#}
+		}
+	}
+	
+	auto_accept = yes
+	ai_potential = {
+		NOT = {
+			has_trait = compassionate
+		}
+	}
+	
+	ai_targets = {
+		ai_recipients = war_enemies
+	}
+
+	ai_frequency = 12
+
+	ai_will_do = {
+		base = 0
+		
+		modifier = {
+			add = 100
+			scope:recipient = {
+				is_at_war_with = scope:actor
+			}
+		}
+		modifier = {
+			add = -200
+			scope:recipient = {
+				OR = {
+					has_relation_lover = scope:actor
+					has_relation_friend = scope:actor
+					has_relation_best_friend = scope:actor
+					has_relation_soulmate = scope:actor
+					scope:actor.location = scope:recipient.location
+				}
+			}
+		}
+	}
+}
+
+
+drink_magic_potion_interaction = {
+	is_shown = {
+		scope:recipient = scope:actor
+		scope:actor = {
+			is_imprisoned = no
+			any_character_artifact = {
+				OR = {
+					has_variable = pot1
+					has_variable = pot2
+					has_variable = pot3
+					has_variable = pot4
+					has_variable = pot5
+					has_variable = pot6
+					has_variable = pot7
+					has_variable = pot8
+					has_variable = pot9
+				}
+			}
+		}	
+	}
+	
+	icon = icon_elixir
+	common_interaction = yes
+	interface_priority = 90
+	category = interaction_category_friendly
+	desc = drink_magic_potion_interaction_desc
+
+	cooldown = { 
+		days = drink_magic_potion_cooldown_value
+	} 
+	ignores_pending_interaction_block = yes
+	use_diplomatic_range = no
+	#hidden = yes
+	
+	on_accept = {
+		scope:actor = {
+			send_interface_message = {
+				type = event_toast_effect_neutral
+				title = drink_magic_potion_interaction
+				desc = "send_interface_message_text"
+				left_icon = scope:actor
+				if = {
+					limit = {
+						scope:use_pot1 = yes
+					}
+					hidden_effect = {
+						add_character_flag = {
+							flag = use_recently_pot1_flag
+							days = 1
+						}
+					}
+					if = { limit = { has_trait = disfigured }
+						remove_trait = disfigured
+					}
+					if = { limit = { has_trait = inbred }
+						remove_trait = inbred
+					}
+					if = { limit = { has_trait = impotent }
+						remove_trait = impotent
+					}
+					if = { limit = { has_trait = bleeder }
+						remove_trait = bleeder
+					}
+					if = { limit = { has_trait = wheezing }
+						remove_trait = wheezing
+					}
+					if = { limit = { has_trait = infertile }
+						remove_trait = infertile
+					}
+					if = { limit = { has_trait = one_legged }
+						remove_trait = one_legged
+					}
+					if = { limit = { has_trait = one_eyed }
+						remove_trait = one_eyed
+					}
+					if = { limit = { has_trait = lunatic_genetic }
+						remove_trait = lunatic_genetic
+					}
+					if = { limit = { has_trait = lunatic_1 }
+						remove_trait = lunatic_1
+					}
+					if = { limit = { has_trait = ill }
+						remove_trait = ill
+					}
+					if = { limit = { has_trait = pneumonic }
+						remove_trait = pneumonic
+					}
+					if = { limit = { has_trait = great_pox }
+						remove_trait = great_pox
+					}
+					if = { limit = { has_trait = early_great_pox }
+						remove_trait = early_great_pox
+					}
+					if = { limit = { has_trait = lovers_pox }
+						remove_trait = lovers_pox
+					}
+					if = { limit = { has_trait = leper }
+						remove_trait = leper
+					}
+					if = { limit = { has_trait = wounded_1 }
+						remove_trait = wounded_1
+					}
+					if = { limit = { has_trait = wounded_2 }
+						remove_trait = wounded_2
+					}
+					if = { limit = { has_trait = wounded_3 }
+						remove_trait = wounded_3
+					}
+					if = { limit = { has_trait = maimed }
+						remove_trait = maimed
+					}
+					if = { limit = { has_trait = infirm }
+						remove_trait = infirm
+					}
+					if = { limit = { has_trait = incapable }
+						remove_trait = incapable
+					}
+					if = { limit = { has_trait = gout_ridden }
+						remove_trait = gout_ridden
+					}
+					if = { limit = { has_trait = consumption }
+						remove_trait = consumption
+					}
+					if = { limit = { has_trait = cancer }
+						remove_trait = cancer
+					}
+					if = { limit = { has_trait = typhus }
+						remove_trait = typhus
+					}
+					if = { limit = { has_trait = bubonic_plague }
+						remove_trait = bubonic_plague
+					}
+					if = { limit = { has_trait = smallpox }
+						remove_trait = smallpox
+					}
+					if = { limit = { has_trait = sickly }
+						remove_trait = sickly
+					}
+					if = { limit = { has_trait = blind }
+						remove_trait = blind
+					}
+					if = { limit = { has_character_modifier = magic_eyes_modifier }
+						remove_character_modifier = magic_eyes_modifier
+					}
+					#if = { limit = { has_character_modifier = magic_claws_modifier }
+					#	remove_character_modifier = magic_claws_modifier
+					#}
+					if = { limit = { has_character_modifier = chronic_headaches_modifier }
+						remove_character_modifier = chronic_headaches_modifier
+					}
+					if = { limit = { has_character_modifier = infected_wound_modifier }
+						remove_character_modifier = infected_wound_modifier
+					}
+					if = { limit = { has_character_modifier = gangrene_modifier }
+						remove_character_modifier = gangrene_modifier
+					}
+					if = {	limit = {	has_trait = measles	}
+						remove_trait = measles
+					}
+					if = {	limit = {	has_trait = dysentery	}
+						remove_trait = dysentery
+					}
+					if = {	limit = {	has_trait = ergotism	}
+						remove_trait = ergotism
+					}
+					if = {	limit = {	has_trait = scarred	}
+						remove_trait = scarred
+					}
+					random_character_artifact = {
+						limit = {
+							has_variable = pot1
+						}
+						destroy_artifact = this
+					}
+				}
+				else_if = {
+					limit = {
+						scope:use_pot2 = yes
+					}
+					hidden_effect = {
+						add_character_flag = {
+							flag = use_recently_pot2_flag
+							days = 1
+						}
+					}
+					gain_standard_ps_effect = yes
+					random_character_artifact = {
+						limit = {
+							has_variable = pot2
+						}
+						destroy_artifact = this
+					}
+				}
+				else_if = {
+					limit = {
+						scope:use_pot3 = yes
+					}
+					hidden_effect = {
+						add_character_flag = {
+							flag = use_recently_pot3_flag
+							years = 1
+						}
+					}
+					random_list = {
+						10 = {
+							if = {
+								limit = {
+									has_trait = physique_bad_3
+								}
+								remove_trait = physique_bad_3
+							}
+							else_if = {
+								limit = {
+									has_trait = physique_bad_2
+								}
+								remove_trait = physique_bad_2
+							}
+							else_if = {
+								limit = {
+									has_trait = physique_bad_1
+								}
+								remove_trait = physique_bad_1
+							}
+							else_if = {
+								limit = {
+									has_trait = physique_good_1
+								}
+								remove_trait = physique_good_1
+							}
+							else_if = {
+								limit = {
+									has_trait = physique_good_2
+								}
+								remove_trait = physique_good_2
+							}
+							add_trait_force_tooltip = physique_good_3
+							add_trait_force_tooltip = strong
+							add_trait_force_tooltip = athletic
+							add_prowess_skill = 3
+						}
+						50 = {
+							if = {
+								limit = {
+									has_trait = physique_bad_3
+								}
+								remove_trait = physique_bad_3
+							}
+							else_if = {
+								limit = {
+									has_trait = physique_bad_2
+								}
+								remove_trait = physique_bad_2
+							}
+							else_if = {
+								limit = {
+									has_trait = physique_bad_1
+								}
+								remove_trait = physique_bad_1
+							}
+							else_if = {
+								limit = {
+									has_trait = physique_good_1
+								}
+								remove_trait = physique_good_1
+							}
+							add_trait_force_tooltip = physique_good_2
+							add_trait_force_tooltip = strong
+							if = {
+								limit = {
+									has_trait = fecund
+								}
+								remove_trait = fecund
+							}
+							add_trait_force_tooltip = infertile
+							add_prowess_skill = 2
+						}
+						25 = {
+							if = {
+								limit = {
+									has_trait = physique_bad_3
+								}
+								remove_trait = physique_bad_3
+							}
+							else_if = {
+								limit = {
+									has_trait = physique_bad_2
+								}
+								remove_trait = physique_bad_2
+							}
+							else_if = {
+								limit = {
+									has_trait = physique_bad_1
+								}
+								remove_trait = physique_bad_1
+							}
+
+							add_trait_force_tooltip = physique_good_1
+							add_trait_force_tooltip = strong
+							if = {
+								limit = {
+									has_trait = fecund
+								}
+								remove_trait = fecund
+							}
+							add_trait_force_tooltip = infertile
+							add_prowess_skill = 1
+						}
+						10 = {
+							if = {
+								limit = {
+									has_trait = physique_bad_3
+								}
+								remove_trait = physique_bad_3
+							}
+							else_if = {
+								limit = {
+									has_trait = physique_bad_2
+								}
+								remove_trait = physique_bad_2
+							}
+							else_if = {
+								limit = {
+									has_trait = physique_bad_1
+								}
+								remove_trait = physique_bad_1
+							}
+							add_trait_force_tooltip = physique_good_1
+							add_trait_force_tooltip = strong
+							if = {
+								limit = {
+									has_trait = fecund
+								}
+								remove_trait = fecund
+							}
+							add_trait_force_tooltip = infertile
+							add_trait_force_tooltip = disfigured
+						}
+						5 = {
+							if = {
+								limit = {
+									has_trait = physique_good_3
+								}
+								remove_trait = physique_good_3
+							}
+							else_if = {
+								limit = {
+									has_trait = physique_good_2
+								}
+								remove_trait = physique_good_2
+							}
+							else_if = {
+								limit = {
+									has_trait = physique_good_1
+								}
+								remove_trait = physique_good_1
+							}
+							add_trait_force_tooltip = physique_bad_1
+							add_trait_force_tooltip = weak
+							if = {
+								limit = {
+									has_trait = fecund
+								}
+								remove_trait = fecund
+							}
+							add_trait_force_tooltip = infertile
+							add_trait_force_tooltip = disfigured
+							add_prowess_skill = -1
+						}
+					}
+					random_character_artifact = {
+						limit = {
+							has_variable = pot3
+						}
+						destroy_artifact = this
+					}
+				}
+				else_if = {
+					limit = {
+						scope:use_pot4 = yes
+					}
+					hidden_effect = {
+						add_character_flag = {
+							flag = use_recently_pot4_flag
+							days = 1
+						}
+					}
+					custom_tooltip = drink_pot4_decision_ct
+					random_character_artifact = {
+						limit = {
+							has_variable = pot4
+							}
+						destroy_artifact = this
+					}
+					trigger_event = magic_ev2.42
+				}
+				else_if = {
+					limit = {
+						scope:use_pot5 = yes
+					}
+					hidden_effect = {
+						add_character_flag = {
+							flag = use_recently_pot5_flag
+							years = 3
+						}
+					}
+					hidden_effect = {
+						set_age = new_young_age_value
+					}
+					custom_tooltip = drink_pot5_decision_ct
+					random_character_artifact = {
+						limit = {
+							has_variable = pot5
+						}
+						destroy_artifact = this
+					}
+				}
+				else_if = {
+					limit = {
+						scope:use_pot6 = yes
+					}
+					hidden_effect = {
+						add_character_flag = {
+							flag = use_recently_pot6_flag
+							months = 24
+						}
+					}
+					if = {
+						limit = {
+							has_character_modifier = pot6_modifier
+						}
+						remove_character_modifier = pot6_modifier
+					}
+					add_character_modifier = {
+						modifier = pot6_modifier
+						months = 24
+					}
+					random_character_artifact = {
+						limit = {
+							has_variable = pot6
+							}
+						destroy_artifact = this
+					}
+				}
+				else_if = {
+					limit = {
+						scope:use_pot7 = yes
+					}
+					hidden_effect = {
+						add_character_flag = {
+							flag = use_recently_pot7_flag
+							months = 6
+						}
+					}
+					if = {
+						limit = {
+							NOT = {
+								has_character_modifier = mind_reader_modifier
+							}
+						}
+						add_character_modifier = {
+							modifier = mind_reader_modifier
+							months = 6
+						}
+					}
+					custom_tooltip = drink_pot7_decision_ct
+					hidden_effect = {
+						add_character_flag = {
+							flag = mind_reading_elixir
+							months = 6
+						}
+					}
+					
+					random_character_artifact = {
+						limit = {
+							has_variable = pot7
+							}
+						destroy_artifact = this
+					}
+				}
+				else_if = {
+					limit = {
+						scope:use_pot8 = yes
+					}
+					hidden_effect = {
+						add_character_flag = {
+							flag = use_recently_pot8_flag
+							months = 12
+						}
+					}
+					hidden_effect = {
+						if = {
+							limit = {
+								has_character_modifier = alchemical_enhancement
+							}
+							remove_character_modifier = alchemical_enhancement
+						}
+					}
+					add_character_modifier = {
+						modifier = alchemical_enhancement
+						months = 12
+					}
+					random_character_artifact = {
+						limit = {
+							has_variable = pot8
+							}
+						destroy_artifact = this
+					}
+				}
+				else_if = {
+					limit = {
+						scope:use_pot9 = yes
+					}
+					hidden_effect = {
+						add_character_flag = {
+							flag = use_recently_pot9_flag
+							months = 12
+						}
+					}
+					hidden_effect = {
+						if = {
+							limit = {
+								has_character_modifier = elixir_learning_modifier
+							}
+							remove_character_modifier = elixir_learning_modifier
+						}
+					}
+					add_character_modifier = {
+						modifier = elixir_learning_modifier
+						months = 12
+					}
+					
+					random_character_artifact = {
+						limit = {
+							has_variable = pot9
+							}
+						destroy_artifact = this
+					}
+				}
+				else = {
+					custom_tooltip = no_potion_right_now
+				}
+			}
+		}
+	}
+	can_send = {
+		custom_description = {
+			text = no_potion_right_now_custom
+			OR = {
+				scope:use_pot1 = yes
+				scope:use_pot2 = yes
+				scope:use_pot3 = yes
+				scope:use_pot4 = yes
+				scope:use_pot5 = yes
+				scope:use_pot6 = yes
+				scope:use_pot7 = yes
+				scope:use_pot8 = yes
+				scope:use_pot9 = yes
+			}
+		}
+		
+	}
+	#options_heading = command_minion_option_title
+	send_options_exclusive = yes
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				any_character_artifact = {
+					has_variable = pot1
+				}
+			}
+		}
+		is_valid = {
+			scope:actor = {
+				custom_description = {
+					text = potion_used_too_often
+					NOT = {
+						has_character_flag = use_recently_pot1_flag
+					}
+				}
+				custom_description = {
+					text = you_are_healthy
+					OR = {
+						has_trait = ill
+						has_trait = pneumonic
+						has_trait = great_pox
+						has_trait = early_great_pox
+						has_trait = lovers_pox
+						has_trait = leper
+						has_trait = wounded_1
+						has_trait = wounded_2
+						has_trait = wounded_3
+						has_trait = maimed
+						has_trait = infirm
+						has_trait = incapable
+						has_trait = gout_ridden
+						has_trait = consumption
+						has_trait = cancer
+						has_trait = typhus
+						has_trait = bubonic_plague
+						has_trait = smallpox
+						has_trait = sickly
+						has_trait = blind
+						has_trait = lunatic_1
+						has_trait = lunatic_genetic
+						has_trait = one_eyed
+						has_trait = one_legged
+						has_trait = disfigured
+						has_trait = infertile
+						has_trait = bleeder
+						has_trait = wheezing
+						has_trait = impotent
+						has_trait = inbred
+						has_character_modifier = chronic_headaches_modifier
+						has_character_modifier = infected_wound_modifier
+						has_character_modifier = gangrene_modifier
+						has_trait = ergotism
+						has_trait = measles
+						has_trait = dysentery
+						has_trait = scarred
+					}
+				}
+			}
+		}
+		flag = use_pot1
+		localization = pot1
+	}
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				any_character_artifact = {
+					has_variable = pot2
+				}
+			}
+		}
+		is_valid = {
+			scope:actor = {
+				custom_description = {
+					text = potion_used_too_often
+					NOT = {
+						has_character_flag = use_recently_pot2_flag
+					}
+				}
+				custom_description = {
+					text = you_are_saturated
+					can_be_power_saturated_trigger = yes
+				}
+			}
+		}
+		flag = use_pot2
+		localization = pot2
+	}
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				any_character_artifact = {
+					has_variable = pot3
+				}
+			}
+		}
+		is_valid = {
+			scope:actor = {
+				custom_description = {
+					text = potion_used_too_often
+					NOT = {
+						has_character_flag = use_recently_pot3_flag
+					}
+				}
+				custom_description = {
+					text = you_are_herculean
+					NOT = {
+						has_trait = physique_good_3
+					}
+				}
+			}
+		}
+		flag = use_pot3
+		localization = pot3
+	}
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				any_character_artifact = {
+					has_variable = pot4
+				}
+			}
+		}
+		is_valid = {
+			scope:actor = {
+				custom_description = {
+					text = potion_used_too_often
+					NOT = {
+						has_character_flag = use_recently_pot4_flag
+					}
+				}
+			}
+		}
+		flag = use_pot4
+		localization = pot4
+	}
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				any_character_artifact = {
+					has_variable = pot5
+				}
+			}
+		}
+		is_valid = {
+			scope:actor = {
+				custom_description = {
+					text = potion_used_too_often
+					NOT = {
+						has_character_flag = use_recently_pot5_flag
+					}
+				}
+				custom_description = {
+					text = you_are_too_young
+					age > 21
+				}
+			}
+		}
+		flag = use_pot5
+		localization = pot5
+	}
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				any_character_artifact = {
+					has_variable = pot6
+				}
+			}
+		}
+		is_valid = {
+			scope:actor = {
+				custom_description = {
+					text = potion_used_too_often
+					NOT = {
+						has_character_flag = use_recently_pot6_flag
+					}
+				}
+			}
+		}
+		flag = use_pot6
+		localization = pot6
+	}
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				any_character_artifact = {
+					has_variable = pot7
+				}
+			}
+		}
+		is_valid = {
+			scope:actor = {
+				custom_description = {
+					text = potion_used_too_often
+					NOT = {
+						has_character_flag = use_recently_pot7_flag
+					}
+				}
+			}
+		}
+		flag = use_pot7
+		localization = pot7
+	}
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				any_character_artifact = {
+					has_variable = pot8
+				}
+			}
+		}
+		is_valid = {
+			scope:actor = {
+				custom_description = {
+					text = potion_used_too_often
+					NOT = {
+						has_character_flag = use_recently_pot8_flag
+					}
+				}
+			}
+		}
+		flag = use_pot8
+		localization = pot8
+	}
+	send_option = {
+		is_shown = {
+			scope:actor = {
+				any_character_artifact = {
+					has_variable = pot9
+				}
+			}
+		}
+		is_valid = {
+			scope:actor = {
+				custom_description = {
+					text = potion_used_too_often
+					NOT = {
+						has_character_flag = use_recently_pot9_flag
+					}
+				}
+			}
+		}
+		flag = use_pot9
+		localization = elixir_learning_modifier
+	}
+	auto_accept = yes
 }
