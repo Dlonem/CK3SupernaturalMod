@@ -85,6 +85,7 @@ has_basic_magic_prot_trigger = {
 		has_perk = mage_tower_p2_perk
 		has_trait = demon
 		has_trait = golem
+		has_trait = supernatural_hunter
 		has_character_modifier = aura_boost1_modifier
 		has_character_modifier = aura_boost2_modifier
 		any_equipped_character_artifact = {	has_variable = magic_ring	}
@@ -124,6 +125,7 @@ has_basic_magic_prot_trigger2 = {
 		has_perk = mage_tower_p2_perk
 		has_trait = demon
 		has_trait = golem
+		has_trait = supernatural_hunter
 		has_character_modifier = aura_boost1_modifier
 		has_character_modifier = aura_boost2_modifier
 		any_equipped_character_artifact = {	has_variable = magic_ring	}
@@ -163,6 +165,7 @@ has_any_basic_magic_prot_trigger = {
 		has_perk = mage_tower_p2_perk
 		has_trait = demon
 		has_trait = golem
+		has_trait = supernatural_hunter
 		has_character_modifier = aura_boost1_modifier
 		has_character_modifier = aura_boost2_modifier
 		any_equipped_character_artifact = {	has_variable = magic_ring	}
@@ -205,6 +208,14 @@ can_use_banish_spell = {
 		}
 	}
 }
+can_use_healing_spell = {
+	OR = {
+		any_character_artifact = {
+			has_artifact_modifier = artifact_ring_of_life_modifier
+		}
+		has_character_flag = healing_spell_flag
+	}
+}
 has_full_magic_prot_trigger = {
 	OR = {
 		any_equipped_character_artifact = {	has_variable = dragon_scales	}
@@ -222,7 +233,15 @@ has_physical_contanct = {
 	OR = {
 		AND = {
 			OR = {
-				scope:actor.location = scope:recipient.location
+				AND = {
+					scope:actor = {
+						is_landed_or_landless_administrative = yes
+					}
+					scope:actor.location = scope:recipient.location
+				}
+				#scope:actor = {
+				#	has_contact = scope:recipient
+				#}
 				#scope:actor = {
 				#	is_legendary_mage_trigger = yes
 				#}
@@ -265,6 +284,14 @@ has_physical_contanct = {
 				scope:recipient = {
 					is_imprisoned_by = scope:actor
 				}
+				AND = {
+					scope:actor = { government_has_flag = government_is_landless_adventurer }
+					scope:recipient = { is_contact_of = scope:actor }
+					ep3_laamp_diplo_range_trigger = {
+						TARGET = scope:recipient
+						LAAMP = scope:actor
+					}
+				}
 			}
 			NOT = {
 				has_game_rule = unlimited_spells_range
@@ -277,7 +304,15 @@ has_physical_contanct2 = {
 	OR = {
 		AND = {
 			OR = {
-				scope:actor.location = scope:recipient.location
+				AND = {
+					scope:actor = {
+						is_landed_or_landless_administrative = yes
+					}
+					scope:actor.location = scope:recipient.location
+				}
+				#scope:actor = {
+				#	has_contact = scope:recipient
+				#}
 				scope:actor = {
 					has_relation_lover = scope:recipient
 				}
@@ -313,6 +348,14 @@ has_physical_contanct2 = {
 				}
 				scope:recipient = {
 					is_imprisoned_by = scope:actor
+				}
+				AND = {
+					scope:actor = { government_has_flag = government_is_landless_adventurer }
+					scope:recipient = { is_contact_of = scope:actor }
+					ep3_laamp_diplo_range_trigger = {
+						TARGET = scope:recipient
+						LAAMP = scope:actor
+					}
 				}
 			}
 			NOT = {
@@ -516,6 +559,12 @@ me_can_take_spells_option_trigger = {
 		NOT = {
 			has_character_flag = mana_siphon_flag
 		}
+		AND = {
+			NOT = {
+				has_character_flag = tornado_spell_flag
+			}
+			martial > 24
+		}
 	}
 }
 
@@ -529,6 +578,12 @@ me_have_unlocked_special_project = {
 			has_character_flag = me_golem_project
 			NOT = {
 				has_character_flag = me_golem_project_done
+			}
+		}
+		AND = {
+			has_character_flag = me_golem2_project
+			NOT = {
+				has_character_flag = me_golem2_project_done
 			}
 		}
 		AND = {
@@ -575,6 +630,24 @@ me_have_unlocked_special_project = {
 			has_character_flag = me_time_travel_project
 			NOT = {
 				has_character_flag = me_time_travel_project_done
+			}
+		}
+		AND = {
+			any_character_artifact = {
+				has_variable = singularity
+				OR = {
+					has_artifact_modifier = singularity_modifier2a
+					has_artifact_modifier = singularity_modifier1
+				}
+			}
+			OR = {
+				has_character_flag = me_as_project
+				any_character_artifact = {
+					has_variable = msscroll
+				}
+			}
+			NOT = {
+				has_character_flag = me_as_project_done
 			}
 		}
 	}
@@ -624,7 +697,7 @@ me_may_unlocks_special_project = {
 				has_character_flag = me_castle_project_done
 				has_character_flag = me_castle_project
 			}
-			is_landed_or_landless_administrative = yes
+			is_landed = yes
 		}
 		AND = {
 			NOR = {
@@ -633,10 +706,7 @@ me_may_unlocks_special_project = {
 			}
 			any_character_artifact = {
 				has_variable = singularity
-				NOR = {
-					has_variable = singularity_sleeping
-					has_variable = singularity2
-				}
+				has_artifact_modifier = singularity_modifier5
 			}
 		}
 		AND = {
@@ -661,6 +731,26 @@ me_may_unlocks_special_project = {
 			NOR = {
 				has_character_flag = me_time_travel_project_done
 				has_character_flag = me_time_travel_project
+			}
+		}
+		AND = {
+			NOR = {
+				has_character_flag = me_as_project_done
+				has_character_flag = me_as_project
+				any_character_artifact = {
+					has_variable = msscroll
+				}
+			}
+			OR = {
+				has_character_flag = me_as_project_may_be_random_flag
+				is_legendary_mage_trigger = yes
+			}
+			any_character_artifact = {
+				has_variable = singularity
+				OR = {
+					has_artifact_modifier = singularity_modifier2a
+					has_artifact_modifier = singularity_modifier1
+				}
 			}
 		}
 	}
@@ -701,5 +791,21 @@ may_unlock_time_travel_sp_trigger = {
 		any_culture_global = {
 			has_variable = has_time_traveler
 		}
+	}
+}
+can_use_tornado_spell_trigger = {
+	has_character_flag = tornado_spell_flag
+}
+is_or_will_be_a_demon_trigger = {
+	OR = {
+		has_trait = demon
+		has_trait = demon0
+	}
+}
+has_access_to_aura_reading_trigger = {
+	OR = {
+		has_character_modifier = master_magic_modifier
+		has_character_flag = aura_reading_spell
+		has_character_modifier = magic_eyes_modifier
 	}
 }

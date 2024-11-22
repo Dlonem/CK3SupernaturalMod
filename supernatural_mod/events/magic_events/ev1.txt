@@ -30,6 +30,16 @@ magic_ev.99 = {
 					NOT = {
 						any_character_artifact = { has_variable = magic1 }
 					}
+					trigger_if = {
+						limit = {
+							exists = house
+						}
+						house = {
+							NOT = {
+								has_variable = already_got_magic_art_flag
+							}
+						}
+					}
 				}
 			}
 			random_player = {
@@ -37,6 +47,24 @@ magic_ev.99 = {
 					#is_ai = no
 					NOT = {
 						any_character_artifact = { has_variable = magic1 }
+					}
+					trigger_if = {
+						limit = {
+							exists = house
+						}
+						house = {
+							NOT = {
+								has_variable = already_got_magic_art_flag
+							}
+						}
+					}
+				}
+				if = {
+					limit = {
+						exists = house
+					}
+					house = {
+						set_variable = already_got_magic_art_flag
 					}
 				}
 				random_list = {
@@ -297,7 +325,7 @@ magic_ev.1 = {
 			limit = {
 				is_ai = yes
 			}
-			give_witch_secret_or_trait_effect = yes
+			give_witch_secret_or_trait_effect2 = yes
 		}
 		hidden_effect = {
 			#fake magic sword trigger
@@ -418,10 +446,7 @@ magic_ev.98 = {
 			limit = {
 				is_ai = yes
 			}
-			add_secret = {
-				type = secret_witch
-				target = root
-			}
+			give_witch_secret_or_trait_effect2 = yes
 		}
 		#YAGA
 		hidden_effect = {
@@ -728,47 +753,57 @@ magic_ev.2 = {
 			}
 		}
 		add_trait = heresiarch
-		custom_tooltip = ev2.1.g_ct
 		custom_tooltip = ev2.1.g_ct2
-		hidden_effect = {
-			save_scope_as = dpriest
-			house = {
-				every_house_member = {
-					limit = {
-						is_ai = yes
-						NOR = {
-							THIS = ROOT
-							has_trait = witch
-							has_trait = witch_hunter
-							any_secret = { secret_type = secret_witch }
-							has_relation_rival = root
-							has_relation_nemesis = root
+		if = {
+			limit = {
+				is_landed_or_landless_administrative = yes
+			}
+			custom_tooltip = ev2.1.g_ct
+		
+			hidden_effect = {
+				save_scope_as = dpriest
+				house = {
+					every_house_member = {
+						limit = {
+							is_ai = yes
+							NOR = {
+								THIS = ROOT
+								has_trait = witch
+								has_trait = witch_hunter
+								has_trait = supernatural_hunter
+								any_secret = { secret_type = secret_witch }
+								has_relation_rival = root
+								has_relation_nemesis = root
+							}
+						}
+						random = {
+							chance = dark_priest_pers
+							trigger_event = {
+								id = magic_ev4.49
+								days = { 1 666 }
+							}
 						}
 					}
-					random = {
-						chance = dark_priest_pers
-						trigger_event = {
-							id = magic_ev4.49
-							days = { 1 666 }
-						}
+				}
+				random = {
+					chance = dark_priest_pers
+					trigger_event = {
+						id = magic_ev4.56
+						days = { 1 666 }
 					}
 				}
 			}
-			random = {
-				chance = dark_priest_pers
-				trigger_event = {
-					id = magic_ev4.56
-					days = { 1 666 }
-				}
+		}
+		else = {
+			custom_tooltip = ev2.1.g_ct3
+		}
+		if = {
+			limit = {
+				is_ai = no
 			}
-			if = {
-				limit = {
-					is_ai = no
-				}
-				trigger_event = {
-					id = magic_ev8.40
-					years = 10
-				}
+			trigger_event = {
+				id = magic_ev8.40
+				years = 10
 			}
 		}
 	}
@@ -790,6 +825,12 @@ magic_ev.2 = {
 		#	type = secret_cannibal
 		#}
 		custom_tooltip = ev2.1.e_ct
+		hidden_effect = {
+			trigger_event = {
+				id = magic_ev9.72
+				years = 15
+			}
+		}
 	}
 	option={
 		name = ev2.1.f
@@ -1323,7 +1364,7 @@ magic_ev.44 = {
 	#		}
 	#		if = {
 	#			limit = {
-	#				is_landed = yes
+	#				is_landed_or_landless_administrative = yes
 	#			}
 	#			primary_title = {
 	#				save_scope_as = ptitle
@@ -1370,7 +1411,7 @@ magic_ev.44 = {
 	#		modifier = {
 	#			add = 10
 	#			scope:magic_user = {
-	#				is_landed = yes
+	#				is_landed_or_landless_administrative = yes
 	#			}
 	#			OR = {
 	#				has_trait = greedy
@@ -1571,7 +1612,28 @@ magic_ev.6 = {
 				trigger_event = magic_ev.8
 			}
 			40 = {
+				trigger = {
+					is_landed = yes
+				}
 				trigger_event = magic_ev.81
+			}
+			40 = {
+				trigger = {
+					OR = {
+						is_landed = yes
+						AND = {
+							is_landless_adventurer = yes
+							exists = location
+							location = {
+								is_sea_province = no
+							}
+						}
+					}
+					NOT = {
+						has_character_flag = forbidden_ritual4_flag
+					}
+				}
+				trigger_event = magic_ev9.74
 			}
 		}
 		}
@@ -2296,10 +2358,96 @@ magic_ev.9 = {
 		hidden_effect = {
 			if = {
 				limit = {
-					has_variable = last_ttarget
+					NOT = {	has_variable = last_ttarget	}
 				}
+				random_ruler = {
+					limit = {
+						NOT = {
+							any_character_artifact = {
+								has_variable = magic1
+							}
+						}
+					}
+					save_scope_as = last_ttarget0
+				}
+				set_variable = {
+					name = last_ttarget
+					value = scope:last_ttarget0
+				}
+			}
+			else = {
 				var:last_ttarget = {
 					save_scope_as = last_ttarget0
+				}
+			}
+			
+			if = {
+				limit = {
+					NOT = {
+						exists = scope:artif
+					}
+				}
+				random_artifact = {
+					limit = {
+						has_variable = magic1
+						NOR = {
+							artifact_owner = root
+							ROOT = {
+								has_personal_artifact_claim = PREV
+							}
+							ROOT = {
+								has_relation_rival = PREV.artifact_owner
+							}
+							ROOT = {
+								has_relation_nemesis = PREV.artifact_owner
+							}
+							artifact_owner = scope:last_ttarget0
+						}
+					}
+					save_scope_as = artif
+				}
+				if = {
+					limit = {
+						NOT = {
+							exists = scope:artif
+						}
+					}
+					random_artifact = {
+						limit = {
+							has_variable = magic1
+							NOR = {
+								artifact_owner = root
+								ROOT = {
+									has_personal_artifact_claim = PREV
+								}
+								artifact_owner = scope:last_ttarget0
+							}
+						}
+						save_scope_as = artif
+					}
+				}
+				if = {
+					limit = {
+						NOT = {
+							exists = scope:artif
+						}
+					}
+					random_artifact = {
+						limit = {
+							has_variable = magic1
+							NOR = {
+								artifact_owner = root
+								ROOT = {
+									has_relation_rival = PREV.artifact_owner
+								}
+								ROOT = {
+									has_relation_nemesis = PREV.artifact_owner
+								}
+								artifact_owner = scope:last_ttarget0
+							}
+						}
+						save_scope_as = artif
+					}
 				}
 				if = {
 					limit = {
@@ -2318,11 +2466,6 @@ magic_ev.9 = {
 						save_scope_as = artif
 					}
 				}
-				scope:artif.artifact_owner = {
-					save_scope_as = potential_magician
-				}
-			}
-			else = {
 				if = {
 					limit = {
 						NOT = {
@@ -2339,70 +2482,12 @@ magic_ev.9 = {
 						save_scope_as = artif
 					}
 				}
-				
-				scope:artif.artifact_owner = {
-					save_scope_as = potential_magician
-				}
+			}
+			scope:artif.artifact_owner = {
+				save_scope_as = potential_magician
 			}
 
-			#if = {
-			#	limit = {
-			#		has_variable = last_ttarget
-			#	}
-			#	random_living_character = {
-			#		limit = {
-			#			NOT = { this = root }
-			#			NOT = {	this = var:last_ttarget	}
-			#			any_character_artifact = { has_variable = magic1 }
-			#		}
-			#		save_scope_as = potential_magician
-			#	}
-			#	if = {
-			#		limit = {
-			#			NOT = {
-			#				exists = scope:potential_magician
-			#			}
-			#		}
-			#		random_living_character = {
-			#			limit = {
-			#				NOT = { this = root }
-			#				any_character_artifact = { has_variable = magic1 }
-			#			}
-			#			save_scope_as = potential_magician
-			#		}
-			#	}
-			#}
-			#else = {
-			#	random_living_character = {
-			#		limit = {
-			#			NOT = { this = root }
-			#			any_character_artifact = { has_variable = magic1 }
-			#			in_diplomatic_range = root
-			#		}
-			#		save_scope_as = potential_magician
-			#	}
-			#	if = {
-			#		limit = {
-			#			NOT = {
-			#				exists = scope:potential_magician
-			#			}
-			#		}
-			#		random_living_character = {
-			#			limit = {
-			#				NOT = { this = root }
-			#				any_character_artifact = { has_variable = magic1 }
-			#			}
-			#			save_scope_as = potential_magician
-			#		}
-			#	}
-			#}
-
-			#scope:potential_magician = {
-			#	random_character_artifact = { 
-			#		limit = { has_variable = magic1 }
-			#		save_scope_as = artif
-			#	}
-			#}
+			
 			
 			set_variable = {
 				name = last_ttarget
@@ -2411,9 +2496,169 @@ magic_ev.9 = {
 		}
 		
 	}
-	
+
 	option = {
-		name = ev9.0.a
+		name = ev9.0.g	#I will try to buy this artefact.
+		trigger = {
+			OR = {
+				has_trait = diplomat
+				has_trait = avaricious
+			}
+			scope:potential_magician = {
+				NOT = {
+					has_character_flag = magic_item_offer_already_flag
+				}
+			}
+			NOR = {
+				has_personal_artifact_claim = scope:artif
+				has_relation_rival = scope:potential_magician
+				has_relation_nemesis = scope:potential_magician
+				has_relation_mminion = scope:potential_magician
+				has_relation_mmaster = scope:potential_magician
+			}
+		}
+		show_as_tooltip = {
+			random_list = {
+				1 = {
+					desc = ev9.1.g
+					show_chance = no
+					pay_short_term_gold = {
+						target = scope:potential_magician
+						gold = 1000
+					}
+					scope:artif = {
+						set_owner = {
+							target = ROOT
+							history = {
+								type = purchased
+								actor = scope:potential_magician
+								recipient = ROOT
+								location = root.location
+							}
+						}
+					}
+				}
+				1 = {
+					show_chance = no
+					desc = ev9.2.g
+					add_stress = minor_stress_gain
+				}
+			}
+		}
+		hidden_effect = {
+			save_scope_as = new_mage
+			scope:artif = {
+				save_scope_as = martX
+			}
+			scope:potential_magician = {
+				trigger_event = magic_ev7.136
+			}
+		}
+		ai_chance = {
+			base = 10000
+		}
+	}
+	option = {
+		name = ev9.0.e	#The artifact must be mine.
+		trigger = {
+			NOR = {
+				has_personal_artifact_claim = scope:artif
+				has_relation_rival = scope:potential_magician
+				has_relation_nemesis = scope:potential_magician
+				has_relation_mminion = scope:potential_magician
+				has_relation_mmaster = scope:potential_magician
+			}
+		}
+		if = {
+			limit = {
+				NOR = {
+					has_relation_rival = scope:potential_magician
+					has_relation_nemesis = scope:potential_magician
+				}
+			}
+			set_relation_rival = scope:potential_magician
+		}
+		random = {
+			chance = 10
+			send_interface_toast = {
+				title = game_concept_artifact_claims
+				add_personal_artifact_claim = scope:artif
+			}
+		}
+		stress_impact = {
+			greedy = major_stress_loss
+			ambitious = minor_stress_loss
+			generous = minor_stress_gain
+		}
+		ai_chance = {
+			base = 10
+			modifier = {
+				add = 90
+				OR = {
+					has_trait = greedy
+					has_trait = ambitious
+				}
+			}
+			modifier = {
+				add = -90
+				OR = {
+					has_trait = generous
+					has_trait = craven
+				}
+			}
+			modifier = {
+				add = -900
+				any_relation = {
+					type = rival
+					any_character_artifact = {
+						has_variable = magic1
+					}
+				}
+			}
+			modifier = {
+				add = -900
+				any_relation = {
+					type = rival
+					any_character_artifact = {
+						has_variable = magic1
+					}
+				}
+			}
+			modifier = {
+				add = -900
+				has_character_flag = special_magic_character
+			}
+		}
+	}
+	option = {
+		name = ev9.0.f	#My minion will hand over the artifact to me.
+		trigger = {
+			has_relation_mminion = scope:potential_magician
+		}
+		if = {
+			limit = {
+				has_usable_hook = scope:potential_magician
+			}
+			use_hook = scope:potential_magician
+		}
+		scope:artif = {
+			set_owner = {
+				target = ROOT
+				history = {
+					type = given
+					actor = scope:potential_magician
+					recipient = root
+					location = root.location
+				}
+			}
+		}
+		
+		ai_chance = {
+			base = 10000
+		}
+	}
+	option = {
+		name = ev9.0.a	#I should be keeping an eye on him
 		#if = {
 		#	limit = {
 		#		NOR = {
@@ -2430,121 +2675,142 @@ magic_ev.9 = {
 		
 		ai_chance = {
 			base = 10
-		}
-	}
-	option = {
-		name = ev9.0.b
-		trigger = {
-			has_trait = greedy
-			NOT = { has_character_flag = claimviatriang }
-		}
-		trait = greedy
-		if = {
-			limit = {
-				NOR = {
-					has_relation_rival = scope:potential_magician
-					has_relation_nemesis = scope:potential_magician
+			modifier = {
+				add = -90
+				OR = {
+					has_trait = greedy
+					has_trait = ambitious
 				}
 			}
-			set_relation_rival = scope:potential_magician
-		}
-		
-		add_personal_artifact_claim = scope:artif
-		add_character_flag = claimviatriang
-		#start_scheme = {
-		#	type = steal_back_artifact
-		#	target_character = scope:potential_magician
-		#	artifact = scope:artif
-		#}
-		begin_scheme_with_agents_effect = {
-			SCHEME_TYPE = steal_back_artifact
-			TARGET_TYPE = target_character
-			TARGET_SCOPE = scope:potential_magician
-			# Success.
-			AGENT_1 = agent_thief
-			AGENT_2 = agent_thief
-			# Speed.
-			AGENT_3 = agent_infiltrator
-			AGENT_4 = agent_infiltrator
-			# Secrecy.
-			AGENT_5 = agent_lookout
-		}
-		scope:new_scheme ?= {
-			set_variable = {
-				name = target_artifact
-				value = scope:artif
+			modifier = {
+				add = 190
+				OR = {
+					has_trait = generous
+					has_trait = craven
+				}
 			}
 		}
-		ai_chance = {
-			base = 90
-		}
 	}
+	#option = {
+	#	name = ev9.0.b
+	#	trigger = {
+	#		has_trait = greedy
+	#		NOT = { has_character_flag = claimviatriang }
+	#	}
+	#	trait = greedy
+	#	if = {
+	#		limit = {
+	#			NOR = {
+	#				has_relation_rival = scope:potential_magician
+	#				has_relation_nemesis = scope:potential_magician
+	#			}
+	#		}
+	#		set_relation_rival = scope:potential_magician
+	#	}
+	#	
+	#	add_personal_artifact_claim = scope:artif
+	#	add_character_flag = claimviatriang
+	#	#start_scheme = {
+	#	#	type = steal_back_artifact
+	#	#	target_character = scope:potential_magician
+	#	#	artifact = scope:artif
+	#	#}
+	#	begin_scheme_with_agents_effect = {
+	#		SCHEME_TYPE = steal_back_artifact
+	#		TARGET_TYPE = target_character
+	#		TARGET_SCOPE = scope:potential_magician
+	#		# Success.
+	#		AGENT_1 = agent_thief
+	#		AGENT_2 = agent_thief
+	#		# Speed.
+	#		AGENT_3 = agent_infiltrator
+	#		AGENT_4 = agent_infiltrator
+	#		# Secrecy.
+	#		AGENT_5 = agent_lookout
+	#	}
+	#	scope:new_scheme ?= {
+	#		set_variable = {
+	#			name = target_artifact
+	#			value = scope:artif
+	#		}
+	#	}
+	#	ai_chance = {
+	#		base = 90
+	#	}
+	#}
 
-	option = {
-		name = ev9.0.b
-		trigger = {
-			NOT = { has_trait = greedy }
-			has_trait = ambitious
-			NOT = { has_character_flag = claimviatriang }
-		}
-		trait = ambitious
-		if = {
-			limit = {
-				NOR = {
-					has_relation_rival = scope:potential_magician
-					has_relation_nemesis = scope:potential_magician
-				}
-			}
-			set_relation_rival = scope:potential_magician
-			#set_random_rivalry_reason = { TARGET = scope:potential_magician }
-		}
-		add_personal_artifact_claim = scope:artif
-		add_character_flag = claimviatriang
-		ai_chance = {
-			base = 90
-		}
-	}
+	#option = {
+	#	name = ev9.0.b
+	#	trigger = {
+	#		NOT = { has_trait = greedy }
+	#		has_trait = ambitious
+	#		NOT = { has_character_flag = claimviatriang }
+	#	}
+	#	trait = ambitious
+	#	if = {
+	#		limit = {
+	#			NOR = {
+	#				has_relation_rival = scope:potential_magician
+	#				has_relation_nemesis = scope:potential_magician
+	#			}
+	#		}
+	#		set_relation_rival = scope:potential_magician
+	#		#set_random_rivalry_reason = { TARGET = scope:potential_magician }
+	#	}
+	#	add_personal_artifact_claim = scope:artif
+	#	add_character_flag = claimviatriang
+	#	ai_chance = {
+	#		base = 90
+	#	}
+	#}
 
+	#option = {
+	#	name = ev9.0.c
+	#	trigger = {
+	#		has_trait = paranoid
+	#		NOT = {
+	#			any_scheme = {
+	#				scheme_type = murder
+	#			}
+	#		}
+	#	}
+	#	trait = paranoid
+	#	#if = {
+	#	#	limit = {
+	#	#		NOR = {
+	#	#			has_relation_rival = scope:potential_magician
+	#	#			has_relation_nemesis = scope:potential_magician
+	#	#		}
+	#	#	}
+	#	#	progress_towards_rival_effect = {
+	#	#		CHARACTER = scope:potential_magician
+	#	#		OPINION = 0
+	#	#		REASON = rival_random_m1
+	#	#	}
+	#	#}
+	#	start_scheme = {
+	#		type = murder
+	#		target_character = scope:potential_magician
+	#	}
+	#	ai_chance = {
+	#		base = 90
+	#	}
+	#}
 	option = {
-		name = ev9.0.c
-		trigger = {
-			has_trait = paranoid
-			NOT = {
-				any_scheme = {
-					scheme_type = murder
-				}
-			}
-		}
-		trait = paranoid
-		#if = {
-		#	limit = {
-		#		NOR = {
-		#			has_relation_rival = scope:potential_magician
-		#			has_relation_nemesis = scope:potential_magician
-		#		}
-		#	}
-		#	progress_towards_rival_effect = {
-		#		CHARACTER = scope:potential_magician
-		#		OPINION = 0
-		#		REASON = rival_random_m1
-		#	}
-		#}
-		start_scheme = {
-			type = murder
-			target_character = scope:potential_magician
-		}
-		ai_chance = {
-			base = 90
-		}
-	}
-	option = {
-		name = ev9.0.d
+		name = ev9.0.d	#I should meet him
 		trigger = {
 			has_trait = gregarious
+			
 			NOR = {
 				has_relation_rival = scope:potential_magician
 				has_relation_nemesis = scope:potential_magician
 				has_relation_potential_rival = scope:potential_magician
+				has_relation_friend = scope:potential_magician
+				has_relation_best_friend = scope:potential_magician
+				has_relation_lover = scope:potential_magician
+				has_relation_soulmate = scope:potential_magician
+				has_relation_mminion = scope:potential_magician
+				has_relation_mmaster = scope:potential_magician
 			}
 		}
 		trait = gregarious
@@ -2578,7 +2844,7 @@ magic_ev.9 = {
 			}
 		}
 		ai_chance = {
-			base = 90
+			base = 300
 		}
 	}
 	#after = {
@@ -2597,6 +2863,28 @@ magic_ev.10 = {
 	#immediate = {
 	#
 	#}
+	option = {
+		name = ev10.0.g
+		trigger = {
+			has_trait = yaga
+			scope:reci = {
+				NOR = {
+					has_trait = immortal
+					#age < 16
+				}
+			}
+		}
+		trait = yaga
+		scope:reci = {
+			send_interface_toast = {
+				title = trait_immortal
+				add_trait = immortal
+			}
+		}
+		ai_chance = {
+			base = 0
+		}
+	}
 	option = {
 		name = ev10.0.f
 		trigger = {
@@ -3318,11 +3606,14 @@ magic_ev.14 = {
 				4 = {
 					#Moloch - rage
 					trigger = {
+						NOT = {
+							has_character_flag = ms_met_moloch
+						}
+						has_character_flag = no_complications
 						any_living_character = {
 							has_character_flag = moloch
 							count = 0
 						}
-						has_character_flag = no_complications
 					}
 					ms_moloch_demon_effect = yes
 				}
@@ -3332,6 +3623,9 @@ magic_ev.14 = {
 						any_living_character = {
 							has_character_flag = demon_child
 							count = 0
+						}
+						NOT = {
+							exists = global_var:abaddon_cooldown
 						}
 						has_character_flag = no_complications
 					}
@@ -3536,6 +3830,7 @@ magic_ev.15 = {
 			}
 			hidden_effect = {
 				add_character_flag = special_magic_character
+				add_trait = gallivanter
 			}
 		}
 		ai_chance = {
@@ -4193,10 +4488,90 @@ magic_ev.18 = {
 		metamagic_effect = yes
 	}
 }
-
 #demon escaped
 magic_ev.19 = {
 	hidden = yes
+	trigger = {
+		exists = location
+	}
+	immediate = {
+		create_character = {
+			#employer = scope:target
+			gender_female_chance = 30
+			location = scope:this0.location
+			faith = root.faith
+			culture = root.culture
+			template = generic_demon_character
+			save_scope_as = demon
+		}
+		scope:demon = {
+			set_relation_nemesis = scope:this0
+			#set_relation_rival = scope:heir0
+			if = {
+				limit = {
+					exists = primary_heir
+				}
+				set_random_rivalry_reason = { TARGET = primary_heir RELATION = rival }
+			}
+			
+			
+			add_trait_xp = {
+				trait = demon
+				value = { 25 60 }
+			}
+			add_trait_xp = {
+				trait = source
+				track = magic_potential
+				value = { 20 45 }
+			}
+			if = {
+				limit = {
+					NOT = {
+						has_perk = a_job_done_right_perk
+					}
+				}
+				random = {
+					chance = 90
+					add_perk = a_job_done_right_perk
+				}
+			}
+			add_character_modifier = demonic_charm_modifier
+			gain_source_ps_effect = yes
+			add_gold = 250
+			random = {
+				chance = 50
+				add_character_modifier = {
+					modifier = oneiromancy_modifier
+					years = 5
+				}
+			}
+			random = {
+				chance = 50
+				add_character_modifier = {
+					modifier = preparation_for_strike_modifier
+					years = 5
+				}
+			}
+			random = {
+				chance = 50
+				add_character_modifier = mind_reader_modifier
+			}
+			create_landless_adventurer_title_effect = {
+				REASON = flag:exile
+				FLAVOR_CHAR = scope:this0
+			}
+			start_scheme = {
+				type = murder
+				target_character = scope:this0
+			}
+		}
+		
+	}
+}
+#demon escaped - old
+magic_ev.190 = {
+	hidden = yes
+	orphan = yes
 	immediate = {
 		scope:this0 = {
 			if = { limit = { is_independent_ruler = yes }
@@ -4866,6 +5241,7 @@ magic_ev.25 = {
 		scope:belial = {
 			is_alive = yes
 			is_imprisoned = no
+			is_ai = yes
 		}
 	}
 	on_trigger_fail = {
@@ -4902,11 +5278,13 @@ magic_ev.26 = {
 				OR = {
 					is_alive = no
 					is_imprisoned = yes
+					is_ai = yes
 				}
 			}
 			scope:belial = {
 				OR = {
 					is_alive = no
+					is_ai = no
 					is_imprisoned = yes
 				}
 			}
@@ -6583,10 +6961,13 @@ magic_ev.47 = {
 	immediate = {
 		if = {
 			limit = {
-				scope:owner.involved_activity = {
-					#NOT = { in_activity_type = activity_feast }
-					NOT = {	exists = THIS	}
+				NOT = {
+					exists = scope:owner.involved_activity 
 				}
+				#scope:owner.involved_activity = {
+				#	#NOT = { in_activity_type = activity_feast }
+				#	NOT = {	exists = THIS	}
+				#}
 			}
 			scope:target = {
 				start_scheme = {

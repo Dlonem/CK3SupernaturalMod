@@ -409,6 +409,29 @@ magic_ev6.4 = {
 			modifier = hecate_support_modifier
 			years = 4
 		}
+		hidden_effect = {
+			if = {
+				limit = {
+					any_scheme = {
+						scheme_type = ultimate_spell_cast
+						NOT = {
+							has_scheme_modifier = ultimate_spell_hecate_modifier
+						}
+					}
+				}
+				random_scheme = {
+					limit = {
+						scheme_type = ultimate_spell_cast
+						NOT = {
+							has_scheme_modifier = ultimate_spell_hecate_modifier
+						}
+					}
+					add_scheme_modifier = {
+						type = ultimate_spell_hecate_modifier
+					}
+				}
+			}
+		}
 		trigger_event = magic_ev.18
 	}
 	
@@ -658,7 +681,10 @@ magic_ev6.5 = {
 	option = {
 		name = hecate_name
 		trigger = {
-			has_character_flag = ms_met_hecate
+			OR = {
+				has_character_flag = ms_met_hecate2
+				has_character_flag = ms_met_hecate
+			}
 			has_character_flag = hecate_accesible
 		}
 		ms_hecate_demon_effect = yes
@@ -678,6 +704,17 @@ magic_ev6.5 = {
 			has_character_flag = blob_accesible
 		}
 		ms_blob_demon_effect = yes
+	}
+	option = {
+		name = ev6.5.0.b
+		trigger = {
+			has_trait = sadistic
+			has_character_flag = ms_met_moloch
+			has_character_flag = moloch_accesible
+			has_character_flag = beaten_moloch_flag
+		}
+		trait = sadistic
+		ms_moloch_demon_effect = yes
 	}
 	after = {
 		hidden_effect = {
@@ -909,6 +946,9 @@ magic_ev6.9 = {
 	option = {
 		#claims
 		name = ev6.9.0.a
+		trigger = {
+			is_landed_or_landless_administrative = yes
+		}
 		add_pressed_claim = scope:nyx_claim
 		trigger_event = magic_ev.18
 	}
@@ -957,6 +997,7 @@ magic_ev6.9 = {
 				has_trait = kinslayer_3
 				has_trait = adulterer
 				has_trait = fornicator
+				has_trait = gallowsbait
 			}
 		}
 		if = {
@@ -994,6 +1035,12 @@ magic_ev6.9 = {
 				has_trait = fornicator
 			}
 			remove_trait = fornicator
+		}
+		else_if = {
+			limit = {
+				has_trait = gallowsbait
+			}
+			remove_trait = gallowsbait
 		}
 		trigger_event = magic_ev.18
 	}
@@ -1076,6 +1123,17 @@ magic_ev6.10 = {
 			}
 			add_stress = medium_stress_loss
 		}
+		else_if = {
+			limit = {
+				exists = scope:mscheme
+				scope:mscheme = {
+					is_type_secret = yes
+				}
+			}
+			scope:mscheme = {
+				add_scheme_breach = 1
+			}
+		}
 		trigger_event = magic_ev.18
 	}
 	option = {
@@ -1089,6 +1147,12 @@ magic_ev6.10 = {
 		}
 		scope:mscheme = {
 			expose_scheme = yes
+			if = {
+				limit = {
+					is_type_secret = yes
+				}
+				add_scheme_breach = 1
+			}
 		}
 		hidden_effect = {
 			scope:mscheme.scheme_target_character = {
@@ -1333,6 +1397,12 @@ magic_ev6.11 = {
 		}
 		scope:mscheme = {
 			expose_scheme = yes
+			if = {
+				limit = {
+					is_type_secret = yes
+				}
+				add_scheme_breach = 1
+			}
 		}
 		hidden_effect = {
 			scope:mscheme.scheme_target_character = {
@@ -1362,6 +1432,12 @@ magic_ev6.11 = {
 		}
 		scope:mscheme2 = {
 			expose_scheme = yes
+			if = {
+				limit = {
+					is_type_secret = yes
+				}
+				add_scheme_breach = 1
+			}
 		}
 		hidden_effect = {
 			scope:mscheme2.scheme_target_character = {
@@ -1694,7 +1770,7 @@ magic_ev6.20 = {
 		animation = spymaster
 		#outfit_tags = { ep1_adventurer_cloak }
 	}
-	
+	orphan = yes
 	trigger = {
 		is_alive = yes
 		is_imprisoned = no
@@ -2751,6 +2827,7 @@ magic_ev6.36 = {
 #ring of life special - war
 magic_ev6.37 = {
 	hidden = yes
+	orphan = yes
 	trigger = {
 		is_ai = yes
 		is_imprisoned = no
@@ -3265,7 +3342,7 @@ magic_ev6.48 = {
 				save_scope_as = demona
 				after_creation = {
 					set_sexuality = bisexual
-					give_witch_secret_or_trait_effect = yes
+					give_witch_secret_or_trait_effect2 = yes
 					add_trait_xp = {
 						trait = demon
 						value = 60
@@ -4844,13 +4921,24 @@ magic_ev6.70 = {
 #Mage Tower selection
 magic_ev6.71 = {
 	title = building_mage_tower_01
-	desc = ev6.71.desc
+	#desc = ev6.71.desc
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					is_landless_adventurer = yes
+				}
+				desc = ev6.71.desc2
+			}
+			desc = ev6.71.desc
+		}
+	}
 	theme = witchcraft
 	left_portrait = root
 
 	trigger = {
 		is_alive = yes
-		is_landed_or_landless_administrative = yes
+		is_playable_character = yes
 		NOT = {
 			any_held_county = {
 				exists = title_province
@@ -4933,6 +5021,24 @@ magic_ev6.71 = {
 		name = ev6.71.0.d
 		add_character_modifier = {
 			modifier = magic_lab_modifier
+		}
+	}
+	option = {
+		name = ev6.71.0.f
+		if = {
+			limit = {
+				NOR = {
+					has_trait = diligent
+					has_trait = lazy
+				}
+			}
+			add_stress = minor_stress_loss
+		}
+		else = {
+			stress_impact = {
+				diligent = medium_stress_gain
+				lazy = medium_stress_loss
+			}
 		}
 	}
 	option = {
@@ -5211,6 +5317,9 @@ magic_ev6.74 = {
 					any_living_character = {
 						has_character_flag = demon_child
 					}
+				}
+				NOT = {
+					exists = global_var:abaddon_cooldown
 				}
 			}
 			add_character_flag = demon_child_accesible
