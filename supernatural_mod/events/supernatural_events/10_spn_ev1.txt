@@ -1,0 +1,2033 @@
+﻿namespace = supernatural_ev1
+
+#Vampire Feeding - Invitations for Vampires/Hybrids
+supernatural_ev1.01 = {
+	title = supernatural_ev1.01
+	desc = supernatural_ev1.01.desc
+	theme = secret
+	left_portrait = root
+	right_portrait = scope:host
+
+	trigger = {
+		is_alive = yes
+		NOT = {
+			has_character_modifier = excluded_from_magic_community
+		}
+	}
+	
+	option = {
+		name = supernatural_ev1.01.a
+		custom_tooltip = supernatural_ev1.01.a.tt
+		
+		ai_chance = {
+			base = 60
+			modifier = { add = 20 has_trait = gluttonous }
+			modifier = { add = 15 has_trait = lustful }
+			modifier = { add = -10 has_trait = shy }
+		}
+	}
+}
+
+# No other vampires arrived
+supernatural_ev1.02 = {
+	type = activity_event
+	title = supernatural_ev1.02.t
+	desc = supernatural_ev1.02.desc
+	theme = intrigue
+	override_background = {
+		reference = tavern
+	}
+	center_portrait = {
+		character = root
+		animation = happiness
+	}
+
+	option = {
+		name = supernatural_ev1.02.a
+	
+		ai_chance = {
+			base = 70
+			modifier = { add = -20 has_trait = paranoid }
+			modifier = { add = 10 has_trait = gregarious }
+		}
+	}
+}
+
+# Vampire Feeding - Prelude Phase (Guests Gather)
+supernatural_ev1.03 = {
+	type = activity_event
+	title = supernatural_ev1.03.t
+	desc = supernatural_ev1.03.desc
+	theme = intrigue
+	override_background = {
+		reference = tavern
+	}
+	left_portrait = root
+
+	trigger = {
+		is_alive = yes
+	}
+	immediate = {
+		hidden_effect = {
+			save_scope_as = aowner
+		}
+	}
+
+	option = { # Greet the guests with warmth and camaraderie.
+		name = supernatural_ev1.03.a
+		stress_impact = {
+			shy = medium_stress_gain
+			gregarious = minor_stress_loss
+			paranoid = medium_stress_gain
+			trusting = minor_stress_loss
+			gluttonous = minor_stress_loss
+			drunkard = minor_stress_loss
+		}
+		
+		ai_chance = {
+			base = 50
+			modifier = { add = 20 has_trait = gregarious }
+			modifier = { add = -15 has_trait = shy }
+		}
+	}
+	option = { # Exude an air of quiet authority.
+		name = supernatural_ev1.03.b
+		stress_impact = {
+			deceitful = minor_stress_loss
+			paranoid = minor_stress_loss
+			honest = minor_stress_gain
+		}
+		ai_chance = {
+			base = 50
+			modifier = { add = 15 has_trait = deceitful }
+			modifier = { add = -10 has_trait = honest }
+		}
+	}
+	option = { # Assess the room for any potential threats.
+		name = supernatural_ev1.03.c
+		custom_tooltip = supernatural_ev1.03.c_ct
+		
+		root = {
+			add_dread = { 1 5 }
+		}
+		
+		hidden_effect = {
+			random_list = {
+				2 = { trigger_event = supernatural_ev1.04 } # Hunter appears
+			}
+		}
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = sadistic }
+			modifier = { add = -10 has_trait = trusting }
+		}
+	}
+}
+
+# Vampire Feeding - Monster Hunter Appears
+supernatural_ev1.04 = {
+	type = activity_event
+	title = supernatural_ev1.04.t
+	desc = supernatural_ev1.04.desc
+	theme = intrigue
+	override_background = {
+		reference = tavern
+	}
+	left_portrait = {
+		character = root
+		animation = disbelief
+	}
+	right_portrait = {
+		character = scope:hunter0
+		animation = assassin
+	}
+
+	trigger = {
+		is_alive = yes
+	}
+	immediate = {
+		hidden_effect = {
+			create_character = {
+				location = root.location
+				culture = root.culture
+				faith = root.faith
+				gender = male
+				template = spn_skilled_hunter_template
+				save_scope_as = hunter0
+			}
+		}
+		add_prestige = { -20 -100 }
+	}
+
+	option = { # Capture the hunter and deal with him discreetly.
+		name = supernatural_ev1.04.a
+		imprison = {
+			target = scope:hunter0
+			type = dungeon
+		}
+		ai_chance = {
+			base = 60
+			modifier = { add = 20 has_trait = vengeful }
+			modifier = { add = -15 has_trait = compassionate }
+		}
+	}
+	option = { # Quietly drain the hunter’s life and dispose of the body.
+		name = supernatural_ev1.04.b
+		trigger = {
+			OR = {
+				has_trait_xp = { trait = supernatural_vampire track = vampirism value > 30 }
+				has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 30 }
+			}
+		}
+		add_dread = medium_dread_gain
+		stress_impact = {
+			vengeful = medium_stress_loss
+			sadistic = medium_stress_loss
+		}
+		scope:hunter0 = {
+			death = {
+				death_reason = spn_death_drained
+				killer = root
+			}
+		}
+		trigger_event = supernatural_ev1.05 # Follow-up for guests
+		
+		ai_chance = {
+			base = 50
+			modifier = { add = 15 has_trait = sadistic }
+			modifier = { add = -20 has_trait = forgiving }
+		}
+	}
+}
+
+# Vampire Feeding - Guest Reaction to Hunter's Death
+supernatural_ev1.05 = {
+	type = activity_event
+	title = supernatural_ev1.05.t
+	desc = supernatural_ev1.05.desc
+	theme = intrigue
+	left_portrait = scope:aowner
+	right_portrait = scope:hunter0
+
+	trigger = {
+		is_alive = yes
+	}
+	immediate = {
+		scope:hunter0 = {
+			death = {
+				death_reason = spn_death_drained
+				killer = scope:aowner
+			}
+		}
+	}
+
+	option = { # An appropriate end for such insolence.
+		name = supernatural_ev1.05.a
+		stress_impact = {
+			sadistic = medium_stress_loss
+			compassionate = major_stress_gain
+			forgiving = medium_stress_gain
+		}
+		add_opinion = {
+			target = scope:aowner
+			modifier = impressed_opinion
+			opinion = 30
+		}
+		ai_chance = {
+			base = 50
+			modifier = { add = 20 has_trait = sadistic }
+			modifier = { add = -15 has_trait = compassionate }
+		}
+	}
+	option = { # A necessary act to ensure the safety of all.
+		name = supernatural_ev1.05.b
+		stress_impact = {
+			callous = medium_stress_loss
+		}
+		ai_chance = {
+			base = 40
+			modifier = { add = 15 has_trait = callous }
+		}
+	}
+	option = { # Let this serve as a lesson to others.
+		name = supernatural_ev1.05.c
+		stress_impact = {
+			sadistic = minor_stress_loss
+		}
+		ai_chance = {
+			base = 60
+			modifier = { add = 10 has_trait = sadistic }
+		}
+	}
+}
+
+
+# Vampire Feeding - Mikaelson-specific Event
+supernatural_ev1.06 = {
+	type = activity_event
+	title = supernatural_ev1.06.title
+	desc = supernatural_ev1.06.desc
+	theme = intrigue
+	override_background = {
+		reference = feast
+	}
+	left_portrait = root
+	center_portrait = scope:guest2
+	right_portrait = scope:mikaelson0
+
+	trigger = {
+		is_alive = yes
+		exists = scope:activity
+		scope:activity = {
+			any_attending_character = {
+				has_character_flag = mikaelson_vampire
+			}
+		}
+		NOR = {
+			has_character_flag = mikaelson_story_flag
+			has_character_flag = mikaelson_vampire
+		}
+	}
+	immediate = {
+		hidden_effect = {
+			scope:activity = {
+				random_attending_character = {
+					limit = {
+						has_character_flag = mikaelson_vampire
+					}
+					save_scope_as = mikaelson0
+				}
+				random_attending_character = {
+					limit = {
+						NOR = {
+							has_character_flag = mikaelson_vampire
+							THIS=ROOT
+						}
+					}
+					save_scope_as = guest1
+				}
+				random_attending_character = {
+					limit = {
+						NOR = {
+							has_character_flag = mikaelson_vampire
+							THIS=ROOT
+							THIS=scope:guest1
+						}
+					}
+					save_scope_as = guest2
+				}
+			}
+		}
+	}
+	option = {
+		name = supernatural_ev1.06.a
+		trigger_event = supernatural_ev1.07
+		ai_chance = {
+			base = 60
+			modifier = { add = 20 has_trait = ambitious }
+			modifier = { add = -15 has_trait = humble }
+		}
+	}
+	after = {
+		add_character_flag = mikaelson_story_flag
+	}
+}
+
+# Vampire Feeding - Mikaelson-specific Event Part 2
+supernatural_ev1.07 = {
+	type = activity_event
+	title = supernatural_ev1.07.title
+	desc = supernatural_ev1.07.desc
+	theme = intrigue
+	override_background = {
+		reference = feast
+	}
+	left_portrait = root
+	center_portrait = scope:guest2
+	right_portrait = scope:mikaelson0
+
+	trigger = {
+		is_alive = yes
+	}
+	immediate = {
+		gain_st_xp1_effect = yes
+	}
+	option = {
+		name = supernatural_ev1.07.a
+		stress_impact = {
+			arrogant = minor_stress_loss
+			humble = minor_stress_gain
+		}
+	}
+	option = {
+		name = supernatural_ev1.07.b
+		trigger = {
+			has_st_embrace_the_night_intent_trigger = yes
+		}
+		stress_impact = {
+			greedy = medium_stress_loss
+			compassionate = minor_stress_gain
+		}
+		custom_tooltip = supernatural_ev1.07.b.tt
+	}
+}
+
+supernatural_ev1.08 = {
+	type = activity_event
+	title = supernatural_ev1.08.title
+	desc = supernatural_ev1.08.desc
+	theme = intrigue
+	override_background = {
+		reference = bp1_wine_cellar
+	}
+	
+	left_portrait = {
+		character = root
+		animation = disbelief
+	}
+	center_portrait = {
+		character = scope:local_courtier
+		animation = pain
+	}
+	right_portrait = {
+		character = scope:vampire0
+		animation = shock
+	}
+	
+	trigger = {
+		is_alive = yes
+		exists = scope:activity
+		scope:activity = {
+			any_attending_character = {
+				NOT = {
+					THIS=ROOT
+					has_trait = supernatural_vampire
+					has_trait = supernatural_hybrid
+				}
+			}
+		}
+	}
+	
+	immediate = {
+		hidden_effect = {
+			random_courtier = {
+				limit = {
+					NOR = {
+						scope_is_close_to_root_trigger = no
+						has_trait = supernatural_vampire
+						has_trait = supernatural_hybrid
+						is_adult = no
+					}
+				}
+				save_scope_as = local_courtier
+				add_trait = wounded_2
+			}
+			involved_activity = {
+				random_attending_character = {
+					limit = {
+						NOT = {
+							THIS=ROOT
+						}
+					}
+					save_scope_as = vampire0
+				}
+			}
+		}
+	}
+
+	option = { #Feed on the Wounded Courtier
+		name = supernatural_ev1.08.a
+		add_trait_xp = {
+			trait = supernatural_vampire
+			track = vampirism
+			value = 10
+		}
+		add_trait_xp = {
+			trait = supernatural_hybrid
+			track = hybrid_vampirism
+			value = 10
+		}
+		scope:local_courtier = {
+			death = { death_reason = spn_death_drained }
+		}
+		remove_short_term_gold = { 5 15 }
+		
+		ai_chance = {
+			base = 50
+			modifier = { add = 15 has_trait = gluttonous }
+			modifier = { add = -10 has_trait = compassionate }
+		}
+	}
+
+	option = { #Heal the Wounded Courtier
+		name = supernatural_ev1.08.b
+		add_prestige = { 35 75 }
+		add_piety = { 40 85 }
+		scope:local_courtier = {
+			remove_trait = wounded_2
+			add_character_modifier = {
+				modifier = ingested_vampire_blood_modifier
+			}
+			add_character_flag = vampire_blood_in_system
+			trigger_event = {
+				id = spn_miscellaneous_events.0002
+				years = 3
+			}
+		}
+		remove_short_term_gold = { 5 15 }
+		
+		ai_chance = {
+			base = 60
+			modifier = { add = 20 has_trait = compassionate }
+			modifier = { add = -15 has_trait = sadistic }
+		}
+	}
+
+	option = { #Feed On & Heal the Wounded Couriter
+		name = supernatural_ev1.08.c
+		trigger = {
+			OR = {
+				has_trait_xp = {
+					trait = supernatural_vampire
+					track = vampirism
+					value > 20
+				}
+				has_trait_xp = {
+					trait = supernatural_hybrid
+					track = hybrid_vampirism
+					value > 15
+				}
+			}
+		}
+		add_prestige = { 35 75 }
+		add_piety = { 40 85 }
+		if = {
+			limit = {
+				has_trait = supernatural_vampire
+			}
+			add_trait_xp = {
+				trait = supernatural_vampire
+				track = vampirism
+				value = 10
+			}			
+		}
+		else = {
+			limit = {
+				has_trait = supernatural_hybrid
+			}
+			add_trait_xp = {
+				trait = supernatural_hybrid
+				track = hybrid_vampirism
+				value = 10
+			}
+		}
+
+		scope:local_courtier = {
+			remove_trait = wounded_2
+			add_character_modifier = {
+				modifier = ingested_vampire_blood_modifier
+			}
+			add_character_flag = vampire_blood_in_system
+			trigger_event = {
+				id = spn_miscellaneous_events.0002
+				years = 3
+			}
+		}
+		remove_short_term_gold = { 5 15 }
+		
+		ai_chance = {
+			base = 80
+			modifier = { add = 20 has_trait = ambitious }
+		}
+	}
+}
+
+# Vampire Feeding - Tavern Game of Wits
+supernatural_ev1.09 = {
+    type = activity_event
+    title = supernatural_ev1.09.title
+    desc = supernatural_ev1.09.desc
+    theme = intrigue
+    override_background = {
+        reference = tavern
+    }
+
+    left_portrait = {
+        character = root
+        animation = idle
+    }
+	
+	right_portrait = {
+		character = scope:local_courtier
+		animation = drink_goblet
+	}
+
+    immediate = {
+        hidden_effect = {
+            random_courtier = {
+                limit = {
+                    NOR = {
+                        scope_is_close_to_root_trigger = no
+                        has_trait = supernatural_vampire
+                        has_trait = supernatural_hybrid
+                    }
+                }
+                save_scope_as = local_courtier
+            }
+        }
+    }
+
+	cooldown = {
+		years = 1
+	}
+
+    trigger = {
+        is_alive = yes
+        is_imprisoned = no
+    }
+
+	option = {
+		name = supernatural_ev1.09.a
+		custom_tooltip = supernatural_ev1.09.a_tt
+
+		random_list = {
+			50 = { # Chance of winning the challenge
+				custom_tooltip = supernatural_ev1.09.a_win_tt
+				add_prestige = { 20 70 }
+				add_learning_lifestyle_xp = { 100 400 }
+
+				# Positive Modifiers
+				modifier = { add = 10 learning > 8 }
+				modifier = { add = 10 learning > 10 }
+				modifier = { add = 5 has_trait = shrewd }
+				modifier = { add = 5 has_trait = intellect_good_1 }
+				modifier = { add = 10 has_trait = intellect_good_2 }
+				modifier = { add = 15 has_trait = intellect_good_3 }
+				modifier = { add = 10 martial < 8 }
+
+				# Negative Modifiers
+				modifier = { add = -5 has_trait = intellect_bad_1 }
+				modifier = { add = -10 has_trait = intellect_bad_2 }
+				modifier = { add = -15 has_trait = intellect_bad_3 }
+				modifier = { add = -10 has_trait = dull }
+				modifier = { add = -10 has_trait = inbred }
+			}
+			30 = { # Chance of a draw
+				custom_tooltip = supernatural_ev1.09.a_draw_tt
+				add_prestige = { 10 30 }
+
+				# Positive Modifiers
+				modifier = { add = 5 learning > 8 }
+				modifier = { add = 5 has_trait = shrewd }
+				modifier = { add = 5 has_trait = intellect_good_1 }
+				modifier = { add = 10 martial < 8 }
+
+				# Negative Modifiers
+				modifier = { add = -5 has_trait = intellect_bad_1 }
+				modifier = { add = -10 has_trait = intellect_bad_2 }
+				modifier = { add = -10 has_trait = dull }
+			}
+			20 = { # Chance of losing the challenge
+				custom_tooltip = supernatural_ev1.09.a_lose_tt
+				add_prestige = { -30 -100 }
+				add_learning_lifestyle_xp = { -100 -400 }
+
+				# Positive Modifiers (reduce chance of losing)
+				modifier = { add = -5 martial > 10 }
+				modifier = { add = -5 learning < 8 }
+
+				# Negative Modifiers (increase chance of losing)
+				modifier = { add = 5 has_trait = intellect_bad_1 }
+				modifier = { add = 10 has_trait = intellect_bad_2 }
+				modifier = { add = 15 has_trait = intellect_bad_3 }
+				modifier = { add = 10 has_trait = dull }
+				modifier = { add = 10 has_trait = inbred }
+			}
+		}
+	}
+
+
+
+    option = {
+        name = supernatural_ev1.09.b
+        custom_tooltip = supernatural_ev1.09.b_tt
+		
+		trigger = {
+            OR = {
+                has_perk = glamour_perk
+                has_perk = deadly_seduction_perk
+            }
+		}
+		
+		if = {
+			limit = {
+				has_trait = supernatural_vampire
+			}
+			add_trait_xp = {
+				trait = supernatural_vampire
+				track = vampirism
+				value = 5
+			}
+		}
+		else = {
+			limit = {
+				has_trait = supernatural_hybrid
+			}
+			add_trait_xp = {
+				trait = supernatural_hybrid
+				track = hybrid_vampirism
+				value = 5
+			}
+		}
+    }
+
+    option = {
+        name = supernatural_ev1.09.c
+        custom_tooltip = supernatural_ev1.09.c_tt
+        add_prestige = { -5 -25 }
+    }
+}
+
+supernatural_ev1.10 = { #The Catacombs Below
+    type = activity_event
+    title = supernatural_ev1.10.title
+    desc = supernatural_ev1.10.desc
+    theme = intrigue
+	override_background = { reference = tavern }
+
+    left_portrait = root
+    right_portrait = scope:tavern_owner
+
+    trigger = { is_alive = yes }
+
+    immediate = {
+        hidden_effect = {
+			create_character = {
+				gender_female_chance = 50  # Randomly male or female
+				dynasty = none
+				age = { 25 55 }
+				culture = root.location.culture  # Matches player character’s culture (optional)
+				faith = root.location.faith
+				location = root.capital_province  # Places them in the same province
+				save_scope_as = tavern_owner  # Save for use in the portrait
+			}
+        }
+    }
+
+	cooldown = {
+		years = 1
+	}
+
+	option = { # Explore the Catacombs
+		name = supernatural_ev1.10.a
+		custom_tooltip = supernatural_ev1.10.a_tt
+
+		random_list = {
+			40 = { # 40% chance of encountering a hunter
+				custom_tooltip = supernatural_ev1.10.ab_tt
+				trigger_event = {
+					id = supernatural_ev1.11
+				}
+			}
+			60 = { # 60% chance of nothing happening
+			}
+		}
+		
+		ai_chance = {
+			base = 50
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = -15 has_trait = craven }
+		}
+	}
+
+
+    option = { # Pay for a Guide
+        name = supernatural_ev1.10.b
+        custom_tooltip = supernatural_ev1.10.b_tt
+        remove_short_term_gold = 15
+        add_prestige = { 20 50 }
+		
+		ai_chance = {
+			base = 60
+			modifier = { add = 10 has_trait = diligent }
+			modifier = { add = -10 has_trait = greedy }
+		}
+    }
+
+    option = { # Stay in the Tavern
+        name = supernatural_ev1.10.c
+        custom_tooltip = supernatural_ev1.10.c_tt
+		
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = paranoid }
+			modifier = { add = 20 has_trait = shrewd }
+		}
+    }
+	
+	option = {
+		name = supernatural_ev1.10.d
+		trigger = {
+			OR = {
+				has_trait = spn_known_vampire
+				has_trait = spn_known_hybrid
+			}
+		}
+		custom_tooltip = supernatural_ev1.10.d_tt
+
+		trigger_event = {
+			id = supernatural_ev1.11
+		}
+	}
+}
+
+supernatural_ev1.11 = { #The Catacombs Below: Part 2
+    type = activity_event
+    title = supernatural_ev1.11.title
+    desc = supernatural_ev1.11.desc
+    theme = intrigue
+	override_background = { reference = ce1_catacombs }
+
+    left_portrait = {
+        character = root
+        animation = cautious
+    }
+    right_portrait = {
+        character = scope:hunter
+        animation = aggressive_dagger
+    }
+
+    trigger = {
+        is_alive = yes
+    }
+
+    immediate = {
+        hidden_effect = {
+            create_character = {
+                location = root.location
+                culture = root.culture
+                faith = root.faith
+                gender = male
+                template = spn_skilled_hunter_template
+                save_scope_as = hunter
+            }
+        }
+    }
+
+	cooldown = {
+		years = 1
+	}
+
+    option = {
+        name = supernatural_ev1.11.a
+        custom_tooltip = supernatural_ev1.11.a_tt
+
+        random_list = {
+            60 = { # Chance of killing the hunter
+                custom_tooltip = supernatural_ev1.11.a_win_tt
+                scope:hunter = {
+                    death = {
+                        death_reason = spn_death_drained
+                        killer = root
+                    }
+                }
+				if = {
+					limit = {
+						has_trait = supernatural_vampire
+					}			
+					add_trait_xp = {
+						trait = supernatural_vampire
+						track = vampirism
+						value = { 3 15 }
+					}
+				}
+				else = {
+					limit = {
+						has_trait = supernatural_hybrid
+					}			
+					add_trait_xp = {
+						trait = supernatural_hybrid
+						track = hybrid_vampirism
+						value = { 3 15 }
+					}				
+				}
+
+                # Positive modifiers for Vampires
+                modifier = { add = 5 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 20 } }
+                modifier = { add = 5 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 35 } }
+                modifier = { add = 5 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 50 } }
+
+                # Positive modifiers for Hybrids
+                modifier = { add = 8 has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 20 } }
+                modifier = { add = 8 has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 35 } }
+                modifier = { add = 8 has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 50 } }
+
+                # Other positive modifiers
+                modifier = { add = 10 martial > 10 }
+                modifier = { add = 10 prowess > 15 }
+                modifier = { add = 5 has_trait = strong }
+            }
+            40 = { # Chance of the hunter killing the player
+                custom_tooltip = supernatural_ev1.11.a_lose_tt
+				if = {
+					limit = {
+						has_trait = supernatural_vampire
+					}
+					death = {
+						death_reason = spn_death_staked_by_hunter_as_vampire
+						killer = scope:hunter
+					}
+				}
+				else = {
+					limit = {
+						has_trait = supernatural_hybrid
+					}
+					death = {
+						death_reason = spn_death_beheaded_as_hybrid
+						killer = scope:hunter
+					}
+				}
+
+                # Negative modifiers
+                modifier = { add = 10 martial < 8 }
+                modifier = { add = 10 prowess < 10 }
+                modifier = { add = 5 has_trait = weak }
+                # Positive modifiers for Vampires
+                modifier = { add = -5 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 20 } }
+                modifier = { add = -5 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 40 } }
+                modifier = { add = -5 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 60 } }
+                modifier = { add = -5 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 80 } }
+                # Positive modifiers for Hybrids
+                modifier = { add = -5 has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 15 } }
+                modifier = { add = -5 has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 30 } }
+                modifier = { add = -5 has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 45 } }
+                modifier = { add = -5 has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 60 } }
+            }
+        }
+		
+		ai_chance = {
+			base = 50
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 15 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 35 } }
+			modifier = { add = -15 has_trait = craven }
+			modifier = { add = 10 martial > 10 }
+		}
+    }
+
+	option = {
+		name = supernatural_ev1.11.b
+		custom_tooltip = supernatural_ev1.11.b_tt
+
+		random_list = {
+			75 = { # Chance of successfully imprisoning the hunter
+				custom_tooltip = supernatural_ev1.11.b_success_tt
+				imprison = {
+					target = scope:hunter
+					type = dungeon
+				}
+
+				# Positive modifiers for increasing the chance of success
+				modifier = { add = 5 martial > 10 }
+				modifier = { add = 5 prowess > 12 }
+				modifier = { add = 10 has_trait = strong }
+				modifier = { add = 10 has_trait = shrewd }
+				modifier = { add = 5 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 25 } }
+				modifier = { add = 5 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 55 } }
+				modifier = { add = 5 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 75 } }
+				modifier = { add = 8 has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 25 } }
+				modifier = { add = 8 has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 55 } }
+				modifier = { add = 8 has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 75 } }
+			}
+			
+			25 = { # Chance of failing to imprison the hunter
+				custom_tooltip = supernatural_ev1.11.b_fail_tt
+				if = {
+					limit = {
+						has_trait = supernatural_vampire
+					}
+					death = {
+						death_reason = spn_death_staked_by_hunter_as_vampire
+						killer = scope:hunter
+					}
+				}
+				else = {
+					limit = {
+						has_trait = supernatural_hybrid
+					}
+					death = {
+						death_reason = spn_death_beheaded_as_hybrid
+						killer = scope:hunter
+					}
+				}
+
+				# Negative modifiers for decreasing the chance of success
+				modifier = { add = 10 martial < 8 }
+				modifier = { add = 5 prowess < 10 }
+				modifier = { add = 10 has_trait = weak }
+				modifier = { add = 10 has_trait = lazy }
+			}
+		}
+		
+		ai_chance = {
+			base = 60
+			modifier = { add = 15 has_trait = shrewd }
+			modifier = { add = 10 prowess > 12 }
+			modifier = { add = -20 has_trait = lazy }
+		}
+	}
+
+    option = {
+        name = supernatural_ev1.11.c
+        custom_tooltip = supernatural_ev1.11.c_tt
+        add_prestige = { -20 -80 }
+		
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = craven }
+			modifier = { add = -10 has_trait = brave }
+			modifier = { add = -15 martial > 10 }
+		}
+    }
+}
+
+supernatural_ev1.12 = { #A Moment of Desire
+    type = activity_event
+    title = supernatural_ev1.12.title
+    desc = supernatural_ev1.12.desc
+    theme = seduction
+    override_background = { reference = tavern }
+
+    center_portrait = {
+        character = root
+        animation = interested
+    }
+    right_portrait = {
+        character = scope:lover_participant
+        animation = flirtation
+    }
+
+    cooldown = { years = 1 }
+
+    trigger = {
+        exists = scope:activity
+        scope:activity = {
+            any_attending_character = {
+                NOT = { this = root }
+                is_adult = yes
+                has_relation_lover = root
+            }
+        }
+    }
+
+    immediate = {
+        play_music_cue = "mx_cue_seduction"
+        scope:activity = {
+            random_attending_character = {
+                limit = {
+                    is_adult = yes
+                    has_relation_lover = root
+                }
+                save_scope_as = lover_participant
+            }
+        }
+    }
+
+    option = { # Rent a room and enjoy the moment
+        name = supernatural_ev1.12.a
+        custom_tooltip = supernatural_ev1.12.a_tt
+
+        root = {
+            add_character_modifier = {
+                modifier = supernatural_fresh_air_and_exercise_modifier
+                years = 5
+            }
+            scope:lover_participant = {
+                add_opinion = {
+                    target = root
+                    modifier = love_opinion
+                    opinion = 20
+                }
+            }
+            stress_impact = {
+                rakish = medium_stress_impact_loss
+                chaste = medium_stress_impact_gain
+            }
+        }
+
+		ai_chance = {
+			base = 70
+			modifier = { add = 20 has_trait = lustful }
+			modifier = { add = -20 has_trait = chaste }
+		}
+
+    }
+
+    option = { # Focus on the hunt
+        name = supernatural_ev1.12.b
+        custom_tooltip = supernatural_ev1.12.b_tt
+
+        root = {
+            add_prestige = minor_prestige_gain
+            add_character_modifier = {
+                modifier = supernatural_focused_attention_modifier
+                years = 5
+            }
+            stress_impact = {
+                lustful = medium_stress_impact_gain
+            }
+        }
+
+		ai_chance = {
+			base = 30
+			modifier = { add = 30 has_trait = diligent }
+			modifier = { add = -15 has_trait = lustful }
+		}
+    }
+}
+
+
+supernatural_ev1.13 = { #Prepared for the Night - Ev1.13
+    type = activity_event
+    title = supernatural_ev1.13.title
+    desc = supernatural_ev1.13.desc
+    theme = intrigue
+    override_background = { reference = tavern }
+
+    left_portrait = {
+        character = root
+        animation = cautious
+    }
+    right_portrait = {
+        character = scope:random_guest
+        animation = confident
+    }
+
+    trigger = {
+        scope:activity = {
+            has_activity_option = { category = options_preparations option = preparations_option_scout }
+        }
+    }
+
+    immediate = {
+        scope:activity = {
+            every_attending_character = {
+                add_character_flag = vf_scouted_location
+            }
+        }
+    }
+
+    option = {
+        name = supernatural_ev1.13.a
+        custom_tooltip = supernatural_ev1.13.a_tt
+
+        scope:activity = {
+            add_activity_log_entry = {
+                key = scouted_location_safety_key
+                tags = { positive }
+                character = root
+            }
+        }
+    }
+}
+
+supernatural_ev1.14 = { #The Trap
+    type = activity_event
+    title = supernatural_ev1.14.title
+    desc = supernatural_ev1.14.desc
+    theme = intrigue
+    override_background = { reference = alley_night }
+
+    center_portrait = {
+        character = root
+        animation = scheming
+    }
+
+	right_portrait = {
+		character = scope:other_attendee
+		animation = cautious
+	}
+
+	trigger = {
+		scope:activity = {
+			has_activity_option = { category = options_preparations option = preparations_option_trap }
+		}
+	}
+
+	immediate = {
+		scope:activity = {
+			# Save a random attendee (excluding the player) as 'other_attendee'
+			random_attending_character = {
+				limit = { NOT = { this = scope:root } }
+				save_scope_as = other_attendee
+			}
+
+			# Add the character flag to all attending characters, including the player
+			every_attending_character = {
+				add_character_flag = vf_laid_trap
+			}
+		}
+	}
+
+
+    option = {
+        name = supernatural_ev1.14.a
+        custom_tooltip = supernatural_ev1.14.a_tt
+
+        scope:activity = {
+			add_activity_log_entry = {
+				key = supernatural_ev1.14
+				tags = { positive }
+				character = root
+			}
+		}
+    }
+}
+
+supernatural_ev1.15 = { # Tavern Gossip
+    type = activity_event
+    title = supernatural_ev1.15.title
+    desc = supernatural_ev1.15.desc
+    theme = intrigue
+    override_background = { reference = tavern }
+
+    center_portrait = {
+        character = root
+        animation = eyeroll
+    }
+
+    left_portrait = {
+        character = scope:tavern_guest
+        animation = shocked
+    }
+
+    right_portrait = {
+        character = scope:tavern_drunk
+        animation = drink
+    }
+
+    cooldown = {
+        years = 1
+    }
+
+    immediate = {
+        # Create the tavern drunk
+        create_character = {
+            location = root.location
+            culture = root.culture
+            faith = root.faith
+			gender_female_chance = 0
+            save_scope_as = tavern_drunk
+        }
+
+        # Create a random local guest
+        create_character = {
+            location = root.location
+            culture = root.culture
+			gender_female_chance = 50
+            faith = root.faith
+            save_scope_as = tavern_guest
+        }
+    }
+
+    option = {
+        name = supernatural_ev1.15.a
+        custom_tooltip = supernatural_ev1.15.a_tt
+
+        root = {
+            add_prestige = minor_prestige_gain
+        }
+    }
+
+    option = {
+        name = supernatural_ev1.15.b
+        custom_tooltip = supernatural_ev1.15.b_tt
+
+        root = {
+            add_piety = minor_piety_gain
+        }
+    }
+
+    option = {
+        name = supernatural_ev1.15.c
+        custom_tooltip = supernatural_ev1.15.c_tt
+        trigger = {
+            OR = {
+                has_trait = spn_known_vampire
+                has_trait = spn_known_hybrid
+            }
+        }
+
+        root = {
+            add_prestige = 10
+            add_piety = 10
+            add_dread = 15
+        }
+    }
+}
+
+supernatural_ev1.16 = { # Hidden Passage in the Cellar
+    type = activity_event
+    title = supernatural_ev1.16.title
+    desc = supernatural_ev1.16.desc
+    theme = intrigue
+    override_background = { reference = bp1_wine_cellar }
+
+    center_portrait = {
+        character = root
+        animation = scheming
+    }
+
+    cooldown = {
+        years = 1
+    }
+
+    trigger = {
+        is_alive = yes
+    }
+
+    immediate = {
+        # Save the current character as 'discoverer'
+        save_scope_as = discoverer
+    }
+
+    option = { # Keep the passage to yourself
+        name = supernatural_ev1.16.a
+        custom_tooltip = supernatural_ev1.16.a_tt
+
+        add_trait_xp = {
+            trait = supernatural_vampire
+            track = vampirism
+            value = { 5 10 }
+        }
+        add_character_flag = vf_escape_route_known
+
+        scope:activity = {
+			add_activity_log_entry = {
+				key = discovered_escape_route
+				tags = { good }
+				character = root
+			}
+		}
+		
+		ai_chance = {
+			base = 50
+			modifier = { add = 20 has_trait = paranoid }
+			modifier = { add = -10 has_trait = gregarious }
+		}
+    }
+
+	option = { # Share the passage with the guests
+		name = supernatural_ev1.16.b
+		custom_tooltip = supernatural_ev1.16.b_tt
+
+		trigger = {
+			scope:activity = {
+				any_attending_character = {
+					count > 1
+					NOT = { this = scope:root }
+				}
+			}
+		}
+
+		root = {
+			add_character_flag = vf_escape_route_known
+		}
+
+		scope:activity = {
+			every_attending_character = {
+				limit = {
+					NOT = { this = scope:discoverer }  # Exclude the discoverer (host) from gaining opinion of themselves
+				}
+
+				add_character_flag = vf_escape_route_known
+
+				add_opinion = {
+					target = scope:discoverer  # Ensure the opinion is directed toward the discoverer (you)
+					modifier = impressed_opinion
+					opinion = 20
+				}
+
+				custom = every_other_attendee_tt  # Add the custom tooltip for clarity
+			}
+		}
+		
+		ai_chance = {
+			base = 60
+			modifier = { add = 20 has_trait = gregarious }
+			modifier = { add = -15 has_trait = paranoid }
+		}
+	}
+
+}
+
+supernatural_ev1.17 = { #A Moment of Solace
+    type = activity_event
+    title = supernatural_ev1.17.title
+    desc = supernatural_ev1.17.desc
+    theme = intrigue
+    override_background = { reference = alley_night }
+
+    center_portrait = {
+        character = root
+        animation = eccentric
+    }
+
+    trigger = {
+        is_alive = yes
+        has_activity_intent = satiate_thirst_intent
+    }
+
+    immediate = {
+        # Any immediate effects or setup can be placed here if needed
+    }
+
+    option = {
+        name = supernatural_ev1.17.a
+		trigger = {
+			has_trait = supernatural_vampire
+		}
+        custom_tooltip = supernatural_ev1.17.a_tt
+		stress_impact = {
+			base = minor_stress_impact_loss #-15
+			supernatural_vampire = -25
+		}
+    }
+
+    option = {
+        name = supernatural_ev1.17.b
+		trigger = {
+			has_trait = supernatural_hybrid
+		}
+        custom_tooltip = supernatural_ev1.17.b_tt
+		stress_impact = {
+			base = minor_stress_impact_loss #-15
+			supernatural_hybrid = -35
+		}
+    }
+}
+
+supernatural_ev1.18 = { #A Test of Restraint
+    type = activity_event
+    title = supernatural_ev1.18.title
+    desc = supernatural_ev1.18.desc
+    theme = intrigue
+    override_background = { reference = tavern }
+
+    center_portrait = {
+        character = root
+        animation = stress
+    }
+    left_portrait = {
+        character = scope:wounded_victim
+        animation = pain
+    }
+    right_portrait = {
+        character = scope:aggressor
+        animation = anger
+    }
+
+    trigger = {
+        is_alive = yes
+        has_activity_intent = strengthen_the_blood_intent
+    }
+
+    immediate = {
+        create_character = {
+            location = root.location
+            culture = root.culture
+            faith = root.faith
+            gender_female_chance = 50
+            save_scope_as = wounded_victim
+            trait = wounded_1
+        }
+        create_character = {
+            location = root.location
+            culture = root.culture
+            faith = root.faith
+            gender_female_chance = 50
+            save_scope_as = aggressor
+        }
+    }
+
+    option = {
+        name = supernatural_ev1.18.a
+        trigger = {
+            has_trait = supernatural_vampire
+        }
+        custom_tooltip = supernatural_ev1.18.a_tt
+        add_trait_xp = {
+            trait = supernatural_vampire
+            track = vampirism
+            value = { 3 15 }
+        }
+		stress_impact = {
+			base = minor_stress_impact_gain #-15
+			supernatural_vampire = 12
+		}
+    }
+
+    option = {
+        name = supernatural_ev1.18.b
+        trigger = {
+            has_trait = supernatural_hybrid
+        }
+        custom_tooltip = supernatural_ev1.18.b_tt
+        add_trait_xp = {
+            trait = supernatural_hybrid
+            track = hybrid_vampirism
+            value = { 3 15 }
+        }
+		stress_impact = {
+			base = minor_stress_impact_gain #-15
+			supernatural_hybrid = 8
+		}
+    }
+}
+
+supernatural_ev1.19 = { # A Moment of Respect - Ev1.19
+    type = activity_event
+    title = supernatural_ev1.19.title
+    desc = supernatural_ev1.19.desc
+    theme = intrigue
+    override_background = { reference = alley_night }
+
+    left_portrait = {
+        character = root
+        animation = cautious
+    }
+    right_portrait = {
+        character = scope:deceased_body
+        #animation = dead
+    }
+
+    trigger = {
+        scope:activity = {
+            has_activity_option = { category = options_spoils option = spoils_option_dead_respect }
+        }
+    }
+
+    immediate = {
+        create_character = {
+            location = root.location
+            culture = root.culture
+            faith = root.faith
+            gender = male
+            age = { 25 50 }
+            save_scope_as = deceased_body
+			after_creation = {
+				death = {
+					death_reason = death_fight
+				}
+			}
+        }
+    }
+
+    option = { # Show respect and move on.
+        name = supernatural_ev1.19.a
+        custom_tooltip = supernatural_ev1.19.a_tt
+
+        root = {
+            add_piety = { 35 65 }
+        }
+
+        scope:activity = {
+            add_activity_log_entry = {
+                key = respected_the_dead
+                tags = { positive }
+                character = root
+            }
+        }
+    }
+}
+
+supernatural_ev1.20 = { #Whispers In The Dark
+    type = activity_event
+    title = supernatural_ev1.20.title
+    desc = supernatural_ev1.20.desc
+    theme = intrigue
+    override_background = { reference = alley_night }
+
+    center_portrait = {
+        character = root
+        animation = listening
+    }
+
+    trigger = {
+        scope:activity = {
+            has_activity_option = { category = options_preparations option = preparations_option_instinct }
+        }
+    }
+	
+	cooldown = {
+		years = 1
+	}
+	
+    option = { # Focus and listen carefully.
+        name = supernatural_ev1.20.a
+        custom_tooltip = supernatural_ev1.20.a_tt
+        random_list = {
+            50 = { # Success: Gain information
+                custom_tooltip = supernatural_ev1.20.a_success_tt
+				stress_impact = {
+					base = minor_stress_impact_loss #-15
+				}
+                add_intrigue_lifestyle_xp = { 100 300 }
+				
+				modifier = { add = 5 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 15 } }
+				modifier = { add = 5 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 35 } }
+				modifier = { add = 5 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 55 } }
+				modifier = { add = 5 has_trait_xp = { trait = supernatural_vampire track = vampirism value > 75 } }
+				modifier = { add = 8 has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 15 } }
+				modifier = { add = 8 has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 35 } }
+				modifier = { add = 8 has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 55 } }
+				modifier = { add = 8 has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 75 } }
+            }
+            50 = { # Failure: Prestige loss
+                custom_tooltip = supernatural_ev1.20.a_fail_tt
+                add_prestige = { -30 -140 }
+            }
+        }
+    }
+
+    option = { # Ignore them and move on.
+        name = supernatural_ev1.20.b
+        custom_tooltip = supernatural_ev1.20.b_tt
+		stress_impact = {
+			base = 25 #-15
+		}
+    }
+}
+
+supernatural_ev1.21 = { # Wary Citizens
+    type = activity_event
+    title = supernatural_ev1.21.title
+    desc = supernatural_ev1.21.desc
+    theme = intrigue
+    override_background = { reference = alley_night }
+
+    center_portrait = {
+        character = root
+        animation = cautious
+    }
+
+    immediate = {
+        random_courtier = {
+            limit = { is_adult = yes }
+			add_character_flag = vf_human
+            save_scope_as = vf_human
+        }
+    }
+
+    option = { # Use your instincts and follow quietly.
+        name = supernatural_ev1.21.a
+        custom_tooltip = supernatural_ev1.21.a_tt
+
+        root = {
+            add_character_flag = vf_instinct_used
+        }
+
+    }
+
+    option = { # Use your knowledge of the surroundings.
+        name = supernatural_ev1.21.b
+        custom_tooltip = supernatural_ev1.21.b_tt
+		trigger = {
+			scope:activity = {
+				has_activity_option = { category = options_preparations option = preparations_option_scout }
+			}		
+		}
+
+        root = {
+            add_character_flag = vf_scouted_location
+        }
+
+    }
+
+    option = { # Good thing your trap is setup ahead.
+        name = supernatural_ev1.21.c
+        custom_tooltip = supernatural_ev1.21.c_tt
+		trigger = {
+			root = {
+				has_character_flag = vf_laid_trap
+			}
+		}
+    }
+
+    option = { # No creatures out here tonight friend, just rats.
+        name = supernatural_ev1.21.d
+        custom_tooltip = supernatural_ev1.21.d_tt
+        trigger = { 
+			has_trait = supernatural_hybrid
+		}
+
+        root = {
+            add_character_flag = vf_hybrid_approach
+        }
+
+    }
+}
+
+supernatural_ev1.22 = { # Whispers of Danger
+    type = activity_event
+    title = supernatural_ev1.22.title
+    desc = supernatural_ev1.22.desc
+    theme = intrigue
+    override_background = { reference = alley_night }
+
+    right_portrait = {
+        character = scope:vf_human
+        animation = afraid
+    }
+    center_portrait = {
+        character = root
+        animation = sinister
+    }
+
+    immediate = {
+        random_courtier = {
+            limit = { has_character_flag = vf_human }
+            save_scope_as = vf_human
+        }
+    }
+
+    option = { # Close the distance with a burst of vampiric speed.
+        name = supernatural_ev1.22.a
+        trigger = { 
+			root = {
+				has_character_flag = vf_instinct_used
+			}
+		}
+        custom_tooltip = supernatural_ev1.22.a_tt
+
+        root = {
+			if = {
+				limit = {
+					has_trait = supernatural_vampire
+				}
+				add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 5 15 } }
+			}
+			else = {
+				limit = {
+					has_trait = supernatural_hybrid
+				}
+				add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 5 15 } }
+			}
+        }
+
+		
+		ai_chance = {
+			base = 60
+			modifier = { add = 15 has_trait = brave }
+			modifier = { add = -10 has_trait = craven }
+		}
+    }
+
+    option = { # Exploit the weakness you identified.
+        name = supernatural_ev1.22.b
+        trigger = {
+			root = {
+				has_character_flag = vf_scouted_location 
+			}
+		}
+        custom_tooltip = supernatural_ev1.22.b_tt
+        root = {
+			if = {
+				limit = {
+					has_trait = supernatural_vampire
+				}
+				add_trait_xp = {
+					trait = supernatural_vampire 
+					track = vampirism 
+					value = { 1 5 } 
+				}
+			}
+			else = {
+				limit = {
+					has_trait = supernatural_hybrid
+				}
+				add_trait_xp = {
+					trait = supernatural_hybrid
+					track = hybrid_vampirism 
+					value = { 2 6 } 
+				}
+			}
+        }
+		
+		ai_chance = {
+			base = 50
+			modifier = { add = 20 has_trait = shrewd }
+			modifier = { add = -10 has_trait = reckless }
+		}
+    }
+
+
+    option = { # Spring the trap, leaving them no escape.
+        name = supernatural_ev1.22.c
+        trigger = { 
+			root = {
+				has_character_flag = vf_laid_trap
+			}
+		}
+        custom_tooltip = supernatural_ev1.22.c_tt
+
+        root = {
+			if = {
+				limit = {
+					has_trait = supernatural_vampire
+				}
+				add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 5 15 } }
+			}
+			else = {
+				limit = {
+					has_trait = supernatural_hybrid
+				}
+				add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 5 15 } }
+			}
+        }
+
+		ai_chance = {
+			base = 55
+			modifier = { add = 15 has_character_flag = vf_laid_trap }
+		}
+    }
+
+    option = { # Advance boldly, their fear palpable.
+        name = supernatural_ev1.22.d
+        trigger = { 
+			root = {
+				has_trait = supernatural_hybrid
+			}
+		}
+        custom_tooltip = supernatural_ev1.22.d_tt
+
+        root = {
+            add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 5 15 } }
+        }
+
+    }
+}
+
+supernatural_ev1.23 = { # The Crimson Decision
+    type = activity_event
+    title = supernatural_ev1.23.title
+    desc = supernatural_ev1.23.desc
+    theme = intrigue
+    override_background = { reference = alley_night }
+
+    right_portrait = {
+        character = scope:vf_human
+        animation = terrified
+    }
+    center_portrait = {
+        character = root
+        animation = sinister
+    }
+
+    immediate = {
+        random_courtier = {
+            limit = { has_character_flag = vf_human }
+            save_scope_as = vf_human
+        }
+    }
+
+    option = { # Drain them completely, savoring every drop.
+        name = supernatural_ev1.23.a
+        custom_tooltip = supernatural_ev1.23.a_tt
+
+        root = {
+			if = {
+				limit = {
+					has_trait = supernatural_vampire
+				}
+				add_trait_xp = {
+					trait = supernatural_vampire
+					track = vampirism
+					value = { 20 30 } 
+				}
+			}
+			else = {
+				limit = {
+					has_trait = supernatural_hybrid
+				}
+				add_trait_xp = {
+					trait = supernatural_hybrid
+					track = hybrid_vampirism
+					value = { 20 30 } 
+				}
+			}
+            add_stress = major_stress_impact_gain
+        }
+		scope:vf_human = {
+			death = {
+				death_reason = spn_death_drained
+				killer = root
+			}
+		}
+    }
+
+    option = { # Take just enough to satiate your hunger.
+        name = supernatural_ev1.23.b
+        custom_tooltip = supernatural_ev1.23.b_tt
+
+        root = {
+			if = {
+				limit = {
+					has_trait = supernatural_vampire
+				}
+				add_trait_xp = {
+					trait = supernatural_vampire
+					track = vampirism
+					value = 10 
+				}
+			}
+			else = {
+				limit = {
+					has_trait = supernatural_hybrid
+				}
+				add_trait_xp = {
+					trait = supernatural_hybrid
+					track = hybrid_vampirism
+					value = 10
+				}
+			}
+            stress_impact = {
+				base = minor_stress_impact_loss
+			}
+        }
+		scope:vf_human = {
+			add_character_modifier = {
+				modifier = vf_recently_fed_on_modifier
+				years = 3
+			}
+		}
+
+    }
+
+    option = { # Take a small taste and step back.
+        name = supernatural_ev1.23.c
+        custom_tooltip = supernatural_ev1.23.c_tt
+
+        root = {
+            add_piety = { 10 20 }
+            add_stress = minor_stress_impact_loss
+			if = {
+				limit = {
+					has_trait = supernatural_vampire
+				}
+				add_trait_xp = {
+					trait = supernatural_vampire
+					track = vampirism
+					value = { 2 6 } 
+				}
+			}
+			else = {
+				limit = {
+					has_trait = supernatural_hybrid
+				}
+				add_trait_xp = {
+					trait = supernatural_hybrid
+					track = hybrid_vampirism
+					value = { 2 6 }
+				}
+			}
+        }
+		scope:vf_human = {
+			add_character_modifier = {
+				modifier = vf_recently_fed_on_modifier
+				years = 3
+			}
+		}
+
+    }
+
+    option = { # Use the hidden escape route.
+        name = supernatural_ev1.23.d
+        trigger = { has_character_flag = vf_escape_route_known }
+        custom_tooltip = supernatural_ev1.23.d_tt
+
+        root = {
+            add_trait_xp = {
+				trait = supernatural_vampire
+				track = vampirism
+				value = 5 
+			}
+        }
+
+    }
+
+    option = { # Feed and then loot them.
+        name = supernatural_ev1.23.e
+        trigger = {
+            scope:activity = { has_activity_option = { category = options_spoils option = spoils_option_robbing } }
+        }
+        custom_tooltip = supernatural_ev1.23.e_tt
+
+        root = {
+            add_gold = { 20 125 }
+			if = {
+				limit = {
+					has_trait = supernatural_vampire
+				}
+				add_trait_xp = {
+					trait = supernatural_vampire
+					track = vampirism
+					value = { 4 8 } 
+				}
+			}
+			else = {
+				limit = {
+					has_trait = supernatural_hybrid
+				}
+				add_trait_xp = {
+					trait = supernatural_hybrid
+					track = hybrid_vampirism
+					value = { 4 8 }
+				}
+			}
+        }
+		scope:vf_human = {
+			add_character_modifier = {
+				modifier = vf_recently_fed_on_modifier
+				years = 3
+			}
+		}
+    }
+
+    option = { # A wealthy target yields more than just blood.
+        name = supernatural_ev1.23.f
+        trigger = {
+            scope:activity = { has_activity_option = { category = options_spoils option = spoils_option_casing } }
+        }
+        custom_tooltip = supernatural_ev1.23.f_tt
+
+        root = {
+            add_gold = { 50 250 }
+			if = {
+				limit = {
+					has_trait = supernatural_vampire
+				}
+				add_trait_xp = {
+					trait = supernatural_vampire
+					track = vampirism
+					value = { 4 8 }
+				}
+			}
+			else = {
+				limit = {
+					has_trait = supernatural_hybrid
+				}
+				add_trait_xp = {
+					trait = supernatural_hybrid
+					track = hybrid_vampirism
+					value = { 4 8 }
+				}
+			}
+        }
+		scope:vf_human = {
+			add_character_modifier = {
+				modifier = vf_recently_fed_on_modifier
+				years = 3
+			}
+		}
+    }
+}
