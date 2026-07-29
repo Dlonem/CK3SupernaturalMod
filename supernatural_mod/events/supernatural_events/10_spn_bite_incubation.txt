@@ -1,0 +1,860 @@
+﻿namespace = spn_wound_incubation
+
+##################################################################
+# WEREWOLF WOUND INCUBATION - pulse engine + event pool
+#
+# Identifier = the ww_infected_wound trait. Climax (9000) removes it -> pulse (0001) self-terminates.
+# Infection track XP is the spine (0-100). Options use RANDOM xp swings + stress trade-offs.
+# Fighting the infection (lowering XP) costs stress; giving in (raising XP) relieves it.
+# Names: use var-chain for the sire (scope: refs don't resolve in this build's event loc).
+##################################################################
+
+
+# ============================================================
+# 0001 - PULSE DISPATCHER (hidden). No back-to-back repeats; soft caps on the generics.
+# ============================================================
+spn_wound_incubation.0001 = {
+	hidden = yes
+	trigger = { has_trait = ww_infected_wound }
+	immediate = {
+		random_list = {
+			10 = { # The wound festers (generic, cap 2)
+				trigger = { NOT = { var:spn_last_wound_event = 10 }  NOT = { var:spn_wound_c10 >= 2 } }
+				set_variable = { name = spn_last_wound_event value = 10 }
+				change_variable = { name = spn_wound_c10 add = 1 }
+				trigger_event = spn_wound_incubation.0010
+			}
+			10 = { # Fevered nights (generic, cap 2)
+				trigger = { NOT = { var:spn_last_wound_event = 11 }  NOT = { var:spn_wound_c11 >= 2 } }
+				set_variable = { name = spn_last_wound_event value = 11 }
+				change_variable = { name = spn_wound_c11 add = 1 }
+				trigger_event = spn_wound_incubation.0011
+			}
+			9 = { # The wound worsens - risk of maiming (generic)
+				trigger = { NOT = { var:spn_last_wound_event = 30 } }
+				set_variable = { name = spn_last_wound_event value = 30 }
+				trigger_event = spn_wound_incubation.0030
+			}
+			8 = { # A healer attends you (ONCE, needs a physician courtier)
+				trigger = {
+					NOT = { has_character_flag = spn_had_healer_event }
+					any_courtier = { has_trait = lifestyle_physician }
+				}
+				trigger_event = spn_wound_incubation.0012
+			}
+			7 = { # A hunter grows suspicious (ONCE, needs a capable monster-hunter courtier)
+				trigger = {
+					NOT = { has_variable = spn_hunter_confronted }
+					any_courtier = {
+						has_trait = supernatural_hunter
+						has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 20 }
+					}
+				}
+				trigger_event = spn_wound_incubation.0040
+			}
+			6 = { # The wolf stirs (yield vs resist) - one-shot
+				trigger = { NOR = { has_character_flag = spn_yielding_to_the_change  has_character_flag = spn_resisting_the_change } }
+				set_variable = { name = spn_last_wound_event value = 20 }
+				trigger_event = spn_wound_incubation.0020
+			}
+			6 = { # The one who clawed you (any turning) - one-shot
+				trigger = { has_variable = spn_conferred_sire  NOT = { has_variable = spn_sire_choice_made } }
+				set_variable = { name = spn_last_wound_event value = 21 }
+				trigger_event = spn_wound_incubation.0021
+			}
+			7 = { # A crisis of faith (one-shot; the event sets its own spn_faith_crisis_done flag)
+				trigger = { NOT = { has_character_flag = spn_faith_crisis_done } }
+				set_variable = { name = spn_last_wound_event value = 50 }
+				trigger_event = spn_wound_incubation.0050
+			}
+		}
+		trigger_event = { id = spn_wound_incubation.0001 days = { 90 120 } }
+	}
+}
+
+
+# ============================================================
+# 0002 - Passive monthly infection creep (hidden, self-chaining). The "sweat factor".
+# ============================================================
+spn_wound_incubation.0002 = {
+	hidden = yes
+	trigger = { has_trait = ww_infected_wound }
+	immediate = {
+		add_trait_xp = { trait = ww_infected_wound track = infection value = 3 }
+		trigger_event = { id = spn_wound_incubation.0002 days = { 25 35 } }
+	}
+}
+
+
+# ============================================================
+# 0010 - The Wound Festers (generic)
+# ============================================================
+spn_wound_incubation.0010 = {
+	type = character_event
+	title = spn_wound_incubation.0010.t
+	desc = spn_wound_incubation.0010.desc
+	theme = mental_break
+	trigger = { has_trait = ww_infected_wound }
+	left_portrait = { character = root  animation = sick_idle_add }
+
+	option = { # Rest and fight it (lower XP, costs stress)
+		name = spn_wound_incubation.0010.a
+		custom_tooltip = spn_wound_incubation.0010.a.tt
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -16 max = -7 } } }
+		add_stress = 40
+		ai_chance = {
+			base = 40
+			modifier = { add = 25  has_trait = patient }
+			modifier = { add = 20  has_trait = diligent }
+			modifier = { add = 15  has_trait = temperate }
+			modifier = { add = -20  stress >= 200 }
+		}
+	}
+	option = { # Push through my duties (raise XP, but no stress; martial strain)
+		name = spn_wound_incubation.0010.b
+		custom_tooltip = spn_wound_incubation.0010.b.tt
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = 6 max = 14 } } }
+		ai_chance = {
+			base = 25
+			modifier = { add = 25  has_trait = diligent }
+			modifier = { add = 20  has_trait = ambitious }
+			modifier = { add = 20  is_at_war = yes }
+			modifier = { add = 15  stress >= 200 }
+		}
+	}
+	option = { # Drown the fever in wine (raise XP, relieve stress)
+		name = spn_wound_incubation.0010.c
+		custom_tooltip = spn_wound_incubation.0010.c.tt
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = 4 max = 10 } } }
+		add_stress = -25
+		ai_chance = {
+			base = 10
+			modifier = { add = 60  has_trait = drunkard }
+			modifier = { add = 20  has_trait = gluttonous }
+			modifier = { add = 25  stress >= 250 }
+		}
+	}
+	option = { # [Strong] Trust my body (big lower, less stress)
+		name = spn_wound_incubation.0010.d
+		trigger = { OR = { has_trait = strong  has_trait = physique_good_1  has_trait = physique_good_2 } }
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -18 max = -10 } } }
+		add_stress = 10
+		ai_chance = { base = 80 }
+	}
+	option = { # [Craven] Cower from it (big raise, relieve stress)
+		name = spn_wound_incubation.0010.e
+		trigger = { has_trait = craven }
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = 8 max = 16 } } }
+		add_stress = -15
+		ai_chance = { base = 70 }
+	}
+}
+
+
+# ============================================================
+# 0011 - Fevered Nights (generic)
+# ============================================================
+spn_wound_incubation.0011 = {
+	type = character_event
+	title = spn_wound_incubation.0011.t
+	desc = spn_wound_incubation.0011.desc
+	theme = mental_break
+	trigger = { has_trait = ww_infected_wound }
+	left_portrait = { character = root  animation = sick_idle_add }
+
+	option = { # Endure it (lower XP, costs stress)
+		name = spn_wound_incubation.0011.a
+		custom_tooltip = spn_wound_incubation.0011.a.tt
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -14 max = -6 } } }
+		add_stress = 35
+		ai_chance = {
+			base = 40
+			modifier = { add = 20  has_trait = patient }
+			modifier = { add = 20  has_trait = temperate }
+			modifier = { add = -20  stress >= 200 }
+		}
+	}
+	option = { # [Brave] Master the fever (big lower, smaller stress)
+		name = spn_wound_incubation.0011.b
+		trigger = { has_trait = brave }
+		custom_tooltip = spn_wound_incubation.0011.b.tt
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -16 max = -8 } } }
+		add_stress = 10
+		ai_chance = { base = 75 }
+	}
+	option = { # [Learned] Study the sickness (moderate lower)
+		name = spn_wound_incubation.0011.f
+		trigger = { learning >= 12 }
+		custom_tooltip = spn_wound_incubation.0011.f.tt
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -12 max = -6 } } }
+		add_stress = 8
+		ai_chance = { base = 60  modifier = { add = 20  has_trait = scholar } }
+	}
+	option = { # Surrender to the dark dreams (raise XP, relieve stress)
+		name = spn_wound_incubation.0011.c
+		custom_tooltip = spn_wound_incubation.0011.c.tt
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = 6 max = 14 } } }
+		add_stress = -20
+		ai_chance = {
+			base = 25
+			modifier = { add = 25  has_trait = craven }
+			modifier = { add = 20  has_trait = paranoid }
+			modifier = { add = 25  stress >= 250 }
+		}
+	}
+	option = { # [Weak] My frail body buckles (big raise)
+		name = spn_wound_incubation.0011.d
+		trigger = { has_trait = weak }
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = 10 max = 18 } } }
+		ai_chance = { base = 70 }
+	}
+}
+
+
+# ============================================================
+# 0030 - The Wound Worsens (maiming risk; body/mind can avoid it) - generic
+# ============================================================
+spn_wound_incubation.0030 = {
+	type = character_event
+	title = spn_wound_incubation.0030.t
+	desc = spn_wound_incubation.0030.desc
+	theme = mental_break
+	trigger = { has_trait = ww_infected_wound  NOT = { has_trait = maimed } }
+	left_portrait = { character = root  animation = stress }
+
+	option = { # Fight to keep the limb (chance to avoid maiming, scaled by body/mind)
+		name = spn_wound_incubation.0030.a
+		custom_tooltip = spn_wound_incubation.0030.a.tt
+		add_stress = 15
+		random_list = {
+			50 = { # keep it
+				modifier = { add = 20  has_trait = strong }
+				modifier = { add = 15  has_trait = physique_good_1 }
+				modifier = { add = 15  has_trait = brave }
+				modifier = { add = 15  health >= 4 }
+				modifier = { add = -15  has_trait = weak }
+				add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -6 max = -2 } } }
+			}
+			50 = { # lose it
+				modifier = { add = -20  has_trait = strong }
+				modifier = { add = -15  has_trait = brave }
+				modifier = { add = 20  has_trait = weak }
+				add_trait = maimed
+				add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = 4 max = 10 } } }
+			}
+		}
+		ai_chance = { base = 60  modifier = { add = 20  has_trait = brave } modifier = { add = 20  has_trait = strong } }
+	}
+	option = { # Let them take the limb to stop the spread (guaranteed maim, big XP drop)
+		name = spn_wound_incubation.0030.b
+		custom_tooltip = spn_wound_incubation.0030.b.tt
+		add_trait = maimed
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -16 max = -8 } } }
+		add_stress = 25
+		ai_chance = { base = 30  modifier = { add = 25  has_trait = craven } modifier = { add = 20  has_trait = cynical } }
+	}
+	option = { # [Learned] Tend the wound with a healer's knowledge of your own
+		name = spn_wound_incubation.0030.c
+		trigger = { OR = { learning >= 12  has_trait = scholar  has_trait = lifestyle_physician } }
+		custom_tooltip = spn_wound_incubation.0030.c.tt
+		add_stress = 10
+		random_list = {
+			65 = { # save it cleanly
+				modifier = { add = 15  learning >= 16 }
+				modifier = { add = 10  has_trait = lifestyle_physician }
+				modifier = { add = 10  has_trait = scholar }
+				add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -10 max = -4 } } }
+			}
+			35 = { # still lose it, but staunch the spread
+				add_trait = maimed
+				add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -8 max = -3 } } }
+			}
+		}
+		ai_chance = { base = 70  modifier = { add = 20  has_trait = lifestyle_physician } }
+	}
+}
+
+
+# ============================================================
+# 0012 - A Healer's Hands (ONCE; needs a physician courtier)
+# ============================================================
+spn_wound_incubation.0012 = {
+	type = character_event
+	title = spn_wound_incubation.0012.t
+	desc = spn_wound_incubation.0012.desc
+	theme = education
+	trigger = {
+		has_trait = ww_infected_wound
+		NOT = { has_character_flag = spn_had_healer_event }
+		any_courtier = { has_trait = lifestyle_physician }
+	}
+	immediate = {
+		add_character_flag = spn_had_healer_event
+		random_courtier = { limit = { has_trait = lifestyle_physician } save_scope_as = healer }
+	}
+	left_portrait = { character = root  animation = sick_idle_add }
+	right_portrait = { character = scope:healer  animation = personality_compassionate }
+
+	option = { # Accept their full care (big lower; small chance they suspect)
+		name = spn_wound_incubation.0012.a
+		custom_tooltip = spn_wound_incubation.0012.a.tt
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -20 max = -12 } } }
+		hidden_effect = {
+			random = { chance = 15  scope:healer = { add_character_flag = spn_suspects_my_affliction } }
+		}
+		ai_chance = {
+			base = 70
+			modifier = { add = -50  has_trait = paranoid }
+			modifier = { add = 20  stress >= 200 }
+		}
+	}
+	option = { # A cautious treatment only (modest lower, no risk)
+		name = spn_wound_incubation.0012.b
+		custom_tooltip = spn_wound_incubation.0012.b.tt
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -9 max = -4 } } }
+		ai_chance = { base = 40  modifier = { add = 25  has_trait = paranoid } }
+	}
+	option = { # Refuse their meddling (slight raise)
+		name = spn_wound_incubation.0012.c
+		custom_tooltip = spn_wound_incubation.0012.c.tt
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = 2 max = 6 } } }
+		ai_chance = { base = 15  modifier = { add = 30  has_trait = paranoid } }
+	}
+}
+
+
+# ============================================================
+# 0040 - A Hunter Grows Suspicious (ONCE; needs a capable monster-hunter courtier)
+# ============================================================
+spn_wound_incubation.0040 = {
+	type = character_event
+	title = spn_wound_incubation.0040.t
+	desc = spn_wound_incubation.0040.desc
+	theme = mental_break
+	trigger = {
+		has_trait = ww_infected_wound
+		NOT = { has_variable = spn_hunter_confronted }
+		any_courtier = { has_trait = supernatural_hunter  has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 20 } }
+	}
+	immediate = {
+		set_variable = spn_hunter_confronted
+		random_courtier = {
+			limit = { has_trait = supernatural_hunter  has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 20 } }
+			save_scope_as = hunter
+		}
+	}
+	left_portrait = { character = root  animation = worry }
+	right_portrait = { character = scope:hunter  animation = personality_callous }
+
+	option = { # Name the one who did this (the hunter learns your sire's secret)
+		name = spn_wound_incubation.0040.a
+		custom_tooltip = spn_wound_incubation.0040.a.tt
+		stress_impact = { trusting = medium_stress_impact_gain  loyal = medium_stress_impact_gain  honest = minor_stress_impact_loss }
+		hidden_effect = {
+			if = {
+				limit = { has_variable = spn_conferred_sire }
+				scope:hunter = {
+					set_variable = { name = spn_marked_werewolf  value = root.var:spn_conferred_sire }
+					add_character_flag = spn_hunter_has_a_mark
+				}
+			}
+		}
+		ai_chance = { base = 30  modifier = { add = 30  has_trait = honest } modifier = { add = -30  has_trait = loyal } }
+	}
+	option = { # Deny everything (costs stress to keep the lie)
+		name = spn_wound_incubation.0040.b
+		custom_tooltip = spn_wound_incubation.0040.b.tt
+		stress_impact = { honest = medium_stress_impact_gain  deceitful = minor_stress_impact_loss }
+		ai_chance = { base = 45  modifier = { add = 30  has_trait = deceitful } modifier = { add = 20  has_trait = paranoid } }
+	}
+	option = { # [Brave/Dread] Cow them into silence
+		name = spn_wound_incubation.0040.c
+		trigger = { OR = { has_trait = brave  has_trait = sadistic  dread >= 25 } }
+		custom_tooltip = spn_wound_incubation.0040.c.tt
+		scope:hunter = { add_opinion = { target = root  modifier = spn_resents_forced_gift } }
+		ai_chance = { base = 35  modifier = { add = 25  has_trait = sadistic } modifier = { add = 20  has_trait = arrogant } }
+	}
+}
+
+
+# ============================================================
+# 0020 - The Wolf Stirs (yield vs resist fork - one-shot)
+# ============================================================
+spn_wound_incubation.0020 = {
+	type = character_event
+	title = spn_wound_incubation.0020.t
+	desc = spn_wound_incubation.0020.desc
+	theme = mental_break
+	trigger = {
+		has_trait = ww_infected_wound
+		NOR = { has_character_flag = spn_yielding_to_the_change  has_character_flag = spn_resisting_the_change }
+	}
+	left_portrait = { character = root  animation = anger }
+
+	option = { # I want this - let the change in (lower XP, relieve stress)
+		name = spn_wound_incubation.0020.a
+		custom_tooltip = spn_wound_incubation.0020.a.tt
+		add_character_flag = spn_yielding_to_the_change
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -14 max = -7 } } }
+		add_stress = -10
+		ai_chance = {
+			base = 40
+			modifier = { add = 25  has_trait = brave }
+			modifier = { add = 25  has_trait = ambitious }
+			modifier = { add = 20  has_trait = arrogant }
+		}
+	}
+	option = { # I refuse to become a monster (raise XP, costs stress; opens the Strong path)
+		name = spn_wound_incubation.0020.b
+		custom_tooltip = spn_wound_incubation.0020.b.tt
+		add_character_flag = spn_resisting_the_change
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = 7 max = 14 } } }
+		add_stress = 40
+		ai_chance = {
+			base = 35
+			modifier = { add = 25  has_trait = compassionate }
+			modifier = { add = 25  has_trait = craven }
+			modifier = { add = 20  has_trait = zealous }
+		}
+	}
+	option = { # Hold steady - decide nothing yet (small lower)
+		name = spn_wound_incubation.0020.c
+		custom_tooltip = spn_wound_incubation.0020.c.tt
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -6 max = -2 } } }
+		add_stress = 8
+		ai_chance = {
+			base = 25
+			modifier = { add = 25  has_trait = stubborn }
+			modifier = { add = 20  has_trait = calm }
+		}
+	}
+}
+
+
+# ============================================================
+# 0021 - The One Who Clawed You (any turning - one-shot)
+# ============================================================
+spn_wound_incubation.0021 = {
+	type = character_event
+	title = spn_wound_incubation.0021.t
+	desc = spn_wound_incubation.0021.desc
+	theme = family
+	trigger = {
+		has_trait = ww_infected_wound
+		has_variable = spn_conferred_sire
+		NOT = { has_variable = spn_sire_choice_made }
+	}
+	immediate = { var:spn_conferred_sire = { save_scope_as = sire } }
+	left_portrait = { character = root  animation = grief }
+	right_portrait = { character = scope:sire  animation = idle }
+
+	option = { # Seek them out - let them guide me (lower XP; opens the relationship arc)
+		name = spn_wound_incubation.0021.a
+		custom_tooltip = spn_wound_incubation.0021.a.tt
+		add_character_flag = spn_sire_involved
+		set_variable = spn_sire_choice_made
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -12 max = -6 } } }
+		trigger_event = { id = spn_wound_incubation.0022 days = { 60 120 } }
+		ai_chance = {
+			base = 30
+			modifier = { add = 25  has_trait = forgiving }
+			modifier = { add = 20  has_trait = trusting }
+			modifier = { add = 25  has_character_flag = voluntary_turning }
+			modifier = { add = -30  has_trait = vengeful }
+		}
+	}
+	option = { # Face this alone (no change; a forced turning hardens into rivalry)
+		name = spn_wound_incubation.0021.b
+		custom_tooltip = spn_wound_incubation.0021.b.tt
+		set_variable = spn_sire_choice_made
+		add_stress = 10
+		if = {
+			limit = {
+				has_character_flag = forced_turning
+				can_set_relation_rival_trigger = { CHARACTER = scope:sire }
+			}
+			set_relation_rival = scope:sire
+		}
+		ai_chance = {
+			base = 40
+			modifier = { add = 25  has_trait = vengeful }
+			modifier = { add = 20  has_trait = arrogant }
+			modifier = { add = 20  has_trait = wrathful }
+			modifier = { add = 20  has_trait = shy }
+		}
+	}
+	option = { # [Cunning] Take their guidance now - and settle the debt later (forced turnings breed a reckoning)
+		name = spn_wound_incubation.0021.c
+		trigger = { OR = { has_trait = ambitious  has_trait = deceitful  has_character_flag = forced_turning } }
+		custom_tooltip = spn_wound_incubation.0021.c.tt
+		add_character_flag = spn_sire_involved
+		set_variable = spn_sire_choice_made
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -10 max = -4 } } }
+		add_stress = 5
+		if = {
+			limit = {
+				has_character_flag = forced_turning
+				can_set_relation_potential_rival_trigger = { CHARACTER = scope:sire }
+			}
+			set_relation_potential_rival = scope:sire
+		}
+		trigger_event = { id = spn_wound_incubation.0022 days = { 60 120 } }
+		ai_chance = {
+			base = 20
+			modifier = { add = 25  has_trait = deceitful }
+			modifier = { add = 20  has_trait = ambitious }
+			modifier = { add = 15  has_trait = arrogant }
+			modifier = { add = -40  has_trait = honest }
+		}
+	}
+}
+
+
+# ============================================================
+# 0022 - Growing Closer (chained from 0021; friendship, or onto the lovers part-2)
+# ============================================================
+spn_wound_incubation.0022 = {
+	type = character_event
+	title = spn_wound_incubation.0022.t
+	desc = spn_wound_incubation.0022.desc
+	theme = family
+	trigger = {
+		has_trait = ww_infected_wound
+		has_character_flag = spn_sire_involved
+		has_variable = spn_conferred_sire
+	}
+	immediate = { var:spn_conferred_sire = { save_scope_as = sire } }
+	left_portrait = { character = root  animation = personality_compassionate }
+	right_portrait = { character = scope:sire  animation = personality_compassionate }
+
+	option = { # Bind us as friends (lower XP; become friends)
+		name = spn_wound_incubation.0022.a
+		custom_tooltip = spn_wound_incubation.0022.a.tt
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -8 max = -3 } } }
+		hidden_effect = {
+			if = {
+				limit = { NOR = { has_relation_friend = scope:sire  has_relation_best_friend = scope:sire } }
+				set_relation_friend = scope:sire
+			}
+		}
+		ai_chance = { base = 50  modifier = { add = 20  has_trait = trusting } modifier = { add = 20  has_trait = compassionate } }
+	}
+	option = { # Let something kindle between us (chains to a saucier follow-up)
+		name = spn_wound_incubation.0022.b
+		custom_tooltip = spn_wound_incubation.0022.b.tt
+		trigger = {
+			scope:sire = { is_alive = yes }
+			NOT = { has_relation_soulmate = scope:sire }
+			NOT = { has_relation_lover = scope:sire }
+		}
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -8 max = -3 } } }
+		stress_impact = { lustful = minor_stress_impact_loss  chaste = minor_stress_impact_gain }
+		trigger_event = { id = spn_wound_incubation.0023 days = { 30 60 } }
+		ai_chance = {
+			base = 15
+			modifier = { add = 40  has_trait = lustful }
+			modifier = { add = 20  has_trait = lifestyle_reveler }
+			modifier = { add = -1000  has_relation_soulmate = scope:sire }
+			modifier = { add = -40  is_married = yes }
+			modifier = { add = -25  has_trait = chaste }
+		}
+	}
+	option = { # Keep them at arm's length
+		name = spn_wound_incubation.0022.c
+		custom_tooltip = spn_wound_incubation.0022.c.tt
+		ai_chance = { base = 35  modifier = { add = 20  has_trait = shy } modifier = { add = 20  has_trait = chaste } }
+	}
+}
+
+
+# ============================================================
+# 0023 - A Dangerous Closeness (lovers part-2; chained from 0022.b, NOT in the pulse pool)
+# ============================================================
+spn_wound_incubation.0023 = {
+	type = character_event
+	title = spn_wound_incubation.0023.t
+	desc = spn_wound_incubation.0023.desc
+	theme = secret
+	trigger = { has_variable = spn_conferred_sire }
+	immediate = { var:spn_conferred_sire = { save_scope_as = sire } }
+	left_portrait = { character = root  animation = personality_compassionate }
+	right_portrait = { character = scope:sire  animation = personality_compassionate }
+
+	option = { # Lie with them and become lovers
+		name = spn_wound_incubation.0023.a
+		custom_tooltip = spn_wound_incubation.0023.a.tt
+		trigger = { scope:sire = { is_alive = yes }  NOT = { has_relation_lover = scope:sire } }
+		set_relation_lover = scope:sire
+		had_sex_with_effect = { CHARACTER = scope:sire  PREGNANCY_CHANCE = pregnancy_chance }
+		ai_chance = { base = 40  modifier = { add = 40  has_trait = lustful } modifier = { add = -1000  has_relation_soulmate = scope:sire } }
+	}
+	option = { # [Loyal] Give them my heart entirely (chance of soulmate)
+		name = spn_wound_incubation.0023.b
+		trigger = { has_trait = loyal  scope:sire = { is_alive = yes } }
+		custom_tooltip = spn_wound_incubation.0023.b.tt
+		set_relation_lover = scope:sire
+		had_sex_with_effect = { CHARACTER = scope:sire  PREGNANCY_CHANCE = pregnancy_chance }
+		hidden_effect = {
+			random = { chance = 50  if = { limit = { can_set_relation_soulmate_trigger = { CHARACTER = scope:sire } } set_relation_soulmate = scope:sire } }
+		}
+		ai_chance = { base = 50 }
+	}
+	option = { # A single reckless night, nothing more
+		name = spn_wound_incubation.0023.c
+		custom_tooltip = spn_wound_incubation.0023.c.tt
+		trigger = { scope:sire = { is_alive = yes } }
+		had_sex_with_effect = { CHARACTER = scope:sire  PREGNANCY_CHANCE = pregnancy_chance }
+		ai_chance = { base = 25  modifier = { add = 30  has_trait = lustful } modifier = { add = 20  has_trait = lifestyle_reveler } }
+	}
+	option = { # Step back from the edge
+		name = spn_wound_incubation.0023.d
+		ai_chance = { base = 30  modifier = { add = 25  has_trait = chaste } modifier = { add = 20  has_trait = shy } }
+	}
+}
+
+
+# ============================================================
+# 0050 - A Crisis of Faith (one-shot). The soul reckons with what the body is becoming.
+# Mirrors the 0020 yield/resist framing: making peace with the curse eases the body (lowers
+# infection) and leans toward yielding; railing against it as damnation wars on the flesh
+# (raises infection) and leans toward resisting. Confession and study are piety-forward.
+# ============================================================
+spn_wound_incubation.0050 = {
+	type = character_event
+	title = spn_wound_incubation.0050.t
+	desc = spn_wound_incubation.0050.desc
+	theme = mental_break
+	trigger = {
+		has_trait = ww_infected_wound
+		NOT = { has_character_flag = spn_faith_crisis_done }
+	}
+	immediate = { add_character_flag = spn_faith_crisis_done }
+	left_portrait = { character = root  animation = worry }
+
+	option = { # Make peace - if God shapes all things, He shaped this too (yield lean)
+		name = spn_wound_incubation.0050.a
+		custom_tooltip = spn_wound_incubation.0050.a.tt
+		if = {
+			limit = { NOR = { has_character_flag = spn_yielding_to_the_change  has_character_flag = spn_resisting_the_change } }
+			add_character_flag = spn_yielding_to_the_change
+		}
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -12 max = -5 } } }
+		add_stress = -15
+		add_piety = minor_piety_value
+		ai_chance = {
+			base = 35
+			modifier = { add = 25  has_trait = cynical }
+			modifier = { add = 20  has_trait = ambitious }
+			modifier = { add = 15  has_trait = brave }
+			modifier = { add = -30  has_trait = zealous }
+		}
+	}
+	option = { # Pray to be delivered from this damnation (resist lean)
+		name = spn_wound_incubation.0050.b
+		custom_tooltip = spn_wound_incubation.0050.b.tt
+		if = {
+			limit = { NOR = { has_character_flag = spn_yielding_to_the_change  has_character_flag = spn_resisting_the_change } }
+			add_character_flag = spn_resisting_the_change
+		}
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = 6 max = 13 } } }
+		add_stress = 25
+		add_piety = medium_piety_value
+		ai_chance = {
+			base = 35
+			modifier = { add = 35  has_trait = zealous }
+			modifier = { add = 20  has_trait = craven }
+			modifier = { add = 15  has_trait = compassionate }
+			modifier = { add = -40  has_trait = cynical }
+		}
+	}
+	option = { # [Devout] Confess all, and submit to His judgment
+		name = spn_wound_incubation.0050.c
+		trigger = { OR = { has_trait = zealous  piety_level >= 2 } }
+		custom_tooltip = spn_wound_incubation.0050.c.tt
+		add_piety = major_piety_value
+		add_stress = -25
+		ai_chance = { base = 60  modifier = { add = 25  has_trait = zealous }  modifier = { add = 20  has_trait = honest } }
+	}
+	option = { # [Learned] Search the scriptures for the truth of what I am
+		name = spn_wound_incubation.0050.d
+		trigger = { OR = { learning >= 12  has_trait = scholar  has_trait = theologian } }
+		custom_tooltip = spn_wound_incubation.0050.d.tt
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -9 max = -4 } } }
+		add_piety = minor_piety_value
+		add_stress = 5
+		ai_chance = { base = 55  modifier = { add = 25  has_trait = scholar }  modifier = { add = 20  has_trait = lifestyle_mystic } }
+	}
+	option = { # [Cynical] No just god would do this - I am done with prayer (yield lean)
+		name = spn_wound_incubation.0050.e
+		trigger = { has_trait = cynical }
+		custom_tooltip = spn_wound_incubation.0050.e.tt
+		if = {
+			limit = { NOR = { has_character_flag = spn_yielding_to_the_change  has_character_flag = spn_resisting_the_change } }
+			add_character_flag = spn_yielding_to_the_change
+		}
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = -10 max = -4 } } }
+		add_stress = -20
+		add_piety = { value = medium_piety_value  multiply = -1 }
+		ai_chance = { base = 70 }
+	}
+}
+
+
+# ============================================================
+# 9000 - THE FEVER BREAKS (climax decision). Outcome ~80% journey, ~20% this choice.
+# ============================================================
+spn_wound_incubation.9000 = {
+	type = character_event
+	title = spn_wound_incubation.9000.t
+	desc = spn_wound_incubation.9000.desc
+	theme = mental_break
+	trigger = { has_trait = ww_infected_wound }
+	left_portrait = { character = root  animation = stress }
+
+	option = { # Fight to live
+		name = spn_wound_incubation.9000.a
+		custom_tooltip = spn_wound_incubation.9000.a.tt
+		save_scope_value_as = { name = climax_lean  value = 2 }
+		hidden_effect = { spn_resolve_wound_climax = yes }
+		ai_chance = { base = 40  modifier = { add = 20  has_trait = brave } modifier = { add = 15  has_trait = ambitious } modifier = { add = 15  has_trait = stubborn } }
+	}
+	option = { # Surrender to the wolf
+		name = spn_wound_incubation.9000.b
+		custom_tooltip = spn_wound_incubation.9000.b.tt
+		add_character_flag = spn_yielding_to_the_change
+		save_scope_value_as = { name = climax_lean  value = 2 }
+		hidden_effect = { spn_resolve_wound_climax = yes }
+		ai_chance = { base = 30  modifier = { add = 20  has_trait = zealous } modifier = { add = 15  has_trait = ambitious } modifier = { add = 15  has_trait = arrogant } }
+	}
+	option = { # Refuse to become a monster
+		name = spn_wound_incubation.9000.c
+		custom_tooltip = spn_wound_incubation.9000.c.tt
+		add_character_flag = spn_resisting_the_change
+		save_scope_value_as = { name = climax_lean  value = 0 }
+		hidden_effect = { spn_resolve_wound_climax = yes }
+		ai_chance = { base = 30  modifier = { add = 20  has_trait = compassionate } modifier = { add = 15  has_trait = craven } modifier = { add = 15  has_trait = zealous } }
+	}
+	option = { # [Strong] Trust my body
+		name = spn_wound_incubation.9000.d
+		custom_tooltip = spn_wound_incubation.9000.d.tt
+		trigger = { OR = { has_trait = strong  has_trait = physique_good_1  has_trait = physique_good_2 } }
+		save_scope_value_as = { name = climax_lean  value = 2 }
+		hidden_effect = { spn_resolve_wound_climax = yes }
+		ai_chance = { base = 70 }
+	}
+	option = { # [Guided] Lean on the one who saw me through it (they gain a weak hook on you)
+		name = spn_wound_incubation.9000.e
+		custom_tooltip = spn_wound_incubation.9000.e.tt
+		trigger = { has_character_flag = spn_sire_involved  exists = var:spn_conferred_sire }
+		save_scope_value_as = { name = climax_lean  value = 2 }
+		hidden_effect = {
+			var:spn_conferred_sire = { add_hook = { type = loyalty_hook  target = root } }
+			spn_resolve_wound_climax = yes
+		}
+		ai_chance = { base = 45  modifier = { add = 20  has_trait = trusting } }
+	}
+}
+
+
+# ---- 9010 : Exceptional Turn ----
+spn_wound_incubation.9010 = {
+	type = character_event
+	title = spn_wound_incubation.9010.t
+	desc = spn_wound_incubation.9010.desc
+	theme = mental_break
+	trigger = { has_trait = ww_infected_wound }
+	left_portrait = { character = root  animation = ecstasy }
+	option = {
+		name = spn_wound_incubation.9010.a
+		set_variable = { name = spn_pending_ww_xp  value = 30 }
+		if = { limit = { NOT = { has_trait = strong } } add_trait = strong }
+		spn_complete_wound_turn = yes
+		trigger_event = { id = spn_wound_incubation.9050 days = 1 }
+	}
+}
+
+# ---- 9011 : Clean Turn ----
+spn_wound_incubation.9011 = {
+	type = character_event
+	title = spn_wound_incubation.9011.t
+	desc = spn_wound_incubation.9011.desc
+	theme = mental_break
+	trigger = { has_trait = ww_infected_wound }
+	left_portrait = { character = root  animation = ecstasy }
+	option = {
+		name = spn_wound_incubation.9011.a
+		set_variable = { name = spn_pending_ww_xp  value = 10 }
+		spn_complete_wound_turn = yes
+		trigger_event = { id = spn_wound_incubation.9050 days = 1 }
+	}
+}
+
+# ---- 9012 : Rough Turn ----
+spn_wound_incubation.9012 = {
+	type = character_event
+	title = spn_wound_incubation.9012.t
+	desc = spn_wound_incubation.9012.desc
+	theme = mental_break
+	trigger = { has_trait = ww_infected_wound }
+	left_portrait = { character = root  animation = stress }
+	option = {
+		name = spn_wound_incubation.9012.a
+		add_stress = 30
+		spn_complete_wound_turn = yes
+	}
+}
+
+# ---- 9020 : Resilient Non-Turn (no werewolf, gain Strong) ----
+spn_wound_incubation.9020 = {
+	type = character_event
+	title = spn_wound_incubation.9020.t
+	desc = spn_wound_incubation.9020.desc
+	theme = mental_break
+	trigger = { has_trait = ww_infected_wound }
+	left_portrait = { character = root  animation = idle }
+	option = {
+		name = spn_wound_incubation.9020.a
+		if = { limit = { NOT = { has_trait = strong } } add_trait = strong }
+		spn_clear_wound_incubation_state = yes
+	}
+}
+
+# ---- 9021 : Scarred Non-Turn (no werewolf, maimed) ----
+spn_wound_incubation.9021 = {
+	type = character_event
+	title = spn_wound_incubation.9021.t
+	desc = spn_wound_incubation.9021.desc
+	theme = mental_break
+	trigger = { has_trait = ww_infected_wound }
+	left_portrait = { character = root  animation = stress }
+	option = {
+		name = spn_wound_incubation.9021.a
+		add_stress = 20
+		if = { limit = { NOT = { has_trait = maimed } } add_trait = maimed }
+		spn_clear_wound_incubation_state = yes
+	}
+}
+
+# ---- 9030 : Death ----
+spn_wound_incubation.9030 = {
+	type = character_event
+	title = spn_wound_incubation.9030.t
+	desc = spn_wound_incubation.9030.desc
+	theme = mental_break
+	trigger = { has_trait = ww_infected_wound }
+	left_portrait = { character = root  animation = grief }
+	option = {
+		name = spn_wound_incubation.9030.a
+		death = { death_reason = spn_death_during_confer }
+	}
+}
+
+# ---- 9050 : Deferred reward applier (day after a good turn) ----
+spn_wound_incubation.9050 = {
+	hidden = yes
+	trigger = { has_trait = supernatural_werewolf  has_variable = spn_pending_ww_xp }
+	immediate = {
+		add_trait_xp = { trait = supernatural_werewolf  track = lycanthropy  value = var:spn_pending_ww_xp }
+		remove_variable = spn_pending_ww_xp
+	}
+}

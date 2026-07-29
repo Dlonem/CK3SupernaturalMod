@@ -1,17 +1,6 @@
-﻿####################################################
-#
-#	Sire Tracking
-#
-####################################################
-spn_assign_sire_birth = {
-	spn_assign_mother_sire = {
-		MOTHER = $MOTHER$
-	}
-	spn_assign_father_sire = {
-		FATHER = $FATHER$
-	}	
-}
-
+﻿#####################
+### Sire Tracking ###
+#####################
 spn_assign_conferred_sire = {
 	set_variable = {
 		name = spn_conferred_sire
@@ -20,12 +9,27 @@ spn_assign_conferred_sire = {
 	add_character_flag = spn_has_conferred_sire
 }
 
-spn_assign_hunter_trainer = {
+spn_assign_conferred_progeny = {
 	set_variable = {
-		name = spn_hunter_trainer
+		name = spn_conferred_progeny
 		value = $CHARACTER$
 	}
-	add_character_flag = spn_has_hunter_trainer
+	add_character_flag = spn_has_conferred_progeny
+}
+
+spn_assign_vampire_blood_donor = {
+	set_variable = {
+		name = spn_vampire_blood_donor
+		value = $CHARACTER$
+	}
+}
+
+spn_assign_conferred_vampire_blood = {
+    set_variable = {
+		name = spn_conferred_sire
+		value = var:spn_vampire_blood_donor
+	}
+	add_character_flag = spn_has_conferred_sire
 }
 
 spn_assign_father_sire = {
@@ -42,6 +46,14 @@ spn_assign_mother_sire = {
 		value = $MOTHER$
 	}
 	add_character_flag = spn_has_mother_sire
+}
+
+spn_assign_hunter_trainer = {
+	set_variable = {
+		name = spn_hunter_trainer
+		value = $CHARACTER$
+	}
+	add_character_flag = spn_has_hunter_trainer
 }
 
 spn_update_number_of_supernatural_children_for_parents = {
@@ -68,6 +80,135 @@ spn_update_num_immortal_children = {
 		set_variable = {
 			name = spn_number_of_supernatural_children
 			value = 1
+		}
+	}
+}
+
+##########################
+### Wound Incubation    ###
+##########################
+# Called on the freshly-wounded character (after the ww_infected_wound trait + flags are set).
+# Schedules the hidden climax (random 1-3 years out) and the first pulse event (~3-4 months).
+# The ww_infected_wound trait is the only identifier the pulse/climax need - when the climax
+# removes it, the pulse chain self-terminates (its trigger checks has_trait), so no ghost events.
+spn_kickoff_wound_incubation = {
+	set_variable = { name = spn_last_wound_event value = 0 } # for the no-immediate-repeat guard
+	set_variable = { name = spn_wound_c10 value = 0 } # per-event fire counters (caps)
+	set_variable = { name = spn_wound_c11 value = 0 }
+	# Hidden incubation length: the climax fires at a random point 1-3 years from now.
+	trigger_event = { id = spn_wound_incubation.9000 days = { 365 1095 } }
+	# First pulse event arrives in roughly 3-4 months.
+	trigger_event = { id = spn_wound_incubation.0001 days = { 90 120 } }
+	# Passive monthly worsening (the "sweat factor" - infection creeps up ~+2/month).
+	trigger_event = { id = spn_wound_incubation.0002 days = 30 }
+}
+
+# Tear down the incubation state (called by the climax on resolution).
+# Keeps spn_conferred_sire (drives the "Clawed By" trait description if they turned).
+spn_clear_wound_incubation_state = {
+	remove_trait = ww_infected_wound
+	remove_character_flag = voluntary_turning
+	remove_character_flag = forced_turning
+	remove_character_flag = spn_yielding_to_the_change
+	remove_character_flag = spn_resisting_the_change
+	remove_character_flag = spn_sire_involved
+	remove_variable = spn_wound_incubation_start
+	remove_variable = spn_sire_choice_made
+	remove_variable = spn_last_wound_event
+	remove_variable = spn_wound_c10
+	remove_variable = spn_wound_c11
+	remove_character_flag = spn_had_healer_event
+	remove_character_flag = spn_faith_crisis_done
+}
+
+# Finish a SUCCESSFUL turn (called by the turn outcome events 9010/9011/9012).
+# Assigns the wound-lineage relation + sentiment, tags them turned, clears state, fires the
+# canonical werewolf init. Reads turning-type flags BEFORE clearing them.
+spn_complete_wound_turn = {
+	if = {
+		limit = { has_variable = spn_conferred_sire }
+		var:spn_conferred_sire = { save_scope_as = the_sire }
+		hidden_effect = {
+			if = {
+				limit = { NOT = { has_relation_ww_clawed_by = scope:the_sire } }
+				set_relation_ww_clawed_by = scope:the_sire
+			}
+		}
+		if = {
+			limit = { has_character_flag = forced_turning }
+			add_opinion = { target = scope:the_sire modifier = spn_resents_forced_gift }
+		}
+		else = {
+			add_opinion = { target = scope:the_sire modifier = spn_grateful_for_gift }
+		}
+	}
+	add_character_flag = spn_turned_werewolf
+	spn_clear_wound_incubation_state = yes
+	trigger_event = spn_initiate.1001 # Initialize Werewolf (immortality, disease immunity, secret)
+	trigger_event = spn_message.1001  # Send messages
+}
+
+# Climax resolver: weighted roll over outcome buckets, then fire the matching outcome event.
+# ~80% of the weight comes from the journey (infection XP + yield/resist flags + body/mind +
+# turning type); ~20% from the player's final lean (scope:climax_lean 0=let go, 1=neutral, 2=fight).
+spn_resolve_wound_climax = {
+	random_list = {
+		# --- Exceptional Turn (rare best) ---
+		3 = {
+			modifier = { add = 12  has_trait_xp = { trait = ww_infected_wound track = infection value < 20 } }
+			modifier = { add = 4  has_trait = strong }
+			modifier = { add = 3  has_trait = brave }
+			modifier = { add = 4  has_character_flag = spn_yielding_to_the_change }
+			modifier = { add = 3  has_character_flag = voluntary_turning }
+			modifier = { add = 3  scope:climax_lean = 2 }
+			trigger_event = spn_wound_incubation.9010
+		}
+		# --- Clean Turn ---
+		8 = {
+			modifier = { add = 25  has_trait_xp = { trait = ww_infected_wound track = infection value < 20 } }
+			modifier = { add = 18  has_trait_xp = { trait = ww_infected_wound track = infection value >= 20 value < 40 } }
+			modifier = { add = 5  has_character_flag = voluntary_turning }
+			modifier = { add = 5  has_character_flag = spn_yielding_to_the_change }
+			modifier = { add = 4  has_trait = strong }
+			modifier = { add = 4  scope:climax_lean = 2 }
+			trigger_event = spn_wound_incubation.9011
+		}
+		# --- Rough Turn ---
+		10 = {
+			modifier = { add = 12  has_trait_xp = { trait = ww_infected_wound track = infection value >= 40 value < 60 } }
+			modifier = { add = 18  has_trait_xp = { trait = ww_infected_wound track = infection value >= 60 value < 80 } }
+			modifier = { add = 8  has_character_flag = forced_turning }
+			modifier = { add = 3  scope:climax_lean = 2 }
+			trigger_event = spn_wound_incubation.9012
+		}
+		# --- Resilient Non-Turn (survive, no werewolf, gain Strong) ---
+		3 = {
+			modifier = { factor = 0  has_character_flag = spn_yielding_to_the_change } # surrendering forecloses this
+			modifier = { add = 16  has_character_flag = spn_resisting_the_change }
+			modifier = { add = 6  has_trait_xp = { trait = ww_infected_wound track = infection value >= 40 value < 60 } }
+			modifier = { add = 5  has_trait = strong }
+			modifier = { add = 4  has_trait = brave }
+			modifier = { add = 6  scope:climax_lean = 0 }
+			trigger_event = spn_wound_incubation.9020
+		}
+		# --- Scarred Non-Turn (survive, no werewolf, maimed) ---
+		6 = {
+			modifier = { add = 10  has_trait_xp = { trait = ww_infected_wound track = infection value >= 60 value < 80 } }
+			modifier = { add = 12  has_trait_xp = { trait = ww_infected_wound track = infection value >= 80 } }
+			modifier = { add = 5  has_character_flag = spn_resisting_the_change }
+			modifier = { add = 4  scope:climax_lean = 0 }
+			trigger_event = spn_wound_incubation.9021
+		}
+		# --- Death (always possible, never automatic) ---
+		6 = {
+			modifier = { add = 10  has_trait_xp = { trait = ww_infected_wound track = infection value >= 60 value < 80 } }
+			modifier = { add = 30  has_trait_xp = { trait = ww_infected_wound track = infection value >= 80 } }
+			modifier = { add = 8  has_character_flag = forced_turning }
+			modifier = { add = -8  has_character_flag = voluntary_turning }
+			modifier = { add = -8  has_trait = strong }
+			modifier = { add = -4  has_trait = brave }
+			modifier = { add = 5  scope:climax_lean = 0 }
+			trigger_event = spn_wound_incubation.9030
 		}
 	}
 }

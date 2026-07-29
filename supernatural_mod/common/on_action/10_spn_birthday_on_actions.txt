@@ -1,51 +1,45 @@
 ﻿#For when a spn genetic birth occurs
 spn_on_genetic_birth = {
 	trigger = {
-		NOR = {
-			has_game_rule = spn_no_trait_inheritance 
-			has_game_rule = spn_human_no_immortal_trait_inheritance
-			has_game_rule = spn_human_only_trait_inheritance
-		}
 		OR = {
-			scope:mother = { spn_has_supernatural_trait = yes }
-			scope:real_father = { spn_has_supernatural_trait = yes }
+			AND = { #Werewolf / Vampire / Hybrid path (original behaviour)
+				NOR = {
+					has_game_rule = spn_no_trait_inheritance 
+					has_game_rule = spn_human_no_immortal_trait_inheritance
+					has_game_rule = spn_human_only_trait_inheritance
+				}
+				OR = {
+					scope:mother = { spn_has_supernatural_trait = yes }
+					scope:real_father = { spn_has_supernatural_trait = yes }
+				}
+			}
+			AND = { #Demon path, gated by its own rule so it works even if werewolf inheritance is off
+				NOT = { has_game_rule = spn_demon_no_inheritance }
+				OR = {
+					scope:mother = { is_a_demon_trigger = yes }
+					scope:real_father = { is_a_demon_trigger = yes }
+				}
+			}
 		}
 	}
 	effect = {
-		if = { #Both Parents Vampire
+		if = { #Demon parent(s) -> chance of a demon-blooded (demon0) child, per spn_enable_demon_inheritance. Checked first so Demons never fall into the werewolf branches below.
 			limit = {
-				NOT = { has_game_rule = spn_werewolf_trait_inheritance }
-				scope:real_father = { has_trait = supernatural_vampire }
-				scope:mother = { has_trait = supernatural_vampire }
-			}
-
-			spn_give_knowledge_of_vampire_secret = { CHARACTER = scope:mother }
-		
-			if = {
-				limit = { scope:father = scope:real_father }
-				spn_give_knowledge_of_vampire_secret = { CHARACTER = scope:father }
-			}
-			else_if = {
-				limit = {
-					scope:real_father = { has_character_flag = pregnancy_real_father_knows }
+				NOT = { has_game_rule = spn_demon_no_inheritance }
+				OR = {
+					scope:mother = { is_a_demon_trigger = yes }
+					scope:real_father = { is_a_demon_trigger = yes }
 				}
-				spn_give_knowledge_of_vampire_secret = { CHARACTER = scope:real_father }
 			}
 
-			spn_assign_sire_birth = {
-				MOTHER = scope:mother
-				FATHER = scope:real_father
-			}
-
-			spn_update_number_of_supernatural_children_for_parents = yes
-
-			add_character_flag = {
-				flag = spn_baby_vampire
+			random = {
+				chance = spn_demon_birth_chance
+				add_trait = demon0
+				spn_update_number_of_supernatural_children_for_parents = yes
 			}
 		}
 		else_if = { #Both Parents Lycan
 			limit = {
-				#NOT = { has_game_rule = spn_vampire_trait_inheritance } #Commented out on 11/14/22 because Werewolves can procreate with Werewolves too
 				scope:real_father = { has_trait = supernatural_werewolf }
 				scope:mother = { has_trait = supernatural_werewolf }
 			}
@@ -61,11 +55,6 @@ spn_on_genetic_birth = {
 					scope:real_father = { has_character_flag = pregnancy_real_father_knows }
 				}
 				spn_give_knowledge_of_lycan_secret = { CHARACTER = scope:real_father }
-			}
-
-			spn_assign_sire_birth = {
-				MOTHER = scope:mother
-				FATHER = scope:real_father
 			}
 
 			spn_update_number_of_supernatural_children_for_parents = yes
@@ -105,33 +94,10 @@ spn_on_genetic_birth = {
 				spn_give_knowledge_of_hybrid_secret = { CHARACTER = scope:real_father }
 			}
 
-			spn_assign_sire_birth = {
-				MOTHER = scope:mother
-				FATHER = scope:real_father
-			}
-
 			spn_update_number_of_supernatural_children_for_parents = yes
 
 			add_character_flag = {
 				flag = spn_baby_werewolf #Because Hybrids cannot be born v2.08
-			}
-		}
-		else_if = { #Mother is Vampire
-			limit = {
-				NOR = {
-					has_game_rule = spn_werewolf_trait_inheritance
-				}
-				scope:mother = { has_trait = supernatural_vampire }
-			}
-			
-			spn_assign_mother_sire = {
-				MOTHER = scope:mother
-			}
-		
-			spn_update_number_of_supernatural_children_for_parents = yes
-		
-			add_character_flag = {
-				flag = spn_baby_vampire
 			}
 		}
 		else_if = { #Mother is Werewolf
@@ -168,26 +134,6 @@ spn_on_genetic_birth = {
 			add_character_flag = {
 				flag = spn_baby_werewolf
 			}
-		}
-		else_if = { #Father is Vampire
-		 	limit = {
-		 		NOR = {
-		 			has_game_rule = spn_werewolf_trait_inheritance
-		 			has_game_rule = spn_immortal_only_trait_inheritance
-		 			has_game_rule = spn_yes_trait_inheritance
-		 		}
-		 		scope:real_father = { has_trait = supernatural_vampire }
-		 	}
-
-		 	spn_assign_father_sire = {
-		 		FATHER = scope:real_father
-		 	}
-
-		 	spn_update_number_of_supernatural_children_for_parents = yes
-
-		 	add_character_flag = {
-		 		flag = spn_baby_vampire
-		 	}
 		}
 		else_if = { #Father is Lycan
 		 	limit = {
@@ -284,6 +230,35 @@ spn_check_pregnancy = {
 			}
 			trigger_event = {
 				on_action = spn_on_pregnancy_mother_events
+			}
+		}
+		else_if = { #Demon pregnancy (gated by spn_enable_demon_inheritance, independent of the werewolf rule)
+			limit = {
+				spn_demon_possible_pregnancy = { FATHER = scope:real_father }
+			}
+			#debug_log = "Demon Pregnancy Possible"
+			random = {
+				chance = spn_pregnancy_chance
+
+				save_scope_value_as = {
+					name = spn_preg_success
+					value = yes
+				}
+			}
+
+			if = {
+				limit = {
+					exists = scope:spn_preg_success
+				}
+				#debug_log = "Demon Pregnancy Success"
+				trigger_event = {
+					on_action = spn_on_pregnancy_mother_events
+				}
+			}
+			else = {
+				#debug_log = "Demon Pregnancy Failure"
+				end_pregnancy = yes
+				pregnancy_cleanup_effect = yes
 			}
 		}
 		else_if = { #One or more of the baby makers is Supernatural

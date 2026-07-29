@@ -951,9 +951,8 @@ magic_ev9.12 = {
 					limit = {
 						is_pool_character = yes
 						has_trait = witch
-						NOR = {
-							has_trait = demon
-							has_trait = archmage
+						is_powerful_being = no
+						NOT = {
 							has_character_flag = special_magic_character
 						}
 					}
@@ -1250,6 +1249,16 @@ magic_ev9.14 = {
 	
 	option = {
 		name = char_interaction.0220.a	#Good.
+		#if = {
+		#	limit = {
+		#		NOT = {
+		#			has_character_modifier = magic_lab_modifier
+		#		}
+		#	}
+		#	add_character_modifier = {
+		#		modifier = magic_lab_modifier
+		#	}
+		#}
 		give_knowledge_reward_for_wandering_mage_effect = yes
 	}
 }
@@ -1518,9 +1527,11 @@ magic_ev9.18 = {
 		name = ev9.18.0.b
 		add_internal_flag = special
 		trigger = {
-			has_trait = archmage
+			#is_true_mage = yes
 			has_access_to_aura_reading_trigger = yes
+			is_antimagic_trigger = no
 		}
+		trait = archmage
 		add_prestige = minor_prestige_gain
 		if = {
 			limit = {
@@ -1562,15 +1573,19 @@ magic_ev9.19 = {
 	option = {
 		name = ev9.19.0.b
 		trigger = {
-			has_trait = archmage
+			is_true_mage = yes
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		trait = archmage
 		show_as_unavailable = {
-			has_trait = archmage
+			is_true_mage = yes
 		}
 		add_prestige = medium_prestige_gain
 		spend_standard_ps_effect = yes
@@ -1602,6 +1617,7 @@ magic_ev9.19 = {
 	}
 	option = {
 		name = ev9.19.0.d
+		custom_tooltip = ev9.27.0.c_ct
 		scope:task_contract = {
 			complete_task_contract = failure_standard
 		}
@@ -1638,7 +1654,7 @@ magic_ev9.20 = {
 		}
 		if = {
 			limit = {
-				has_trait = archmage
+				is_true_mage = yes
 				has_trait_xp = {
 					trait = archmage
 					track = secret_knowledge
@@ -1797,7 +1813,8 @@ magic_ev9.21 = {
 	option = {
 		name = ev9.21.0.d
 		trigger = {
-			has_trait = archmage
+			is_true_mage = yes
+			has_access_to_magic_triangulation_trigger = yes
 		}
 		custom_tooltip = ev9.21.0.a_ct1
 		trigger_event = magic_ev9.23
@@ -1938,10 +1955,14 @@ magic_ev9.24 = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		trait = archmage
 		show_as_unavailable = {
-			has_trait = archmage
+			is_true_mage = yes
 		}
 		custom_tooltip = ev7.45.0.d_ct
 		spend_standard_ps_effect = yes
@@ -2011,7 +2032,7 @@ magic_ev9.26 = {
 		name = ev9.26.0.a
 		if = {
 			limit = {
-				has_trait = archmage
+				is_true_mage = yes
 				has_trait_xp = {
 					trait = archmage
 					track = secret_knowledge
@@ -2025,6 +2046,7 @@ magic_ev9.26 = {
 				OR = {
 					has_focus = witch_focus
 					has_focus = arcane_focus
+					has_focus = blackmagic_focus
 				}
 			}
 			custom_tooltip = ev2.47.a_ct
@@ -2109,7 +2131,10 @@ magic_ev9.27 = {
 				random_relation = {
 					type = rival
 					limit = {
-						has_any_basic_magic_prot_trigger = no
+						is_antimagic_trigger = no
+						has_immunity_for_regular_curse = no
+						has_immunity_for_powerful_curse = no
+						is_magic_protected = no
 						NOT = { THIS = ROOT }
 					}
 					save_scope_as = nrival
@@ -2128,7 +2153,10 @@ magic_ev9.27 = {
 						NOR = {
 							this = root
 							this = scope:employer
-							has_any_basic_magic_prot_trigger = no
+							is_antimagic_trigger = no
+							has_immunity_for_regular_curse = no
+							has_immunity_for_powerful_curse = no
+							is_magic_protected = no
 						}
 					}
 					set_relation_rival = scope:employer
@@ -2216,17 +2244,21 @@ magic_ev9.28 = {
 		trigger = {
 			OR = {
 				has_perk = fate_weaver_p10_perk
-				has_trait = archmage
+				is_true_mage = yes
 			}
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		show_as_unavailable = {
 			OR = {
 				has_perk = fate_weaver_p10_perk
-				has_trait = archmage
+				is_true_mage = yes
 			}
 		}
 		spend_standard_ps_effect = yes
@@ -2248,19 +2280,7 @@ magic_ev9.28 = {
 	}
 	option = {
 		name = ev9.28.0.c
-		if = {
-			limit = {
-				NOT = {
-					has_trait = gallowsbait
-				}
-			}
-			add_trait = gallowsbait
-		}
-		add_trait_xp = {
-			trait = gallowsbait
-			track = trickster
-			value = 20
-		}
+		
 		duel = {
 			skill = intrigue
 			target = scope:employer
@@ -2277,6 +2297,15 @@ magic_ev9.28 = {
 						complete_task_contract = success_standard
 					}
 				}
+				hidden_effect = {
+					random = {
+						chance = 40
+						trigger_event = {
+							id = magic_ev10.35
+							days = 2
+						}
+					}
+				}
 			}
 			5 = {
 				desc = ev9.27.0.c2
@@ -2287,9 +2316,22 @@ magic_ev9.28 = {
 				}
 				send_interface_toast = {
 					title = ev3.52.a_2
+					if = {
+						limit = {
+							NOT = {
+								has_trait = gallowsbait
+							}
+						}
+						add_trait = gallowsbait
+					}
 					scope:task_contract = {
 						complete_task_contract = failure_standard
 					}
+				}
+				add_trait_xp = {
+					trait = gallowsbait
+					track = trickster
+					value = 20
 				}
 			}
 		}
@@ -2413,15 +2455,23 @@ magic_ev9.29 = {
 	option = {
 		name = ev9.29.0.b
 		trigger = {
+			OR = {
+				is_true_mage = yes
+				has_perk = healer_p9_perk
+			}
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
+			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
 			}
 		}
 		trait = archmage
 		show_as_unavailable = {
 			OR = {
-				has_trait = archmage
+				is_true_mage = yes
 				has_perk = healer_p9_perk
 			}
 		}
@@ -2450,17 +2500,21 @@ magic_ev9.29 = {
 	option = {
 		name = ev9.29.0.c
 		trigger = {
+			is_true_mage = yes
+			can_use_healing_spell = yes
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		trait = archmage
 		show_as_unavailable = {
-			OR = {
-				has_trait = archmage
-				can_use_healing_spell = yes
-			}
+			is_true_mage = yes
+			can_use_healing_spell = yes
 		}
 		spend_standard_ps_effect = yes
 		gain_sc_xp1_effect = yes
@@ -2514,7 +2568,8 @@ magic_ev9.30 = {
 	}
 	override_background = { reference = wilderness_mountains }
 	trigger = {
-		has_trait = archmage
+		#has_trait = archmage
+		is_true_mage = yes
 	}
 	on_trigger_fail = {
 		scope:task_contract = {
@@ -2524,7 +2579,7 @@ magic_ev9.30 = {
 	option = {
 		name = ev9.30.0.a
 		trigger = {
-			has_trait = archmage
+			is_true_mage = yes
 		}
 		custom_tooltip = ev9.30.0.a_ct
 		trigger_event = magic_ev9.31
@@ -3158,17 +3213,24 @@ magic_ev9.37 = {
 	option = {
 		name = ev9.37.0.d
 		trigger = {
-			has_trait = archmage
+			is_true_mage = yes
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
+			scope:employer = {
+				custom_description = {
+					text = have_antimagic_seal
+					has_immunity_for_magic_domination = no
+				}
+			}
 		}
 		show_as_unavailable = {
-			has_trait = archmage
-			scope:employer = {
-				has_any_basic_magic_prot_trigger = no
-			}
+			is_true_mage = yes
 		}
 		spend_standard_ps_effect = yes
 		scope:employer = {
@@ -3423,11 +3485,12 @@ magic_ev9.41 = {
 	}
 	immediate = {
 		scope:employer = {
-			add_trait = witch_hunter
+			add_trait = supernatural_hunter
 			hidden_effect = {
 				add_trait_xp = {
-					trait = witch_hunter
-					value = 80
+					trait = supernatural_hunter
+					track = witch_hunting
+					value = 40
 				}
 			}
 			set_relation_rival = ROOT
@@ -3435,7 +3498,7 @@ magic_ev9.41 = {
 		hidden_effect = {
 			random_courtier = {
 				limit = {
-					has_trait = demon
+					is_a_demon_trigger = yes
 					NOT = {
 						has_trait = compassionate
 					}
@@ -3571,14 +3634,21 @@ magic_ev9.41 = {
 	option = {
 		name = ev9.41.0.d
 		trigger = {
-			has_trait = archmage
+			OR = {
+				is_true_mage = yes
+				has_perk = healer_p9_perk
+			}
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		show_as_unavailable = {
-			has_trait = archmage
+			is_true_mage = yes
 		}
 		spend_standard_ps_effect = yes
 		duel = {
@@ -3628,38 +3698,18 @@ magic_ev9.41 = {
 	option = {
 		name = ev9.41.0.e
 		trigger = {
-			OR = {
-				AND = {
-					has_trait = demon
-					has_trait_xp = {
-						trait = demon
-						value > 74
-					}
-				}
-				AND = {
-					has_trait = archmage
-					has_character_flag = firestorm_spell_flag
-				}
-			}
+			can_cast_firestorm_trigger = yes
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		show_as_unavailable = {
-			OR = {
-				AND = {
-					has_trait = demon
-					has_trait_xp = {
-						trait = demon
-						value > 74
-					}
-				}
-				AND = {
-					has_trait = archmage
-					has_character_flag = firestorm_spell_flag
-				}
-			}
+			can_cast_firestorm_trigger = yes
 		}
 		spend_standard_ps_effect = yes
 		custom_tooltip = ev9.41.0.e_ct
@@ -3684,6 +3734,10 @@ magic_ev9.41 = {
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
+			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
 			}
 		}
 		show_as_unavailable = {
@@ -3718,7 +3772,7 @@ magic_ev9.41 = {
 	option = {
 		name = ev9.41.0.f
 		trigger = {
-			has_trait = archmage
+			is_true_mage = yes
 			any_character_artifact = {
 				OR = {
 					has_artifact_modifier = singularity_modifier5
@@ -3729,9 +3783,13 @@ magic_ev9.41 = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		show_as_unavailable = {
-			has_trait = archmage
+			is_true_mage = yes
 			any_character_artifact = {
 				OR = {
 					has_artifact_modifier = singularity_modifier5
@@ -3763,7 +3821,7 @@ magic_ev9.41 = {
 			OR = {
 				has_character_flag = shadowstep_flag
 				AND = {
-					has_trait = archmage
+					is_true_mage = yes
 					any_equipped_character_artifact = {
 						has_variable = magic_crown
 					}
@@ -3773,12 +3831,16 @@ magic_ev9.41 = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		show_as_unavailable = {
 			OR = {
 				has_character_flag = shadowstep_flag
 				AND = {
-					has_trait = archmage
+					is_true_mage = yes
 					any_equipped_character_artifact = {
 						has_variable = magic_crown
 					}
@@ -3808,15 +3870,19 @@ magic_ev9.41 = {
 	option = {
 		name = ev9.41.0.h
 		trigger = {
-			has_trait = archmage
+			is_true_mage = yes
 			can_use_tornado_spell_trigger = yes
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		show_as_unavailable = {
-			has_trait = archmage
+			is_true_mage = yes
 			can_use_tornado_spell_trigger = yes
 		}
 		custom_tooltip = ev9.41.0.h_ct
@@ -3957,7 +4023,7 @@ magic_ev9.43 = {
 		}
 	}
 	option = {
-		name = ev9.43.0.a
+		name = ev9.43.0.b
 		stress_impact = {
 			compassionate = minor_stress_loss
 			sadistic = minor_stress_gain
@@ -4201,14 +4267,18 @@ magic_ev9.45 = {
 	option = {
 		name = ev9.45.0.c
 		trigger = {
-			has_trait = archmage
+			is_true_mage = yes
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		show_as_unavailable = {
-			has_trait = archmage
+			is_true_mage = yes
 		}
 		spend_standard_ps_effect = yes
 		add_dread = minor_dread_gain
@@ -4407,15 +4477,19 @@ magic_ev9.47 = {
 	option = {
 		name = ev9.47.0.c
 		trigger = {
-			has_trait = archmage
+			is_true_mage = yes
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		trait = archmage
 		show_as_unavailable = {
-			has_trait = archmage
+			is_true_mage = yes
 		}
 		flavor = ev9.47.0.c_fl
 		custom_tooltip = ev9.47.0.c_ct
@@ -4424,16 +4498,20 @@ magic_ev9.47 = {
 	option = {
 		name = ev9.47.0.d
 		trigger = {
-			has_trait = archmage
+			is_true_mage = yes
 			has_character_modifier = master_alteration_modifier
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		trait = archmage
 		show_as_unavailable = {
-			has_trait = archmage
+			is_true_mage = yes
 			has_character_modifier = master_alteration_modifier
 		}
 		flavor = ev9.47.0.d_fl
@@ -4453,16 +4531,20 @@ magic_ev9.47 = {
 	option = {
 		name = ev9.47.0.e
 		trigger = {
-			has_trait = archmage
+			is_true_mage = yes
 			has_character_modifier = master_psionic_modifier
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		trait = archmage
 		show_as_unavailable = {
-			has_trait = archmage
+			is_true_mage = yes
 			has_character_modifier = master_psionic_modifier
 		}
 		flavor = ev9.47.0.e_fl
@@ -4472,15 +4554,19 @@ magic_ev9.47 = {
 	option = {
 		name = ev9.47.0.f
 		trigger = {
-			has_trait = archmage
+			is_true_mage = yes
 			can_use_tornado_spell_trigger = yes
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		show_as_unavailable = {
-			has_trait = archmage
+			is_true_mage = yes
 			can_use_tornado_spell_trigger = yes
 		}
 		flavor = ev9.47.0.f_fl
@@ -4573,7 +4659,7 @@ magic_ev9.49 = {
 					set_sexuality = bisexual
 					give_witch_secret_or_trait_effect2 = yes
 					add_trait_xp = {
-						trait = demon
+						trait = demon2
 						value = { 20 40 }
 					}
 					set_source4demon = yes
@@ -4780,7 +4866,7 @@ magic_ev9.53 = {
 		trigger = {
 			OR = {
 				has_trait = true_witch
-				has_trait = archmage
+				is_true_mage = yes
 			}
 			NOT = {
 				has_character_flag = witch_contract_o2_done
@@ -4815,7 +4901,7 @@ magic_ev9.53 = {
 		trigger = {
 			has_trait = lifestyle_hunter
 			NOT = {
-				has_character_flag = witch_contract_o1_done
+				has_character_flag = witch_contract_o3_done
 			}
 		}
 		hidden_effect = {
@@ -5115,11 +5201,9 @@ magic_ev9.56 = {
 				after_creation = {
 					set_sexuality = bisexual
 					give_witch_secret_or_trait_effect2 = yes
-					add_trait_xp = {
-						trait = demon
-						value = { 40 50 }
-					}
+					add_prowess_skill = 10
 					set_source4demon = yes
+					add_character_modifier = power_saturated1
 					if = {
 						limit = {
 							NOR = {
@@ -5146,7 +5230,7 @@ magic_ev9.56 = {
 		name = ev9.56.0.a
 		trigger = {
 			NOT = {
-				has_trait = archmage
+				is_true_mage = yes
 			}
 		}
 		trigger_event = magic_ev9.57
@@ -5155,7 +5239,7 @@ magic_ev9.56 = {
 	option = {
 		name = ev9.56.0.b
 		trigger = {
-			has_trait = archmage
+			is_true_mage = yes
 		}
 		trigger_event = magic_ev9.60
 	}
@@ -5381,7 +5465,7 @@ magic_ev9.63 = {
 
 	option = {
 		name = ev9.63.0.a
-		custom_tooltip = start_duel_ct
+		#custom_tooltip = start_duel_ct
 		configure_start_mage_duel_effect = {
 			MD_ATTACKER = root
 			MD_DEFENDER = scope:demon2
@@ -5508,95 +5592,16 @@ magic_ev9.65 = {
 		}
 		gain_cm_xp1_effect = yes
 		spend_standard_ps_effect = yes
-		custom_tooltip = use_tornado_spell_army_ct
-		custom_tooltip = use_tornado_spell_army_ct2
-		custom_tooltip = use_tornado_spell_army_ct3
-		scope:army1 = {
-			location = {
-				if = {
-					limit = {
-						exists = county
-					}
-					county = {
-						change_county_control = extreme_county_control_loss
-						change_development_progress = major_development_progress_loss
-					}
-				}
-				if = {
-					limit = {
-						NOT = {
-							has_province_modifier = tornado_spell_modifier
-						}
-					}
-					add_province_modifier = {
-						modifier = tornado_spell_modifier
-						years = 3
-					}
-				}
-			}
+		set_variable = {
+			name = tornado_type
+			value = 0
 		}
-		hidden_effect = {
-			set_spell_id = { ID = 30 }
-			save_scope_as = magic_user
-			send_message_4_magic_sense_effect = yes
-			scope:army1 = {
-				location = {
-					every_army_in_location = {
-						deplete_army_by_percentage = 0.98
-						send_tornado_notification_effect = yes
-					}
-					every_character_in_location = {
-						limit = {
-							has_full_magic_prot_trigger = no
-						}
-						if = {
-							limit = {
-								OR = {
-									has_trait  = wounded_1
-									has_trait  = wounded_2
-									has_trait  = wounded_3
-								}
-							}
-							random = {
-								chance = 30
-								death = {
-									death_reason = death_violent_storm
-								}
-							}
-						}
-						else = {
-							random_list = {
-								1 = {
-									send_interface_toast = {
-										title = tornado_spell
-										add_trait = wounded_1
-									}
-								}
-								1 = {
-									send_interface_toast = {
-										title = tornado_spell
-										add_trait = wounded_2
-									}
-								}
-								1 = {
-									send_interface_toast = {
-										title = tornado_spell
-										add_trait = wounded_3
-									}
-								}
-								2 = {
-									
-								}
-							}
-						}
-					}
-				}
-			}
-			send_interface_toast = {
-				title = tornado_spell
-				custom_tooltip = use_tornado_spell_destruction_ct
-			}
+		show_as_tooltip = {
+			tornado_spell_effect0 = yes
 		}
+		set_spell_id = { ID = 30 }
+		execute_or_counter_spell_hidden_effect = { SID = 30 }
+		
 	}
 	option = {
 		name = ev9.65.0.d
@@ -5608,95 +5613,16 @@ magic_ev9.65 = {
 		}
 		gain_cm_xp1_effect = yes
 		spend_standard_ps_effect = yes
-		custom_tooltip = use_tornado_spell_army_ct
-		custom_tooltip = use_tornado_spell_army_ct2
-		custom_tooltip = use_tornado_spell_army_ct3
-		scope:army2 = {
-			location = {
-				if = {
-					limit = {
-						exists = county
-					}
-					county = {
-						change_county_control = extreme_county_control_loss
-						change_development_progress = major_development_progress_loss
-					}
-				}
-				if = {
-					limit = {
-						NOT = {
-							has_province_modifier = tornado_spell_modifier
-						}
-					}
-					add_province_modifier = {
-						modifier = tornado_spell_modifier
-						years = 3
-					}
-				}
-			}
+		set_variable = {
+			name = tornado_type
+			value = 1
 		}
-		hidden_effect = {
-			set_spell_id = { ID = 30 }
-			save_scope_as = magic_user
-			send_message_4_magic_sense_effect = yes
-			scope:army2 = {
-				location = {
-					every_army_in_location = {
-						deplete_army_by_percentage = 0.98
-						send_tornado_notification_effect = yes
-					}
-					every_character_in_location  = {
-						limit = {
-							has_full_magic_prot_trigger = no
-						}
-						if = {
-							limit = {
-								OR = {
-									has_trait  = wounded_1
-									has_trait  = wounded_2
-									has_trait  = wounded_3
-								}
-							}
-							random = {
-								chance = 30
-								death = {
-									death_reason = death_violent_storm
-								}
-							}
-						}
-						else = {
-							random_list = {
-								1 = {
-									send_interface_toast = {
-										title = tornado_spell
-										add_trait = wounded_1
-									}
-								}
-								1 = {
-									send_interface_toast = {
-										title = tornado_spell
-										add_trait = wounded_2
-									}
-								}
-								1 = {
-									send_interface_toast = {
-										title = tornado_spell
-										add_trait = wounded_3
-									}
-								}
-								2 = {
-									
-								}
-							}
-						}
-					}
-				}
-			}
-			send_interface_toast = {
-				title = tornado_spell
-				custom_tooltip = use_tornado_spell_destruction_ct
-			}
+		show_as_tooltip = {
+			tornado_spell_effect1 = yes
 		}
+		set_spell_id = { ID = 30 }
+		execute_or_counter_spell_hidden_effect = { SID = 30 }
+		
 	}
 	option = {
 		name = ev9.65.0.a
@@ -5731,95 +5657,16 @@ magic_ev9.65 = {
 		}
 		gain_cm_xp1_effect = yes
 		spend_standard_ps_effect = yes
-		custom_tooltip = use_singularity_agains_army_ct
-		custom_tooltip = use_tornado_spell_army_ct3
-		scope:recipient = {
-			location = {
-				if = {
-					limit = {
-						exists = county
-					}
-					county = {
-						change_county_control = extreme_county_control_loss
-						change_development_progress = major_development_progress_loss
-					}
-				}
-				if = {
-					limit = {
-						NOT = {
-							has_province_modifier = tornado_spell_modifier
-						}
-					}
-					add_province_modifier = {
-						modifier = tornado_spell_modifier
-						years = 3
-					}
-				}
-			}
+		set_variable = {
+			name = tornado_type
+			value = 2
 		}
-		hidden_effect = {
-			set_spell_id = { ID = 30 }
-			save_scope_as = magic_user
-			send_message_4_magic_sense_effect = yes
-
-			scope:recipient = {
-				location = {
-					every_army_in_location = {
-						deplete_army_by_percentage = 0.98
-						send_tornado_notification_effect = yes
-					}
-					every_character_in_location  = {
-						limit = {
-							has_full_magic_prot_trigger = no
-						}
-						if = {
-							limit = {
-								OR = {
-									has_trait  = wounded_1
-									has_trait  = wounded_2
-									has_trait  = wounded_3
-								}
-							}
-							random = {
-								chance = 30
-								death = {
-									death_reason = death_violent_storm
-								}
-							}
-						}
-						else = {
-							random_list = {
-								1 = {
-									send_interface_toast = {
-										title = tornado_spell
-										add_trait = wounded_1
-									}
-								}
-								1 = {
-									send_interface_toast = {
-										title = tornado_spell
-										add_trait = wounded_2
-									}
-								}
-								1 = {
-									send_interface_toast = {
-										title = tornado_spell
-										add_trait = wounded_3
-									}
-								}
-								2 = {
-									
-								}
-							}
-						}
-					}
-				}
-			}
-			send_interface_toast = {
-				title = tornado_spell
-				custom_tooltip = use_tornado_spell_destruction_ct
-			}
+		show_as_tooltip = {
+			tornado_spell_effect2 = yes
 		}
+		set_spell_id = { ID = 30 }
+		execute_or_counter_spell_hidden_effect = { SID = 30 }
+		
 	}
 	option = {
 		name = ev9.65.0.b
@@ -5830,94 +5677,16 @@ magic_ev9.65 = {
 		}
 		gain_cm_xp1_effect = yes
 		spend_standard_ps_effect = yes
-		custom_tooltip = use_singularity_agains_army_ct
-		custom_tooltip = use_tornado_spell_army_ct3
-		scope:recipient = {
-			capital_province = {
-				if = {
-					limit = {
-						exists = county
-					}
-					county = {
-						change_county_control = extreme_county_control_loss
-						change_development_progress = major_development_progress_loss
-					}
-				}
-				if = {
-					limit = {
-						NOT = {
-							has_province_modifier = tornado_spell_modifier
-						}
-					}
-					add_province_modifier = {
-						modifier = tornado_spell_modifier
-						years = 3
-					}
-				}
-			}
+		set_variable = {
+			name = tornado_type
+			value = 3
 		}
-		hidden_effect = {
-			set_spell_id = { ID = 30 }
-			save_scope_as = magic_user
-			send_message_4_magic_sense_effect = yes
-			scope:recipient = {
-				capital_province = {
-					every_army_in_location = {
-						deplete_army_by_percentage = 0.98
-						send_tornado_notification_effect = yes
-					}
-					every_character_in_location  = {
-						limit = {
-							has_full_magic_prot_trigger = no
-						}
-						if = {
-							limit = {
-								OR = {
-									has_trait  = wounded_1
-									has_trait  = wounded_2
-									has_trait  = wounded_3
-								}
-							}
-							random = {
-								chance = 30
-								death = {
-									death_reason = death_violent_storm
-								}
-							}
-						}
-						else = {
-							random_list = {
-								1 = {
-									send_interface_toast = {
-										title = tornado_spell
-										add_trait = wounded_1
-									}
-								}
-								1 = {
-									send_interface_toast = {
-										title = tornado_spell
-										add_trait = wounded_2
-									}
-								}
-								1 = {
-									send_interface_toast = {
-										title = tornado_spell
-										add_trait = wounded_3
-									}
-								}
-								2 = {
-									
-								}
-							}
-						}
-					}
-				}
-			}
-			send_interface_toast = {
-				title = tornado_spell
-				custom_tooltip = use_tornado_spell_destruction_ct
-			}
+		show_as_tooltip = {
+			tornado_spell_effect3 = yes
 		}
+		set_spell_id = { ID = 30 }
+		execute_or_counter_spell_hidden_effect = { SID = 30 }
+		
 	}
 	option = {
 		name = ev9.65.0.e
@@ -6012,16 +5781,13 @@ magic_ev9.66 = {
 			remove_trait = ill
 		}
 		else_if = { limit = { has_trait = maimed }
-			random = {
-				chance = 25
-				remove_trait = maimed
-			}
+			remove_trait = maimed
 		}
 		else_if = { limit = { has_trait = smallpox }
-			random = {
-				chance = 25
-				remove_trait = smallpox
-			}
+			remove_trait = smallpox
+		}
+		else_if = { limit = { has_trait = consumption }
+			remove_trait = consumption
 		}
 		else_if = {	limit = {	has_character_modifier = chronic_headaches_modifier	}
 			remove_character_modifier = chronic_headaches_modifier
@@ -6032,6 +5798,12 @@ magic_ev9.66 = {
 		else_if = {	limit = {	has_character_modifier = infected_wound_modifier	}
 			remove_character_modifier = infected_wound_modifier
 		}
+		if = {
+			limit = {
+				has_character_modifier = wc_poisoned_bolt_modifier
+			}
+			remove_character_modifier = wc_poisoned_bolt_modifier
+		}
 		ai_chance = {
 			base = 1
 			modifier = {
@@ -6041,10 +5813,27 @@ magic_ev9.66 = {
 		}
 	}
 	option = {
+		name = ev2.41.f
+		trigger = {
+			has_character_modifier = wc_innovator_pyrotechnician_modifier
+			NOT = {
+				has_character_modifier = wc_innovator_bomb_modifier
+			}
+		}
+		add_internal_flag = special
+		add_character_modifier = {
+			modifier = wc_innovator_bomb_modifier
+			years = 3
+		}
+		ai_chance = {
+			base = 0
+		}
+	}
+	option = {
 		name = ev9.66.0.a
 		trigger = {
 			OR = {
-				has_trait = archmage
+				is_true_mage = yes
 				has_trait = true_witch
 			}
 		}
@@ -6094,6 +5883,7 @@ magic_ev9.67 = {
 			scope:newly_created_artifact={
 				set_variable=pot1
 			}
+			trigger_event = magic_ev10.45
 		}
 		custom_tooltip = gain_pot1_ct
 	}
@@ -6118,6 +5908,7 @@ magic_ev9.67 = {
 			scope:newly_created_artifact={
 				set_variable=pot3
 			}
+			trigger_event = magic_ev10.45
 		}
 		custom_tooltip = gain_pot3_ct
 	}
@@ -6142,6 +5933,7 @@ magic_ev9.67 = {
 			scope:newly_created_artifact={
 				set_variable=pot2
 			}
+			trigger_event = magic_ev10.45
 		}
 		custom_tooltip = gain_pot2_ct
 	}
@@ -6166,8 +5958,30 @@ magic_ev9.67 = {
 			scope:newly_created_artifact={
 				set_variable=pot7
 			}
+			trigger_event = magic_ev10.45
 		}
 		custom_tooltip = gain_pot7_ct
+	}
+	option = {
+		name = elixir_fertility_modifier	#fertility
+		hidden_effect = {
+			create_artifact = {	
+				name = elixir_fertility_modifier
+				description = pot10_desc
+				template=magical_unique_template
+				type = miscellaneous
+				visuals = flask
+				modifier = elixir_modifier
+				rarity=illustrious
+				decaying = no
+				save_scope_as = newly_created_artifact
+			}
+			scope:newly_created_artifact={
+				set_variable=pot10
+			}
+			trigger_event = magic_ev10.45
+		}
+		custom_tooltip = gain_pot10_ct
 	}
 	option = {
 		name = ev9.67.0.a
@@ -6207,6 +6021,7 @@ magic_ev9.68 = {
 			scope:newly_created_artifact={
 				set_variable=pot5
 			}
+			trigger_event = magic_ev10.45
 		}
 		custom_tooltip = gain_pot5_ct
 	}
@@ -6231,6 +6046,7 @@ magic_ev9.68 = {
 			scope:newly_created_artifact={
 				set_variable=pot6
 			}
+			trigger_event = magic_ev10.45
 		}
 		custom_tooltip = gain_pot6_ct
 	}
@@ -6255,8 +6071,9 @@ magic_ev9.68 = {
 			scope:newly_created_artifact={
 				set_variable=pot8
 			}
+			trigger_event = magic_ev10.45
 		}
-		custom_tooltip = gain_pot2_ct
+		custom_tooltip = gain_pot8_ct
 	}
 	option = {
 		name = elixir_learning_modifier
@@ -6279,8 +6096,60 @@ magic_ev9.68 = {
 			scope:newly_created_artifact={
 				set_variable=pot9
 			}
+			trigger_event = magic_ev10.45
 		}
 		custom_tooltip = gain_pot9_ct
+	}
+	option = {
+		name = pot11_name
+		random_list = {
+			1 = {
+				desc = ev3.52.a_1
+				hidden_effect = {
+					create_artifact = {	
+						name = pot11_name
+						description = pot11_desc
+						template=magical_unique_template
+						type = miscellaneous
+						visuals = flask
+						modifier = pot11_modifier
+						rarity=illustrious
+						decaying = no
+						save_scope_as = newly_created_artifact
+					}
+					scope:newly_created_artifact={
+						set_variable=pot11
+					}
+				}
+				send_interface_toast = {
+					title = ev2.41.dt
+					custom_tooltip = gain_pot11_ct
+				}
+			}
+			1 = {
+				desc = ev3.52.a_2
+				hidden_effect = {
+					create_artifact = {	
+						name = pot4
+						description = pot4_desc
+						template=magical_unique_template
+						type = miscellaneous
+						visuals = flask
+						modifier = elixir_modifier
+						rarity=illustrious
+						decaying = no
+						save_scope_as = newly_created_artifact
+					}
+					scope:newly_created_artifact={
+						set_variable=pot4
+					}
+				}
+				send_interface_toast = {
+					title = ev2.41.dt
+					custom_tooltip = gain_pot4_ct
+				}
+			}
+		}
 	}
 	option = {
 		name = ev9.68.0.a
@@ -6291,6 +6160,7 @@ magic_ev9.68 = {
 #magic epic - special project - unlocks golem army
 magic_ev9.69 = {
 	type = character_event
+	orphan = yes
 	title = ev9.69.title
 	desc = ev9.69.desc
 	theme = witchcraft
@@ -6444,6 +6314,14 @@ magic_ev9.70 = {
 			add_trait = callous
 		}
 	}
+	after = {
+		hidden_effect = {
+			trigger_event = {
+				id = magic_ev10.101
+				years = 5
+			}
+		}
+	}
 }
 
 #from magic triangulation - refusing offer
@@ -6466,11 +6344,44 @@ magic_ev9.71 = {
 	
 	option = {
 		name = ev9.71.0.a
-		set_relation_rival = scope:second_mage
+		if = {
+			limit = {
+				NOT = {
+					has_character_flag = special_magic_character
+				}
+			}
+			set_relation_rival = scope:second_mage
+		}
+		else = {
+			hidden_effect = {
+				add_opinion = {
+					target = scope:second_mage
+					modifier = irritated_opinion
+					opinion = -100
+				}
+			}
+		}
+		ai_chance = {
+			base = 1
+		}
 	}
 
 	option = {
 		name = tour_grounds_events.3017.a	#A pity.
+		hidden_effect = {
+			add_opinion = {
+				target = scope:second_mage
+				modifier = refusal_opinion
+				opinion = -25
+			}
+		}
+		ai_chance = {
+			base = 1
+			modifier = {
+				add = 100
+				has_character_flag = special_magic_character
+			}
+		}
 	}
 }
 
@@ -6797,7 +6708,14 @@ magic_ev9.74 = {
 			}
 		}
 		ai_chance = {
-			base = 20
+			base = 1
+			modifier = {
+				add = 49
+				OR = {
+					is_landed_or_landless_administrative = yes
+					has_trait = gallowsbait
+				}
+			}
 		}
 	}
 	option = {
@@ -6807,7 +6725,10 @@ magic_ev9.74 = {
 			player_heir = {
 				NOR = {
 					has_trait = weak
-					has_trait = demon
+					is_a_demon_trigger = yes
+					has_trait = physique_good_1
+					has_trait = physique_good_2
+					has_trait = physique_good_3
 				}
 			}
 		}
@@ -6831,7 +6752,14 @@ magic_ev9.74 = {
 			}
 		}
 		ai_chance = {
-			base = 20
+			base = 1
+			modifier = {
+				add = 9
+				OR = {
+					has_trait = sadistic
+					has_trait = ambitious
+				}
+			}
 		}
 	}
 	option = {
@@ -6839,7 +6767,10 @@ magic_ev9.74 = {
 		trigger = {
 			NOR = {
 				has_trait = weak
-				has_trait = demon
+				is_a_demon_trigger = yes
+				has_trait = physique_good_1
+				has_trait = physique_good_2
+				has_trait = physique_good_3
 			}
 		}
 		hidden_effect = {
@@ -6859,17 +6790,20 @@ magic_ev9.74 = {
 			}
 		}
 		ai_chance = {
-			base = 20
+			base = 1
+			modifier = {
+				add = 9
+				has_trait = ambitious
+			}
 		}
 	}
 
 	option = {
 		name = ev7.0.b
 		ai_chance = {
-			base = 1
+			base = 10
 		}
 	}
-	
 }
 #blackgrimoire special
 magic_ev9.75 = {
@@ -6887,7 +6821,7 @@ magic_ev9.75 = {
 		add_stress = major_stress_gain
 		if = {
 			limit = {
-				has_trait = archmage
+				is_true_mage = yes
 				has_trait_xp = {
 					trait = archmage
 					track = secret_knowledge
@@ -6902,6 +6836,18 @@ magic_ev9.75 = {
 		}
 		else = {
 			add_learning_skill = 1
+		}
+		if = {
+			limit = {
+				NOR = {
+					has_trait = lunatic_1
+					has_trait = lunatic_genetic
+				}
+			}
+			random = {
+				chance = 2
+				add_trait = lunatic_1
+			}
 		}
 		hidden_effect = {
 			add_character_flag = used_magic_book_flag2
@@ -6970,7 +6916,7 @@ magic_ev9.77 = {
 					NOR = {
 						THIS = ROOT
 						has_character_flag = special_magic_character
-						has_trait = demon
+						is_a_demon_trigger = yes
 						has_trait = archmage
 					}
 				}
@@ -6987,7 +6933,7 @@ magic_ev9.77 = {
 						NOR = {
 							THIS = ROOT
 							has_character_flag = special_magic_character
-							has_trait = demon
+							is_a_demon_trigger = yes
 							has_trait = archmage
 						}
 					}
@@ -7006,7 +6952,7 @@ magic_ev9.77 = {
 							NOR = {
 								THIS = ROOT
 								has_character_flag = special_magic_character
-								has_trait = demon
+								is_a_demon_trigger = yes
 								has_trait = archmage
 							}
 						}
@@ -7044,7 +6990,7 @@ magic_ev9.78 = {
 		}
 		if = {
 			limit = {
-				has_trait = archmage
+				is_true_mage = yes
 				is_legendary_mage_trigger = no
 			}
 			gain_sc_xp2_effect = yes
@@ -7055,10 +7001,11 @@ magic_ev9.78 = {
 		}
 		else_if = {
 			limit = {
-				has_trait = demon
+				has_trait = demon2
 			}
 			add_trait_xp = {
-				trait = demon
+				trait = demon2
+				track = hell_powers
 				value = 10
 			}
 		}
@@ -7103,6 +7050,7 @@ magic_ev9.79 = {
 	immediate = {
 		if = {
 			limit = {
+				exists = domicile
 				domicile = { 
 					OR = {
 						has_domicile_building_or_higher = cult_caravan_01
@@ -7115,6 +7063,7 @@ magic_ev9.79 = {
 		}
 		if = {
 			limit = {
+				exists = domicile
 				domicile = { 
 					OR = {
 						has_domicile_building_or_higher = cult_caravan_01
@@ -7127,6 +7076,7 @@ magic_ev9.79 = {
 		}
 		if = {
 			limit = {
+				exists = domicile
 				domicile = { 
 					OR = {
 						has_domicile_building_or_higher = cult_caravan_01
@@ -7139,6 +7089,7 @@ magic_ev9.79 = {
 		}
 		if = {
 			limit = {
+				exists = domicile
 				domicile = { 
 					OR = {
 						has_domicile_building_or_higher = cult_caravan_01
@@ -7151,6 +7102,7 @@ magic_ev9.79 = {
 		}
 		if = {
 			limit = {
+				exists = domicile
 				domicile = { 
 					has_domicile_building = cult_caravan_01
 				}
@@ -7160,6 +7112,7 @@ magic_ev9.79 = {
 		}
 		else_if = {
 			limit = {
+				exists = domicile
 				domicile = { 
 					has_domicile_building = cult_caravan_02
 				}
@@ -7169,6 +7122,7 @@ magic_ev9.79 = {
 		}
 		else_if = {
 			limit = {
+				exists = domicile
 				domicile = { 
 					has_domicile_building = cult_caravan_03
 				}
@@ -7178,6 +7132,7 @@ magic_ev9.79 = {
 		}
 		else_if = {
 			limit = {
+				exists = domicile
 				domicile = { 
 					has_domicile_building = cult_caravan_04
 				}
@@ -7187,6 +7142,7 @@ magic_ev9.79 = {
 		}
 		else_if = {
 			limit = {
+				exists = domicile
 				domicile = { 
 					has_domicile_building = cult_caravan_05
 				}
@@ -7196,6 +7152,7 @@ magic_ev9.79 = {
 		}
 		else_if = {
 			limit = {
+				exists = domicile
 				domicile = { 
 					has_domicile_building = cult_caravan_06
 				}
@@ -7205,6 +7162,7 @@ magic_ev9.79 = {
 		}
 		if = {
 			limit = {
+				exists = domicile
 				domicile = {
 					has_domicile_building_or_higher = baggage_train_01
 					has_domicile_construction = fortune_tellers_tent_01
@@ -7351,7 +7309,7 @@ magic_ev9.83 = {
 		trigger = {
 			OR = {
 				has_trait = true_witch
-				has_trait = archmage
+				is_true_mage = yes
 			}
 			NOT = {
 				has_character_flag = searching_ghosts_flag
@@ -7487,7 +7445,7 @@ magic_ev9.88 = {
 		name = ev9.88.0.a
 		if = {
 			limit = {
-				has_trait = archmage
+				is_true_mage = yes
 			}
 			gain_al_xp_small_effect = yes
 		}
@@ -7592,7 +7550,7 @@ magic_ev9.89 = {
 		}
 		trait = archmage
 		show_as_unavailable = {
-			has_trait = archmage
+			is_true_mage = yes
 			has_character_modifier = mind_reader_modifier
 		}
 		hidden_effect = {
@@ -7783,27 +7741,54 @@ magic_ev9.91 = {
 				}
 				random_scheme_agent_character = {
 					limit = {
-						NOT = {
-							THIS = scope:p1
+						always = yes
+						trigger_if = {
+							limit = {
+								exists = scope:p1
+							}
+							NOT = { THIS = scope:p1 }
 						}
 					}
 					save_scope_as = p2
 				}
 				random_scheme_agent_character = {
 					limit = {
-						NOR = {
-							THIS = scope:p1
-							THIS = scope:p2
+						always = yes
+						trigger_if = {
+							limit = {
+								exists = scope:p1
+							}
+							NOT = { THIS = scope:p1 }
+						}
+						trigger_if = {
+							limit = {
+								exists = scope:p2
+							}
+							NOT = { THIS = scope:p2 }
 						}
 					}
 					save_scope_as = p3
 				}
 				random_scheme_agent_character = {
 					limit = {
-						NOR = {
-							THIS = scope:p1
-							THIS = scope:p2
-							THIS = scope:p3
+						always = yes
+						trigger_if = {
+							limit = {
+								exists = scope:p1
+							}
+							NOT = { THIS = scope:p1 }
+						}
+						trigger_if = {
+							limit = {
+								exists = scope:p2
+							}
+							NOT = { THIS = scope:p2 }
+						}
+						trigger_if = {
+							limit = {
+								exists = scope:p3
+							}
+							NOT = { THIS = scope:p3 }
 						}
 					}
 					save_scope_as = p4
@@ -7823,11 +7808,15 @@ magic_ev9.91 = {
 			}
 			custom_description = {
 				text = advantages_are_too_low_custom
-				scope:scheme = { scheme_agent_charges >= 5 }
+				scope:scheme = { scheme_agent_charges >= 2 }
 			}
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
+			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
 			}
 		}
 		show_as_unavailable = {
@@ -7858,7 +7847,7 @@ magic_ev9.91 = {
 							text = empty_description1
 						}
 						spend_standard_ps_effect = yes
-						gain_sc_xp2_effect = yes
+						gain_sc_xp1_effect = yes
 						hidden_effect = {
 							set_spell_id = { ID = 26 }
 						}
@@ -7874,8 +7863,23 @@ magic_ev9.91 = {
 					}
 					custom_tooltip = ev9.91.1.a_ct
 					hidden_effect = {
-						ROOT = {
-							trigger_event = magic_ev7.129
+						if = {
+							limit = {
+								scope:scheme = {
+									exists = var:scheme_traitor
+									any_scheme_agent_character = {
+										THIS = scope:scheme.var:scheme_traitor
+									}
+								}
+							}
+							ROOT = {
+								trigger_event = magic_ev10.106
+							}
+						}
+						else = {
+							ROOT = {
+								trigger_event = magic_ev7.129
+							}
 						}
 					}
 				}
@@ -7896,9 +7900,9 @@ magic_ev9.91 = {
 								}
 								4 = {
 									trigger = {
-										NOt = {
-											has_character_flag = weaken_ultimate_spell_flag
-										}
+										#NOt = {
+										#	has_character_flag = weaken_ultimate_spell_flag
+										#}
 									}
 									trigger_event = magic_ev9.93
 								}
@@ -7946,9 +7950,13 @@ magic_ev9.92 = {
 					value > 99
 				}
 			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
+			}
 		}
 		show_as_unavailable = {
-			has_trait = archmage
+			is_true_mage = yes
 			is_the_choosen_one_trigger = yes
 		}
 		add_trait_xp = {
@@ -7970,6 +7978,10 @@ magic_ev9.92 = {
 			custom_description = {
 				text = power_needed_custom
 				can_spend_standard_ps_trigger = yes
+			}
+			custom_description = {
+				text = have_antimagic_seal
+				is_antimagic_trigger = no
 			}
 		}
 		show_as_unavailable = {
@@ -8017,7 +8029,22 @@ magic_ev9.93 = {
 	override_background = {
 		reference = burning_building
 	}
-	
+	immediate = {
+		hidden_effect = {
+			scope:scheme = {
+				every_scheme_agent_character = {
+					send_interface_toast = {
+						title = ev9.94.title
+						show_as_tooltip = {
+							scope:scheme = {
+								end_scheme = yes
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 	option = {
 		name = harm.0541.a	#"..."
 		if = {
@@ -8099,7 +8126,22 @@ magic_ev9.94 = {
 	override_background = {
 		reference = burning_building
 	}
-	
+	immediate = {
+		hidden_effect = {
+			scope:scheme = {
+				every_scheme_agent_character = {
+					send_interface_toast = {
+						title = ev9.94.title
+						show_as_tooltip = {
+							scope:scheme = {
+								end_scheme = yes
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 	option = {
 		name = ev9.94.0.a
 		duel = {
@@ -8310,7 +8352,7 @@ magic_ev9.95 = {
 			intellect_bad_3 = medium_stress_loss
 		}
 		random = {
-			chance = 60
+			chance = 25
 			send_interface_toast = {
 				title = ev3.52.a_2
 				scope:scheme = {
@@ -8427,39 +8469,28 @@ magic_ev9.96 = {
 					spend_standard_ps_effect = yes
 				}
 			}
+			change_opportunities = 1
+			add_scheme_modifier = {
+				type = ultimate_spell_loaded_modifier
+			}
 		}
-		#if = {
-		#	limit = {
-		#		exists = scope:p1
-		#		scope:p1 = {
-		#			can_spend_standard_ps_trigger = yes
-		#		}
-		#	}
-		#	scope:p1 = {
-		#		send_interface_toast = {
-		#			title = ev9.96.title
-		#			spend_standard_ps_effect = yes
-		#		}
-		#	}
-		#}
-		
 	}
 	option = {
 		name = ev9.96.0.b
-		custom_tooltip = ev9.96.0.b_ct
-		hidden_effect = {
-			if = {
-				limit = {
-					Not = {
-						has_character_flag = weaken_ultimate_spell_flag
-					}
-				}
-			}
-			add_character_flag = {
-				flag = weaken_ultimate_spell_flag
-				years = 5
-			}
-		}
+		#custom_tooltip = ev9.96.0.b_ct
+		#hidden_effect = {
+		#	if = {
+		#		limit = {
+		#			Not = {
+		#				has_character_flag = weaken_ultimate_spell_flag
+		#			}
+		#		}
+		#	}
+		#	add_character_flag = {
+		#		flag = weaken_ultimate_spell_flag
+		#		years = 5
+		#	}
+		#}
 	}
 }
 #ultimate spell ongoing - 3.

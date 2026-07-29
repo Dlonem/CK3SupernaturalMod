@@ -1,13 +1,34 @@
 ﻿namespace = spn_error_suppression
 
+# ============================================================================
+# ERROR-LOG SUPPRESSION  (orphan event, never fires)
+# ----------------------------------------------------------------------------
+# CK3 has no "mute this warning" command. The only thing that works is an
+# orphan event: events are NOT "scripted triggers/effects", so references
+# inside immediate{} DO count toward set/used analysis.
+#
+# Primitives:
+#   - "X is set but never used"  -> provide a READ here:
+#         variable      -> if = { limit = { exists = var:X } }
+#         character flag -> if = { limit = { has_character_flag = X } }
+#   - "X is used but never set"  -> provide a SET here (add the flag / set/save it).
+#   - "flag:X used but never set" comparison token -> save it once: value = flag:X
+#
+# NOTE: file MUST be saved as UTF-8-BOM or CK3 complains on load.
+#
+# The old "Flag 'trait:<x>' is set but never used" lines were fixed at the
+# SOURCE (10_spn_religious_triggers.txt now compares traits directly instead of
+# building flag:$TRAIT$ tokens), so they no longer need suppression here.
+# ============================================================================
+
 spn_error_suppression.0001 = {
     hidden = yes
     orphan = yes
-    
+
     immediate = {
         hidden_effect = {
-        
-			# Add flags that are set but never used and then check if they exist:
+
+			# --- Legacy character flags (witchcraft-era; set nowhere else) -------
 			add_character_flag = mutagen_potion
 			add_character_flag = grinding
 			add_character_flag = witch_potion
@@ -19,26 +40,28 @@ spn_error_suppression.0001 = {
 			if = { limit = { has_character_flag = witch_potion } }
 			if = { limit = { has_character_flag = elixir_of_life } }
 			if = { limit = { has_character_flag = love_potion } }
-			if = { limit = { has_character_flag = lupus} }
+			if = { limit = { has_character_flag = lupus } }
 
-
-
-			# Add and then check for variables that are set but never used:
-			if = { limit = { exists = var:outcome_artifact } }
-			if = { limit = { exists = var:lupus } }
-			if = { limit = { exists = var:wbanquet_friend_insight_var } }
+			# --- SPN variables: "set but never used" (scaffolding / pending) -----
 			if = { limit = { exists = var:supernatural_hunter } }
-			if = { limit = { exists = var:family_schemer } }
-			if = { limit = { exists = var:supernatural_vampire } }
-			#if = { limit = { exists = mutagen_potion } }
-			#if = { limit = { exists = grinding } }
-			#if = { limit = { exists = witch_potion } }
-			#if = { limit = { exists = elixir_of_life } }
-			#if = { limit = { exists = love_potion } }			
-			
-			# Add and then check for variables and event targets that are used but never set:
-			if = { limit = { exists = var:lupus } }
-			if = { limit = { exists = var:outcome_artifact } }
+			if = { limit = { exists = var:spn_marked_werewolf } }
+			if = { limit = { exists = var:spn_conferred_progeny } }
+
+			# --- SPN character flags: "set but never used" (Phase 2 scaffolding) -
+			if = { limit = { has_character_flag = spn_born_werewolf } }
+			if = { limit = { has_character_flag = spn_suspects_my_affliction } }
+			if = { limit = { has_character_flag = spn_hunter_has_a_mark } }
+
+			# --- "used but never set": set elsewhere (history) but unseen by the
+			#     analyzer. Providing a scanned set/save clears the log; no gameplay
+			#     change (this event never fires).
+			add_character_flag = mikaelson_vampire   # set on the Mikaelson characters; confirmed working in-game
+			save_scope_as = command_progeny_marry    # registers the interaction event-target name
+
+			# --- Faith-shunning flag tokens: REMOVED. Fixed at the source instead --
+			#     10_spn_religious_triggers.txt now compares traits directly
+			#     ($TRAIT$ = trait:X) rather than via flag:$TRAIT$, so neither
+			#     flag:<x> nor flag:trait:<x> tokens are produced anymore.
 		}
     }
 }

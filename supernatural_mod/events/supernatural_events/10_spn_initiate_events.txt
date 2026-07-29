@@ -33,15 +33,23 @@ spn_initiate.0001 { #Initialize Vampire
 			limit = { has_treatable_disease_trigger = yes }
 			spn_remove_treatable_disease = yes
 		}
+		if = {
+			limit = { has_variable = spn_vampire_blood_donor }
+			spn_assign_conferred_vampire_blood = yes
+		}
 		add_character_flag = {
 			flag = immune_to_disease
 		}
 
-		spn_give_vampire_secret_or_trait_effect = yes
-
+		spn_remove_negative_age_traits = yes
 		add_character_flag = {
 			flag = spn_recently_became_vampire
 			days = 1
+		}
+		spn_give_vampire_secret_or_trait_effect = yes
+		
+		trigger_event = { #Removes Vampire Blood + Donor variable
+			id = spn_miscellaneous_events.0002
 		}
 
 		spn_track_current_visual_age = { VISUALAGE = age }
@@ -69,7 +77,7 @@ spn_initiate.0002 { #Remove Vampire
 
 
 		if = {
-			limit = { any_secret = { secret_type = spn_secret_vampire } }
+			limit = { any_secret = { type = spn_secret_vampire } }
 			random_secret = { #Remove the secret
 				limit = {
 					secret_type = spn_secret_vampire
@@ -199,6 +207,14 @@ spn_initiate.1001 { #Initiate Werewolf
 			add_trait = supernatural_werewolf
 		}
 
+		# Born-vs-turned tag (for the gathering activity & future content).
+		# The wound/incubation climax sets spn_turned_werewolf BEFORE firing this event;
+		# everyone else (born, ruler designer, console, etc.) defaults to born.
+		if = {
+			limit = { NOT = { has_character_flag = spn_turned_werewolf } }
+			add_character_flag = spn_born_werewolf
+		}
+
 		set_variable = {
 			name = spn_age_aquired_immortality
 			value = age
@@ -212,12 +228,11 @@ spn_initiate.1001 { #Initiate Werewolf
 			flag = immune_to_disease
 		}
 
-		spn_give_lycan_secret_or_trait_effect = yes
-
 		add_character_flag = {
 			flag = spn_recently_became_lycan
 			days = 1
 		}
+		spn_give_lycan_secret_or_trait_effect = yes
 
 		#spn_track_current_visual_age = { VISUALAGE = age }
 	}
@@ -244,7 +259,7 @@ spn_initiate.1002 { #Remove Werewolf
 		#spn_remove_immortal_modifiers = yes
 
 		if = {
-			limit = { any_secret = { secret_type = spn_secret_werewolf } }
+			limit = { any_secret = { type = spn_secret_werewolf } }
 			random_secret = { #Remove the secret
 				limit = {
 					secret_type = spn_secret_werewolf
@@ -366,7 +381,7 @@ spn_initiate.2001 { #Initiate Hybrid
 		}	
 	}
 
-	immediate = { 
+	immediate = {
 		#Removes Lycanthropy from New Hybrid
 		remove_trait = supernatural_werewolf
 		remove_trait = spn_known_werewolf
@@ -377,7 +392,7 @@ spn_initiate.2001 { #Initiate Hybrid
 		remove_character_flag = spn_has_father_sire
 
 		if = {
-			limit = { any_secret = { secret_type = spn_secret_werewolf } }
+			limit = { any_secret = { type = spn_secret_werewolf } }
 			random_secret = { #Remove the secret
 				limit = {
 					secret_type = spn_secret_werewolf
@@ -402,19 +417,33 @@ spn_initiate.2001 { #Initiate Hybrid
 		}
 
 		if = {
+			limit = { has_character_flag = vampire_blood_in_system }
+			remove_character_flag = vampire_blood_in_system
+			remove_character_modifier = ingested_vampire_blood_modifier
+		}
+
+		if = {
+			limit = { has_variable = spn_vampire_blood_donor }
+			spn_assign_conferred_vampire_blood = yes
+		}
+
+		if = {
 			limit = { has_treatable_disease_trigger = yes }
 			spn_remove_treatable_disease = yes
 		}
 		add_character_flag = {
 			flag = immune_to_disease
 		}
-
-		#trigger_event = vampandlycan.0017 #Add Fertility modifier
-		spn_give_hybrid_secret_or_trait_effect = yes
-
+		
+		spn_remove_negative_age_traits = yes
 		add_character_flag = {
 			flag = spn_recently_became_hybrid
 			days = 1
+		}
+		spn_give_hybrid_secret_or_trait_effect = yes
+
+		trigger_event = { #Removes Vampire Blood + Donor variable
+			id = spn_miscellaneous_events.0002
 		}
 
 		spn_track_current_visual_age = { VISUALAGE = age }
@@ -440,7 +469,7 @@ spn_initiate.2002 { #Remove the Hybrid Trait
 		remove_character_flag = spn_has_father_sire
 
 		if = {
-			limit = { any_secret = { secret_type = spn_secret_hybrid } }
+			limit = { any_secret = { type = spn_secret_hybrid } }
 			random_secret = { #Remove the secret
 				limit = {
 					secret_type = spn_secret_hybrid
@@ -575,7 +604,7 @@ spn_initiate.3002 { #Remove Hunter
 		remove_variable = spn_yearly_pulses_since_trait_upgrade
 
 		if = {
-			limit = { any_secret = { secret_type = spn_secret_hunter } }
+			limit = { any_secret = { type = spn_secret_hunter } }
 			random_secret = { #Remove the secret
 				limit = {
 					secret_type = spn_secret_hunter
@@ -904,21 +933,6 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 				}
 
 				if = {
-					limit = { #Initialize Vampire
-						has_character_flag = spn_baby_vampire
-					}
-
-					remove_character_flag = spn_baby_vampire
-					add_character_flag = supernatural_vampire
-
-					trigger_event = spn_initiate.0001 #Initialize Vampire
-					add_trait_xp = {
-						trait = supernatural_vampire
-						track = vampirism
-						value = { 0 15 }
-					}
-				}
-				else_if = {
 					limit = { #Initialize Werewolf
 						has_character_flag = spn_baby_werewolf
 					}
@@ -1122,21 +1136,6 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 				}
 
 				if = {
-					limit = { #Initialize Vampire
-						has_character_flag = spn_baby_vampire
-					}
-
-					remove_character_flag = spn_baby_vampire
-					add_character_flag = supernatural_embrace_vampire
-
-					trigger_event = spn_initiate.0001 #Initialize Vampire
-					add_trait_xp = {
-						trait = supernatural_vampire
-						track = vampirism
-						value = { 10 25 }
-					}
-				}
-				else_if = {
 					limit = { #Initialize Werewolf
 						has_character_flag = spn_baby_werewolf
 					}
@@ -1338,21 +1337,6 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 				}
 
 				if = {
-					limit = { #Initialize Vampire
-						has_character_flag = spn_baby_vampire
-					}
-
-					remove_character_flag = spn_baby_vampire
-					add_character_flag = supernatural_embrace_vampire
-
-					trigger_event = spn_initiate.0001 #Initialize Vampire
-					add_trait_xp = {
-						trait = supernatural_vampire
-						track = vampirism
-						value = { 20 35 }
-					}
-				}
-				else_if = {
 					limit = { #Initialize Werewolf
 						has_character_flag = spn_baby_werewolf
 					}

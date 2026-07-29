@@ -82,7 +82,7 @@
 					NOR = {
 						employs_court_position = master_thief_camp_officer
 						any_character_active_contract = {
-							has_task_contract_type = laamp_steal_artifact_contract
+							task_contract_type = laamp_steal_artifact_contract
 							var:task_contract_target ?= scope:target
 						}
 					}
@@ -117,6 +117,7 @@
 		add = agent_groups_target_character_perspective_value
 		add = hostile_scheme_base_odds_prediction_target_is_char_value
 		add = odds_steal_back_artifact_scheme_misc_value
+		add = odds_magic_game_rule_strealing_value
 		min = 0
 	}
 
@@ -124,33 +125,6 @@
 	base_success_chance = {
 		base = 0
 		scheme_type_skill_success_chance_modifier = { SKILL = INTRIGUE }
-
-		modifier = {
-			add = -30
-			desc = IS_MAGICAL_ARTIFACT
-			#scope:artifact = {
-			#	has_variable = magic1
-			#}
-			scope:target = {
-				any_character_artifact = {
-					has_variable = magic1
-				}
-			}
-			scope:owner = {
-				is_ai = no
-			}
-		}
-		#modifier = {
-		#	add = -75
-		#	desc = "DS_SCHEME_EXPOSED"
-		#	scope:owner = {
-		#		any_scheme = {
-		#			scheme_type = steal_back_artifact
-		#			scheme_target_character = scope:target
-		#			is_scheme_exposed = yes
-		#		}
-		#	}
-		#}
 
 		#SCHEME OWNER#
 		compare_modifier = {
@@ -167,7 +141,7 @@
 		modifier = {
 			scope:owner = {
 				any_character_task_contract = {
-					has_task_contract_type = laamp_steal_artifact_contract
+					task_contract_type = laamp_steal_artifact_contract
 					var:task_contract_target ?= scope:target
 				}
 			}
@@ -186,6 +160,16 @@
 			add = -10
 			scope:owner = { has_character_modifier = hostile_schemes_distracted_modifier }
 			desc = hostile_schemes_distracted_modifier
+		}
+		modifier = {
+			add = -10
+			scope:target = { domicile ?= { has_domicile_parameter = mage_tower_with_small_lock } }
+			desc = hostile_schemes_wc_stealing_magic_lock
+		}
+		modifier = {
+			add = -25
+			scope:target = { domicile ?= { has_domicile_parameter = mage_tower_with_big_lock } }
+			desc = hostile_schemes_wc_stealing_magic_lock
 		}
 	}
 	base_secrecy = {
@@ -213,6 +197,21 @@
 			add_agent_slot = agent_infiltrator
 			add_agent_slot = agent_lookout
 		}
+		if = {
+			limit = {
+				has_game_rule = adjusted_magic_schemes
+			}
+			add_scheme_modifier = {
+				type = magic_stealing_equipped_modifier
+			}
+			save_scope_as = my_stealing_scheme
+			scheme_owner = {
+				trigger_event = {
+					id = magic_ev10.7
+					days = 1
+				}
+			}
+		}
 	}
 	on_phase_completed = {
 		suppress_scheme_follow_up_event_till_input_given_effect = yes
@@ -226,6 +225,7 @@
 				scheme_owner = { is_ai = yes }
 			}
 			steal_back_artifact_scheme_prep_effect = yes
+			purge_ai_scheme_slots_effect = yes
 		}
 	}
 	on_monthly = {

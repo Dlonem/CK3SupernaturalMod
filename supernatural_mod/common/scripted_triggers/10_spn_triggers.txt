@@ -1,9 +1,40 @@
 ﻿spn_has_supernatural_trait = {
 	OR = {
-		has_trait = demon
+		is_a_demon_trigger = yes
 		has_trait = supernatural_vampire
 		has_trait = supernatural_werewolf
 		has_trait = supernatural_hybrid
+	}
+}
+
+# Generalized "actor can physically reach the recipient" check (Force Gift now; reusable for future
+# melee/touch-based options). Mirrors the contact conditions of has_physical_contanct2 but is our own,
+# WITHOUT the magic-specific unlimited_spells_range game rule. Call inside scope:actor with scope:recipient set.
+spn_has_physical_contact = {
+	OR = {
+		AND = {
+			scope:actor = {
+				OR = {
+					is_landed_or_landless_administrative = yes
+					AND = { is_in_army = yes  scope:recipient = { is_in_army = yes } }
+					AND = { is_landless_ruler = yes  scope:recipient = { is_landless_ruler = yes } }
+					AND = {
+						exists = involved_activity
+						exists = scope:recipient.involved_activity
+						involved_activity = scope:recipient.involved_activity
+					}
+				}
+			}
+			scope:actor.location = scope:recipient.location
+		}
+		# GENUINE proximity / in-your-power only (no relationship shortcuts - a hostile clawing
+		# needs you to actually reach them, not just be their distant friend).
+		scope:recipient = { is_vassal_of = scope:actor  NOT = { is_at_war_with = scope:actor } }
+		scope:recipient = { is_imprisoned_by = scope:actor }
+		scope:recipient = { is_courtier_of = scope:actor }
+		scope:recipient = { is_foreign_court_or_pool_guest_of = scope:actor }
+		# A neighbouring ruler is "right next to you" - within reach to claw (your realm + the realms bordering it).
+		scope:actor = { character_is_realm_neighbor = scope:recipient }
 	}
 }
 
@@ -102,18 +133,6 @@ is_shapeshifted_trigger = {
 		has_character_modifier = POD_werewolf_form_lupus_modifier
 	}
 }
-
-#magic_user = {
-#	has_character_flag = magic_user				#Commented out in Update 2.05, was in error.log but not in WC mod
-#}
-
-#killed_real_witch_flag = {						#Commented out in Update 2.05, was in error.log but not in WC mod
-#	has_character_flag = killed_real_witch_flag
-#}
-
-#magic_exists = {								#Commented out in Update 2.05, was in error.log but not in WC mod
-#	has_character_flag = magic_exists
-#}
 
 spn_former_werewolf_effect = {
 	has_trait = supernatural_hybrid
@@ -313,6 +332,40 @@ spn_possible_pregnancy = {
 					has_trait = supernatural_hybrid
 					$FATHER$ = { spn_has_supernatural_trait = no }
 				}				
+			}
+		}
+	}
+}
+
+#Determines whether a Demon pregnancy is allowed, based on the spn_enable_demon_inheritance game rule.
+#ROOT is the mother, $FATHER$ is the biological father.
+#Demon = is_a_demon_trigger (demon1 / demon2). Human = spn_has_supernatural_trait = no.
+#This is intentionally independent of the werewolf spn_enable_trait_inheritance rule.
+spn_demon_possible_pregnancy = {
+	NOT = { has_game_rule = spn_demon_no_inheritance }
+	OR = {
+		AND = { #Demon + Demon (allowed under On and Demons Only)
+			OR = {
+				has_game_rule = spn_demon_yes_inheritance
+				has_game_rule = spn_demon_immortal_only_inheritance
+			}
+			is_a_demon_trigger = yes
+			$FATHER$ = { is_a_demon_trigger = yes }
+		}
+		AND = { #Demon + Human, either direction (allowed under On and Only Via Humans)
+			OR = {
+				has_game_rule = spn_demon_yes_inheritance
+				has_game_rule = spn_demon_human_only_inheritance
+			}
+			OR = {
+				AND = {
+					is_a_demon_trigger = yes
+					$FATHER$ = { spn_has_supernatural_trait = no }
+				}
+				AND = {
+					spn_has_supernatural_trait = no
+					$FATHER$ = { is_a_demon_trigger = yes }
+				}
 			}
 		}
 	}

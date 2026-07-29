@@ -1,7 +1,8 @@
-﻿can_be_cursed_trigger = {
+﻿#is_location_valid_for_travel_event_on_land = yes
+can_be_cursed_trigger = {
 	NOR = {
 		has_perk = protective_runes_perk
-		has_trait = demon
+		is_a_demon_trigger = yes
 		has_character_modifier = cursed_modifier
 		any_character_artifact = { has_variable = magic_ring }
 		any_parent = { has_perk = protective_runes_perk }
@@ -33,6 +34,14 @@ can_spend_standard_ps_trigger = {
 				value > 9
 			}
 		}
+	}
+}
+can_spend_huge_ps_trigger = {
+	has_trait = archmage
+	has_trait_xp = {
+		trait = archmage
+		track = power_saturation
+		value > 19
 	}
 }
 
@@ -70,6 +79,14 @@ is_the_choosen_one_trigger = {
 		value > 99
 	}
 }
+has_at_least_minor_source_trigger = {
+	has_trait = source
+	has_trait_xp = {
+		trait = source
+		track = magic_potential
+		value > 19
+	}
+}
 has_unstable_source_trigger = {
 	has_trait = source
 	has_trait_xp = {
@@ -83,7 +100,7 @@ has_basic_magic_prot_trigger = {
 	OR = {
 		has_perk = protective_runes_perk
 		has_perk = mage_tower_p2_perk
-		has_trait = demon
+		is_a_demon_trigger = yes
 		has_trait = golem
 		has_trait = supernatural_hunter
 		has_character_modifier = aura_boost1_modifier
@@ -123,7 +140,7 @@ has_basic_magic_prot_trigger2 = {
 	OR = {
 		has_perk = protective_runes_perk
 		has_perk = mage_tower_p2_perk
-		has_trait = demon
+		is_a_demon_trigger = yes
 		has_trait = golem
 		has_trait = supernatural_hunter
 		has_character_modifier = aura_boost1_modifier
@@ -163,7 +180,7 @@ has_any_basic_magic_prot_trigger = {
 	OR = {
 		has_perk = protective_runes_perk
 		has_perk = mage_tower_p2_perk
-		has_trait = demon
+		is_a_demon_trigger = yes
 		has_trait = golem
 		has_trait = supernatural_hunter
 		has_character_modifier = aura_boost1_modifier
@@ -188,6 +205,178 @@ has_any_basic_magic_prot_trigger = {
 		}
 	}
 }
+is_magic_protected = {
+	trigger_if = {
+		limit = {
+			exists = scope:magic_user
+			NOT = {
+				scope:magic_user = THIS
+			}
+		}
+		NOT = {
+			is_imprisoned_by = scope:magic_user
+		}
+	}
+	OR = {		
+		AND = {
+			has_perk = mage_tower_p2_perk
+			is_imprisoned = no
+			NOT = {
+				has_trait = incapable
+			}
+		}
+		AND = {
+			is_courtier = yes
+			exists = liege
+			trigger_if = {
+				limit = {
+					exists = ROOT
+					NOT = {
+						ROOT = THIS
+					}
+				}
+				NOT = {
+					liege = ROOT
+				}
+			}
+			trigger_if = {
+				limit = {
+					exists = scope:magic_user
+					NOT = {
+						scope:magic_user = THIS
+					}
+				}
+				NOT = {
+					liege = scope:magic_user
+				}
+			}
+			liege = {
+				trigger_if = {
+					limit = {
+						exists = scope:magic_user
+						NOT = {
+							scope:magic_user = THIS
+						}
+					}
+					NOT = {
+						liege = scope:magic_user
+					}
+				}
+				has_perk = mage_tower_p2_perk
+				is_imprisoned = no
+				NOT = {
+					has_trait = incapable
+				}
+			}
+		}
+		AND = {
+			is_courtier = yes
+			exists = liege
+			trigger_if = {
+				limit = {
+					exists = ROOT
+					NOT = {
+						ROOT = THIS
+					}
+				}
+				NOT = {
+					liege = ROOT
+				}
+			}
+			trigger_if = {
+				limit = {
+					exists = scope:magic_user
+					NOT = {
+						scope:magic_user = THIS
+					}
+				}
+				NOT = {
+					liege = scope:magic_user
+				}
+			}
+			liege = {
+				employs_court_position = mage_court_position
+				any_court_position_holder = {
+					type = mage_court_position
+					has_perk = mage_tower_p2_perk
+					is_imprisoned = no
+					NOT = {
+						has_trait = incapable
+					}
+					trigger_if = {
+						limit = {
+							exists = ROOT
+						}
+						NOT = {
+							THIS = ROOT
+						}
+					}
+					trigger_if = {
+						limit = {
+							exists = scope:magic_user
+							NOT = {
+								scope:magic_user = THIS
+							}
+						}
+						NOT = {
+							liege = scope:magic_user
+						}
+					}
+					trigger_if = {
+						limit = {
+							exists = scope:magic_user
+						}
+						NOT = {
+							scope:magic_user = THIS
+						}
+					}
+				}
+			}
+		}
+		AND = {
+			is_ruler = yes
+			employs_court_position = mage_court_position
+			any_court_position_holder = {
+				type = mage_court_position
+				has_perk = mage_tower_p2_perk
+				NOT = {
+					has_trait = incapable
+				}
+				is_imprisoned = no
+				trigger_if = {
+					limit = {
+						exists = ROOT
+					}
+					NOT = {
+						THIS = ROOT
+					}
+				}
+				trigger_if = {
+					limit = {
+						exists = scope:magic_user
+						NOT = {
+							scope:magic_user = THIS
+						}
+					}
+					NOT = {
+						liege = scope:magic_user
+					}
+				}
+				trigger_if = {
+					limit = {
+						exists = scope:magic_user
+					}
+					NOT = {
+						scope:magic_user = THIS
+					}
+				}
+			}
+		}
+	}
+}
+is_antimagic_trigger = {
+	has_character_modifier = antimagic_seal_modifier
+}
 can_penetrate_basic_magic_prot_trigger = {
 	OR = {
 		has_character_modifier = touched_divinity_modifier
@@ -208,6 +397,17 @@ can_use_banish_spell = {
 		}
 	}
 }
+can_use_shadowstep_spell = {
+	OR = {
+		has_character_flag = shadowstep_flag
+		AND = {
+			is_true_mage = yes
+			any_equipped_character_artifact = {
+				has_variable = magic_crown
+			}
+		}
+	}
+}
 can_use_healing_spell = {
 	OR = {
 		any_character_artifact = {
@@ -216,22 +416,12 @@ can_use_healing_spell = {
 		has_character_flag = healing_spell_flag
 	}
 }
-has_full_magic_prot_trigger = {
-	OR = {
-		any_equipped_character_artifact = {	has_variable = dragon_scales	}
-		has_character_modifier = amp_modifier
-		AND = {
-			has_trait = demon
-			has_trait_xp = {
-				trait = demon
-				value > 99
-			}
-		}
-	}
-}
 has_physical_contanct = {
 	OR = {
 		AND = {
+			NOT = {
+				has_game_rule = unlimited_spells_range
+			}
 			OR = {
 				AND = {
 					scope:actor = {
@@ -271,6 +461,11 @@ has_physical_contanct = {
 				#}
 				scope:actor = {
 					has_character_modifier = master_psionic_modifier
+				}
+				scope:actor = {
+					any_equipped_character_artifact = {
+						has_artifact_modifier = magic_orb_modifier
+					}
 				}
 				scope:actor = {
 					has_relation_lover = scope:recipient
@@ -322,9 +517,6 @@ has_physical_contanct = {
 						LAAMP = scope:actor
 					}
 				}
-			}
-			NOT = {
-				has_game_rule = unlimited_spells_range
 			}
 		}
 		has_game_rule = unlimited_spells_range
@@ -445,6 +637,7 @@ has_power_place_trigger = {
 	#	#	}
 	#	#}
 	#}
+	is_landed = yes
 	any_held_county = {
 		#tier = tier_county
 		exists = title_province
@@ -505,7 +698,7 @@ can_unlock_arcane_focus_trigger = {
 	OR = {
 		has_trait = witch
 		has_trait = true_witch
-		any_secret = { secret_type = secret_witch }
+		any_secret = { type = secret_witch }
 	}
 	OR = {
 		any_character_artifact = { has_variable = magic1 }
@@ -519,6 +712,17 @@ can_unlock_arcane_focus_trigger = {
 		has_character_flag = arcane_unlocked_flag
 		has_power_place_trigger = yes
 		has_character_modifier = research_cooperation
+		has_character_modifier = mc_place_of_power_modifier
+		AND = {
+			exists = house
+			house = {
+				has_house_modifier = house_magic_academy_modifier
+			}
+		}
+		AND = {
+			exists = global_var:magic_academy_opened
+			has_trait = true_witch
+		}
 	}
 }
 
@@ -660,7 +864,7 @@ me_have_unlocked_special_project = {
 			has_character_flag = me_ascendency_project
 			NOR = {
 				has_character_flag = me_ascendency_project_done
-				has_trait = demon
+				is_a_demon_trigger = yes
 			}
 		}
 		AND = {
@@ -705,6 +909,17 @@ me_have_unlocked_special_project = {
 				has_character_flag = me_as_project_done
 			}
 		}
+		AND = {
+			has_trait = archmage
+			has_trait_xp = {
+				trait = archmage
+				track = combat_magic
+				value > 99
+			}
+			NOT = {
+				has_character_flag = me_custom_spell_project_done
+			}
+		}
 	}
 }
 me_may_unlocks_special_project = {
@@ -730,12 +945,13 @@ me_may_unlocks_special_project = {
 				is_cannibal_trigger = yes
 				has_trait = necromancer
 			}
+			is_or_will_be_a_demon_trigger = no
 		}
 		AND = {
 			NOR = {
 				has_character_flag = me_ascendency_project_done
 				has_character_flag = me_ascendency_project
-				has_trait = demon
+				is_a_demon_trigger = yes
 			}
 			OR = {
 				has_trait = source
@@ -768,7 +984,7 @@ me_may_unlocks_special_project = {
 			NOR = {
 				has_character_flag = me_soul_project_done
 				has_character_flag = me_soul_project
-				has_character_flag = no_soul
+				has_character_modifier = no_soul_modifier
 			}
 			is_legendary_mage_trigger = yes
 			#OR = {
@@ -836,6 +1052,7 @@ requires_magic_healing_trigger = {
 		has_character_modifier = chronic_headaches_modifier
 		has_character_modifier = infected_wound_modifier
 		has_character_modifier = gangrene_modifier
+		has_character_modifier = wc_poisoned_bolt_modifier
 		has_trait = measles
 		has_trait = dysentery
 		has_trait = ergotism
@@ -853,7 +1070,7 @@ can_use_tornado_spell_trigger = {
 }
 is_or_will_be_a_demon_trigger = {
 	OR = {
-		has_trait = demon
+		is_a_demon_trigger = yes
 		has_trait = demon0
 	}
 }
@@ -862,5 +1079,235 @@ has_access_to_aura_reading_trigger = {
 		has_character_modifier = master_magic_modifier
 		has_character_flag = aura_reading_spell
 		has_character_modifier = magic_eyes_modifier
+		has_perk = magical_creature_perk
+		AND = {
+			exists = dynasty
+			dynasty = {
+				has_dynasty_perk = witchcraft_legacy_4
+			}
+			has_perk = mage_p4_perk
+		}
 	}
 }
+can_use_aura_reading_for_free_trigger = {
+	OR = {
+		has_character_modifier = master_magic_modifier
+		has_character_modifier = magic_eyes_modifier
+		has_perk = magical_creature_perk
+	}
+}
+has_immunity_for_regular_curse = {
+	OR = {
+		any_equipped_character_artifact = {
+			has_artifact_modifier = immunity_curse_terrain_cancel_negative_supply
+		}
+		any_equipped_character_artifact = {
+			has_artifact_modifier = artifact_dragon_scales_modifier
+		}
+		has_character_modifier = master_defence_modifier
+		has_perk = natural_immunity_perk
+		is_antimagic_trigger = yes
+		has_character_modifier = mr_curse_expert_modifier
+	}
+}
+has_immunity_for_powerful_curse = {
+	OR = {
+		any_equipped_character_artifact = {
+			has_artifact_modifier = immunity_curse2_terrain_cancel_negative_supply
+		}
+		any_equipped_character_artifact = {
+			has_artifact_modifier = artifact_dragon_scales_modifier
+		}
+		has_character_modifier = master_defence_modifier
+		has_perk = natural_immunity_perk
+		is_antimagic_trigger = yes
+		has_character_modifier = mr_curse_expert_modifier
+	}
+}
+has_immunity_for_magic_domination = {
+	OR = {
+		any_equipped_character_artifact = {
+			has_artifact_modifier = immunity_domination_terrain_cancel_negative_supply
+		}
+		any_equipped_character_artifact = {
+			has_artifact_modifier = artifact_dragon_scales_modifier
+		}
+		has_character_modifier = master_defence_modifier
+		has_perk = natural_immunity_perk
+		is_antimagic_trigger = yes
+	}
+}
+has_immunity_for_mind_scan = {
+	OR = {
+		any_equipped_character_artifact = {
+			has_artifact_modifier = immunity_mind_scan_terrain_cancel_negative_supply
+		}
+		any_equipped_character_artifact = {
+			has_artifact_modifier = artifact_dragon_scales_modifier
+		}
+		has_character_modifier = master_defence_modifier
+		is_antimagic_trigger = yes
+	}
+}
+has_immunity_for_death_wish = {
+	OR = {
+		is_antimagic_trigger = yes
+		has_character_modifier = master_defence_modifier
+		has_character_modifier = samael_blessing
+	}
+}
+has_immunity_for_antimagic_seal = {
+	OR = {
+		is_antimagic_trigger = yes
+		has_perk = magical_creature_perk
+		has_character_modifier = master_defence_modifier
+	}
+}
+is_powerful_being = {
+	OR = {
+		AND = {
+			has_trait = archmage
+			NOT = {
+				any_secret = {
+					type = secret_false_mage
+				}
+			}
+		}
+		has_trait = yaga
+		is_a_demon_trigger = yes
+	}
+}
+is_a_demon_trigger = {
+	OR = {
+		has_trait = demon2
+		has_trait = demon1
+	}
+}
+has_access_to_demon_lifestyle_trigger = {
+	is_a_demon_trigger = yes
+	NAND = {
+		has_perk = archdemon_perk
+		has_perk = crossroad_dealer_perk
+	}
+}
+can_cast_firestorm_trigger = {
+	OR = {
+		AND = {
+			has_trait = demon2
+			has_trait_xp = {
+				trait = demon2
+				track = hell_powers
+				value > 99
+			}
+		}
+		has_character_flag = firestorm_spell_flag
+	}
+}
+is_true_mage = {
+	has_trait = archmage
+	NOT = {
+		any_secret = {
+			type = secret_false_mage
+		}
+	}
+}
+is_false_mage = {
+	has_trait = archmage
+	any_secret = {
+		type = secret_false_mage
+	}
+}
+is_witch_hunter = {
+	OR = {
+		has_character_modifier = novice_witch_hunter_modifier
+		has_trait = witch_hunter
+		has_trait_xp = {
+			trait = supernatural_hunter
+			track = witch_hunting
+			value > 25
+		}
+		any_secret = {
+			type = secret_witch_hunter
+		}
+	}
+}
+new_archmage_must_be_selected_trigger = {
+	exists = global_var:mc_has_been_formed
+	exists = scope:activity
+	scope:activity = {
+		has_variable = elections
+	}
+}
+mc_gold_global_exists_trigger = {
+	exists = global_var:mc_gold_global
+}
+mc_gold_global_avaiable_trigger = {
+	exists = global_var:mc_gold_global
+	global_var:mc_gold_global > 99
+}
+has_access_to_magic_triangulation_trigger = {
+	OR = {
+		has_perk = mage_p4_perk
+		has_perk = warlock_perk
+	}
+	trigger_if = {
+		limit = {
+			is_ai = no
+		}
+		OR = {
+			has_mage_tower_trigger = yes
+			has_character_modifier = magic_lab_modifier
+		}
+	}
+	trigger_else = {
+		OR = {
+			has_mage_tower_trigger = yes
+			has_character_modifier = magic_lab_modifier
+			is_landed_or_landless_administrative = yes
+		}
+	}
+}
+has_mage_tower_trigger = {
+	OR = {
+		any_directly_owned_province = {
+			has_building_with_flag = wc_mage_tower_flag
+		}
+		domicile ?= { has_domicile_parameter = mtriangulation_unlocked }
+	}
+}
+can_use_power_strike_free_trigger = {
+	AND = {
+		has_trait = source
+		has_trait_xp = {
+			trait = source
+			track = magic_potential
+			value > 79
+		}
+	}
+	has_trait = demon2
+}
+can_be_target_to_send_mercenaries_for_artifact_trigger = {
+	is_imprisoned = no
+	is_adult = yes
+	NOT = {
+		has_character_flag = mercenaries_go_after_artifact_flag
+	}
+	OR = {
+		is_landless_adventurer = yes
+		AND = {
+			is_ruler = no
+			trigger_if = {
+				limit = {
+					exists = liege
+				}
+				liege = {
+					is_landless_adventurer = yes
+				}
+			}
+		}
+	}
+}
+#is_landless_adventurer = no
+#is_landless_administrative = no
+#change_to_administrative_interaction_effect = yes
+#change_to_administrative_effect = yes

@@ -1,0 +1,1692 @@
+﻿invoke_the_bond = {
+	icon = vampire_bond
+	ai_maybe = yes
+	ai_min_reply_days = 1
+	ai_max_reply_days = 1
+	common_interaction = yes
+	interface_priority = 100
+	category = interaction_category_favorites
+	desc = invoke_the_bond_interaction_desc
+	greeting = positive
+	notification_text = COMMAND_PROGENY_PROPOSAL
+	cooldown_against_recipient = { years = 8 } 
+	cooldown = { days = 1 }
+	can_send_despite_rejection = yes
+	popup_on_receive = yes
+	pause_on_receive = yes
+	use_diplomatic_range = yes
+	
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			is_imprisoned = no
+			is_adult = yes
+			has_relation_pprogeny = scope:recipient #You have to be listed as their Maker
+		}
+		scope:recipient = {
+			is_imprisoned = no
+			has_relation_mmaker = scope:actor #They have to be listed as your Progeny
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = invoke_bond_requires_vampiric_strength # shown if the condition below fails
+				OR = {
+					has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 10 }
+					has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 10 }
+				}
+			}
+		}
+		scope:recipient = {
+			NOT = { has_trait = demon2 }  # keep your existing exclusion
+		}
+	}
+	
+	on_accept = {
+		scope:actor = {
+			send_interface_message = {
+				type = event_toast_effect_neutral
+				title = command_pprogeny_interaction
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				if = {
+					limit = {
+						has_usable_hook = scope:recipient
+					}
+					use_hook = scope:recipient
+				}
+				
+				stress_impact = {
+					deceitful = medium_stress_impact_loss
+				}
+				scope:recipient = {
+					if = {
+						limit = {
+							exists = diarch
+							diarch = scope:actor
+							scope:actor = {
+							  OR = {
+								has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 10 }
+								has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 10 }
+							  }
+							}
+						}
+						scope:actor = {
+							update_diarchy_swing_with_perspective_effect = {
+								SWING = medium_sop_swing_diarch_gain
+								LIEGE = scope:recipient
+							}
+						}
+
+					  scope:actor = {
+						if = {
+						  limit = { has_trait = supernatural_vampire }
+						  add_trait_xp = { trait = supernatural_vampire track = vampirism value = -10 }
+						}
+						else_if = {
+						  limit = { has_trait = supernatural_hybrid }
+						  add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = -10 }
+						}
+					  }
+					}
+					if = {
+					  limit = {
+						scope:command_progeny_goold = yes
+						# check the INVOKER (actor), not the recipient
+						scope:actor = {
+						  OR = {
+							has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 10 }
+							has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 10 }
+						  }
+						}
+					  }
+
+					  pay_short_term_gold = { gold = gift_value target = scope:actor }
+
+					  # spend 10 from the INVOKER's pool (shows under "Effects on you")
+					  scope:actor = {
+						if = {
+						  limit = { has_trait = supernatural_vampire }
+						  add_trait_xp = { trait = supernatural_vampire track = vampirism value = -10 }
+						}
+						else_if = {
+						  limit = { has_trait = supernatural_hybrid }
+						  add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = -10 }
+						}
+					  }
+					}
+
+
+					else_if = {
+						limit = {
+							scope:command_progeny_war = yes
+						}
+						scope:actor = {
+							every_character_war = {
+								limit = {
+									OR = {
+										primary_attacker = scope:actor
+										primary_defender = scope:actor
+									}
+								}
+								if = {
+									limit = {
+										primary_attacker = scope:actor
+									}
+									add_attacker = scope:recipient
+								}
+								else_if = {
+									limit = {
+										primary_defender = scope:actor
+									}
+									add_defender = scope:recipient
+								}
+							}
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -15 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -15 } }
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_suicide = yes
+						}
+						trigger_event = magic_ev5.3
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -75 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -75 } }
+						}
+						scope:actor = {
+							send_interface_toast = {
+								title = command_pprogeny_interaction
+								show_as_tooltip = {
+									scope:recipient = {
+										death = natural
+									}
+								}
+							}
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_lover = yes
+						}
+						if = {
+							limit = {
+								NOT = {
+									is_attracted_to_gender_of = scope:actor
+								}
+							}
+							set_sexuality = bisexual
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -15 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -15 } }
+						}
+						set_relation_lover = scope:actor
+						save_scope_as = had_sex_with_effect_partner
+						scope:actor = {
+							custom_tooltip = had_sex_with_effect.first_person.tt
+							trigger_event = debug.410
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_surrender = yes
+						}
+						scope:recipient = {
+							every_character_war = {
+								limit = {
+									OR = {
+										primary_attacker = scope:recipient
+										primary_defender = scope:recipient
+									}
+								}
+								if = {
+									limit = {
+										primary_attacker = scope:recipient
+									}
+									end_war = defender
+								}
+								else_if = {
+									limit = {
+										primary_defender = scope:recipient
+									}
+									end_war = attacker
+								}
+							}
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -25 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -25 } }
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_titles = yes
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -40 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -40 } }
+						}
+						if = {
+							limit = {
+								scope:actor = {
+									is_landed_or_landless_administrative = yes
+								}
+							}
+							scope:recipient = {
+								create_title_and_vassal_change = {
+									type = granted
+									save_scope_as = title_change
+									add_claim_on_loss = no
+								}
+					
+								every_held_title = {
+									limit = {
+										any_claimant = {
+											this = scope:actor
+										}
+									}
+									change_title_holder_include_vassals = {
+										holder = scope:actor
+										change = scope:title_change
+									}
+								}
+								resolve_title_and_vassal_change = scope:title_change
+							}
+							hidden_effect_new_object = {
+								scope:actor = {
+									spawn_monster_hunter_full_chance_effect = { EMPL = scope:actor }
+									scope:mhunter = {
+										add_perk = a_job_done_right_perk
+										add_intrigue_skill = 1
+										random = {
+											chance = 25
+											start_scheme = {
+												type = murder
+												target_character = scope:actor
+											}
+										}
+									}
+									
+								}
+							}
+						}
+						else_if = {
+							limit = {
+								scope:recipient = {
+									is_independent_ruler = yes
+									highest_held_title_tier > tier_kingdom
+									OR = {
+										government_has_flag = government_is_administrative
+										government_has_flag = government_is_japan_administrative
+										government_has_flag = government_has_powerful_families
+									}
+								}
+							}
+							scope:actor = {
+								save_scope_as = adventurer
+								procure_estate_interaction_effect = yes
+							}
+							scope:actor = {
+							  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -20 } }
+							  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -20 } }
+							}
+						}
+						else_if = {
+							limit = {
+								scope:recipient = {
+									highest_held_title_tier >= tier_duchy
+									any_held_county = {
+										exists = title_province
+										count > 1
+									}
+								}
+							}
+							scope:actor = {
+							  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -20 } }
+							  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -20 } }
+							}
+							scope:recipient = {
+								hidden_effect = {
+									random_held_county = {
+										limit = {
+											NOT = {
+												THIS = scope:recipient.capital_county
+											}
+										}
+										add_to_list = offered_titles
+										save_scope_as = new_primary_title
+									}
+								}
+							}
+							scope:actor = {
+								#negotiate_settlement_interaction_effect = yes
+								hidden_effect = {
+									if = {
+										limit = {
+											NOT = { has_trait = adventurer }
+										}
+										add_trait = adventurer
+									}
+									every_courtier = {
+										add_trait = adventurer_follower
+									}
+								}
+								ep3_become_landed_transfer_effect = {
+									TITLE_RECEIVER = scope:actor
+									TITLE_LIST = offered_titles
+									TYPE = granted
+									REASON = flag:granted
+								}
+								hidden_effect = {
+									if = {
+										limit = {
+											has_character_modifier = ep3_lust_for_land_modifier
+										}
+										remove_character_modifier = ep3_lust_for_land_modifier
+									}
+								}
+							}
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_entertain = yes
+						}
+						save_scope_as = had_sex_with_effect_partner
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -5 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -5 } }
+						}
+						scope:actor = {
+							add_stress = major_stress_loss
+							stress_impact = {
+								sadistic = medium_stress_loss
+								compassionate = medium_stress_gain
+							}
+							if = {
+								limit = {
+									OR = {
+										has_trait = lustful
+										has_trait = rakish
+									}
+								}
+								
+								scope:actor = {
+									custom_tooltip = had_sex_with_effect.first_person.tt
+									trigger_event = debug.410
+								}
+							}
+						}
+						
+						scope:recipient = {
+							add_stress = major_stress_gain
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_dismiss_regency = yes
+						}
+						scope:actor = { end_diarchy = yes }
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -10 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -10 } }
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_patron = yes
+						}
+						scope:actor = {
+							add_contact = scope:recipient
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -10 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -10 } }
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_obedient = yes
+						}
+						scope:actor = {
+							add_hook = {
+								type = loyalty_hook
+								target = scope:recipient
+							}
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -25 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -25 } }
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_marry = yes
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -30 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -30 } }
+						}
+						if = {
+							limit = {
+								scope:actor = {
+									is_male = yes
+								}
+							}
+							scope:actor = {
+								marry = scope:recipient
+							}
+						}
+						else = {
+							scope:actor = {
+								marry_matrilineal = scope:recipient
+							}
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_convertion = yes
+						}
+						scope:recipient = {
+							set_character_faith = scope:actor.faith
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -35 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -35 } }
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_fallen_hunter = yes
+						}
+						scope:recipient = {
+							if = {
+								limit = {
+									has_character_modifier = inq_modifier
+								}
+								remove_character_modifier = inq_modifier
+							}
+							remove_trait = witch_hunter
+							#add_trait_force_tooltip = witch_hunter2
+							if = {
+								limit = {
+									is_witch_trigger = no
+								}
+								give_witch_secret_or_trait_effect2 = yes
+							}
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -20 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -20 } }
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_influence = yes
+						}
+						scope:recipient = {
+							change_influence = major_influence_loss
+						}
+						scope:actor = {
+							change_influence = scope:recipient.major_influence_gain
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -20 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -20 } }
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_join_me = yes
+						}
+						scope:actor = {
+							add_courtier = scope:recipient
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -15 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -15 } }
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_secrets = yes
+						}
+						# spend 10
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -10 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -10 } }
+						}
+
+						custom_tooltip = command_minion_secrets_ct
+						hidden_effect = {
+							scope:recipient = {
+								every_secret = {
+									limit = {
+										NOT = {
+											is_known_by = scope:actor
+										}
+									}
+									if = {
+										limit = {
+											exists = secret_target
+										}
+										scope:actor = {
+											send_interface_toast = {
+												title = command_pprogeny_interaction
+												left_icon = scope:recipient
+												right_icon = secret_target
+												PREV = {
+													reveal_to = scope:actor
+												}
+											}
+										}
+									}
+									else = {
+										scope:actor = {
+											send_interface_toast = {
+												title = command_pprogeny_interaction
+												left_icon = scope:recipient
+												PREV = {
+													reveal_to = scope:actor
+												}
+											}
+										}
+									}
+								}
+								every_known_secret = {
+									limit = {
+										NOT = {
+											is_known_by = scope:actor
+										}
+									}
+									if = {
+										limit = {
+											exists = secret_target
+										}
+										scope:actor = {
+											send_interface_toast = {
+												title = command_pprogeny_interaction
+												left_icon = prev.secret_owner
+												right_icon = secret_target
+												PREV = {
+													reveal_to = scope:actor
+												}
+											}
+										}
+									}
+									else = {
+										scope:actor = {
+											send_interface_toast = {
+												title = command_pprogeny_interaction
+												left_icon = prev.secret_owner
+												PREV = {
+													reveal_to = scope:actor
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	on_decline = {
+		scope:actor = {
+			send_interface_message = {
+				type = event_toast_effect_neutral
+				title = command_pprogeny_interaction
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				if = {
+					limit = {
+						has_relation_mmaker = scope:recipient
+					}
+					custom_tooltip = command_progeny_failed
+				}
+				if = {
+					limit = {
+						has_hook = scope:recipient
+					}
+					remove_hook = {
+						target = scope:recipient
+					}
+				}
+				scope:recipient = {
+					if = {
+						limit = {
+							has_relation_pprogeny = scope:actor
+						}
+						remove_relation_pprogeny = scope:actor
+						add_opinion = {
+							target = scope:actor
+							modifier = use_bond_on_me_opinion
+						}
+					}
+					if = {
+						limit = {
+							scope:actor = {
+								OR = {
+									has_perk = deadly_seduction_perk
+									has_perk = vampire_seduction_perk
+								}
+							}
+							OR = {
+								has_relation_lover = scope:actor
+								has_relation_soulmate = scope:actor
+							}
+						}
+						if = {
+							limit = {
+								has_relation_lover = scope:actor
+							}
+							remove_relation_lover = scope:actor
+						}
+						if = {
+							limit = {
+								has_relation_soulmate = scope:actor
+							}
+							remove_relation_soulmate = scope:actor
+						}
+						add_opinion = {
+							target = scope:actor
+							#modifier = confusion_opinion
+							modifier = suspicion_opinion
+							opinion = -50
+						}
+					}
+					
+				}
+				hidden_effect = {
+					send_interface_toast = {
+						title = command_pprogeny_interaction
+						custom_tooltip = command_progeny_failed
+					}
+				}
+			}
+		}
+	}
+	options_heading = command_progeny_option_title
+	send_options_exclusive = yes
+#Demand Gold (cost 10)
+	send_option = {
+		is_valid = {
+			custom_description = {
+			text = invoke_bond_requires_vampiric_strength
+				scope:actor = {
+					OR = {
+					has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 10 }
+					has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 10 }
+					}
+				}
+			}
+
+			custom_description = {
+			text = target_has_no_gold
+			scope:recipient = { gold > 0 }
+			}
+		}
+
+	  flag = command_progeny_goold
+	  localization = COMMAND_PROGENY_O1
+	}
+#Join My War (cost 15)
+	send_option = {
+	  is_shown = {
+		scope:actor = {
+		  any_character_war = { OR = { primary_attacker = scope:actor primary_defender = scope:actor } }
+		}
+		scope:recipient = { is_ruler = yes }
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_15
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 15 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 15 }
+			}
+		  }
+		}
+		scope:recipient = {
+		  NOT = { is_at_war_with = scope:actor }
+		  is_landed_or_landless_administrative = yes
+		}
+	  }
+	  flag = command_progeny_war
+	  localization = COMMAND_PROGENY_O2   # "Join My War (Cost: 15 Vampirism)"
+	}
+#Force Surrender (cost 25)
+	send_option = {
+	  is_shown = {
+		scope:recipient = {
+		  any_character_war = { OR = { primary_attacker = scope:recipient primary_defender = scope:recipient } }
+		}
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_25
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 25 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 25 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_surrender
+	  localization = COMMAND_PROGENY_O5   # "(Cost: 25 Vampirism)"
+	}
+#Command Suicide (cost 75)
+	send_option = {
+	  is_shown = {
+		scope:actor = { has_strong_hook = scope:recipient }   # keep your existing show rule
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_75
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 75 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 75 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_suicide
+	  localization = COMMAND_PROGENY_O3   # "(Cost: 75 Vampirism)"
+	}
+#Become My Lover (cost 15)
+	send_option = {
+	  is_shown = {
+		scope:actor = { NOR = { has_relation_lover = scope:recipient has_relation_soulmate = scope:recipient } }
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_20
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 15 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 15 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_lover
+	  localization = COMMAND_PROGENY_O4   # "(Cost: 15 Vampirism)"
+	}
+#Titles/Claims Shuffle (cost 40)
+	send_option = {
+	  is_shown = {
+		OR = {
+		  AND = {
+			scope:actor = { is_landed_or_landless_administrative = yes }
+			scope:recipient = {
+			  any_held_title = { any_claimant = { this = scope:actor } }
+			}
+		  }
+		  AND = {
+			scope:actor = { is_landed_or_landless_administrative = no }
+			scope:recipient = {
+			  highest_held_title_tier >= tier_duchy
+			  OR = {
+				any_held_county = { exists = title_province count > 1 }
+				AND = {
+				  is_independent_ruler = yes
+				  highest_held_title_tier > tier_kingdom
+					OR = {
+						government_has_flag = government_is_administrative
+						government_has_flag = government_is_japan_administrative
+						government_has_flag = government_has_powerful_families
+					}
+				}
+			  }
+			}
+		  }
+		}
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_40
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 40 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 40 }
+			}
+		  }
+		}
+		scope:recipient = { is_at_war = no }
+		scope:actor     = { is_at_war = no }
+	  }
+	  flag = command_progeny_titles
+	  localization = COMMAND_PROGENY_O6   # "(Cost: 40 Vampirism)"
+	}
+#Entertain Me (cost 5)
+	send_option = {
+	  is_shown = {
+		scope:recipient = {
+		  is_at_war = no
+		  NOT = { any_held_title = { any_claimant = { this = scope:actor } } }
+		}
+		scope:actor = {
+		  OR = { stress > 100 has_trait = sadistic has_trait = gluttonous }
+		  NOT = { has_trait = shy has_trait = just }
+		}
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_15
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 5 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 5 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_entertain
+	  localization = COMMAND_PROGENY_O7   # "(Cost: 15 Vampirism)"
+	}
+#Dismiss Regency (cost 10)
+	send_option = {
+	  is_shown = {
+		scope:actor = { exists = diarch diarch = scope:recipient can_leave_diarchy_trigger = yes }
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_10
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 10 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 10 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_dismiss_regency
+	  localization = liege_dismiss_entrenched_regency_interaction  # add cost note
+	}
+
+#Become My Patron (cost 10)
+	send_option = {
+	  is_shown = {
+		scope:actor = { is_landless_adventurer = yes }
+		scope:recipient = { is_landed_or_landless_administrative = yes NOT = { is_contact_of = scope:actor } }
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_10
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 10 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 10 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_patron
+	  localization = COMMAND_PROGENY_O9   # "(Cost: 10 Vampirism)"
+	}
+#Make You Obedient (grant loyalty hook) (cost 25)
+	send_option = {
+	  is_shown = {
+		scope:actor = {
+		  NOT = { has_hook = scope:recipient }
+		  OR = { has_character_modifier = succubus_modifier has_character_modifier = incubus_modifier }
+		}
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_25
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 25 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 25 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_obedient
+	  localization = COMMAND_PROGENY_11   # "(Cost: 25 Vampirism)"
+	}
+#Marry Me (cost 30)
+	send_option = {
+	  is_shown = {
+		scope:actor = { is_ruler = yes }
+		OR = {
+		  scope:recipient = { can_marry_character_trigger = { CHARACTER = scope:actor } }
+		  scope:actor     = { can_marry_character_trigger = { CHARACTER = scope:recipient } }
+		}
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_30
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 30 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 30 }
+			}
+		  }
+		}
+		scope:actor     = { is_imprisoned = no }
+		scope:recipient = { is_imprisoned = no is_hostage = no }
+	  }
+	  flag = compel_mortal_marry
+	  localization = COMMAND_PROGENY_10   # "(Cost: 30 Vampirism)"
+	}
+#Demand Conversion (cost 35)
+	send_option = {
+	  is_shown = {
+		NOT = { scope:actor.faith = scope:recipient.faith }
+		trigger_if = { limit = { exists = scope:recipient.faith.religious_head } NOT = { scope:recipient = scope:recipient.faith.religious_head } }
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_35
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 35 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 35 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_convertion
+	  localization = game_concept_demand_conversion   # add cost note
+	}
+#Break the Hunter (cost 20)
+	send_option = {
+	  is_shown = { scope:recipient = { has_trait = witch_hunter } }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_20
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 20 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 20 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_fallen_hunter
+	  localization = COMMAND_PROGENY_12   # "(Cost: 20 Vampirism)"
+	}
+#Siphon Influence (cost 20)
+	send_option = {
+	  is_shown = {
+		scope:actor = {
+		  is_ruler = yes
+		  is_imprisoned = no
+			OR = {
+				government_has_flag = government_is_administrative
+				government_has_flag = government_is_japan_administrative
+				government_has_flag = government_has_powerful_families
+			}
+		  NOT = { is_at_war_with = scope:recipient }
+		}
+		scope:recipient = { is_ruler = yes is_imprisoned = no government_has_flag = government_is_administrative }
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_20
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 20 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 20 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_influence
+	  localization = COMMAND_PROGENY_13   # "(Cost: 20 Vampirism)"
+	}
+#Join My Court (cost 15)
+	send_option = {
+	  is_shown = {
+		scope:actor = { is_ruler = yes }
+		scope:recipient = { is_ruler = no NOT = { is_courtier_of = scope:actor } }
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_15
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 15 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 15 }
+			}
+		  }
+		}
+		scope:recipient = {
+		  is_imprisoned = no
+		  #is_adult = yes
+		  is_travelling = no
+		  is_concubine = no
+		  is_hostage = no
+		}
+	  }
+	  flag = command_progeny_join_me
+	  localization = COMMAND_PROGENY_14   # "(Cost: 15 Vampirism)"
+	}
+#Tell Me All Your Secrets (cost 10)
+	send_option = {
+	  is_shown = {
+		scope:recipient = {
+		  any_secret = { NOT = { is_known_by = scope:actor } }
+		}
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_10
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 10 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 10 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_secrets
+	  localization = COMMAND_PROGENY_15   # "(Cost: 10 Vampirism)"
+	}
+
+	ai_accept = {
+		base = 20
+		modifier = {
+			add = -50
+			scope:recipient = {
+				OR = {
+					has_trait = lunatic_1
+					has_trait = lunatic_genetic
+				}
+			}
+			desc = DS_IS_LUNATIC
+		}
+		modifier = {
+			add = -50
+			scope:actor = {
+				NOT = {
+					has_usable_hook = scope:recipient
+				}
+			}
+			desc = DS_IS_NO_HOOKS
+		}
+		modifier = {
+			add = {
+				value = scope:actor.diplomacy
+				multiply = 2
+			}
+			desc = DS_DIPLOMACY_ACTOR
+		}
+		modifier = {
+			add = {
+				value = scope:actor.intrigue
+				multiply = 2
+			}
+			desc = DS_INTRIGUE_ACTOR
+		}
+		modifier = {
+			add = -40
+			scope:recipient = {
+				has_trait = stubborn
+			}
+			desc = DS_IS_STUBBORN
+		}
+		modifier = {
+			add = 20
+			scope:recipient = {
+				has_trait = craven
+			}
+			desc = DS_IS_CRAVEN
+		}
+		modifier = {
+			add = 20
+			scope:recipient = {
+				has_trait = fickle
+			}
+			desc = DS_IS_FICKLE
+		}
+		modifier = {
+			add = 30
+			scope:actor = {
+				has_character_modifier = master_psionic_modifier
+			}
+			desc = DS_IS_MASTER_PSIONIC
+		}
+		modifier = {
+			add = -65
+			scope:command_progeny_suicide = yes
+			scope:recipient = {
+				NOR = {
+					has_trait = depressed_1
+					has_trait = depressed_genetic
+				}
+			}
+			desc = DS_IS_SUICIDE
+		}
+		modifier = {
+			add = -50
+			OR = {
+				scope:command_progeny_war = yes
+				scope:command_progeny_surrender = yes
+			}
+			scope:recipient = {
+				NOR = {
+					has_trait = brave
+					has_trait = wrathful
+					has_trait = craven
+				}
+			}
+			desc = DS_IS_SUICIDE
+		}
+		modifier = {
+			add = -40
+			scope:command_progeny_obedient = yes
+			desc = DS_IS_SUICIDE
+		}
+		modifier = {
+			add = -50
+			OR = {
+				scope:command_progeny_war = yes
+			}
+			scope:recipient = {
+				has_trait = craven
+			}
+			desc = DS_IS_SUICIDE
+		}
+		modifier = {
+			add = -40
+			scope:command_progeny_titles = yes
+			scope:recipient = {
+				NOR = {
+					has_trait = greedy
+					has_trait = generous
+				}
+			}
+			desc = DS_IS_SUICIDE
+		}
+		modifier = {
+			add = -50
+			scope:command_progeny_titles = yes
+			scope:recipient = {
+				has_trait = greedy
+			}
+			desc = DS_IS_SUICIDE
+		}
+		modifier = {
+			add = -20
+			scope:command_progeny_lover = yes
+			scope:recipient = {
+				NOT = {
+					is_attracted_to_gender_of = scope:actor
+				}
+			}
+			desc = DS_IS_SUICIDE
+		}
+		modifier = {
+			add = -20
+			scope:command_progeny_entertain= yes
+			scope:recipient = {
+				OR = {
+					has_trait = arrogant
+					has_trait = shy
+				}
+			}
+			desc = DS_IS_SUICIDE
+		}
+		modifier = {
+		  add = { value = sire_vs_progeny_margin_accept }
+		  desc = DS_SIRE_PROGENY_MARGIN   # (optional tooltip line; localize if you want)
+		}
+
+	}
+	# If the recipient is human-controlled, auto-accept instantly (no letter UI)
+	auto_accept = {
+		scope:recipient = { is_ai = no }
+	}
+
+}
+
+spn_compulsion = {
+	icon = vampire_no_turn
+	ai_maybe = yes
+	ai_min_reply_days = 1
+	ai_max_reply_days = 1
+	common_interaction = yes
+	interface_priority = 100
+	category = interaction_category_favorites
+	desc = compulsion_interaction_desc
+	greeting = positive
+	notification_text = COMPEL_MORTAL_PROPOSAL
+
+	# Cooldowns (global + per-recipient)
+	cooldown = { months = 6 }
+	cooldown_against_recipient = { months = 3 }
+
+	can_send_despite_rejection = yes
+	popup_on_receive = yes
+	pause_on_receive = yes
+
+	# Who sees it
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = { 
+			is_adult = yes 
+			is_imprisoned = no
+			OR = {
+				has_trait = supernatural_vampire
+				has_trait = supernatural_hybrid
+			}
+		}
+		scope:recipient = {
+			#is_imprisoned = no
+			NOT = { has_trait = supernatural_vampire }
+			NOT = { has_trait = supernatural_hybrid }
+			NOT = { is_a_demon_trigger = yes }                  # your demon trait check
+			NOT = { is_witch_trigger = yes }        # Witchcraft block
+			# werewolf allowed (handled by acceptance and surcharge)
+		}
+	}
+
+	# Show gating failures if actor doesn't have enough "vampiric strength" (>=10 XP in vampirism side)
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = spn_compel_range_gate_tt
+
+				OR = {
+					# === SAME REALM (either direction) ===
+					scope:recipient = { is_vassal_or_below_of = scope:actor }      # my vassal/below
+					scope:actor     = { is_vassal_or_below_of = scope:recipient }  # I'm their vassal/below
+
+					# === YOUR LIEGE'S REALM ===
+					AND = {
+						exists = liege
+						scope:recipient = { is_vassal_or_below_of = scope:actor.liege }
+					}
+					AND = {
+						scope:recipient = { exists = liege }
+						scope:actor     = { is_vassal_or_below_of = scope:recipient.liege }
+					}
+
+					# === BORDERING REALM (top-liege vs top-liege) ===
+					# Any county in my realm borders any county ruled (de facto) by the target's top liege
+					scope:actor = {
+						any_realm_county = {
+							any_neighboring_county = {
+								holder.top_liege = scope:recipient.top_liege
+							}
+						}
+					}
+
+					# === BORDERING REALM (unlanded targets at that realm's court) ===
+					# e.g., the king’s consort, an unlanded courtier in the neighboring realm, etc.
+					AND = {
+						scope:recipient = { exists = court_owner }
+						scope:actor = {
+							any_realm_county = {
+								any_neighboring_county = {
+									holder.top_liege = scope:recipient.court_owner.top_liege
+								}
+							}
+						}
+					}
+
+					# === CO-LOCATION / SAME COURT (bypass distance) ===
+					# If you’re literally in the same court/host/location (feasts, visits, etc.)
+					AND = {
+						scope:actor     = { exists = court_owner }
+						scope:recipient = { exists = court_owner }
+						scope:actor = { court_owner = { this = scope:recipient.court_owner } }
+					}
+					AND = {
+						scope:actor     = { exists = location }
+						scope:recipient = { exists = location }
+						scope:actor = { location = scope:recipient.location }
+					}
+					AND = {
+						# both are currently involved in *some* activity
+						scope:actor     = { exists = involved_activity }
+						scope:recipient = { exists = involved_activity }
+
+						# …and it’s the *same* activity object
+						scope:actor.involved_activity = { this = scope:recipient.involved_activity }
+					}
+				}
+			}
+		}
+	}
+
+
+
+	# ---- UI: nested options (same flow as Bond) ----
+	options_heading = compulsion_option_title
+	send_options_exclusive = yes
+
+	# Demand Gold (cost 20)
+	send_option = {
+		is_valid = {
+			custom_description = {
+				text = invoke_bond_requires_vampiric_strength_20
+				scope:actor = {
+					OR = {
+						has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 15 }
+						has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 15 }
+					}
+				}
+			}
+			custom_description = { text = target_has_no_gold scope:recipient = { gold > 0 } }
+		}
+		flag = compel_mortal_goold
+		localization = COMPEL_MORTAL_O1
+	}
+
+	# Reveal Secrets (cost 20)
+	send_option = {
+		is_shown = {
+			scope:recipient = { any_secret = { NOT = { is_known_by = scope:actor } } }
+		}
+		is_valid = {
+			custom_description = {
+				text = invoke_bond_requires_vampiric_strength_20
+				scope:actor = {
+					OR = {
+						has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 20 }
+						has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 20 }
+					}
+				}
+			}
+		}
+		flag = compel_mortal_secrets
+		localization = COMPEL_MORTAL_15
+	}
+
+	# Join My Court (cost 25) — non-ruler targets
+	send_option = {
+		is_shown = {
+			scope:actor = { is_ruler = yes }
+			scope:recipient = { is_ruler = no NOT = { is_courtier_of = scope:actor } }
+		}
+		is_valid = {
+			custom_description = {
+				text = invoke_bond_requires_vampiric_strength_25
+				scope:actor = {
+					OR = {
+						has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 25 }
+						has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 25 }
+					}
+				}
+			}
+			scope:recipient = {
+			  is_imprisoned = no
+			  #is_adult = yes
+			  is_travelling = no
+			  is_concubine = no
+			  is_hostage = no
+			}
+		}
+		flag = compel_mortal_join_me
+		localization = COMPEL_MORTAL_14
+	}
+
+	# Become My Lover (cost 25)
+	send_option = {
+		is_shown = {
+			scope:recipient = {
+				is_adult = yes
+				NOT = { has_relation_lover    = scope:actor }
+				NOT = { has_relation_soulmate = scope:actor }
+			}
+		}
+		is_valid = {
+			custom_description = {
+				text = invoke_bond_requires_vampiric_strength_25
+				scope:actor = {
+					OR = {
+						has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 25 }
+						has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 25 }
+					}
+				}
+			}
+		}
+		flag = compel_mortal_lover
+		localization = COMPEL_MORTAL_05
+	}
+
+	# Be Obedient (weak hook on target) (cost 35)
+	send_option = {
+		is_valid = {
+			custom_description = {
+				text = invoke_bond_requires_vampiric_strength_35
+				scope:actor = {
+					OR = {
+						has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 35 }
+						has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 35 }
+					}
+				}
+			}
+		}
+		flag = compel_mortal_obedient
+		localization = COMPEL_MORTAL_11
+	}
+
+	# Become My Patron (strong hook on target) (cost 20)
+	send_option = {
+	  is_shown = {
+		scope:actor = { is_landless_adventurer = yes }
+		scope:recipient = { is_landed_or_landless_administrative = yes NOT = { is_contact_of = scope:actor } }
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_10
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 10 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 10 }
+			}
+		  }
+		}
+	  }
+	  flag = compel_mortal_patron
+	  localization = COMPEL_MORTAL_O9   # "(Cost: 10 Vampirism)"
+	}
+
+	# Release From Prison (NEW) (cost 20)
+	send_option = {
+		is_shown = { scope:recipient = { is_imprisoned = yes } }
+		is_valid = {
+			custom_description = {
+				text = invoke_bond_requires_vampiric_strength_20
+				scope:actor = {
+					OR = {
+						has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 20 }
+						has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 20 }
+					}
+				}
+			}
+		}
+		flag = compel_mortal_release
+		localization = COMPEL_MORTAL_RELEASE
+	}
+
+	# End Your Life (cost 85)
+	send_option = {
+		is_valid = {
+			custom_description = {
+				text = invoke_bond_requires_vampiric_strength_75
+				scope:actor = {
+					OR = {
+						has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 85 }
+						has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 85 }
+					}
+				}
+			}
+		}
+		flag = compel_mortal_suicide
+		localization = COMPEL_MORTAL_03
+	}
+
+	# ---- Decline / Accept ----
+	on_decline = {
+		# Reveal ONLY if the actor has a vampire secret the recipient doesn't know
+		scope:actor = {
+			if = {
+				limit = {
+					any_secret = {
+						type = spn_secret_vampire
+						NOT = { is_known_by = scope:recipient }
+					}
+				}
+				spn_give_knowledge_of_vampire_secret = { CHARACTER = scope:recipient }
+			}
+		}
+
+		# Recipient resisted: notify both sides (the actor's nature is exposed just above)
+		trigger_event = { id = spn_message.4002 }
+	}
+
+
+	on_accept = {
+		# Drive all visible effects through a toast so both sides render correctly
+		scope:actor = {
+			send_interface_message = {
+				type = event_toast_effect_neutral
+				title = compulsion_interaction
+				left_icon  = scope:actor
+				right_icon = scope:recipient
+
+				# ---- DEMAND GOLD ----
+				if = {
+					limit = { scope:compel_mortal_goold = yes }
+					# Recipient pays, you receive (vanilla helper prints proper UI line)
+					scope:recipient = { pay_short_term_gold = { gold = 100 target = scope:actor } }
+
+					# XP cost
+					if      = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism        value = -15 } }
+					else_if = { limit = { has_trait = supernatural_hybrid  } add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -15 } }
+				}
+
+				# ---- REVEAL SECRETS ----
+				else_if = {
+					limit = { scope:compel_mortal_secrets = yes }
+					# Reveal any unknown secrets to you
+					hidden_effect = {
+						scope:recipient = {
+							every_secret = {
+								limit = { NOT = { is_known_by = scope:actor } }
+								PREV = { reveal_to = scope:actor }
+							}
+						}
+					}
+					if      = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism        value = -20 } }
+					else_if = { limit = { has_trait = supernatural_hybrid  } add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -20 } }
+				}
+
+				# ---- JOIN MY COURT ----
+				else_if = {
+					limit = { scope:compel_mortal_join_me = yes }
+					# Use the vanilla effect that prints "joins your court" in the toast
+					scope:actor = { add_courtier = scope:recipient }
+					if      = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism        value = -15 } }
+					else_if = { limit = { has_trait = supernatural_hybrid  } add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -15 } }
+				}
+
+				# ---- BE OBEDIENT (weak hook) ----
+				else_if = {
+					limit = { scope:compel_mortal_obedient = yes }
+					add_hook = { type = loyalty_hook target = scope:recipient }
+					if      = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism        value = -35 } }
+					else_if = { limit = { has_trait = supernatural_hybrid  } add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -35 } }
+				}
+
+				# ---- BECOME MY LOVER ----
+				else_if = {
+					limit = { scope:compel_mortal_lover = yes }
+					scope:recipient = {
+						if = { limit = { has_relation_lover    = scope:actor } remove_relation_lover    = scope:actor }
+						if = { limit = { has_relation_soulmate = scope:actor } remove_relation_soulmate = scope:actor }
+						set_relation_lover = scope:actor
+					}
+					if      = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism        value = -15 } }
+					else_if = { limit = { has_trait = supernatural_hybrid  } add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -15 } }
+				}
+
+				# ---- BECOME MY PATRON (contact/strong relationship) ----
+				else_if = {
+					limit = { scope:compel_mortal_patron = yes }
+					add_contact = scope:recipient
+					if      = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism        value = -10 } }
+					else_if = { limit = { has_trait = supernatural_hybrid  } add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -10 } }
+				}
+
+				# ---- RELEASE FROM PRISON ----
+				else_if = {
+					limit = { scope:compel_mortal_release = yes }
+					scope:recipient = { release_from_prison = yes }
+					if      = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism        value = -5 } }
+					else_if = { limit = { has_trait = supernatural_hybrid  } add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -5 } }
+				}
+
+				# ---- END YOUR LIFE ----
+				else_if = {
+					limit = { scope:compel_mortal_suicide = yes }
+					scope:recipient = { death = { death_reason = death_suicide } }
+					if      = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism        value = -85 } }
+					else_if = { limit = { has_trait = supernatural_hybrid  } add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -85 } }
+				}
+
+				# ---- Werewolf surcharge (applies after any successful command) ----
+				if = {
+					limit = { scope:recipient = { has_trait = supernatural_werewolf } }
+					if      = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism        value = -5 } }
+					else_if = { limit = { has_trait = supernatural_hybrid  } add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -5 } }
+				}
+			}
+		}
+
+		# Notify both sides that the compulsion took hold (4001 handles actor + recipient)
+		trigger_event = { id = spn_message.4001 }
+	}
+
+
+	# AI acceptance driven by the scripted value (utility file)
+	ai_accept = {
+		base = 0
+		modifier = { add = { value = spn_compulsion_margin_accept } desc = DS_COMPULSION_MARGIN }
+
+		# −30 if they know what you are
+		modifier = {
+			add = -30
+			desc = DS_COMPULSION_KNOWS_YOU
+			OR = {
+				scope:actor = { any_secret = { type = spn_secret_vampire is_known_by = scope:recipient } }
+				scope:actor = { any_secret = { type = spn_secret_hybrid  is_known_by = scope:recipient } }
+				scope:actor = { has_trait = spn_known_vampire }
+				scope:actor = { has_trait = spn_known_hybrid }
+			}
+		}
+
+		# +50 if the recipient is your prisoner
+		modifier = {
+			add = 50
+			desc = DS_COMPULSION_PRISONER
+			scope:recipient = { is_imprisoned_by = scope:actor }
+		}
+
+		# +10 if the recipient is of your dynasty (handles lowborn safely)
+		modifier = {
+			add = 10
+			desc = DS_COMPULSION_SAME_DYNASTY
+			exists = scope:actor.dynasty
+			exists = scope:recipient.dynasty
+			scope:actor.dynasty = { this = scope:recipient.dynasty }
+		}
+		
+		# Exactly Duke (duchy or higher, but NOT king+)
+		modifier = {
+			add = -10
+			desc = DS_COMPULSION_TARGET_DUKE
+			scope:recipient = { highest_held_title_tier >= tier_duchy }
+			NOT = { scope:recipient = { highest_held_title_tier >= tier_kingdom } }
+		}
+
+		# Exactly King (kingdom or higher, but NOT emperor)
+		modifier = {
+			add = -15
+			desc = DS_COMPULSION_TARGET_KING
+			scope:recipient = { highest_held_title_tier >= tier_kingdom }
+			NOT = { scope:recipient = { highest_held_title_tier >= tier_empire } }
+		}
+
+		# Emperor (highest tier)
+		modifier = {
+			add = -25
+			desc = DS_COMPULSION_TARGET_EMPEROR
+			scope:recipient = { highest_held_title_tier >= tier_empire }
+		}
+
+		# +10 if recipient is your vassal (or below your realm)
+		modifier = {
+			add = 10
+			desc = DS_COMPULSION_VASSAL
+			scope:recipient = { is_vassal_or_below_of = scope:actor }
+		}
+		
+		# Hunter training resists Compulsion (scales with Monster-Hunting XP)
+		modifier = {
+			add = { value = spn_compulsion_hunter_resist }
+			desc = DS_COMPULSION_HUNTER_RESIST
+			scope:recipient = { has_trait = supernatural_hunter }
+		}
+
+	}
+
+
+	auto_accept = no
+}

@@ -1,0 +1,931 @@
+﻿container = {
+	name = "window_mage_counc_tab_button0"
+	parentanchor = bottom|left
+	position = { -5 -450 }
+	alwaystransparent = no
+	layer = bottom
+	#datacontext = "[GetPlayer]"
+	#visible = "[Or(Not(IsObserver), GetPlayer.IsValid)]"
+	#visible = yes
+	#visible = "[GetVariableSystem.Exists( 'mc_has_been_formed' )]"
+	#visible = "[Not( VariableSystem.Exists( 'mc_has_been_formed' ) )]"
+	#visible = "[EqualTo_CFixedPoint( Character.MakeScope.Var( 'mc_has_been_formed' ).GetValue, '(CFixedPoint)0')]"	#works with datacontext = "[GetPlayer]"
+	#visible = "[EqualTo_CFixedPoint( GetPlayer.MakeScope.Var( 'mc_has_been_formed' ).GetValue, '(CFixedPoint)0')]"	#works!
+	#visible = "[GetPlayer.MakeScope.Var( 'mc_has_been_formed' ).IsSet]"
+	visible = "[And( Not( GetGlobalVariable( 'mc_has_been_formed' ).IsSet ), Or(GetPlayer.HasTrait( GetTrait( 'archmage' ) ), GetPlayer.HasTrait( GetTrait( 'true_witch' ) ) ) )]"
+	
+	button_hud_character_bar = {
+		name = "mage_counc_button"
+		datacontext = "[GetPlayer.GetFaith]"
+		parentanchor = left
+		enabled = no
+
+		using = tooltip_es
+
+		tooltip = mc_disabled_tooltip
+
+		highlight_icon = {
+			texture = "gfx/interface/icons/activities/mages_summit.dds"
+			size = { 40 40 }
+			position = { 0 1 }
+			parentanchor = center
+
+			glow = {
+				color = { 0 0 0 0.8 }
+				glow_radius = 3
+				using = Glow_Standard
+			}
+		}
+	}
+}
+container = {
+	name = "window_mage_counc_tab_button1"
+	parentanchor = bottom|left
+	position = { -5 -450 }
+	alwaystransparent = no
+	layer = bottom
+	#visible = "[GetGlobalVariable( 'mc_has_been_formed' ).IsSet]"
+	visible = "[Or( And( GetGlobalVariable( 'mc_has_been_formed' ).IsSet, Or(GetPlayer.HasTrait( GetTrait( 'archmage' ) ), GetPlayer.HasTrait( GetTrait( 'true_witch' ) ) ) ), GetGlobalVariable( 'mc_revealed' ).IsSet )]"
+	
+	button_hud_character_bar = {
+		name = "mage_counc_button"
+		datacontext = "[GetPlayer.GetFaith]"
+		parentanchor = left
+		enabled = yes
+		#onclick = "[OpenGameViewData( 'faith', GetPlayer.GetFaith.GetID )]"
+		#onclick = "[ToggleGameViewData( 'faith', GetPlayer.GetFaith.GetID )]"
+		onclick = "[GetVariableSystem.Toggle('window_mage_counc_show')]"
+		#onclick = "[GetScriptedGui('load_mc_variables').Execute( GuiScope.SetRoot( GetPlayer.MakeScope ).End )]"
+
+		using = tooltip_es
+
+		tooltip = mc_full_name
+
+		highlight_icon = {
+			texture = "gfx/interface/icons/activities/mages_summit.dds"
+			size = { 40 40 }
+			position = { 0 1 }
+			parentanchor = center
+
+			glow = {
+				color = { 0 0 0 0.8 }
+				glow_radius = 3
+				using = Glow_Standard
+			}
+		}
+	}
+}
+window = {
+	name = "window_mage_counc"
+	parentanchor = top|left
+	layer = middle
+
+	movable = no
+	#using = Window_Size_Sidebar
+	size = { 440 100% }
+	using = Window_Background_Sidebar
+	
+	visible = "[GetVariableSystem.Exists('window_mage_counc_show')]"
+	
+	state = {
+		name = _show
+		using = Animation_FadeIn_Quick
+		using = Sound_WindowShow_Standard
+		on_start = "[GetVariableSystem.Set( 'hide_bottom_left_HUD', 'true' )]"
+	}
+
+	state = {
+		name = _hide
+		using = Animation_FadeOut_Quick
+		using = Sound_WindowHide_Standard
+		on_start = "[GetVariableSystem.Clear( 'hide_bottom_left_HUD' )]"
+	}
+	vbox = {
+		#main tab
+		using = Window_Margins_Sidebar
+		#size = { 100% 250 }
+		#size = { 100 100 }
+		layoutpolicy_horizontal = expanding
+		header_pattern = {
+			layoutpolicy_horizontal = expanding
+			#size = { -1 250 }
+			#maximumsize = { 10 10 }
+			blockoverride "header_text"
+			{
+				text = "mc_full_name"
+			}
+
+			blockoverride "button_close"
+			{
+				onclick = "[GetVariableSystem.Toggle('window_mage_counc_show')]"
+			}
+
+			blockoverride "button_back"
+			{
+				visible = "[HasViewHistory]"
+				onclick = "[OpenFromViewHistory]"
+				tooltip = "[GetViewHistoryTooltip]"
+			}
+
+			blockoverride "button_me"
+			{
+				onclick = "[DefaultOnCharacterClick( GetPlayer.GetID )]"
+			}
+		}
+		#hbox = {	maximumsize = { 400 -1 }
+		#	layoutpolicy_horizontal = expanding
+		#	expand = {}
+		#	button_icon = {
+		#		#parentanchor = top|right
+		#		size = { 30 30 }
+		#		onclick = "[GetVariableSystem.Toggle('window_mage_counc_show')]"
+		#		texture = "gfx/interface/icons/flat_icons/window_close.dds"
+		#	}
+		#}
+		hbox = {
+			layoutpolicy_horizontal = expanding
+			hbox = {
+				allow_outside = yes
+				visible = "[GetPlayer.MakeScope.Var('mc_member_var').IsSet]"
+				hbox = {
+					background = {
+						#using = Background_Frame
+						using = Background_Area_Dark
+						using = Background_Area_ExtraDark
+					}
+					##margin_top = -20
+					spacing = 7
+					text_single = {
+						fontsize = 16
+						text = mc_gold
+						tooltip = mc_gold_desc
+						#default_format = "#high;glow_color:{0.1,0.1,0.1,1.0}"
+						default_format = "#high"
+						using = Font_Type_Flavor
+						alpha = 0
+						autoresize = yes
+						margin = { 6 6 }
+						#position = { 0 5 }
+						#margin_bottom = 5
+		
+						state = {
+							name = start
+							trigger_on_create = yes
+							delay = 0.2
+							using = Animation_Curve_Default
+							alpha = 1
+							duration = 0.5
+						}
+					}
+				}
+				
+			}
+			expand = {}
+		}
+		expand = {}
+		hbox = {
+			#archmage section
+			#margin_top = 250
+			layoutpolicy_horizontal = expanding
+			expand = {}
+			vbox = {
+				hbox = {
+					spacing = 12
+					text_single = {
+						#parentanchor = top|center
+						#position = { -50 -10 }
+						fontsize = 20
+						text = mc_archmage_m
+						default_format = "#high;glow_color:{0.1,0.1,0.1,1.0}"
+						using = Font_Type_Flavor
+						alpha = 0
+						state = {
+							name = start
+							trigger_on_create = yes
+							delay = 0.2
+							using = Animation_Curve_Default
+							alpha = 1
+							duration = 0.5
+						}
+					}
+				}
+				hbox = {
+					name = "achmage_port"
+					margin_top = 6
+					spacing = 12
+					#portrait_texture = "[GetGlobalVariable( 'current_archmage_global' ).Char.GetPortrait('environment_torso', 'camera_torso', 'idle', PdxGetWidgetScreenSize(PdxGuiWidget.Self))]"
+					hbox = {
+						layoutpolicy_vertical = expanding
+						margin_left = 5
+						datacontext = "[GetGlobalVariable( 'current_archmage_global' ).Char]"
+						background = {
+							using = Background_Area
+							margin_top = 5
+						}
+	
+						background = {
+							visible = "[ObjectsEqual( Character.Self, GetPlayer )]"
+							texture = "gfx/interface/component_masks/patterns/mask_pattern_02.dds"
+							spriteType = Corneredtiled
+							alpha = 0.3
+	
+							using = Color_Blue
+	
+							modify_texture = {
+								texture = "gfx/interface/component_masks/mask_fade_horizontal.dds"
+								blend_mode = alphamultiply
+								alpha = 0.9
+								mirror = horizontal
+							}
+	
+							modify_texture = {
+								texture = "gfx/interface/component_masks/mask_texture_01.dds"
+								spriteType = Corneredtiled
+								spriteborder = { 15 15 }
+								blend_mode = alphamultiply
+							}
+						}
+	
+						background = {
+							visible = "[ObjectsEqual( Character.Self, GetPlayer )]"
+							texture = "gfx/interface/component_masks/mask_frame.dds"
+							spriteType = Corneredstretched
+							spriteborder = { 15 15 }
+							alpha = 0.25
+	
+							using = Color_Blue
+	
+							modify_texture = {
+								texture = "gfx/interface/component_masks/mask_fade_horizontal.dds"
+								blend_mode = alphamultiply
+								alpha = 0.9
+								mirror = horizontal
+							}
+						}
+	
+						widget = {
+							#size = { 200 210 }
+							size = { 180 190 }
+							portrait_torso = {
+								name = "army_commander"
+								visible = "[Character.IsValid]"
+								size = { 100% 100% }
+	
+								blockoverride "opinion_box"
+								{}
+								blockoverride "status_icons"
+								{}
+	
+								blockoverride "coa"
+								{}
+	
+								blockoverride "portrait_button_template_onclick"
+								{
+									onclick = "[DefaultOnCharacterClick(Character.GetID)]"
+								}
+	
+								blockoverride "portrait_button" {
+									mask = "gfx/portraits/portrait_mask_council.dds"
+									size = { 195 225 }
+								}
+							}
+	
+							portrait_torso = {
+								name = "no_commander"
+								visible = "[Not( Character.IsValid )]"
+								position = { 15 0 }
+								using = tooltip_es
+								tooltip = mc_no_position_tooltip
+	
+								blockoverride "opinion_box"
+								{}
+								blockoverride "status_icons"
+								{}
+	
+								blockoverride "portrait_button_template_onclick"
+								{}
+	
+								blockoverride "onclick" {
+									#onclick = "[ArmyWindow.ShowCommanders]"
+									#
+									#button_icon = {
+									#	parentanchor = center
+									#	alwaystransparent = yes
+									#	size = { 50 50 }
+									#	position = { 0 20 }
+									#	texture = "gfx/interface/icons/flat_icons/plus.dds"
+									#}
+								}
+							}
+						}
+						divider_light = {
+							layoutpolicy_vertical = expanding
+						}
+					}
+				}
+				hbox = {
+					visible = "[GetGlobalVariable( 'current_archmage_global' ).IsSet]"
+					text_single = {
+						#parentanchor = top|center
+						#position = { -50 -10 }
+						fontsize = 15
+						text = mc_archmage_name
+						#text = mc_test_test
+						default_format = "#high;glow_color:{0.1,0.1,0.1,1.0}"
+						using = Font_Type_Flavor
+						alpha = 0
+						state = {
+							name = start
+							trigger_on_create = yes
+							delay = 0.2
+							using = Animation_Curve_Default
+							alpha = 1
+							duration = 0.5
+						}
+					}
+				}
+			}
+			expand = {}
+		}
+		expand = {}
+		hbox = {
+			#loremaster
+			#margin_top = 250
+			layoutpolicy_horizontal = expanding
+			expand = {}
+			vbox = {
+				hbox = {
+					spacing = 12
+					text_single = {
+						#parentanchor = top|center
+						#position = { -50 -10 }
+						fontsize = 20
+						text = mc_loremaster_m
+						default_format = "#high;glow_color:{0.1,0.1,0.1,1.0}"
+						using = Font_Type_Flavor
+						alpha = 0
+						state = {
+							name = start
+							trigger_on_create = yes
+							delay = 0.2
+							using = Animation_Curve_Default
+							alpha = 1
+							duration = 0.5
+						}
+					}
+				}
+				hbox = {
+					name = "loremaster_port"
+					margin_top = 6
+					spacing = 12
+					#portrait_texture = "[GetGlobalVariable( 'current_archmage_global' ).Char.GetPortrait('environment_torso', 'camera_torso', 'idle', PdxGetWidgetScreenSize(PdxGuiWidget.Self))]"
+					hbox = {
+						layoutpolicy_vertical = expanding
+						margin_left = 5
+						datacontext = "[GetGlobalVariable( 'current_loremaster_global' ).Char]"
+						background = {
+							using = Background_Area
+							margin_top = 5
+						}
+	
+						background = {
+							visible = "[ObjectsEqual( Character.Self, GetPlayer )]"
+							texture = "gfx/interface/component_masks/patterns/mask_pattern_02.dds"
+							spriteType = Corneredtiled
+							alpha = 0.3
+	
+							using = Color_Blue
+	
+							modify_texture = {
+								texture = "gfx/interface/component_masks/mask_fade_horizontal.dds"
+								blend_mode = alphamultiply
+								alpha = 0.9
+								mirror = horizontal
+							}
+	
+							modify_texture = {
+								texture = "gfx/interface/component_masks/mask_texture_01.dds"
+								spriteType = Corneredtiled
+								spriteborder = { 15 15 }
+								blend_mode = alphamultiply
+							}
+						}
+	
+						background = {
+							visible = "[ObjectsEqual( Character.Self, GetPlayer )]"
+							texture = "gfx/interface/component_masks/mask_frame.dds"
+							spriteType = Corneredstretched
+							spriteborder = { 15 15 }
+							alpha = 0.25
+	
+							using = Color_Blue
+	
+							modify_texture = {
+								texture = "gfx/interface/component_masks/mask_fade_horizontal.dds"
+								blend_mode = alphamultiply
+								alpha = 0.9
+								mirror = horizontal
+							}
+						}
+	
+						widget = {
+							#size = { 200 210 }
+							size = { 180 190 }
+							portrait_torso = {
+								name = "lore"
+								visible = "[Character.IsValid]"
+								size = { 100% 100% }
+	
+								blockoverride "opinion_box"
+								{}
+								blockoverride "status_icons"
+								{}
+	
+								blockoverride "coa"
+								{}
+	
+								blockoverride "portrait_button_template_onclick"
+								{
+									onclick = "[DefaultOnCharacterClick(Character.GetID)]"
+								}
+	
+								blockoverride "portrait_button" {
+									mask = "gfx/portraits/portrait_mask_council.dds"
+									size = { 195 225 }
+								}
+							}
+	
+							portrait_torso = {
+								name = "no_lore"
+								#visible = "[Not( Character.IsValid )]"
+								visible = "[And( Not( Character.IsValid ), Not( ObjectsEqual( GetPlayer.Self, GetGlobalVariable( 'current_archmage_global' ).Char ) ) )]"
+								position = { 15 0 }
+								using = tooltip_es
+								tooltip = mc_no_position_tooltip
+	
+								blockoverride "opinion_box"
+								{}
+								blockoverride "status_icons"
+								{}
+	
+								blockoverride "portrait_button_template_onclick"
+								{}
+	
+								blockoverride "onclick" {
+									#onclick = "[ArmyWindow.ShowCommanders]"
+									#
+									#button_icon = {
+									#	parentanchor = center
+									#	alwaystransparent = yes
+									#	size = { 50 50 }
+									#	position = { 0 20 }
+									#	texture = "gfx/interface/icons/flat_icons/plus.dds"
+									#}
+								}
+							}
+							portrait_torso = {
+								name = "no_lore2"
+								#visible = "[Not( Character.IsValid )]"
+								visible = "[And( Not( Character.IsValid ), ObjectsEqual( GetPlayer.Self, GetGlobalVariable( 'current_archmage_global' ).Char ) )]"
+								position = { 15 0 }
+								using = tooltip_es
+								tooltip = mc_archmage_may_appoint_tooltip
+	
+								blockoverride "opinion_box"
+								{}
+								blockoverride "status_icons"
+								{}
+	
+								blockoverride "portrait_button_template_onclick"
+								{}
+	
+								blockoverride "onclick" {
+									#onclick = "[ArmyWindow.ShowCommanders]"
+									#button_icon = {
+									#	parentanchor = center
+									#	alwaystransparent = yes
+									#	size = { 50 50 }
+									#	position = { 0 20 }
+									#	texture = "gfx/interface/icons/flat_icons/plus.dds"
+									#}
+								}
+							}
+						}
+						divider_light = {
+							layoutpolicy_vertical = expanding
+						}
+					}
+				}
+				hbox = {
+					visible = "[GetGlobalVariable( 'current_loremaster_global' ).IsSet]"
+					text_single = {
+						#parentanchor = top|center
+						#position = { -50 -10 }
+						fontsize = 15
+						text = mc_loremaster_name
+						#text = mc_test_test
+						default_format = "#high;glow_color:{0.1,0.1,0.1,1.0}"
+						using = Font_Type_Flavor
+						alpha = 0
+						state = {
+							name = start
+							trigger_on_create = yes
+							delay = 0.2
+							using = Animation_Curve_Default
+							alpha = 1
+							duration = 0.5
+						}
+					}
+				}
+			}
+			expand = {}
+		}
+		expand ={}
+		hbox = {
+			#black mage
+			#margin_top = 250
+			layoutpolicy_horizontal = expanding
+			expand = {}
+			vbox = {
+				hbox = {
+					spacing = 12
+					text_single = {
+						#parentanchor = top|center
+						#position = { -50 -10 }
+						fontsize = 20
+						text = mc_black_mage_m
+						default_format = "#high;glow_color:{0.1,0.1,0.1,1.0}"
+						using = Font_Type_Flavor
+						alpha = 0
+						state = {
+							name = start
+							trigger_on_create = yes
+							delay = 0.2
+							using = Animation_Curve_Default
+							alpha = 1
+							duration = 0.5
+						}
+					}
+				}
+				hbox = {
+					name = "black_port"
+					margin_top = 6
+					spacing = 12
+					#portrait_texture = "[GetGlobalVariable( 'current_archmage_global' ).Char.GetPortrait('environment_torso', 'camera_torso', 'idle', PdxGetWidgetScreenSize(PdxGuiWidget.Self))]"
+					hbox = {
+						layoutpolicy_vertical = expanding
+						margin_left = 5
+						datacontext = "[GetGlobalVariable( 'current_black_mage_global' ).Char]"
+						background = {
+							using = Background_Area
+							margin_top = 5
+						}
+	
+						background = {
+							visible = "[ObjectsEqual( Character.Self, GetPlayer )]"
+							texture = "gfx/interface/component_masks/patterns/mask_pattern_02.dds"
+							spriteType = Corneredtiled
+							alpha = 0.3
+	
+							using = Color_Blue
+	
+							modify_texture = {
+								texture = "gfx/interface/component_masks/mask_fade_horizontal.dds"
+								blend_mode = alphamultiply
+								alpha = 0.9
+								mirror = horizontal
+							}
+	
+							modify_texture = {
+								texture = "gfx/interface/component_masks/mask_texture_01.dds"
+								spriteType = Corneredtiled
+								spriteborder = { 15 15 }
+								blend_mode = alphamultiply
+							}
+						}
+	
+						background = {
+							visible = "[ObjectsEqual( Character.Self, GetPlayer )]"
+							texture = "gfx/interface/component_masks/mask_frame.dds"
+							spriteType = Corneredstretched
+							spriteborder = { 15 15 }
+							alpha = 0.25
+	
+							using = Color_Blue
+	
+							modify_texture = {
+								texture = "gfx/interface/component_masks/mask_fade_horizontal.dds"
+								blend_mode = alphamultiply
+								alpha = 0.9
+								mirror = horizontal
+							}
+						}
+	
+						widget = {
+							#size = { 200 210 }
+							size = { 180 190 }
+							portrait_torso = {
+								name = "black"
+								visible = "[Character.IsValid]"
+								size = { 100% 100% }
+	
+								blockoverride "opinion_box"
+								{}
+								blockoverride "status_icons"
+								{}
+	
+								blockoverride "coa"
+								{}
+	
+								blockoverride "portrait_button_template_onclick"
+								{
+									onclick = "[DefaultOnCharacterClick(Character.GetID)]"
+								}
+	
+								blockoverride "portrait_button" {
+									mask = "gfx/portraits/portrait_mask_council.dds"
+									size = { 195 225 }
+								}
+							}
+	
+							portrait_torso = {
+								name = "no_lore"
+								#visible = "[Not( Character.IsValid )]"
+								visible = "[And( Not( Character.IsValid ), Not( ObjectsEqual( GetPlayer.Self, GetGlobalVariable( 'current_archmage_global' ).Char ) ) )]"
+								position = { 15 0 }
+								using = tooltip_es
+								tooltip = mc_no_position_tooltip
+	
+								blockoverride "opinion_box"
+								{}
+								blockoverride "status_icons"
+								{}
+	
+								blockoverride "portrait_button_template_onclick"
+								{}
+	
+								blockoverride "onclick" {
+									#onclick = "[ArmyWindow.ShowCommanders]"
+									#
+									#button_icon = {
+									#	parentanchor = center
+									#	alwaystransparent = yes
+									#	size = { 50 50 }
+									#	position = { 0 20 }
+									#	texture = "gfx/interface/icons/flat_icons/plus.dds"
+									#}
+								}
+							}
+							portrait_torso = {
+								name = "no_lore2"
+								#visible = "[Not( Character.IsValid )]"
+								visible = "[And( Not( Character.IsValid ), ObjectsEqual( GetPlayer.Self, GetGlobalVariable( 'current_archmage_global' ).Char ) )]"
+								position = { 15 0 }
+								using = tooltip_es
+								tooltip = mc_archmage_may_appoint_tooltip
+	
+								blockoverride "opinion_box"
+								{}
+								blockoverride "status_icons"
+								{}
+	
+								blockoverride "portrait_button_template_onclick"
+								{}
+	
+								blockoverride "onclick" {
+									#onclick = "[ArmyWindow.ShowCommanders]"
+									#button_icon = {
+									#	parentanchor = center
+									#	alwaystransparent = yes
+									#	size = { 50 50 }
+									#	position = { 0 20 }
+									#	texture = "gfx/interface/icons/flat_icons/plus.dds"
+									#}
+								}
+							}
+						}
+						divider_light = {
+							layoutpolicy_vertical = expanding
+						}
+					}
+				}
+				hbox = {
+					visible = "[GetGlobalVariable( 'current_black_mage_global' ).IsSet]"
+					text_single = {
+						#parentanchor = top|center
+						#position = { -50 -10 }
+						fontsize = 15
+						text = mc_black_mage_name
+						#text = mc_test_test
+						default_format = "#high;glow_color:{0.1,0.1,0.1,1.0}"
+						using = Font_Type_Flavor
+						alpha = 0
+						state = {
+							name = start
+							trigger_on_create = yes
+							delay = 0.2
+							using = Animation_Curve_Default
+							alpha = 1
+							duration = 0.5
+						}
+					}
+				}
+			}
+			expand = {}
+		}
+		expand ={}
+		hbox = {
+			#admin
+			margin_bottom = 80
+			layoutpolicy_horizontal = expanding
+			expand = {}
+			vbox = {
+				hbox = {
+					spacing = 12
+					text_single = {
+						#parentanchor = top|center
+						#position = { -50 -10 }
+						fontsize = 20
+						text = mc_admin_m
+						default_format = "#high;glow_color:{0.1,0.1,0.1,1.0}"
+						using = Font_Type_Flavor
+						alpha = 0
+						state = {
+							name = start
+							trigger_on_create = yes
+							delay = 0.2
+							using = Animation_Curve_Default
+							alpha = 1
+							duration = 0.5
+						}
+					}
+				}
+				hbox = {
+					name = "admin_port"
+					margin_top = 6
+					spacing = 12
+					#portrait_texture = "[GetGlobalVariable( 'current_archmage_global' ).Char.GetPortrait('environment_torso', 'camera_torso', 'idle', PdxGetWidgetScreenSize(PdxGuiWidget.Self))]"
+					hbox = {
+						layoutpolicy_vertical = expanding
+						margin_left = 5
+						datacontext = "[GetGlobalVariable( 'current_admin_global' ).Char]"
+						background = {
+							using = Background_Area
+							margin_top = 5
+						}
+	
+						background = {
+							visible = "[ObjectsEqual( Character.Self, GetPlayer )]"
+							texture = "gfx/interface/component_masks/patterns/mask_pattern_02.dds"
+							spriteType = Corneredtiled
+							alpha = 0.3
+	
+							using = Color_Blue
+	
+							modify_texture = {
+								texture = "gfx/interface/component_masks/mask_fade_horizontal.dds"
+								blend_mode = alphamultiply
+								alpha = 0.9
+								mirror = horizontal
+							}
+	
+							modify_texture = {
+								texture = "gfx/interface/component_masks/mask_texture_01.dds"
+								spriteType = Corneredtiled
+								spriteborder = { 15 15 }
+								blend_mode = alphamultiply
+							}
+						}
+	
+						background = {
+							visible = "[ObjectsEqual( Character.Self, GetPlayer )]"
+							texture = "gfx/interface/component_masks/mask_frame.dds"
+							spriteType = Corneredstretched
+							spriteborder = { 15 15 }
+							alpha = 0.25
+	
+							using = Color_Blue
+	
+							modify_texture = {
+								texture = "gfx/interface/component_masks/mask_fade_horizontal.dds"
+								blend_mode = alphamultiply
+								alpha = 0.9
+								mirror = horizontal
+							}
+						}
+	
+						widget = {
+							#size = { 200 210 }
+							size = { 180 190 }
+							portrait_torso = {
+								name = "admin"
+								visible = "[Character.IsValid]"
+								size = { 100% 100% }
+	
+								blockoverride "opinion_box"
+								{}
+								blockoverride "status_icons"
+								{}
+	
+								blockoverride "coa"
+								{}
+	
+								blockoverride "portrait_button_template_onclick"
+								{
+									onclick = "[DefaultOnCharacterClick(Character.GetID)]"
+								}
+	
+								blockoverride "portrait_button" {
+									mask = "gfx/portraits/portrait_mask_council.dds"
+									size = { 195 225 }
+								}
+							}
+	
+							portrait_torso = {
+								name = "no_admin"
+								#visible = "[Not( Character.IsValid )]"
+								visible = "[And( Not( Character.IsValid ), Not( ObjectsEqual( GetPlayer.Self, GetGlobalVariable( 'current_archmage_global' ).Char ) ) )]"
+								position = { 15 0 }
+								using = tooltip_es
+								tooltip = mc_no_position_tooltip
+	
+								blockoverride "opinion_box"
+								{}
+								blockoverride "status_icons"
+								{}
+	
+								blockoverride "portrait_button_template_onclick"
+								{}
+	
+								blockoverride "onclick" {
+									#onclick = "[ArmyWindow.ShowCommanders]"
+									#
+									#button_icon = {
+									#	parentanchor = center
+									#	alwaystransparent = yes
+									#	size = { 50 50 }
+									#	position = { 0 20 }
+									#	texture = "gfx/interface/icons/flat_icons/plus.dds"
+									#}
+								}
+							}
+							portrait_torso = {
+								name = "no_admin2"
+								#visible = "[Not( Character.IsValid )]"
+								visible = "[And( Not( Character.IsValid ), ObjectsEqual( GetPlayer.Self, GetGlobalVariable( 'current_archmage_global' ).Char ) )]"
+								position = { 15 0 }
+								using = tooltip_es
+								tooltip = mc_archmage_may_appoint_tooltip
+	
+								blockoverride "opinion_box"
+								{}
+								blockoverride "status_icons"
+								{}
+	
+								blockoverride "portrait_button_template_onclick"
+								{}
+	
+								blockoverride "onclick" {
+									#onclick = "[ArmyWindow.ShowCommanders]"
+									#button_icon = {
+									#	parentanchor = center
+									#	alwaystransparent = yes
+									#	size = { 50 50 }
+									#	position = { 0 20 }
+									#	texture = "gfx/interface/icons/flat_icons/plus.dds"
+									#}
+								}
+							}
+						}
+						divider_light = {
+							layoutpolicy_vertical = expanding
+						}
+					}
+				}
+				hbox = {
+					visible = "[GetGlobalVariable( 'current_admin_global' ).IsSet]"
+					text_single = {
+						#parentanchor = top|center
+						#position = { -50 -10 }
+						fontsize = 15
+						text = mc_admin_name
+						#text = mc_test_test
+						default_format = "#high;glow_color:{0.1,0.1,0.1,1.0}"
+						using = Font_Type_Flavor
+						alpha = 0
+						state = {
+							name = start
+							trigger_on_create = yes
+							delay = 0.2
+							using = Animation_Curve_Default
+							alpha = 1
+							duration = 0.5
+						}
+					}
+				}
+			}
+			expand = {}
+		}
+		expand = {}
+	}
+}

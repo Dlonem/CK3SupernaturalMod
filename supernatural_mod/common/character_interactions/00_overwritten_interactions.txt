@@ -48,7 +48,7 @@
 						OR = {
 							has_trait = disputed_heritage
 							any_secret = {
-								secret_type = secret_disputed_heritage
+								type = secret_disputed_heritage
 								is_known_by = scope:actor
 							}
 							has_trait = bastard
@@ -60,8 +60,6 @@
 				dynasty_prestige >= medium_dynasty_prestige_value
 			}
 		}
-
-		scope:recipient = { is_busy_in_events_localised = yes }
 		scope:recipient = { NOT = { has_strong_hook = scope:actor } }
 		trigger_if = {
 			limit = {
@@ -97,25 +95,26 @@
 				compassionate = minor_stress_impact_gain
 			}
 			
+			#Legitimacy loss
 			if = {
 				limit = {
 					scope:actor = {
 						culture = {
 							has_cultural_parameter = coven_rule
 						}
-						exists = house
-						house = {
-							has_house_modifier = witch_coven
-						}
+						#exists = house
+						#house = {
+						#	has_house_modifier = witch_coven
+						#}
 						OR = {
 							has_trait = witch
-							any_secret = { secret_type = secret_witch }
+							any_secret = { type = secret_witch }
 						}
 					}
 					scope:recipient = {
 						NOR = {
 							has_trait = witch
-							any_secret = { secret_type = secret_witch }
+							any_secret = { type = secret_witch }
 						}
 						is_adult = yes
 					}
@@ -152,36 +151,6 @@
 					}
 				}
 			}
-			#if = {
-			#	limit = {
-			#		NOR = {
-			#			culture = {
-			#				has_cultural_parameter = coven_rule
-			#			}
-			#			exists = house
-			#			house = {
-			#				has_house_modifier = witch_coven
-			#			}
-			#			OR = {
-			#				has_trait = witch
-			#				any_secret = { secret_type = secret_witch }
-			#			}
-			#			scope:recipient = {
-			#				NOR = {
-			#					has_trait = witch
-			#					any_secret = { secret_type = secret_witch }
-			#				}
-			#				is_adult = yes
-			#			}
-			#		}
-			#	}
-			#	add_character_modifier = {
-			#		modifier = parent_disinherited_child_modifier
-			#		years = 5
-			#	}
-			#}
-			
-
 			hidden_effect = {
 				send_interface_toast = {
 					title = disinherit_interaction_notification
@@ -202,6 +171,7 @@
 			disinherit_effect = { DISINHERITOR = scope:actor }
 		}
 
+		# If we're a clan this interaction affects unity
 		add_clan_unity_interaction_effect = {
 			CHARACTER = scope:actor
 			TARGET = scope:recipient
@@ -214,7 +184,7 @@
 			limit = {
 				scope:recipient = {
 					any_secret = {
-						secret_type = secret_disputed_heritage
+						type = secret_disputed_heritage
 						is_known_by = scope:actor
 						save_temporary_scope_as = secret_to_reveal
 					}
@@ -234,14 +204,14 @@
 	cost = {
 		renown = {
 			value = {
-				add = medium_dynasty_prestige_value
+				add = scope:actor.dynasty.medium_dynasty_prestige_value
 				if = {
 					limit = {
 						scope:recipient = {
 							is_landed_or_landless_administrative = yes
 						}
 					}
-					add = major_dynasty_prestige_value
+					add = scope:actor.dynasty.major_dynasty_prestige_value
 				}
 				if = {
 					limit = {
@@ -252,7 +222,7 @@
 							}
 						}
 					}
-					add = medium_dynasty_prestige_value
+					add = scope:actor.dynasty.medium_dynasty_prestige_value
 				}
 				if = {
 					limit = {
@@ -260,7 +230,7 @@
 							OR = {
 								has_trait = disputed_heritage
 								any_secret = {
-									secret_type = secret_disputed_heritage
+									type = secret_disputed_heritage
 									is_known_by = scope:actor
 								}
 								has_trait = bastard
@@ -275,19 +245,19 @@
 							culture = {
 								has_cultural_parameter = coven_rule
 							}
-							exists = house
-							house = {
-								has_house_modifier = witch_coven
-							}
+							#exists = house
+							#house = {
+							#	has_house_modifier = witch_coven
+							#}
 							OR = {
 								has_trait = witch
-								any_secret = { secret_type = secret_witch }
+								any_secret = { type = secret_witch }
 							}
 						}
 						scope:recipient = {
 							NOR = {
 								has_trait = witch
-								any_secret = { secret_type = secret_witch }
+								any_secret = { type = secret_witch }
 							}
 							is_adult = yes
 						}
@@ -324,7 +294,7 @@
 							OR = {
 								has_trait = disputed_heritage
 								any_secret = {
-									secret_type = secret_disputed_heritage
+									type = secret_disputed_heritage
 									is_known_by = scope:actor
 								}
 								has_trait = bastard
@@ -339,19 +309,19 @@
 							culture = {
 								has_cultural_parameter = coven_rule
 							}
-							exists = house
-							house = {
-								has_house_modifier = witch_coven
-							}
+							#exists = house
+							#house = {
+							#	has_house_modifier = witch_coven
+							#}
 							OR = {
 								has_trait = witch
-								any_secret = { secret_type = secret_witch }
+								any_secret = { type = secret_witch }
 							}
 						}
 						scope:recipient = {
 							NOR = {
 								has_trait = witch
-								any_secret = { secret_type = secret_witch }
+								any_secret = { type = secret_witch }
 							}
 							is_adult = yes
 						}
@@ -369,6 +339,7 @@
 		NOT = {
 			has_trait = forgiving
 		}
+		is_dynast = yes
 	}
 	
 	ai_targets = {
@@ -376,7 +347,14 @@
 		max = 20
 	}
 	
-	ai_frequency = 96
+	ai_frequency_by_tier = {
+                barony = 0
+                county = 96
+                duchy = 48
+                kingdom = 12
+                empire = 12
+                hegemony = 12
+        }
 	
 	ai_will_do = {
 		base = 0
@@ -424,7 +402,7 @@
 						has_trait = incestuous
 					}
 					NOT = { is_incestuous_trigger = yes }
-					trait_is_criminal_in_faith_trigger = { TRAIT = incestuous FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:incestuous FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -440,7 +418,7 @@
 						has_trait = adulterer
 						has_trait = fornicator
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = adulterer FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:adulterer FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -450,7 +428,7 @@
 						has_trait = adulterer
 						has_trait = fornicator
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = fornicator FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:fornicator FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -459,7 +437,7 @@
 					NOT = {
 						is_deviant_trigger = yes
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = deviant FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:deviant FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -468,7 +446,7 @@
 					NOT = {
 						is_witch_trigger = yes
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:witch FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -477,10 +455,10 @@
 					NOR = {
 						has_trait = sodomite
 						any_secret = {
-							secret_type = secret_homosexual
+							type = secret_homosexual
 						}
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = sodomite FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:sodomite FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -489,10 +467,11 @@
 					NOT = {
 						is_cannibal_trigger = yes
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = cannibal FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:cannibal FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
 				}
 			}
 		}
+		# Unity modifiers
 		evaluate_action_decreasing_house_unity = {
 			VALUE = 100
 		}
@@ -556,7 +535,6 @@ disinherit_children_interaction = {
 		scope:actor = {
 			prestige >= major_prestige_value
 		}
-		scope:recipient = { is_busy_in_events_localised = yes }
 		scope:recipient = { NOT = { has_strong_hook = scope:actor } }
 		trigger_if = {
 			limit = {
@@ -593,22 +571,22 @@ disinherit_children_interaction = {
 			}
 			if = {
 				limit = {
-					NOR = {
+					NOT = {
 						culture = {
 							has_cultural_parameter = coven_rule
 						}
-						exists = house
-						house = {
-							has_house_modifier = witch_coven
-						}
+						#exists = house
+						#house = {
+						#	has_house_modifier = witch_coven
+						#}
 						OR = {
 							has_trait = witch
-							any_secret = { secret_type = secret_witch }
+							any_secret = { type = secret_witch }
 						}
 						scope:recipient = {
 							NOR = {
 								has_trait = witch
-								any_secret = { secret_type = secret_witch }
+								any_secret = { type = secret_witch }
 							}
 							is_adult = yes
 						}
@@ -675,19 +653,19 @@ disinherit_children_interaction = {
 							culture = {
 								has_cultural_parameter = coven_rule
 							}
-							exists = house
-							house = {
-								has_house_modifier = witch_coven
-							}
+							#exists = house
+							#house = {
+							#	has_house_modifier = witch_coven
+							#}
 							OR = {
 								has_trait = witch
-								any_secret = { secret_type = secret_witch }
+								any_secret = { type = secret_witch }
 							}
 						}
 						scope:recipient = {
 							NOR = {
 								has_trait = witch
-								any_secret = { secret_type = secret_witch }
+								any_secret = { type = secret_witch }
 							}
 							is_adult = yes
 						}
@@ -705,6 +683,7 @@ disinherit_children_interaction = {
 		NOT = {
 			has_trait = forgiving
 		}
+		is_dynast = yes
 	}
 
 	ai_targets = {
@@ -712,7 +691,15 @@ disinherit_children_interaction = {
 		max = 20
 	}
 
-	ai_frequency = 96
+	ai_frequency_by_tier = {
+                barony = 0
+                county = 96
+                duchy = 48
+                kingdom = 12
+                empire = 12
+                hegemony = 12
+        }
+
 
 	ai_will_do = {
 		base = 0
@@ -751,7 +738,7 @@ disinherit_children_interaction = {
 						has_trait = incestuous
 					}
 					NOT = { is_incestuous_trigger = yes }
-					trait_is_criminal_in_faith_trigger = { TRAIT = incestuous FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:incestuous FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -767,7 +754,7 @@ disinherit_children_interaction = {
 						has_trait = adulterer
 						has_trait = fornicator
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = adulterer FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:adulterer FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -777,7 +764,7 @@ disinherit_children_interaction = {
 						has_trait = adulterer
 						has_trait = fornicator
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = fornicator FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:fornicator FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -786,7 +773,7 @@ disinherit_children_interaction = {
 					NOT = {
 						is_deviant_trigger = yes
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = deviant FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:deviant FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -795,7 +782,7 @@ disinherit_children_interaction = {
 					NOT = {
 						is_witch_trigger = yes
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:witch FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -804,10 +791,10 @@ disinherit_children_interaction = {
 					NOR = {
 						has_trait = sodomite
 						any_secret = {
-							secret_type = secret_homosexual
+							type = secret_homosexual
 						}
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = sodomite FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:sodomite FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -816,7 +803,7 @@ disinherit_children_interaction = {
 					NOT = {
 						is_cannibal_trigger = yes
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = cannibal FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:cannibal FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
 				}
 			}
 		}
@@ -886,32 +873,60 @@ demand_artifact_interaction = {
 	ai_target_quick_trigger = {
 		adult = yes
 	}
-	ai_frequency = 60
+	ai_frequency_by_tier = {
+                barony = 0
+                county = 0
+                duchy = 72
+                kingdom = 36
+                empire = 36
+                hegemony = 36
+        }
 
 	is_shown = {
-		NOT = {
-			scope:recipient = scope:actor
-		}
-
+		scope:recipient != scope:actor
 		custom_description = {
 			text = "demand_artifact_interaction_valid_tt_1"
 			scope:recipient = {
 				# needs to have an artifact we can claim
 				any_character_artifact = {
 					can_be_claimed_by = scope:actor
+					NOT = { has_variable = is_tribute_mission_artifact }
 				}
 			}
 		}
+
+		scope:recipient = {
+			trigger_if = {
+				limit = {
+					exists = involved_activity
+				}
+				NOT = {
+					involved_activity ?= { #do not give out anything during coronation
+						has_activity_type = activity_coronation
+						activity_host = scope:recipient
+					}
+				}
+			}	
+		}
+
+		scope:actor = {
+			OR = {
+				is_ai = no
+				max_military_strength >= {
+					value = {
+						value = scope:recipient.max_military_strength
+						multiply = 1.3
+					}
+				}
+				highest_held_title_tier > scope:recipient.highest_held_title_tier
+			}
+		}
 	}
-	
 	is_highlighted = {
 		always = yes
 	}
 
 	is_valid_showing_failures_only = {
-
-		scope:recipient = { is_busy_in_events_localised = yes }
-		
 		scope:actor = {
 			NOT = {
 				is_at_war_with = scope:recipient

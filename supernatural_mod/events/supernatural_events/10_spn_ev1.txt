@@ -10,9 +10,16 @@ supernatural_ev1.01 = {
 
 	trigger = {
 		is_alive = yes
-		NOT = {
-			has_character_modifier = excluded_from_magic_community
+		is_imprisoned = no
+		NOR = {
+			has_character_modifier = vf_recently_fed_modifier
+			has_trait_xp = { trait = supernatural_vampire track = vampirism value > 99 }
+			has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 99 }
 		}
+	}
+
+	cooldown = {
+		years = 2
 	}
 	
 	option = {
@@ -511,7 +518,7 @@ supernatural_ev1.08 = {
 				value = 10
 			}			
 		}
-		else = {
+		else_if = {
 			limit = {
 				has_trait = supernatural_hybrid
 			}
@@ -589,6 +596,14 @@ supernatural_ev1.09 = {
 	option = {
 		name = supernatural_ev1.09.a
 		custom_tooltip = supernatural_ev1.09.a_tt
+		ai_chance = {
+			base = 50
+			modifier = { add = 20 has_trait = arrogant }
+			modifier = { add = 15 has_trait = gregarious }
+			modifier = { add = 15 has_trait = intellect_good_3 }
+			modifier = { add = 10 has_trait = intellect_good_2 }
+			modifier = { add = -10 has_trait = shy }
+		}
 
 		random_list = {
 			50 = { # Chance of winning the challenge
@@ -651,10 +666,17 @@ supernatural_ev1.09 = {
     option = {
         name = supernatural_ev1.09.b
         custom_tooltip = supernatural_ev1.09.b_tt
+        ai_chance = {
+        	base = 50
+        	modifier = { add = 25 has_trait = deceitful }
+        	modifier = { add = 20 has_trait = ambitious }
+        	modifier = { add = 15 has_trait = sadistic }
+        	modifier = { add = -25 has_trait = just }
+        }
 		
 		trigger = {
             OR = {
-                has_perk = glamour_perk
+                has_perk = compulsion_perk
                 has_perk = deadly_seduction_perk
             }
 		}
@@ -669,7 +691,7 @@ supernatural_ev1.09 = {
 				value = 5
 			}
 		}
-		else = {
+		else_if = {
 			limit = {
 				has_trait = supernatural_hybrid
 			}
@@ -684,6 +706,13 @@ supernatural_ev1.09 = {
     option = {
         name = supernatural_ev1.09.c
         custom_tooltip = supernatural_ev1.09.c_tt
+        ai_chance = {
+        	base = 25
+        	modifier = { add = 20 has_trait = craven }
+        	modifier = { add = 15 has_trait = humble }
+        	modifier = { add = 15 has_trait = shy }
+        	modifier = { add = -15 has_trait = arrogant }
+        }
         add_prestige = { -5 -25 }
     }
 }
@@ -708,7 +737,7 @@ supernatural_ev1.10 = { #The Catacombs Below
 				age = { 25 55 }
 				culture = root.location.culture  # Matches player character’s culture (optional)
 				faith = root.location.faith
-				location = root.capital_province  # Places them in the same province
+				location = root.location  # Places them in the feeding location
 				save_scope_as = tavern_owner  # Save for use in the portrait
 			}
         }
@@ -841,7 +870,7 @@ supernatural_ev1.11 = { #The Catacombs Below: Part 2
 						value = { 3 15 }
 					}
 				}
-				else = {
+				else_if = {
 					limit = {
 						has_trait = supernatural_hybrid
 					}			
@@ -878,7 +907,7 @@ supernatural_ev1.11 = { #The Catacombs Below: Part 2
 						killer = scope:hunter
 					}
 				}
-				else = {
+				else_if = {
 					limit = {
 						has_trait = supernatural_hybrid
 					}
@@ -950,7 +979,7 @@ supernatural_ev1.11 = { #The Catacombs Below: Part 2
 						killer = scope:hunter
 					}
 				}
-				else = {
+				else_if = {
 					limit = {
 						has_trait = supernatural_hybrid
 					}
@@ -1037,6 +1066,10 @@ supernatural_ev1.12 = { #A Moment of Desire
         custom_tooltip = supernatural_ev1.12.a_tt
 
         root = {
+            had_sex_with_effect = {
+                CHARACTER = scope:lover_participant
+                PREGNANCY_CHANCE = pregnancy_chance
+            }
             add_character_modifier = {
                 modifier = supernatural_fresh_air_and_exercise_modifier
                 years = 5
@@ -1112,6 +1145,7 @@ supernatural_ev1.13 = { #Prepared for the Night - Ev1.13
         scope:activity = {
             every_attending_character = {
                 add_character_flag = vf_scouted_location
+                vf_feeding_chance_change_effect = { VALUE = 10 }
             }
         }
     }
@@ -1157,13 +1191,14 @@ supernatural_ev1.14 = { #The Trap
 		scope:activity = {
 			# Save a random attendee (excluding the player) as 'other_attendee'
 			random_attending_character = {
-				limit = { NOT = { this = scope:root } }
+				limit = { NOT = { this = root } }
 				save_scope_as = other_attendee
 			}
 
 			# Add the character flag to all attending characters, including the player
 			every_attending_character = {
 				add_character_flag = vf_laid_trap
+				vf_feeding_chance_change_effect = { VALUE = 20 }
 			}
 		}
 	}
@@ -1232,6 +1267,11 @@ supernatural_ev1.15 = { # Tavern Gossip
     option = {
         name = supernatural_ev1.15.a
         custom_tooltip = supernatural_ev1.15.a_tt
+        ai_chance = {
+        	base = 50
+        	modifier = { add = 20 has_trait = arrogant }
+        	modifier = { add = 15 has_trait = gregarious }
+        }
 
         root = {
             add_prestige = minor_prestige_gain
@@ -1241,6 +1281,12 @@ supernatural_ev1.15 = { # Tavern Gossip
     option = {
         name = supernatural_ev1.15.b
         custom_tooltip = supernatural_ev1.15.b_tt
+        ai_chance = {
+        	base = 50
+        	modifier = { add = 20 has_trait = humble }
+        	modifier = { add = 15 has_trait = zealous }
+        	modifier = { add = 10 has_trait = compassionate }
+        }
 
         root = {
             add_piety = minor_piety_gain
@@ -1250,6 +1296,13 @@ supernatural_ev1.15 = { # Tavern Gossip
     option = {
         name = supernatural_ev1.15.c
         custom_tooltip = supernatural_ev1.15.c_tt
+        ai_chance = {
+        	base = 50
+        	modifier = { add = 25 has_trait = sadistic }
+        	modifier = { add = 20 has_trait = callous }
+        	modifier = { add = 15 has_trait = arrogant }
+        	modifier = { add = -20 has_trait = compassionate }
+        }
         trigger = {
             OR = {
                 has_trait = spn_known_vampire
@@ -1293,6 +1346,7 @@ supernatural_ev1.16 = { # Hidden Passage in the Cellar
     option = { # Keep the passage to yourself
         name = supernatural_ev1.16.a
         custom_tooltip = supernatural_ev1.16.a_tt
+        vf_feeding_chance_change_effect = { VALUE = 10 }
 
         add_trait_xp = {
             trait = supernatural_vampire
@@ -1319,12 +1373,13 @@ supernatural_ev1.16 = { # Hidden Passage in the Cellar
 	option = { # Share the passage with the guests
 		name = supernatural_ev1.16.b
 		custom_tooltip = supernatural_ev1.16.b_tt
+		vf_feeding_chance_change_effect = { VALUE = 5 }
 
 		trigger = {
 			scope:activity = {
 				any_attending_character = {
 					count > 1
-					NOT = { this = scope:root }
+					NOT = { this = root }
 				}
 			}
 		}
@@ -1565,9 +1620,16 @@ supernatural_ev1.20 = { #Whispers In The Dark
     option = { # Focus and listen carefully.
         name = supernatural_ev1.20.a
         custom_tooltip = supernatural_ev1.20.a_tt
+        ai_chance = {
+        	base = 50
+        	modifier = { add = 20 has_trait = diligent }
+        	modifier = { add = 15 has_trait = paranoid }
+        	modifier = { add = 10 has_trait = shrewd }
+        }
         random_list = {
             50 = { # Success: Gain information
                 custom_tooltip = supernatural_ev1.20.a_success_tt
+                vf_feeding_chance_change_effect = { VALUE = 8 }
 				stress_impact = {
 					base = minor_stress_impact_loss #-15
 				}
@@ -1592,6 +1654,13 @@ supernatural_ev1.20 = { #Whispers In The Dark
     option = { # Ignore them and move on.
         name = supernatural_ev1.20.b
         custom_tooltip = supernatural_ev1.20.b_tt
+        ai_chance = {
+        	base = 30
+        	modifier = { add = 25 has_trait = lazy }
+        	modifier = { add = 15 has_trait = content }
+        	modifier = { add = -15 has_trait = paranoid }
+        }
+        vf_feeding_chance_change_effect = { VALUE = -5 }
 		stress_impact = {
 			base = 25 #-15
 		}
@@ -1621,6 +1690,13 @@ supernatural_ev1.21 = { # Wary Citizens
     option = { # Use your instincts and follow quietly.
         name = supernatural_ev1.21.a
         custom_tooltip = supernatural_ev1.21.a_tt
+        ai_chance = {
+        	base = 50
+        	modifier = { add = 15 has_trait = diligent }
+        	modifier = { add = 15 has_trait = paranoid }
+        	modifier = { add = 10 has_trait = patient }
+        }
+        vf_feeding_chance_change_effect = { VALUE = 5 }
 
         root = {
             add_character_flag = vf_instinct_used
@@ -1631,6 +1707,11 @@ supernatural_ev1.21 = { # Wary Citizens
     option = { # Use your knowledge of the surroundings.
         name = supernatural_ev1.21.b
         custom_tooltip = supernatural_ev1.21.b_tt
+        ai_chance = {
+        	base = 50
+        	modifier = { add = 20 has_trait = shrewd }
+        	modifier = { add = 15 has_trait = diligent }
+        }
 		trigger = {
 			scope:activity = {
 				has_activity_option = { category = options_preparations option = preparations_option_scout }
@@ -1639,6 +1720,7 @@ supernatural_ev1.21 = { # Wary Citizens
 
         root = {
             add_character_flag = vf_scouted_location
+            vf_feeding_chance_change_effect = { VALUE = 10 }
         }
 
     }
@@ -1646,6 +1728,12 @@ supernatural_ev1.21 = { # Wary Citizens
     option = { # Good thing your trap is setup ahead.
         name = supernatural_ev1.21.c
         custom_tooltip = supernatural_ev1.21.c_tt
+        ai_chance = {
+        	base = 50
+        	modifier = { add = 20 has_trait = shrewd }
+        	modifier = { add = 15 has_trait = deceitful }
+        	modifier = { add = 10 has_trait = sadistic }
+        }
 		trigger = {
 			root = {
 				has_character_flag = vf_laid_trap
@@ -1656,6 +1744,13 @@ supernatural_ev1.21 = { # Wary Citizens
     option = { # No creatures out here tonight friend, just rats.
         name = supernatural_ev1.21.d
         custom_tooltip = supernatural_ev1.21.d_tt
+        ai_chance = {
+        	base = 50
+        	modifier = { add = 20 has_trait = arrogant }
+        	modifier = { add = 15 has_trait = brave }
+        	modifier = { add = 10 has_trait = gregarious }
+        }
+        vf_feeding_chance_change_effect = { VALUE = 5 }
         trigger = { 
 			has_trait = supernatural_hybrid
 		}
@@ -1698,6 +1793,7 @@ supernatural_ev1.22 = { # Whispers of Danger
 			}
 		}
         custom_tooltip = supernatural_ev1.22.a_tt
+        vf_feeding_chance_change_effect = { VALUE = 8 }
 
         root = {
 			if = {
@@ -1706,7 +1802,7 @@ supernatural_ev1.22 = { # Whispers of Danger
 				}
 				add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 5 15 } }
 			}
-			else = {
+			else_if = {
 				limit = {
 					has_trait = supernatural_hybrid
 				}
@@ -1730,6 +1826,7 @@ supernatural_ev1.22 = { # Whispers of Danger
 			}
 		}
         custom_tooltip = supernatural_ev1.22.b_tt
+        vf_feeding_chance_change_effect = { VALUE = 8 }
         root = {
 			if = {
 				limit = {
@@ -1741,7 +1838,7 @@ supernatural_ev1.22 = { # Whispers of Danger
 					value = { 1 5 } 
 				}
 			}
-			else = {
+			else_if = {
 				limit = {
 					has_trait = supernatural_hybrid
 				}
@@ -1769,6 +1866,7 @@ supernatural_ev1.22 = { # Whispers of Danger
 			}
 		}
         custom_tooltip = supernatural_ev1.22.c_tt
+        vf_feeding_chance_change_effect = { VALUE = 8 }
 
         root = {
 			if = {
@@ -1777,7 +1875,7 @@ supernatural_ev1.22 = { # Whispers of Danger
 				}
 				add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 5 15 } }
 			}
-			else = {
+			else_if = {
 				limit = {
 					has_trait = supernatural_hybrid
 				}
@@ -1799,235 +1897,330 @@ supernatural_ev1.22 = { # Whispers of Danger
 			}
 		}
         custom_tooltip = supernatural_ev1.22.d_tt
+        vf_feeding_chance_change_effect = { VALUE = 8 }
 
         root = {
             add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 5 15 } }
         }
 
+		ai_chance = {
+			base = 70
+			modifier = { add = 15 has_trait = brave }
+			modifier = { add = -10 has_trait = craven }
+		}
     }
 }
 
 supernatural_ev1.23 = { # The Crimson Decision
-    type = activity_event
-    title = supernatural_ev1.23.title
-    desc = supernatural_ev1.23.desc
-    theme = intrigue
-    override_background = { reference = alley_night }
+	type = activity_event
+	title = supernatural_ev1.23.title
+	desc = {
+		triggered_desc = { trigger = { has_character_flag = vf_feeding_botched } desc = supernatural_ev1.23.desc_botched }
+		desc = supernatural_ev1.23.desc
+	}
+	theme = intrigue
+	override_background = { reference = alley_night }
 
-    right_portrait = {
-        character = scope:vf_human
-        animation = terrified
-    }
-    center_portrait = {
-        character = root
-        animation = sinister
-    }
+	right_portrait = { character = scope:vf_human animation = terrified }
+	center_portrait = { character = root animation = sinister }
 
-    immediate = {
-        random_courtier = {
-            limit = { has_character_flag = vf_human }
-            save_scope_as = vf_human
-        }
-    }
-
-    option = { # Drain them completely, savoring every drop.
-        name = supernatural_ev1.23.a
-        custom_tooltip = supernatural_ev1.23.a_tt
-
-        root = {
-			if = {
-				limit = {
-					has_trait = supernatural_vampire
-				}
-				add_trait_xp = {
-					trait = supernatural_vampire
-					track = vampirism
-					value = { 20 30 } 
-				}
-			}
-			else = {
-				limit = {
-					has_trait = supernatural_hybrid
-				}
-				add_trait_xp = {
-					trait = supernatural_hybrid
-					track = hybrid_vampirism
-					value = { 20 30 } 
-				}
-			}
-            add_stress = major_stress_impact_gain
-        }
-		scope:vf_human = {
-			death = {
-				death_reason = spn_death_drained
-				killer = root
-			}
+	immediate = {
+		random_courtier_or_guest = {
+			limit = { is_adult = yes NOT = { has_trait = supernatural_vampire } NOT = { has_trait = supernatural_hybrid } }
+			save_scope_as = vf_human
 		}
-    }
-
-    option = { # Take just enough to satiate your hunger.
-        name = supernatural_ev1.23.b
-        custom_tooltip = supernatural_ev1.23.b_tt
-
-        root = {
-			if = {
-				limit = {
-					has_trait = supernatural_vampire
-				}
-				add_trait_xp = {
-					trait = supernatural_vampire
-					track = vampirism
-					value = 10 
-				}
-			}
-			else = {
-				limit = {
-					has_trait = supernatural_hybrid
-				}
-				add_trait_xp = {
-					trait = supernatural_hybrid
-					track = hybrid_vampirism
-					value = 10
-				}
-			}
-            stress_impact = {
-				base = minor_stress_impact_loss
-			}
-        }
-		scope:vf_human = {
-			add_character_modifier = {
-				modifier = vf_recently_fed_on_modifier
-				years = 3
-			}
+		# Fallback: a camp-based feeder may have no valid courtier/guest; create a local victim.
+		if = {
+			limit = { NOT = { exists = scope:vf_human } }
+			create_character = { location = root.location culture = root.culture faith = root.faith gender_female_chance = 50 save_scope_as = vf_human }
 		}
 
-    }
-
-    option = { # Take a small taste and step back.
-        name = supernatural_ev1.23.c
-        custom_tooltip = supernatural_ev1.23.c_tt
-
-        root = {
-            add_piety = { 10 20 }
-            add_stress = minor_stress_impact_loss
-			if = {
-				limit = {
-					has_trait = supernatural_vampire
-				}
-				add_trait_xp = {
-					trait = supernatural_vampire
-					track = vampirism
-					value = { 2 6 } 
-				}
-			}
-			else = {
-				limit = {
-					has_trait = supernatural_hybrid
-				}
-				add_trait_xp = {
-					trait = supernatural_hybrid
-					track = hybrid_vampirism
-					value = { 2 6 }
-				}
-			}
-        }
-		scope:vf_human = {
-			add_character_modifier = {
-				modifier = vf_recently_fed_on_modifier
-				years = 3
-			}
+		# --- P2: ensure the success-chance var exists, then roll clean vs botched off the live bar ---
+		if = { limit = { exists = scope:activity scope:activity = { NOT = { has_variable = vampire_feeding_success_chance } } } scope:activity = { set_variable = { name = vampire_feeding_success_chance value = vf_feeding_success_chance } } }
+		random = {
+			chance = { value = scope:activity.var:vampire_feeding_success_chance }
+			add_character_flag = { flag = vf_feeding_clean days = 14 }
 		}
+		if = { limit = { NOT = { has_character_flag = vf_feeding_clean } } add_character_flag = { flag = vf_feeding_botched days = 14 } }
+		# A successful feed leaves the city more downtrodden (lore: vampires keep development low; hunters push it back up).
+		if = { limit = { has_character_flag = vf_feeding_clean } add_prestige = 25 scope:activity ?= { activity_location.county ?= { change_development_level = -3 change_county_control = -3 } } }
+	}
 
-    }
-
-    option = { # Use the hidden escape route.
-        name = supernatural_ev1.23.d
-        trigger = { has_character_flag = vf_escape_route_known }
-        custom_tooltip = supernatural_ev1.23.d_tt
-
-        root = {
-            add_trait_xp = {
-				trait = supernatural_vampire
-				track = vampirism
-				value = 5 
-			}
-        }
-
-    }
-
-    option = { # Feed and then loot them.
-        name = supernatural_ev1.23.e
-        trigger = {
-            scope:activity = { has_activity_option = { category = options_spoils option = spoils_option_robbing } }
-        }
-        custom_tooltip = supernatural_ev1.23.e_tt
-
-        root = {
-            add_gold = { 20 125 }
-			if = {
-				limit = {
-					has_trait = supernatural_vampire
-				}
-				add_trait_xp = {
-					trait = supernatural_vampire
-					track = vampirism
-					value = { 4 8 } 
-				}
-			}
-			else = {
-				limit = {
-					has_trait = supernatural_hybrid
-				}
-				add_trait_xp = {
-					trait = supernatural_hybrid
-					track = hybrid_vampirism
-					value = { 4 8 }
-				}
-			}
-        }
-		scope:vf_human = {
-			add_character_modifier = {
-				modifier = vf_recently_fed_on_modifier
-				years = 3
-			}
+	# ===== CLEAN FEED =====
+	option = { # Drain them completely, savoring every drop.
+		name = supernatural_ev1.23.a
+		trigger = { has_character_flag = vf_feeding_clean }
+		custom_tooltip = supernatural_ev1.23.a_tt
+		ai_chance = {
+			base = 25
+			modifier = { add = 40 has_trait = sadistic }
+			modifier = { add = 25 has_trait = callous }
+			modifier = { add = 20 has_trait = ambitious }
+			modifier = { add = 15 has_trait = wrathful }
+			modifier = { add = -45 has_trait = compassionate }
+			modifier = { add = -15 has_trait = craven }
 		}
-    }
-
-    option = { # A wealthy target yields more than just blood.
-        name = supernatural_ev1.23.f
-        trigger = {
-            scope:activity = { has_activity_option = { category = options_spoils option = spoils_option_casing } }
-        }
-        custom_tooltip = supernatural_ev1.23.f_tt
-
-        root = {
-            add_gold = { 50 250 }
-			if = {
-				limit = {
-					has_trait = supernatural_vampire
-				}
-				add_trait_xp = {
-					trait = supernatural_vampire
-					track = vampirism
-					value = { 4 8 }
-				}
-			}
-			else = {
-				limit = {
-					has_trait = supernatural_hybrid
-				}
-				add_trait_xp = {
-					trait = supernatural_hybrid
-					track = hybrid_vampirism
-					value = { 4 8 }
-				}
-			}
-        }
-		scope:vf_human = {
-			add_character_modifier = {
-				modifier = vf_recently_fed_on_modifier
-				years = 3
-			}
+		root = {
+			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 15 22 } } }
+			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 15 22 } } }
+			add_stress = major_stress_impact_gain
 		}
-    }
+		scope:vf_human = { death = { death_reason = spn_death_drained killer = root } }
+	}
+
+	option = { # Take just enough to satiate your hunger.
+		name = supernatural_ev1.23.b
+		trigger = { has_character_flag = vf_feeding_clean }
+		custom_tooltip = supernatural_ev1.23.b_tt
+		ai_chance = {
+			base = 50
+			modifier = { add = 20 has_trait = temperate }
+			modifier = { add = 10 has_trait = compassionate }
+			modifier = { add = -10 has_trait = gluttonous }
+		}
+		root = {
+			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = 10 } }
+			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = 10 } }
+			stress_impact = { base = minor_stress_impact_loss }
+		}
+		scope:vf_human = { add_character_modifier = { modifier = vf_recently_fed_on_modifier years = 3 } }
+	}
+
+	option = { # Take a small taste and step back.
+		name = supernatural_ev1.23.c
+		trigger = { has_character_flag = vf_feeding_clean }
+		custom_tooltip = supernatural_ev1.23.c_tt
+		ai_chance = {
+			base = 30
+			modifier = { add = 45 has_trait = compassionate }
+			modifier = { add = 20 has_trait = temperate }
+			modifier = { add = -35 has_trait = sadistic }
+			modifier = { add = -20 has_trait = callous }
+			modifier = { add = -15 has_trait = gluttonous }
+		}
+		root = {
+			add_piety = { 10 20 }
+			add_stress = minor_stress_impact_loss
+			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 2 6 } } }
+			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 2 6 } } }
+		}
+		scope:vf_human = { add_character_modifier = { modifier = vf_recently_fed_on_modifier years = 3 } }
+	}
+
+	option = { # Use the hidden escape route.
+		name = supernatural_ev1.23.d
+		trigger = { has_character_flag = vf_feeding_clean has_character_flag = vf_escape_route_known }
+		custom_tooltip = supernatural_ev1.23.d_tt
+		ai_chance = {
+			base = 20
+			modifier = { add = 30 has_trait = paranoid }
+			modifier = { add = 25 has_trait = craven }
+			modifier = { add = -10 has_trait = brave }
+		}
+		root = {
+			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = 5 } }
+			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = 5 } }
+		}
+	}
+
+	option = { # Feed and then loot them.
+		name = supernatural_ev1.23.e
+		trigger = { has_character_flag = vf_feeding_clean scope:activity = { has_activity_option = { category = options_spoils option = spoils_option_robbing } } }
+		custom_tooltip = supernatural_ev1.23.e_tt
+		ai_chance = {
+			base = 30
+			modifier = { add = 45 has_trait = greedy }
+			modifier = { add = 15 has_trait = ambitious }
+			modifier = { add = -25 has_trait = generous }
+		}
+		root = {
+			add_gold = { 20 125 }
+			if = { limit = { exists = scope:activity scope:activity.activity_location = { exists = county } } add_gold = { value = scope:activity.activity_location.county.development_level multiply = 2 } }
+			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 4 8 } } }
+			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 4 8 } } }
+		}
+		scope:vf_human = { add_character_modifier = { modifier = vf_recently_fed_on_modifier years = 3 } }
+	}
+
+	option = { # A wealthy target yields more than just blood.
+		name = supernatural_ev1.23.f
+		trigger = { has_character_flag = vf_feeding_clean scope:activity = { has_activity_option = { category = options_spoils option = spoils_option_casing } } }
+		custom_tooltip = supernatural_ev1.23.f_tt
+		ai_chance = {
+			base = 30
+			modifier = { add = 50 has_trait = greedy }
+			modifier = { add = 20 has_trait = ambitious }
+			modifier = { add = -30 has_trait = generous }
+			modifier = { add = -10 has_trait = content }
+		}
+		root = {
+			add_gold = { 50 250 }
+			if = { limit = { exists = scope:activity scope:activity.activity_location = { exists = county } } add_gold = { value = scope:activity.activity_location.county.development_level multiply = 4 } }
+			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 4 8 } } }
+			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 4 8 } } }
+		}
+		scope:vf_human = { add_character_modifier = { modifier = vf_recently_fed_on_modifier years = 3 } }
+	}
+
+	# ===== BOTCHED FEED (P2-C: Silence / Flee / Compel) =====
+	option = { # Silence the witness.
+		name = supernatural_ev1.23.botched_silence
+		trigger = { has_character_flag = vf_feeding_botched }
+		custom_tooltip = supernatural_ev1.23.botched_silence_tt
+		stress_impact = { base = medium_stress_impact_gain sadistic = minor_stress_impact_loss callous = minor_stress_impact_gain compassionate = major_stress_impact_gain just = medium_stress_impact_gain }
+		scope:vf_human = { death = { death_reason = death_murder killer = root } }
+		root = { add_dread = { 5 12 } vf_local_hunter_notices_effect = yes }
+		ai_chance = { base = 35 modifier = { add = 30 has_trait = callous } modifier = { add = 30 has_trait = sadistic } modifier = { add = -25 has_trait = compassionate } }
+	}
+	option = { # Flee into the night.
+		name = supernatural_ev1.23.botched_flee
+		trigger = { has_character_flag = vf_feeding_botched }
+		custom_tooltip = supernatural_ev1.23.botched_flee_tt
+		stress_impact = { base = minor_stress_impact_gain }
+		root = {
+			if = { limit = { has_trait = supernatural_vampire NOT = { has_trait = spn_known_vampire } } random = { chance = 70 spn_give_vampire_secret_or_trait_effect = yes } }
+			else_if = { limit = { has_trait = supernatural_hybrid NOT = { has_trait = spn_known_hybrid } } random = { chance = 70 spn_give_hybrid_secret_or_trait_effect = yes } }
+			vf_local_hunter_notices_effect = yes
+		}
+		ai_chance = { base = 35 modifier = { add = 25 has_trait = craven } }
+	}
+	option = { # Compel them to forget.
+		name = supernatural_ev1.23.botched_compel
+		trigger = { has_character_flag = vf_feeding_botched }
+		custom_tooltip = supernatural_ev1.23.botched_compel_tt
+		root = {
+			add_stress = minor_stress_impact_gain
+			random = {
+				chance = { value = 45 if = { limit = { has_perk = compulsion_perk } add = 35 } if = { limit = { OR = { has_trait_xp = { trait = supernatural_vampire track = vampirism value > 40 } has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 40 } } } add = 15 } if = { limit = { OR = { has_trait_xp = { trait = supernatural_vampire track = vampirism value > 70 } has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 70 } } } add = 10 } min = 5 max = 95 }
+				add_character_flag = { flag = vf_compelled_clean days = 2 }
+			}
+			if = {
+				limit = { NOT = { has_character_flag = vf_compelled_clean } }
+				add_stress = minor_stress_impact_gain
+				if = { limit = { has_trait = supernatural_vampire NOT = { has_trait = spn_known_vampire } } random = { chance = 60 spn_give_vampire_secret_or_trait_effect = yes } }
+				else_if = { limit = { has_trait = supernatural_hybrid NOT = { has_trait = spn_known_hybrid } } random = { chance = 60 spn_give_hybrid_secret_or_trait_effect = yes } }
+				vf_local_hunter_notices_effect = yes
+			}
+			remove_character_flag = vf_compelled_clean
+		}
+		ai_chance = { base = 45 modifier = { add = 35 has_perk = compulsion_perk } }
+	}
 }
+
+
+supernatural_ev1.24 = { # Reveling in the Night - Embrace the Night Intent
+	type = activity_event
+	title = supernatural_ev1.24.title
+	desc = supernatural_ev1.24.desc
+	theme = intrigue
+	override_background = { reference = tavern }
+
+	center_portrait = { character = root animation = ecstasy }
+
+	trigger = {
+		is_alive = yes
+		has_activity_intent = embrace_the_night_intent
+	}
+
+	option = { # Lose yourself in the revelry.
+		name = supernatural_ev1.24.a
+		custom_tooltip = supernatural_ev1.24.a_tt
+		root = {
+			add_prestige = medium_prestige_gain
+			stress_impact = { base = minor_stress_impact_loss arrogant = -10 temperate = minor_stress_impact_gain }
+			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 2 6 } } }
+			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 2 6 } } }
+		}
+		ai_chance = { base = 60 modifier = { add = 20 has_trait = arrogant } modifier = { add = 20 has_trait = gregarious } }
+	}
+
+	option = { # Indulge, but keep your wits about you.
+		name = supernatural_ev1.24.b
+		custom_tooltip = supernatural_ev1.24.b_tt
+		root = {
+			add_prestige = minor_prestige_gain
+			stress_impact = { base = minor_stress_impact_loss paranoid = minor_stress_impact_loss }
+		}
+		ai_chance = { base = 40 modifier = { add = 25 has_trait = paranoid } modifier = { add = 15 has_trait = shy } }
+	}
+}
+
+# ========================= NEW PULSE EVENTS (Bleeding House / Drunk's Ramblings) =========================
+supernatural_ev1.25 = { # The Bleeding House
+	type = activity_event
+	title = supernatural_ev1.25.title
+	desc = supernatural_ev1.25.desc
+	theme = intrigue
+	override_background = { reference = alley_night }
+
+	left_portrait = { character = scope:vf_physician animation = personality_rational }
+	center_portrait = { character = root animation = sinister }
+
+	cooldown = { years = 1 }
+
+	immediate = {
+		hidden_effect = {
+			create_character = { location = root.location culture = root.culture faith = root.faith gender_female_chance = 30 save_scope_as = vf_physician }
+		}
+	}
+
+	option = { # Drink from the bowls - no victim, no trace.
+		name = supernatural_ev1.25.a
+		custom_tooltip = supernatural_ev1.25.a_tt
+		vf_feeding_chance_change_effect = { VALUE = 8 }
+		root = {
+			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 4 8 } } }
+			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 4 8 } } }
+			stress_impact = { base = minor_stress_impact_loss }
+		}
+		ai_chance = { base = 60 }
+	}
+
+	option = { # Feed on a sedated patient.
+		name = supernatural_ev1.25.b
+		custom_tooltip = supernatural_ev1.25.b_tt
+		root = {
+			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 8 14 } } }
+			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 8 14 } } }
+		}
+		ai_chance = { base = 40 modifier = { add = 20 has_trait = sadistic } }
+	}
+}
+
+supernatural_ev1.26 = { # The Drunk's Ramblings
+	type = activity_event
+	title = supernatural_ev1.26.title
+	desc = supernatural_ev1.26.desc
+	theme = intrigue
+	override_background = { reference = tavern }
+
+	right_portrait = { character = scope:vf_drunkard animation = toast_goblet }
+	center_portrait = { character = root animation = scheme }
+
+	cooldown = { years = 1 }
+
+	immediate = {
+		random_courtier = { limit = { is_adult = yes } save_scope_as = vf_drunkard }
+		if = { limit = { NOT = { exists = scope:vf_drunkard } } hidden_effect = { create_character = { location = root.location culture = root.culture faith = root.faith gender = male save_scope_as = vf_drunkard } } }
+	}
+
+	option = { # Compel him for what he knows.
+		name = supernatural_ev1.26.a
+		custom_tooltip = supernatural_ev1.26.a_tt
+		vf_feeding_chance_change_effect = { VALUE = 8 }
+		root = { add_intrigue_lifestyle_xp = { 50 150 } }
+		ai_chance = { base = 50 modifier = { add = 20 has_trait = shrewd } }
+	}
+
+	option = { # Drink, then let him stumble off.
+		name = supernatural_ev1.26.b
+		custom_tooltip = supernatural_ev1.26.b_tt
+		root = {
+			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 3 6 } } }
+			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 3 6 } } }
+		}
+		scope:vf_drunkard = { add_character_modifier = { modifier = vf_recently_fed_on_modifier years = 3 } }
+		ai_chance = { base = 50 }
+	}
+}
+

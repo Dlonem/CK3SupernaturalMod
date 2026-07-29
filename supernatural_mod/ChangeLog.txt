@@ -1,8 +1,173 @@
 Change_Log.txt
 
+Version 2.28 (06/24/2026)  [Quality-Control & Bug-Fix Pass]
+	NEW:
+		+ Custom Supernatural loading-screen tips now rotate in alongside the vanilla ones (Vampire, Werewolf, Hybrid, Hunter, Vampire Feeding, Sire/Progeny bonds, and the supernatural men-at-arms). Added as a separate file, so vanilla loading tips are left fully intact.
+		+ New "Vampire Feeding" game concept (a blue hover-link) explaining how a feeding works - including that a clean, undiscovered feeding quietly lowers the host county's Development and Control.
+
+	FIXES:
+		+ Vampire lifestyle perk tree: Master of Shadows and Vampire Nest could not be hovered or selected (they sat outside the tree's clickable area). Rebuilt the Vampirism tree as a symmetric, bottom-heavy "drop of blood" layout that stays within selectable bounds - all ten perks now work and the bottom-row labels no longer overlap.
+		+ Compulsion now notifies both sides: a successful compulsion and a resisted one each send a message to the vampire and the mortal (the events existed but were never fired). A compelled mortal now learns why they suddenly owe a hook or acted against themselves, and a mortal who resists realizes what you are.
+		+ Cleared a large block of faith-persecution load errors: the three overridden faith checks (shunned / criminal / negative-attitude) were rewritten from a flag-token pattern to direct trait comparison. No behavior change - witches, vampires, werewolves, hybrids and the usual vanilla traits are still shunned/criminal exactly as before - and this also fixes a latent case where exposing a known supernatural failed to remove piety.
+		+ Psychic Surgery spell no longer errors: two leftover references to the retired witch_hunter2 trait were swapped to supernatural_hunter (matching the established convention).
+		+ Court-position tooltip fixed: a reference to the removed witch_hunter2 trait was repointed to supernatural_hunter so it no longer fails to display.
+		+ Corrected the error-suppression event: it was manufacturing several of its own "variable used but never set" warnings (referencing traits as if they were variables) and had lost its required UTF-8-BOM encoding; cleaned up, re-encoded, and the Mikaelson flag plus werewolf-bite scaffolding values are now properly accounted for.
+
+	NOTES:
+		+ Remaining load-log entries are vanilla/DLC (e.g. the countermeasure_parameter scheme trigger) or belong to the Witchcraft addon (no_soul, mage_defeated_list, special_magic_guardian, MC_FUNDS_DESC) - none are core Supernatural.
+		+ Still on the list for a later pass: latent witch_hunter2 references in the non-English localizations + a court-position desc; and a closer playtest of the "known vampire" faith reactions.
+
+Version 2.27 (06/19/2026)  [Werewolf Turning Overhaul - Phase 2]
+	CHANGES:
+		+ Reworked the werewolf turning around a claw-wound theme (reserving "bite" for vampires down the road): the interactions are now Offer Gift / Force Gift / Ask for the Gift, and the affliction is the Infected Wound trait. The lineage relation reads "Clawed By".
+		+ New incubation event "A Crisis of Faith": a one-shot reckoning with your faith over what you are becoming, with branching paths for the zealous, the cynical, the devout, and the learned (piety, stress, and infection consequences that feed the yield/resist spine)
+		+ "The One Who Clawed You" gains a third path - take the sire's help now and settle the debt later (a forced turning can sour into rivalry even as they guide you through it)
+		+ "The Wound Worsens" gains a Learned/Physician path to treat the rot yourself, with better odds than a desperate fight
+		+ Expanded the role-play text in several incubation event descriptions (the festering wound, the healer's vigil, and more)
+
+	BALANCING:
+		+ Offer Gift acceptance reworked to feel personal rather than transactional: lower base, and a layered, organic set of reasons - boldness, ambition, a death already at the door (illness/grievous wounds), despair, devotion, dread, and faith - instead of a flat "do I like you" check. Rank and politics deliberately play no part.
+		+ Offer Gift is now moderately harder to land: the bold, the ambitious, the dying, and those who love or fear you still accept; idle, content, or craven strangers will not
+		+ Acceptance breakdowns now show the numeric value of every reason, not just the text
+		+ Ask for the Gift acceptance rebuilt around what actually moves a werewolf to spread the curse (kinship, trust, faith, pity for the dying, ambition for a pack), and stripped of the inherited vassalization logic (faith pluralism, culture group, illegitimacy) that never belonged here
+		+ Force Gift can now be used on neighbouring rulers (your realm + the realms bordering it), not only those already in your court or grasp
+		+ Voluntary turnings now begin the infection at a randomized 5-15 (was a flat 10); the wound's passive worsening is a steady +3 per tick
+		+ The Infected Wound trait now disables combat leadership while it festers
+
+	FIXES:
+		+ Fixed an invalid trigger (is_liege_of) and a misplaced disables_combat_leadership token in the wound trait that were throwing errors on load
+
+	NEW (modding hooks):
+		+ Added the 'spn_event_bonus_to_gift_accept' character modifier - a ready hook for future "temptation"/sway events to prime a character toward accepting the Gift (read by Offer Gift acceptance, +25)
+		+ Added the 'spn_desperate_for_a_cure_trigger' scripted trigger (illness / grievous wounds / wasting conditions), shared by the gift interactions
+
+	NOTES:
+		+ A lover/spouse "you seem different" post-turn event is planned for the next phase
+
+Version 2.26b (06/11/2026)  [Vampire Feeding Overhaul - Phase 1]
+	CHANGES:
+		+ Embrace the Night intent now has its own feeding event ('Reveling in the Night')
+		+ Feeding option and intent tooltips rewritten for clarity (Stress, Vampirism, and Prestige are now linked)
+
+	BALANCING:
+		+ Tuned Vampire Feeding trait XP so a single feeding no longer over-rewards (drain-kill and completion XP trimmed)
+		+ Fixed backwards Spoils AI: greedy/avaricious/deceitful lean toward robbing and wealthy targets; generous/just/compassionate/zealous prefer sparing the dead
+
+	FIXES:
+		+ Removed a duplicate default on the Spoils options
+		+ Hybrids now correctly gain XP from the hidden-escape feeding option
+		+ Fixed 15 malformed else/limit conditionals in the feeding events
+		+ Fixed a feeding crash for landless/camp feeders with no valid victim (a local target is now created)
+		+ Fixed a missing closing quote and a broken concept link in the feeding localization
+		+ Removed tooltips that promised a 'Feeding Success Chance' that was never implemented (planned for a future update)
+
+Version 2.26a (06/11/2026)  [Hotfix]
+	FIXES:
+		+ Vampires, Werewolves and Hybrids are no longer instantly "Known" the moment they turn; your nature now starts as a hidden Secret that must be exposed (applies whether your faith accepts the type or not)
+		+ Vampire Feeding can now be hosted in any city you travel to, including as a Landless Adventurer (previously required owning or standing on a city)
+		+ Vampires and Hybrids now regenerate from the Disfigured trait (Werewolves intentionally excluded; does not apply to vampire-blood transfusions)
+
+	NOTES:
+		+ Version Info popup now re-triggers correctly on update; the gate variable was still version_2_25 so the 2.26 popup never re-showed for returning players. Bumped to version_2_26a.
+
+Supernatural – Witchcraft Addon (Update X.X) — Changelog
+New
+
+“Invoke the Bond” (Vampire ⇄ Progeny Interaction)
+Right-click your Progeny and Invoke the Bond to compel specific actions. Your Vampirism/Hybrid Vampirism XP fuels each order (cost varies by command). Stronger sire ⇒ more reliable outcomes.
+
+Examples: demand gold, call them into your war, claim titles, reveal secrets, convert faith, “join my court,” make them a lover, even catastrophic orders (very costly).
+
+Works for Vampires and Hybrids; ignores Demons (lore-friendly immunity).
+
+Clear tooltips explain requirements and XP costs. Options grey out when you lack juice.
+
+Astaroth Assassination – Supernatural Escapes
+During the Apocalypse chain, Vampires/Hybrids/Werewolves/Hunters now get themed escape options (with sensible XP or skill checks) to avoid the old “auto-death” feel. If you make it out, you’ll land in a clean follow-up scene instead of the execution path.
+
+Monster Hunter Template
+New Supernatural Monster Hunter template that can spawn via event/effect, complete with the proper Hunter secret/trait assignment on creation.
+
+Changed
+
+Interaction Category (UI Quality-of-Life)
+Repurposed the base-game Favorites interaction category into “Supernatural.”
+
+Favoriting a Supernatural interaction now helps surface it together under this label.
+
+(If you favorite an interaction, you may see it listed twice under Supernatural—by design of how favorites render.)
+
+Game Concepts & Tooltips
+Added/expanded Sire and Progeny concepts with concise, in-world descriptions so players instantly understand the bond and its influence. Also refreshed Vampire/Werewolf/Hybrid concepts for consistency.
+
+Balance
+
+Bond Costs Scale with Power
+Each order under Invoke the Bond consumes a small to major chunk of Vampirism/Hybrid-Vampirism XP (e.g., light nudges ~5–15, heavy domination up to very high). Costs and gating lean on your current track XP, not hooks, so playstyles that invest in vampiric growth feel tangibly stronger.
+
+Sire vs. Progeny Margin (Under the Hood)
+A compact scripted value compares sire power vs. progeny power for AI acceptance and subtle modifiers—keeps things flavorful without micro-math for players.
+
+Fixes & Polish
+
+Robust valid/invalid messaging for bond options (why you can’t use it, what you’re missing).
+
+Cleaned portraits/scenes in the escape follow-ups so Astaroth doesn’t “teleport” into your getaway.
+
+New opinion modifier for using the bond (for when things… strain the relationship).
+
+Version 2.21 (06/29/2025)
+	CHANGES:
+		+ 
+		+ 
+		+ 
+		+ 
+		+ 
+		
+	BALANCING:
+		+ 
+
+	FIXES:
+		+ 
+
+	NOTES:
+		+ Pilgrammage Event to "Repent" the Known Secret of Vampirism, Lycanthropy, Hybridism (bug)
+		+ Warlock is still considered a crime even though being a witch is legal or virtuous (bug)
+
+Version 2.20a (04/04/2025)
+	CHANGES:
+		+ Updated the graphics for Demon lifestyle and various icons related to
+
+	FIXES:
+		+ Fixed a game crash when taking on 'Secret Mission' for Secret Seekers Landless Adventurers
+
+	NOTES:
+		+ Pilgrammage Event to "Repent" the Known Secret of Vampirism, Lycanthropy, Hybridism (bug)
+		+ Warlock is still considered a crime even though being a witch is legal or virtuous (bug)
+
+Version 2.20 (04/03/2025)
+	CHANGES:
+		+ Added an additional Trait Track XP milestone for each Supernatural
+		+ All Vampire related Prowess no longer influences portrait muscles (Werewolves still do)
+		+ Added an effect to Offer Blood that heals most wounds and some illness
+		+ Added a 'Latest Progeny' part to Vampires & Hybrids trait so you can see their Progeny (only the latest)
+		+ Added huge Witchcraft changes to the game
+		
+	BALANCING:
+		+ Rebalanced the Supernaturals (Prowess Max.. Hybrid:+65, Vampire:+55, Werewolf:+50)
+
+	FIXES:
+		+ Fixed some incorrect Hybrid localization
+
+	NOTES:
+		+ Pilgrammage Event to "Repent" the Known Secret of Vampirism, Lycanthropy, Hybridism (bug)
+		+ Warlock is still considered a crime even though being a witch is legal or virtuous (bug)
+
+
 Version 2.19 (12/22/2024)
 	CHANGES:
 		+ Added two new traits (for the end of lifestyle perks)
+		+ Added Vampire Feeding Activity
 		+ Changed the Source trait icon for the varying track level tiers
 		+ Changed the Baba Yaga trait icon
 		+ Removed the additional trait tracks from Vampire + Werewolf (one day they may return)

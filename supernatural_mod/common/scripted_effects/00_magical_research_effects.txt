@@ -1,0 +1,2244 @@
+﻿gain_magical_research_progress_effect = {
+	if = {
+		limit = { scope:activity = { exists = var:activity_special_type_progression } }
+		if = {
+			limit = {
+				$P$ = 1
+			}
+			custom_tooltip = gain_magical_research_progress_1_txt
+		}
+		else_if = {
+			limit = {
+				$P$ = 2
+			}
+			custom_tooltip = gain_magical_research_progress_2_txt
+		}
+		else_if = {
+			limit = {
+				$P$ = 3
+			}
+			custom_tooltip = gain_magical_research_progress_3_txt
+		}
+		else_if = {
+			limit = {
+				$P$ = 5
+			}
+			custom_tooltip = gain_magical_research_progress_5_txt
+		}
+		else_if = {
+			limit = {
+				$P$ = 7
+			}
+			custom_tooltip = gain_magical_research_progress_7_txt
+		}
+		else_if = {
+			limit = {
+				$P$ = 10
+			}
+			custom_tooltip = gain_magical_research_progress_10_txt
+		}
+		else_if = {
+			limit = {
+				$P$ = 15
+			}
+			custom_tooltip = gain_magical_research_progress_15_txt
+		}
+		else_if = {
+			limit = {
+				$P$ = 20
+			}
+			custom_tooltip = gain_magical_research_progress_20_txt
+		}
+		else_if = {
+			limit = {
+				$P$ = 100
+			}
+			custom_tooltip = gain_magical_research_progress_100_txt
+		}
+		else_if = {
+			limit = {
+				$P$ = 0
+			}
+			custom_tooltip = gain_magical_research_progress_0_txt
+		}
+		hidden_effect = {
+			scope:activity = {
+				change_variable = {
+					name = activity_special_type_progression
+					add = $P$
+				}
+			}
+		}
+	}
+}
+mr_save_as_potential_assistant_effect = {
+	if = {
+		limit = {
+			exists = this
+			is_alive = yes
+		}
+		if = {
+			limit = {
+				NOT = {
+					exists = scope:assistant
+				}
+			}
+			save_scope_as = assistant
+		}
+		else_if = {
+			limit = {
+				NOR = {
+					exists = scope:assistant2
+					this = scope:assistant
+				}
+			}
+			save_scope_as = assistant2
+		}
+		else_if = {
+			limit = {
+				NOR = {
+					exists = scope:assistant3
+					this = scope:assistant
+					this = scope:assistant2
+				}
+			}
+			save_scope_as = assistant3
+		}
+	}
+}
+mr_give_reward_for_assistant_effect = {
+	hidden_effect = {
+		if = {
+			limit = {
+				ROOT = {
+					any_secret = { type = secret_witch NOT = { is_known_by = PREV } }
+				}
+			}
+			ROOT = {
+				random_secret = {
+					limit = {
+						secret_type = secret_witch
+					}
+					reveal_to = PREV
+				}
+			}
+		}
+		if = {
+			limit = {
+				has_character_modifier = mr_magic_assistant_modifier
+			}
+			remove_character_modifier = mr_magic_assistant_modifier
+		}
+		send_interface_toast = {
+			title = magical_research
+			left_icon = THIS
+			right_icon = ROOT
+			show_as_tooltip = {
+				add_character_modifier = {
+					modifier = mr_magic_assistant_modifier
+					years = 20
+				}
+			}
+		}
+		save_temporary_scope_as = my_assistant
+		ROOT = {
+			set_variable = {
+				name = mr_assistant
+				value = scope:my_assistant
+			}
+		}
+	}
+	if = {
+		limit = {
+			is_true_mage = yes
+			has_trait_xp = {
+				trait = archmage
+				track = secret_knowledge
+				value < 100
+			}
+		}
+		gain_sc_xp2_effect = yes
+	}
+	else = {
+		add_learning_skill = 1
+	}
+	
+	add_character_modifier = {
+		modifier = mr_magic_assistant_modifier
+		years = 20
+	}
+	add_opinion = {
+		target = ROOT
+		modifier = grateful_opinion
+		opinion = 20
+	}
+	if = {
+		limit = {
+			is_true_mage = yes
+			has_trait_xp = {
+				trait = archmage
+				track = secret_knowledge
+				value > 74
+			}
+		}
+		ROOT = {
+			gain_magical_research_progress_effect = { P = 5 }
+		}
+	}
+	else_if = {
+		limit = {
+			is_true_mage = yes
+			has_trait_xp = {
+				trait = archmage
+				track = secret_knowledge
+				value > 24
+			}
+		}
+		ROOT = {
+			gain_magical_research_progress_effect = { P = 3 }
+		}
+	}
+	else_if = {
+		limit = {
+			is_true_mage = yes
+		}
+		ROOT = {
+			gain_magical_research_progress_effect = { P = 2 }
+		}
+	}
+	else_if = {
+		limit = {
+			OR = {
+				has_trait = true_witch
+				is_a_demon_trigger = yes
+				has_trait = scholar
+			}
+		}
+		ROOT = {
+			gain_magical_research_progress_effect = { P = 1 }
+		}
+	}
+	else = {
+		ROOT = {
+			gain_magical_research_progress_effect = { P = 0 }
+		}
+	}
+}
+select_mr_topic_effect = {
+	if = {
+		limit = {
+			has_activity_intent = general_research_intent
+		}
+		set_variable = {
+			name = drawn_option1
+			value = var:mr_i1o1
+		}
+		set_variable = {
+			name = drawn_option2
+			value = var:mr_i1o2
+		}
+		set_variable = {
+			name = drawn_option3
+			value = var:mr_i1o3
+		}
+		set_variable = {
+			name = drawn_option4
+			value = var:mr_i1o4
+		}
+	}
+	else_if = {
+		limit = {
+			has_activity_intent = life_extension_intent
+		}
+		set_variable = {
+			name = drawn_option1
+			value = var:mr_i2o1
+		}
+		set_variable = {
+			name = drawn_option2
+			value = var:mr_i2o2
+		}
+		set_variable = {
+			name = drawn_option3
+			value = var:mr_i2o3
+		}
+		set_variable = {
+			name = drawn_option4
+			value = var:mr_i2o4
+		}
+	}
+	else_if = {
+		limit = {
+			has_activity_intent = combat_magic_intent
+		}
+		set_variable = {
+			name = drawn_option1
+			value = var:mr_i3o1
+		}
+		set_variable = {
+			name = drawn_option2
+			value = var:mr_i3o2
+		}
+		set_variable = {
+			name = drawn_option3
+			value = var:mr_i3o3
+		}
+		set_variable = {
+			name = drawn_option4
+			value = var:mr_i3o4
+		}
+	}
+	else_if = {
+		limit = {
+			has_activity_intent = creation_magic_intent
+		}
+		set_variable = {
+			name = drawn_option1
+			value = var:mr_i4o1
+		}
+		set_variable = {
+			name = drawn_option2
+			value = var:mr_i4o2
+		}
+		set_variable = {
+			name = drawn_option3
+			value = var:mr_i4o3
+		}
+		set_variable = {
+			name = drawn_option4
+			value = var:mr_i4o4
+		}
+	}
+}
+get_mr_intents_topics_effect = {
+	get_general_research_intent_topics = yes
+	get_life_extension_intent_topics = yes
+	get_combat_magic_intent_topics = yes
+	get_creation_magic_intent_topics = yes
+}
+get_general_research_intent_topics = {
+	#save_scope_value_as = {
+	#	name = time_travel
+	#	value = event_id:magic_ev11.34
+	#}
+	#add_to_list = {
+	#	name = temp_list
+	#	value = scope:my_event
+	#}
+	#random_in_list = {
+	#	list = temp_list
+	#	ROOT = {
+	#		trigger_event = { saved_event_id = PREV }
+	#	}
+	#}
+	
+	#set_variable = {
+	#	name = mr_ev_var
+	#	value = flag:yes
+	#}
+	clear_variable_list ?= general_research_topics
+	if = {
+		limit = {
+			may_unlock_time_travel_sp_trigger = yes
+		}
+		add_to_variable_list = {
+			name = general_research_topics
+			target = flag:time_travel
+		}
+	}
+	if = {
+		limit = {
+			NOT = {
+				has_character_flag = mana_siphon_flag
+			}
+		}
+		add_to_variable_list = {
+			name = general_research_topics
+			target = flag:mana_siphon
+		}
+	}
+	if = {
+		limit = {
+			NOT = { has_character_modifier = mind_reader_modifier }
+		}
+		add_to_variable_list = {
+			name = general_research_topics
+			target = flag:mind_reader
+		}
+	}
+	
+	if = {
+		limit = {
+			has_character_modifier = mind_reader_modifier
+			NOT = { has_character_modifier = master_psionic_modifier }
+		}
+		add_to_variable_list = {
+			name = general_research_topics
+			target = flag:psionics
+		}
+	}
+
+	if = {
+		limit = {
+			NOT = { has_character_modifier = master_metamagic_modifier }
+		}
+		add_to_variable_list = {
+			name = general_research_topics
+			target = flag:metamagic
+		}
+	}
+
+	if = {
+		limit = {
+			NOT = { has_character_flag = blorg_flag }
+		}
+		add_to_variable_list = {
+			name = general_research_topics
+			target = flag:other_worlds
+		}
+	}
+
+	if = {
+		limit = {
+			NOT = {
+				has_character_modifier = master_necromancer_modifier
+				#has_trait = necromancer
+			}
+		}
+		add_to_variable_list = {
+			name = general_research_topics
+			target = flag:necromancy
+		}
+	}
+
+	if = {
+		limit = {
+			NOT = { has_character_modifier = mr_master_nature_modifier }
+		}
+		add_to_variable_list = {
+			name = general_research_topics
+			target = flag:nature
+		}
+	}
+
+	#if = {
+	#	limit = {
+	#		NOT = { has_character_flag = skeleton_warriors }
+	#	}
+	#	add_to_variable_list = {
+	#		name = general_research_topics
+	#		target = flag:skeletons
+	#	}
+	#}
+	
+	random_in_list = {
+		variable = general_research_topics
+		root = {
+			set_variable = {
+				name = mr_i1o1
+				value = PREV
+			}
+		}
+	}
+	random_in_list = {
+		variable = general_research_topics
+		limit = {
+			NOT = {
+				THIS = root.var:mr_i1o1
+			}
+		}
+		root = {
+			set_variable = {
+				name = mr_i1o2
+				value = PREV
+			}
+		}
+	}
+	random_in_list = {
+		variable = general_research_topics
+		limit = {
+			NOR = {
+				THIS = root.var:mr_i1o1
+				THIS = root.var:mr_i1o2
+			}
+		}
+		root = {
+			set_variable = {
+				name = mr_i1o3
+				value = PREV
+			}
+		}
+	}
+
+	set_variable = {
+		name = mr_i1o4
+		value = flag:ultimate_spell_boost
+	}
+}
+get_life_extension_intent_topics = {
+	clear_variable_list ?= life_extension_topics
+	if = {
+		limit = {
+			is_or_will_be_a_demon_trigger = no
+			NOT = {
+				has_trait = necromancer
+			}
+		}
+		add_to_variable_list = {
+			name = life_extension_topics
+			target = flag:ascendancy
+		}
+	}
+	if = {
+		limit = {
+			is_or_will_be_a_demon_trigger = no
+			NOT = {
+				has_trait = necromancer
+			}
+		}
+		add_to_variable_list = {
+			name = life_extension_topics
+			target = flag:lich
+		}
+	}
+	if = {
+		limit = {
+			NOT = {
+				has_character_flag = me_soul_project_done
+			}
+		}
+		add_to_variable_list = {
+			name = life_extension_topics
+			target = flag:soul_transfer
+		}
+	}
+	if = {
+		limit = {
+			is_cannibal_trigger = yes
+			NOT = {
+				has_character_modifier = mr_immortal_child_consumer_modifier
+			}
+		}
+		add_to_variable_list = {
+			name = life_extension_topics
+			target = flag:eternal_hunger
+		}
+	}
+	if = {
+		limit = {
+			NOT = {
+				has_character_modifier = upgraded_body_modifier
+			}
+		}
+		add_to_variable_list = {
+			name = life_extension_topics
+			target = flag:upgraded_body
+		}
+	}
+
+	random_in_list = {
+		variable = life_extension_topics
+		root = {
+			set_variable = {
+				name = mr_i2o1
+				value = PREV
+			}
+		}
+	}
+	random_in_list = {
+		variable = life_extension_topics
+		limit = {
+			NOT = {
+				THIS = root.var:mr_i2o1
+			}
+		}
+		root = {
+			set_variable = {
+				name = mr_i2o2
+				value = PREV
+			}
+		}
+	}
+	random_in_list = {
+		variable = life_extension_topics
+		limit = {
+			NOR = {
+				THIS = root.var:mr_i2o1
+				THIS = root.var:mr_i2o2
+			}
+		}
+		root = {
+			set_variable = {
+				name = mr_i2o3
+				value = PREV
+			}
+		}
+	}
+
+	set_variable = {
+		name = mr_i2o4
+		value = flag:slowed_aging
+	}
+}
+get_combat_magic_intent_topics = {
+	clear_variable_list ?= combat_magic_topics
+	if = {
+		limit = {
+			NOT = {
+				has_character_flag = me_custom_spell_project_done
+			}
+		}
+		add_to_variable_list = {
+			name = combat_magic_topics
+			target = flag:custom_spell
+		}
+	}
+	if = {
+		limit = {
+			NOT = {
+				has_character_flag = tornado_spell_flag
+			}
+		}
+		add_to_variable_list = {
+			name = combat_magic_topics
+			target = flag:tornado_spell
+		}
+	}
+	if = {
+		limit = {
+			has_character_flag = tornado_spell_flag
+			NOT = {
+				has_character_modifier = mr_master_destruction_modifier
+			}
+		}
+		add_to_variable_list = {
+			name = combat_magic_topics
+			target = flag:destruction
+		}
+	}
+	if = {
+		limit = {
+			NOT = {
+				has_character_flag = protection_ritual
+			}
+		}
+		add_to_variable_list = {
+			name = combat_magic_topics
+			target = flag:defence_spell
+		}
+	}
+	if = {
+		limit = {
+			NOT = {
+				has_character_modifier = mr_curse_expert_modifier
+			}
+		}
+		add_to_variable_list = {
+			name = combat_magic_topics
+			target = flag:curse_expert
+		}
+	}
+	
+
+
+	random_in_list = {
+		variable = combat_magic_topics
+		root = {
+			set_variable = {
+				name = mr_i3o1
+				value = PREV
+			}
+		}
+	}
+	random_in_list = {
+		variable = combat_magic_topics
+		limit = {
+			NOT = {
+				THIS = root.var:mr_i3o1
+			}
+		}
+		root = {
+			set_variable = {
+				name = mr_i3o2
+				value = PREV
+			}
+		}
+	}
+	random_in_list = {
+		variable = combat_magic_topics
+		limit = {
+			NOR = {
+				THIS = root.var:mr_i3o1
+				THIS = root.var:mr_i3o2
+			}
+		}
+		root = {
+			set_variable = {
+				name = mr_i3o3
+				value = PREV
+			}
+		}
+	}
+
+	set_variable = {
+		name = mr_i3o4
+		value = flag:elemental_focus
+	}
+}
+get_creation_magic_intent_topics = {
+	clear_variable_list ?= creation_magic_topics
+	if = {
+		limit = {
+			NOT = {
+				has_character_flag = me_golem_project_done
+			}
+		}
+		add_to_variable_list = {
+			name = creation_magic_topics
+			target = flag:golem1
+		}
+	}
+	if = {
+		limit = {
+			has_character_flag = me_golem_project_done
+			NOT = {
+				has_character_flag = me_golem2_project_done
+			}
+		}
+		add_to_variable_list = {
+			name = creation_magic_topics
+			target = flag:golem2
+		}
+	}
+	if = {
+		limit = {
+			NOT = {
+				has_character_modifier = master_alteration_modifier
+			}
+		}
+		add_to_variable_list = {
+			name = creation_magic_topics
+			target = flag:master_alteration
+		}
+	}
+	if = {
+		limit = {
+			NOT = {
+				exists = global_var:ring_of_power_created
+			}
+		}
+		add_to_variable_list = {
+			name = creation_magic_topics
+			target = flag:ring_of_power
+		}
+	}
+	if = {
+		limit = {
+			any_character_artifact = {
+				OR = {
+					has_artifact_modifier = singularity_modifier2a
+					has_artifact_modifier = singularity_modifier1
+				}
+			}
+		}
+		add_to_variable_list = {
+			name = creation_magic_topics
+			target = flag:activate_singularity
+		}
+	}
+	if = {
+		limit = {
+			any_character_artifact = {
+				has_artifact_modifier = singularity_modifier5
+			}
+		}
+		add_to_variable_list = {
+			name = creation_magic_topics
+			target = flag:upgrade_singularity
+		}
+	}
+
+
+	random_in_list = {
+		variable = creation_magic_topics
+		root = {
+			set_variable = {
+				name = mr_i4o1
+				value = PREV
+			}
+		}
+	}
+	random_in_list = {
+		variable = creation_magic_topics
+		limit = {
+			NOT = {
+				THIS = root.var:mr_i4o1
+			}
+		}
+		root = {
+			set_variable = {
+				name = mr_i4o2
+				value = PREV
+			}
+		}
+	}
+	random_in_list = {
+		variable = creation_magic_topics
+		limit = {
+			NOR = {
+				THIS = root.var:mr_i4o1
+				THIS = root.var:mr_i4o2
+			}
+		}
+		root = {
+			set_variable = {
+				name = mr_i4o3
+				value = PREV
+			}
+		}
+	}
+
+	set_variable = {
+		name = mr_i4o4
+		value = flag:runic_fortification
+	}
+}
+mr_show_project_info = {
+	if = {
+		limit = {
+			$O$ = 4
+			var:drawn_option4 = flag:ultimate_spell_boost
+		}
+		mr_show_ult_spell_preparation_info = yes
+	}
+	else_if = {
+		limit = {
+			$O$ = 4
+			var:drawn_option4 = flag:slowed_aging
+		}
+		mr_show_slowed_aging_info = yes
+	}
+	else_if = {
+		limit = {
+			$O$ = 4
+			var:drawn_option4 = flag:elemental_focus
+		}
+		mr_show_elemental_focus_info = yes
+	}
+	else_if = {
+		limit = {
+			$O$ = 4
+			var:drawn_option4 = flag:runic_fortification
+		}
+		mr_show_runic_fortification_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:time_travel
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:time_travel
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:time_travel
+				}
+			}
+		}
+		mr_show_time_travel_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:mana_siphon
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:mana_siphon
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:mana_siphon
+				}
+			}
+		}
+		mr_show_mana_siphon_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:mind_reader
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:mind_reader
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:mind_reader
+				}
+			}
+		}
+		mr_show_mind_reader_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:psionics
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:psionics
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:psionics
+				}
+			}
+		}
+		mr_show_psionics_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:metamagic
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:metamagic
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:metamagic
+				}
+			}
+		}
+		mr_show_metamagic_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:other_worlds
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:other_worlds
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:other_worlds
+				}
+			}
+		}
+		mr_show_other_worlds_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:necromancy
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:necromancy
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:necromancy
+				}
+			}
+		}
+		mr_show_necromancy_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:nature
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:nature
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:nature
+				}
+			}
+		}
+		mr_show_nature_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:ascendancy
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:ascendancy
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:ascendancy
+				}
+			}
+		}
+		mr_show_ascendancy_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:lich
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:lich
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:lich
+				}
+			}
+		}
+		mr_show_lich_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:soul_transfer
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:soul_transfer
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:soul_transfer
+				}
+			}
+		}
+		mr_show_soul_transfer_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:eternal_hunger
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:eternal_hunger
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:eternal_hunger
+				}
+			}
+		}
+		mr_show_eternal_hunger_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:upgraded_body
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:upgraded_body
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:upgraded_body
+				}
+			}
+		}
+		mr_show_upgraded_body_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:custom_spell
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:custom_spell
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:custom_spell
+				}
+			}
+		}
+		mr_show_custom_spell_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:tornado_spell
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:tornado_spell
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:tornado_spell
+				}
+			}
+		}
+		mr_show_tornado_spell_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:destruction
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:destruction
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:destruction
+				}
+			}
+		}
+		mr_show_destruction_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:defence_spell
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:defence_spell
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:defence_spell
+				}
+			}
+		}
+		mr_show_defence_spell_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:activate_singularity
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:activate_singularity
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:activate_singularity
+				}
+			}
+		}
+		mr_show_activate_singularity_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:upgrade_singularity
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:upgrade_singularity
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:upgrade_singularity
+				}
+			}
+		}
+		mr_show_upgrade_singularity_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:golem1
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:golem1
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:golem1
+				}
+			}
+		}
+		mr_show_golem1_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:golem2
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:golem2
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:golem2
+				}
+			}
+		}
+		mr_show_golem2_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:master_alteration
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:master_alteration
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:master_alteration
+				}
+			}
+		}
+		mr_show_master_alteration_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:ring_of_power
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:ring_of_power
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:ring_of_power
+				}
+			}
+		}
+		mr_show_ring_of_power_info = yes
+	}
+	else_if = {
+		limit = {
+			OR = {
+				AND = {
+					$O$ = 1
+					var:drawn_option1 = flag:curse_expert
+				}
+				AND = {
+					$O$ = 2
+					var:drawn_option2 = flag:curse_expert
+				}
+				AND = {
+					$O$ = 3
+					var:drawn_option3 = flag:curse_expert
+				}
+			}
+		}
+		mr_show_curse_expert_info = yes
+	}
+}
+mr_required_breakthroughs_effect = {
+	if = {
+		limit = {
+			$N$ = 1
+		}
+		custom_tooltip = mr_requires_1_breakthrough_info
+	}
+	else_if = {
+		limit = {
+			$N$ = 2
+		}
+		custom_tooltip = mr_requires_2_breakthrough_info
+	}
+	else_if = {
+		limit = {
+			$N$ = 3
+		}
+		custom_tooltip = mr_requires_3_breakthrough_info
+	}
+	else_if = {
+		limit = {
+			$N$ = 4
+		}
+		custom_tooltip = mr_requires_4_breakthrough_info
+	}
+	hidden_effect = {
+		set_variable = {
+			name = mr_required_breakthroughs
+			value = $N$
+		}
+	}
+}
+## GENERAL RESEARCH ##
+mr_show_ult_spell_preparation_info = {
+	custom_tooltip = mr_basic_project_info
+	mr_required_breakthroughs_effect = { N = 2 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_ult_spell_preparation_effect = yes
+	}
+}
+mr_ult_spell_preparation_effect = {
+	hidden_effect = {
+		if = {
+			limit = {
+				has_character_modifier = mr_ultimate_spell_preparation_modifier
+			}
+			remove_character_modifier = mr_ultimate_spell_preparation_modifier
+		}
+	}
+	add_character_modifier = {
+		modifier = mr_ultimate_spell_preparation_modifier
+		years = 8
+	}
+	hidden_effect = {
+		if = {
+			limit = {
+				any_scheme = {
+					type = ultimate_spell_cast
+					NOT = {
+						has_scheme_modifier = ultimate_spell_preparation_modifier
+					}
+				}
+			}
+			random_scheme = {
+				type = ultimate_spell_cast
+				add_scheme_modifier = {
+					type = ultimate_spell_preparation_modifier
+				}
+			}
+		}
+	}
+}
+
+mr_show_time_travel_info = {
+	custom_tooltip = mr_unique_project_info
+	mr_required_breakthroughs_effect = { N = 4 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_time_travel_success_effect = yes
+	}	
+}
+mr_time_travel_success_effect = {
+	custom_tooltip = mr_time_travel_success_info
+	hidden_effect = {
+		trigger_event = {
+			id = magic_ev8.5	#succeded - time travel
+			days = 1
+		}
+	}
+}
+mr_show_mana_siphon_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 2 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_mana_siphon_effect = yes
+	}	
+}
+mr_mana_siphon_effect = {
+	custom_tooltip = ev3.34.h_ct
+	hidden_effect = {
+		add_character_flag = mana_siphon_flag
+	}
+}
+mr_show_mind_reader_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 1 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_mind_reader_effect = yes
+	}	
+}
+mr_mind_reader_effect = {
+	add_character_modifier = {
+		modifier = mind_reader_modifier
+	}
+}
+mr_show_psionics_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 4 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_psionics_effect = yes
+	}	
+}
+mr_psionics_effect = {
+	add_character_modifier = {
+		modifier = master_psionic_modifier
+	}
+}
+mr_show_metamagic_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 3 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_metamagic_effect = yes
+	}	
+}
+mr_metamagic_effect = {
+	custom_tooltip = ev3.34.d_ct
+	hidden_effect = {
+		add_character_flag = master_metamagic
+	}
+	add_character_modifier = {
+		modifier = master_metamagic_modifier
+	}
+}
+mr_show_other_worlds_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 3 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_other_worlds_effect = yes
+	}	
+}
+mr_other_worlds_effect = {
+	custom_tooltip = ev3.34.g_ct
+	add_character_modifier = {
+		modifier = contact_other_worlds_modifier
+	}
+	hidden_effect = {
+		add_character_flag = blorg_flag
+	}
+}
+mr_show_necromancy_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 2 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_necromancy_effect = yes
+	}	
+}
+mr_necromancy_effect = {
+	hidden_effect = {
+		add_character_flag = skeleton_warriors
+		
+	}
+	custom_tooltip = ev3.27.f_ct
+	add_character_modifier = {
+		modifier = master_necromancer_modifier
+	}
+	if = {
+		limit = {
+			NOT = { has_trait = necromancer }
+			NOT = { has_trait = warlock }
+		}
+		add_trait = necromancer
+	}
+}
+mr_show_nature_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 3 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_nature_effect = yes
+	}	
+}
+mr_nature_effect = {
+	add_character_modifier = {
+		modifier = mr_master_nature_modifier
+	}
+}
+## LIFE EXTENSION ##
+mr_show_slowed_aging_info = {
+	custom_tooltip = mr_basic_project_info
+	mr_required_breakthroughs_effect = { N = 2 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_slowed_aging_effect = yes
+	}	
+}
+mr_slowed_aging_effect = {
+	add_character_modifier = {
+		modifier = slowed_aging_process_modifier
+	}
+}
+mr_show_ascendancy_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 4 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_ascendancy_effect = yes
+	}
+}
+mr_ascendancy_effect = {
+	add_trait = demon1
+	hidden_effect = {
+		healing_old_age_effect = yes
+	}
+}
+mr_show_lich_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 4 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_lich_effect = yes
+	}
+}
+mr_lich_effect = {
+	hidden_effect = {
+		if = {
+			limit = {
+				has_trait = necromancer
+			}
+			remove_trait = necromancer
+		}
+		full_healing_effect = yes
+		extra_healing_effect = yes
+	}
+	add_trait = necromancer
+}
+mr_show_soul_transfer_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 4 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_soul_transfer_effect = yes
+	}
+}
+mr_soul_transfer_effect = {
+	hidden_effect = {
+		add_character_flag = me_soul_project_done
+	}
+	custom_tooltip = ev7.117.f_ct
+}
+mr_show_eternal_hunger_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 3 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_eternal_hunger_effect = yes
+	}
+}
+mr_eternal_hunger_effect = {
+	add_character_modifier = {
+		modifier = mr_immortal_child_consumer_modifier
+	}
+}
+mr_show_upgraded_body_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 3 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_upgraded_body_effect = yes
+	}
+}
+mr_upgraded_body_effect = {
+	add_character_modifier = {
+		modifier = upgraded_body_modifier
+	}
+}
+
+## COMBAT MAGIC ##
+mr_show_elemental_focus_info = {
+	custom_tooltip = mr_basic_project_info
+	if = {
+		limit = {
+			has_character_modifier = mc_black_mage_modifier
+		}
+		mr_required_breakthroughs_effect = { N = 1 }
+	}
+	else = {
+		mr_required_breakthroughs_effect = { N = 2 }
+	}
+	
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_elemental_focus_effect = yes
+	}	
+}
+mr_elemental_focus_effect = {
+	hidden_effect = {
+		if = {
+			limit = {
+				has_character_modifier = mr_elemental_focus_modifier
+			}
+			remove_character_modifier = mr_elemental_focus_modifier
+		}
+	}
+	add_character_modifier = {
+		modifier = mr_elemental_focus_modifier
+		years = 8
+	}
+}
+mr_show_custom_spell_info = {
+	custom_tooltip = mr_advanced_project_info
+	if = {
+		limit = {
+			has_character_modifier = mc_black_mage_modifier
+		}
+		mr_required_breakthroughs_effect = { N = 2 }
+	}
+	else = {
+		mr_required_breakthroughs_effect = { N = 3 }
+	}
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_custom_spell_effect = yes
+	}
+}
+mr_custom_spell_effect = {
+	hidden_effect = {
+		add_character_flag = me_custom_spell_project_done
+		trigger_event = {
+			id = magic_ev10.2	#succeded - custom spell
+			days = 2
+		}
+	}
+	custom_tooltip = mr_custom_spell_info
+}
+mr_show_tornado_spell_info = {
+	custom_tooltip = mr_advanced_project_info
+	if = {
+		limit = {
+			has_character_modifier = mc_black_mage_modifier
+		}
+		mr_required_breakthroughs_effect = { N = 2 }
+	}
+	else = {
+		mr_required_breakthroughs_effect = { N = 3 }
+	}
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_tornado_spell_effect = yes
+	}	
+}
+mr_tornado_spell_effect = {
+	hidden_effect = {
+		add_character_flag = tornado_spell_flag
+		#add_character_flag = earthquake_spell_flag
+	}
+	custom_tooltip = ev3.34.i_ct
+	#custom_tooltip = get_earthquake_spell_ct
+}
+mr_show_destruction_info = {
+	custom_tooltip = mr_advanced_project_info
+	if = {
+		limit = {
+			has_character_modifier = mc_black_mage_modifier
+		}
+		mr_required_breakthroughs_effect = { N = 3 }
+	}
+	else = {
+		mr_required_breakthroughs_effect = { N = 4 }
+	}
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_destruction_effect = yes
+	}	
+}
+mr_destruction_effect = {
+	add_character_modifier = {
+		modifier = mr_master_destruction_modifier
+	}
+}
+mr_show_defence_spell_info = {
+	custom_tooltip = mr_advanced_project_info
+	if = {
+		limit = {
+			has_character_modifier = mc_black_mage_modifier
+		}
+		mr_required_breakthroughs_effect = { N = 1 }
+	}
+	else = {
+		mr_required_breakthroughs_effect = { N = 2 }
+	}
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_defence_spell_effect = yes
+	}	
+}
+mr_defence_spell_effect = {
+	hidden_effect = {
+		add_character_flag = protection_ritual
+	}
+	custom_tooltip = mr_defence_spell_info
+}
+mr_show_curse_expert_info = {
+	custom_tooltip = mr_advanced_project_info
+	if = {
+		limit = {
+			has_character_modifier = mc_black_mage_modifier
+		}
+		mr_required_breakthroughs_effect = { N = 2 }
+	}
+	else = {
+		mr_required_breakthroughs_effect = { N = 3 }
+	}
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_curse_expert_effect = yes
+	}	
+}
+mr_curse_expert_effect = {
+	add_character_modifier = {
+		modifier = mr_curse_expert_modifier
+	}
+}
+
+## CREATION ##
+mr_show_runic_fortification_info = {
+	custom_tooltip = mr_basic_project_info
+	mr_required_breakthroughs_effect = { N = 2 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_runic_fortification_effect = yes
+	}	
+}
+mr_runic_fortification_effect = {
+	hidden_effect = {
+		if = {
+			limit = {
+				has_character_modifier = mr_runic_fortifications_modifier
+			}
+			remove_character_modifier = mr_runic_fortifications_modifier
+		}
+	}
+	add_character_modifier = {
+		modifier = mr_runic_fortifications_modifier
+		years = 8
+	}
+}
+mr_show_golem1_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 2 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_golem1_effect = yes
+	}	
+}
+mr_golem1_effect = {
+	hidden_effect = {
+		add_character_flag = me_golem_project_done
+		trigger_event = {
+			id = magic_ev7.118	#succeded - golem
+			days = 2
+		}
+	}
+	custom_tooltip = mr_golem1_info
+}
+mr_show_golem2_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 4 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_golem2_effect = yes
+	}	
+}
+mr_golem2_effect = {
+	hidden_effect = {
+		add_character_flag = me_golem2_project_done
+	}
+	custom_tooltip = ev7.117.g_ct
+}
+mr_show_master_alteration_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 3 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_master_alteration_effect = yes
+	}	
+}
+mr_master_alteration_effect = {
+	add_character_modifier = {
+		modifier = master_alteration_modifier
+	}
+}
+mr_show_ring_of_power_info = {
+	custom_tooltip = mr_unique_project_info
+	mr_required_breakthroughs_effect = { N = 4 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	custom_tooltip = mr_ring_of_power_info
+}
+mr_ring_of_power_effect = {
+	create_power_ring_artifact_effect = yes
+	scope:newly_created_artifact = {
+		save_scope_as = mr_artifact
+	}
+	hidden_effect = {
+		set_global_variable = ring_of_power_created
+		trigger_event = {
+			id = magic_ev11.38
+			days = 2
+		}
+	}
+}
+mr_show_activate_singularity_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 4 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_activate_singularity_effect = yes
+	}	
+}
+mr_activate_singularity_effect = {
+	hidden_effect_new_object = {
+		#add_character_flag = activate_ancient_singularity_flag
+		random_character_artifact = {
+			limit = {
+				OR = {
+					has_artifact_modifier = singularity_modifier1
+					has_artifact_modifier = singularity_modifier2a
+				}
+			}
+			clear_artifact_modifiers = yes
+			add_artifact_modifier = singularity_modifier5
+			#reforge_artifact = { visuals = ancient_singularity2 type = miscellaneous }
+			save_scope_as = mr_artifact
+			#save_scope_as = ancsin
+		}
+		trigger_event = magic_ev10.17
+	}
+	custom_tooltip = me_as_project_done_ct
+	custom_tooltip = ev2.73.a_ct
+}
+mr_show_upgrade_singularity_info = {
+	custom_tooltip = mr_advanced_project_info
+	mr_required_breakthroughs_effect = { N = 4 }
+	custom_description_no_bullet = {
+		text = mr_if_succeded
+	}
+	show_as_tooltip = {
+		mr_upgrade_singularity_effect = yes
+	}	
+}
+mr_upgrade_singularity_effect = {
+	hidden_effect = {
+		random_character_artifact = {
+			limit = {
+				has_artifact_modifier = singularity_modifier5
+			}
+			destroy_artifact = THIS
+		}
+		create_ancient_singularity_v3_effect = { OWNER = root }
+		scope:newly_created_artifact = {
+			save_scope_as = mr_artifact
+		}
+	}
+	custom_tooltip = mr_upgrade_singularity_info
+	custom_tooltip = mr_upgrade_singularity_info2
+}
+
+mr_launch_effect = {
+	scope:activity = {
+		progress_activity_phase_after = { months = 5 }
+	}
+	trigger_event = {
+		on_action = magical_research_destination_events
+		days = { 20 120 }
+	}
+	random = {
+		chance = 40
+		trigger_event = {
+			id = magic_ev6.73
+			days = { 7 14 }
+		}
+	}
+}
+mr_resolve_research_effect = {
+	change_variable = {
+		name = mr_required_breakthroughs
+		multiply = 25
+	}
+	if = {
+		limit = {
+			var:mr_final_option = flag:activate_singularity
+			NOT = {
+				any_character_artifact = {
+					OR = {
+						has_artifact_modifier = singularity_modifier1
+						has_artifact_modifier = singularity_modifier2a
+					}
+				}
+			}
+		}
+		trigger_event = magic_ev11.37
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:upgrade_singularity
+			NOT = {
+				any_character_artifact = {
+					has_artifact_modifier = singularity_modifier5
+				}
+			}
+		}
+		trigger_event = magic_ev11.37
+	}
+	else_if = {
+		limit = {
+			var:mr_required_breakthroughs <= scope:activity.var:activity_special_type_progression
+		}
+		complete_activity_intent = yes
+		
+		trigger_event = magic_ev11.36
+	}
+	else = {
+		#involved_activity = {
+		#	add_activity_log_entry = {
+		#		key = mr_completed_failed
+		#		#tags = { completed }
+		#		show_in_conclusion = yes
+		#		character = root
+		#		ROOT = {
+		#			add_character_modifier = {
+		#				modifier = mr_learning_from_mistakes_modifier
+		#				years = 16
+		#			}
+		#			gain_sc_xp1_effect = yes
+		#		}
+		#	}
+		#}
+		trigger_event = magic_ev11.37
+	}
+}
+mr_grant_research_regular_reward_effect = {
+	if = {
+		limit = {
+			var:mr_final_option = flag:ultimate_spell_boost
+		}
+		mr_ult_spell_preparation_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:time_travel
+		}
+		mr_time_travel_success_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:mana_siphon
+		}
+		mr_mana_siphon_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:mind_reader
+		}
+		mr_mind_reader_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:psionics
+		}
+		mr_psionics_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:metamagic
+		}
+		mr_metamagic_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:other_worlds
+		}
+		mr_other_worlds_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:necromancy
+		}
+		mr_necromancy_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:nature
+		}
+		mr_nature_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:slowed_aging
+		}
+		mr_slowed_aging_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:ascendancy
+		}
+		mr_ascendancy_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:lich
+		}
+		mr_lich_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:soul_transfer
+		}
+		mr_soul_transfer_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:eternal_hunger
+		}
+		mr_eternal_hunger_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:upgraded_body
+		}
+		mr_upgraded_body_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:elemental_focus
+		}
+		mr_elemental_focus_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:custom_spell
+		}
+		mr_custom_spell_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:tornado_spell
+		}
+		mr_tornado_spell_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:destruction
+		}
+		mr_destruction_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:defence_spell
+		}
+		mr_defence_spell_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:curse_expert
+		}
+		mr_curse_expert_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:activate_singularity
+		}
+		mr_activate_singularity_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:upgrade_singularity
+		}
+		mr_upgrade_singularity_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:runic_fortification
+		}
+		mr_runic_fortification_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:golem1
+		}
+		mr_golem1_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:golem2
+		}
+		mr_golem2_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:master_alteration
+		}
+		mr_master_alteration_effect = yes
+	}
+	else_if = {
+		limit = {
+			var:mr_final_option = flag:ring_of_power
+		}
+		mr_ring_of_power_effect = yes
+	}
+}
+
+mr_phase_handler_effect = {
+	if = {
+		limit = {	#disabled for project with calibration phase
+			NOR = {
+				var:mr_final_option = flag:time_travel
+				var:mr_final_option = flag:custom_spell
+				var:mr_final_option = flag:golem1
+				var:mr_final_option = flag:ring_of_power
+			}
+		}
+		hidden_effect = {
+			scope:activity = {
+				progress_activity_phase_after = { days = 1 }
+			}
+		}
+	}
+}
+mr_gain_xp_intent_based_effect = {
+	if = {
+		limit = {
+			has_activity_intent = general_research_intent
+		}
+		gain_sc_xp1_effect = yes
+	}
+	else_if = {
+		limit = {
+			has_activity_intent = life_extension_intent
+		}
+		gain_al_xp_small_effect = yes
+		gain_demonology_standard_effect = yes
+	}
+	else_if = {
+		limit = {
+			has_activity_intent = combat_magic_intent
+		}
+		gain_cm_xp1_effect = yes
+	}
+	else_if = {
+		limit = {
+			has_activity_intent = creation_magic_intent
+		}
+		gain_al_or_sc_xp_small_effect = yes
+	}
+}
+mr_consider_additional_reward_from_bt_effect = {
+	if = {
+		limit = {
+			OR = {
+				has_completed_activity_intent = general_research_intent
+				has_completed_activity_intent = life_extension_intent
+				has_completed_activity_intent = combat_magic_intent
+				has_completed_activity_intent = creation_magic_intent
+			}
+			mr_calc_exc_bt_value > 25
+		}
+		trigger_event = {
+			id = magic_ev11.54
+			days = 1
+		}
+	}
+	else = {
+		scope:activity = {
+			progress_activity_phase_after = { days = 1 }
+		}
+	}
+}
+	
+	#save_scope_value_as = {
+	#	name = follow_up_event
+	#	value = event_id:$OUTPUT_EVENT$
+	#}
+	#trigger_event = { saved_event_id = scope:follow_up_event }

@@ -11,7 +11,8 @@
 		}
 		has_trait = archmage
 	}
-	is_grand_activity = yes
+	#is_grand_activity = yes
+	activity_group_type = grand
 	can_start_showing_failures_only = {
 		custom_description = {
 			text = may_call_mage_summit
@@ -58,6 +59,7 @@
 		#space for invitation event
 		every_living_character = {
 			limit = {
+				is_ai = no
 				NOT = {
 					THIS = scope:host
 				}
@@ -67,9 +69,33 @@
 				OR = {
 					has_trait = archmage
 					has_trait = yaga
+					has_trait = true_witch
+					has_focus = arcane_focus
 				}
 			}
 			trigger_event = magic_ev7.81
+		}
+		scope:host = {
+			trigger_event = {
+				id = magic_ev10.74
+				days = 2
+			}
+		}
+		if = {
+			limit = {
+				exists = global_var:mc_has_been_formed
+				NOT = {
+					exists = global_var:current_archmage_global
+				}
+				NOT = {
+					any_activity = {
+						has_variable = elections
+					}
+				}
+			}
+			scope:activity = {
+				set_variable = elections
+			}
 		}
 	}
 
@@ -111,7 +137,14 @@
 			}
 			scope:host = { trigger_event = activity_system.0100 }
 		}
-		remove_speaker_var = yes
+		scope:host = {
+			if = {
+				limit = {
+					is_alive = yes
+				}
+				remove_speaker_var = yes
+			}
+		}
 	}
 
 	on_host_death = {
@@ -301,8 +334,14 @@
 					ms_load_intents_for_ai_effect = yes
 				}
 				if = {
+					limit = {
+						has_character_flag = mage_summit_discount_flag
+					}
+					remove_character_flag = mage_summit_discount_flag
+				}
+				if = {
 					limit = { this = scope:host }
-					scope:activity = { progress_activity_phase_after = { weeks = 3 } }
+					scope:activity = { progress_activity_phase_after = { weeks = 4 } }
 					# Check that there are guests apart from the feast host.
 					if = {
 						limit = {
@@ -318,29 +357,59 @@
 					}
 					else = {
 						trigger_event = magic_ev7.76
-						#special4host
-						random = {
-							chance = 50
-							trigger_event = {
-								id = magic_ev7.82
-								days = 4
+						if = {
+							limit = {
+								new_archmage_must_be_selected_trigger = no
+							}
+							#special4host
+							random = {
+								chance = 50
+								trigger_event = {
+									id = magic_ev7.82
+									days = 4
+								}
+							}
+							#Mammon
+							random = {
+								chance = 30
+									trigger_event = {
+									id = magic_ev7.100
+									days = { 5 14 }
+								}
 							}
 						}
-						#Mammon
-						random = {
-							chance = 30
+						else = {
+							scope:activity = {
+								add_to_variable_list ={
+									name = ms_election_list
+									target = scope:host
+								}
+							}
 							trigger_event = {
-								id = magic_ev7.100
-								days = { 5 14 }
+								id = magic_ev10.63
+								days = 5
 							}
 						}
 					}
 				}
-				else = {
+				else_if = {
+					limit = {
+						new_archmage_must_be_selected_trigger = no
+					}
 					trigger_event = magic_ev7.80
 				}
 				if = {
 					limit = {
+						new_archmage_must_be_selected_trigger = yes
+					}
+					trigger_event = {
+						id = magic_ev10.62
+						days = 1
+					}
+				}
+				if = {
+					limit = {
+						new_archmage_must_be_selected_trigger = no
 						scope:activity = {
 							any_attending_character = {
 								has_character_flag = yaga_flag
@@ -365,35 +434,56 @@
 			is_predefined = yes
 			order = 2
 			on_enter_phase = {
-				assign_speaker_var = yes
+				if = {
+					limit = {
+						new_archmage_must_be_selected_trigger = no
+					}
+					assign_speaker_var = yes
+				}
+				else = {
+					recreate_ms_candidates_effect = yes
+				}
 				if = {
 					limit = { this = scope:host }
-					# No passive state, just jump right into it
 					scope:activity = { progress_activity_phase_after = { days = 2 } }
 				}
-				trigger_event = magic_ev7.101
+				if = {
+					limit = {
+						new_archmage_must_be_selected_trigger = yes
+						exists = scope:ms_cand1
+					}
+					trigger_event = magic_ev10.64
+				}
+				else = {
+					trigger_event = magic_ev7.101
+				}
+				
 			}
 			on_phase_active = {
 				if = {
 					limit = { this = scope:host }
-					scope:activity = { progress_activity_phase_after = { days = 14 } }
+					scope:activity = { progress_activity_phase_after = { days = 20 } }
 				}
-				select_speaker_effect = yes
 				if = {
-					limit = { this = scope:speaker0 }
-					trigger_event = magic_ev7.102
+					limit = {
+						new_archmage_must_be_selected_trigger = no
+					}
+					select_speaker_effect = yes
+					if = {
+						limit = { this = scope:speaker0 }
+						trigger_event = magic_ev7.102
+					}
+					else = {
+						trigger_event = magic_ev7.103
+					}
 				}
 				else = {
-					trigger_event = magic_ev7.103
-				}
+					recreate_ms_candidates_effect = yes
+					calculate_ms_archmage_effect = yes
+				}	
 			}
 
 			on_end = {
-				# Run conclusion stuff here
-				#if = {
-				#	limit = { this = scope:host }
-				#	trigger_event = witch.3098
-				#}
 				ms_resolve_voting_effects = yes
 			}
 		}
@@ -402,13 +492,13 @@
 
 	# desc is only shown in debug AI watch window
 	ai_will_do = {
-		value = 200
+		value = 100
 		
 		# How much do you care about your faith not liking this?
 		if = {
 			limit = {
 				faith = { has_doctrine_parameter = witchcraft_illegal }
-				NOT = { has_trait = cynical }
+				NOR = { has_trait = cynical has_trait = eccentric }
 			}
 			add = -25
 		}
@@ -419,13 +509,53 @@
 			}
 			add = -50
 		}
+		if = {
+			limit = {
+				is_at_war = yes
+			}
+			add = -50
+		}
+
+		if = {
+			limit = {
+				OR = {
+					has_trait = shy
+					has_trait = paranoid
+				}
+			}
+			add = -50
+		}
+
+		if = {
+			limit = {
+				OR = {
+					has_trait = scholar
+					has_trait = gregarious
+					has_trait = arrogant
+					has_trait = ambitious
+				}
+			}
+			add = 50
+		}
+		if = {
+			limit = {
+				any_activity = {
+					has_activity_type = mages_summit
+					trigger_if = {
+						limit = { exists = root.involved_activity }
+						NOT = { THIS = root.involved_activity }
+					}
+				}
+			}
+			add = -1000
+		}
 		
 		#Can you actually afford this?
 		if = {
 			limit = {
-				NOT = { can_make_expensive_purchase_trigger = { PRICE = mage_summit_cost } }
+				NOT = { can_make_expensive_purchase_trigger = { PRICE = mage_summit_cost_final_value } }
 			}
-			add = -50
+			add = -100
 		}
 	}
 
@@ -439,52 +569,61 @@
 		exists = province_owner
 		OR = {
 			ROOT = scope:host.capital_province
+			trigger_if = {
+				limit = {
+					exists = scope:host.domicile
+				}
+				ROOT = scope:host.domicile.domicile_location
+			}
 			is_power_place_trigger = yes
+			has_building_or_higher = mage_tower_02
 		}
 	}
 
-	province_filter = domain
-	ai_province_filter = domain
+	#province_filter = domain
+	#ai_province_filter = domain
+	province_filter = domicile_domain
+	ai_province_filter = domicile_domain
 
 	max_province_icons = 1
 	
 	cost = {
 		gold = {
 			add = {
-				value = mage_summit_cost
+				value = mage_summit_cost_final_value
 				desc = hunt_base_cost
 			}
-			if = {
-				limit = {
-					exists = house
-					house = {
-						has_house_modifier = magic_tradition_modifier
-					}
-				}
-				multiply = {
-					value = 0.5
-					desc = magic_tradition_modifier
-				}
-			}
+			#if = {
+			#	limit = {
+			#		exists = house
+			#		house = {
+			#			has_house_modifier = magic_tradition_modifier
+			#		}
+			#	}
+			#	multiply = {
+			#		value = 0.5
+			#		desc = magic_tradition_modifier
+			#	}
+			#}
 		}
 	}
 
 	ui_predicted_cost = {
 		gold = {
 			# Base Cost
-			value = mage_summit_cost
-			if = {
-				limit = {
-					exists = house
-					house = {
-						has_house_modifier = magic_tradition_modifier
-					}
-				}
-				multiply = 0.5
-			}
+			value = mage_summit_cost_final_value
+			#if = {
+			#	limit = {
+			#		exists = house
+			#		house = {
+			#			has_house_modifier = magic_tradition_modifier
+			#		}
+			#	}
+			#	multiply = 0.5
+			#}
 			# Make it a multiple of 5 (rounded up)
-			divide = 5 
-			ceiling = yes 
+			divide = 5
+			ceiling = yes
 			multiply = 5
 		}
 	}
@@ -496,9 +635,9 @@
 	
 	pulse_actions = {
 		entries = {
-			recited_witchcraft_treatise relation_gains_friend guest_impressed_by_court_artifact host_gains_diplo_xp guest_friendship guest_insulted apa_studying_scripture apa_comet_sighted
+			recited_witchcraft_treatise relation_gains_friend guest_impressed_by_court_artifact host_gains_diplo_xp guest_friendship guest_insulted apa_studying_scripture apa_comet_sighted mca_gain_sc_pulse
 		}
-		chance_of_no_event = 15
+		chance_of_no_event = 10
 	}
 
 	###################
@@ -536,13 +675,13 @@
 			has_trait = true_witch
 			has_trait = archmage
 			has_trait = yaga
-			has_trait = demon
+			is_a_demon_trigger = yes
 			has_focus = arcane_focus
 			has_trait = lifestyle_mystic
 			has_trait = scholar
 			OR = {
 				has_trait = witch
-				any_secret = { secret_type = secret_witch }
+				any_secret = { type = secret_witch }
 			}
 			has_trait = grandmaster_coven
 		}

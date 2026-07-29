@@ -18,8 +18,8 @@
 	maximum_secrecy = 95
 	base_maximum_success = 95
 	minimum_success = 5
-	freeze_scheme_when_traveling = yes
-	freeze_scheme_when_traveling_target = yes
+	freeze_scheme_when_traveling = no
+	freeze_scheme_when_traveling_target = no
 
 	# Core Triggers
 	allow = {
@@ -59,9 +59,6 @@
 				}
 			}
 		}
-		scope:target = {
-			exists = location
-		}
 	}
 	use_secrecy = {
 		use_convert_to_witchcraft_secrecy_trigger = { OWNER = scope:owner }
@@ -70,24 +67,7 @@
 	odds_prediction = {
 		add = base_odds_prediction_target_is_char_value
 		add = odds_skill_contribution_learning_value
-		add = odds_sway_scheme_misc_value
-		if = {
-			limit = {
-				scope:owner = {
-					exists = house
-					house = { has_house_modifier = witch_coven }
-				}
-			}
-			add = 20
-		}
-		if = {
-			limit = {
-				scope:target.ai_zeal < 0
-			}
-			add = scope:target.ai_zeal
-			multiply = -1
-			max = 50
-		}
+		add = odds_convert_to_witchcraft_misc_value
 		min = 0
 	}
 	
@@ -99,8 +79,7 @@
 		#Coven leader
 		modifier = {
 			scope:owner = {
-				exists = house
-				house = { has_house_modifier = witch_coven }
+				house ?= { has_house_modifier = witch_coven }
 			}
 			desc = SCHEME_WITCH_COVEN
 			add = 20
@@ -116,12 +95,35 @@
 			desc = cult_caravan_convertion_domicile_building
 			add = 10
 		}
+		#Coven Policy
+		modifier = {
+			scope:owner = {
+				exists = house
+				house = {
+					has_house_modifier = coven_policy_spreading_witchcraft_modifier
+				}
+			}
+			desc = coven_policy_spreading_witchcraft_modifier
+			add = 10
+		}
 
 		#Their zeal
 		ai_value_modifier = {
 			who = scope:target
-			ai_zeal = -1
+
+			ai_zeal = {
+				if = {
+					limit = {
+						scope:target.faith = { trait_is_virtue = witch has_doctrine_parameter = witchcraft_accepted }
+					}
+					value = 0.25
+				}
+				else = {
+					value = -1
+				}
+			}
 			max = 50
+			min = -25
 		}
 
 		#Opinion
@@ -337,7 +339,7 @@
 		scheme_target_character = { save_scope_as = target }
 		if = {
 			limit = {
-				scope:target = { any_secret = { secret_type = secret_witch } }
+				scope:target = { any_secret = { type = secret_witch } }
 			}
 			scope:owner = {
 				trigger_event = {

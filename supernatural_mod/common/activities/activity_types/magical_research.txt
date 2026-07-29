@@ -1,0 +1,602 @@
+﻿magical_research = {
+	is_shown = {
+		#has_bp2_dlc_trigger = yes
+		highest_held_title_tier > tier_barony
+		is_adult = yes
+		is_true_mage = yes
+	}
+
+	activity_group_type = grand
+
+	can_start_showing_failures_only = {
+		is_available_adult = yes
+	}
+
+	is_valid = {
+		scope:host = {
+			#Getting imprisoned will invalidate
+			is_imprisoned = no
+			#Becoming incapable will invalidate
+			NOT = { is_incapable = yes }
+		}
+	}
+
+	on_invalidated = {
+		#incapable
+		if = {
+			limit = {
+				scope:host = { is_incapable = yes }
+			}
+			scope:activity = {
+				activity_type = { save_scope_as = activity_type }
+			}
+			scope:host = {
+				trigger_event = activity_system.0330
+			}
+			every_attending_character = {
+				limit = { NOT = { this = scope:host } }
+				trigger_event = activity_system.0331
+			}
+		}
+		# Host is imprisoned
+		else_if = {
+			limit = {
+				scope:host = { is_imprisoned = yes } 
+			}
+			scope:host = { trigger_event = bp2_adult_education.0005 }
+		}
+	}
+
+	on_host_death = {
+		#cancel the activity by not setting a new host
+		#free the students
+		scope:activity = {
+			every_attending_character = {
+				limit = {
+					has_character_flag = generated_character_uni
+				}
+				remove_character_flag = generated_character_uni
+			}
+		}
+		# Send your entourage home
+		scope:host = {
+			current_travel_plan = {
+				every_entourage_character = { set_location_to_default = yes }
+			}
+		}
+	}
+
+
+
+	###################
+	# PARAMETERS
+	###################
+
+	is_single_location = yes
+	#wait_time_before_start = { days = 5 }
+	wait_time_before_start = { days = mr_day_delay_value }
+
+	province_filter = all
+	ai_province_filter = all
+	max_province_icons = 1
+	is_location_valid = {
+		trigger_if = {
+			limit = {
+				scope:special_option = flag:magical_research_standard
+				exists = barony
+			}
+			#custom_tooltip = {
+			#	text = activity_pilgrimage.is_location_valid.hajj_mecca
+			#	barony = title:b_makka
+			#}
+			scope:host.location = root
+		}
+		trigger_if = {
+			limit = {
+				scope:special_option = flag:magical_research_exp
+			}
+			has_building_with_flag = wc_place_of_power
+			OR = {
+				trigger_if = {
+					limit = {
+						scope:host = {
+							may_visit_witch_house_trigger = yes
+						}
+					}
+					has_building_or_higher = witch_house
+				}
+				trigger_if = {
+					limit = {
+						scope:host = {
+							may_visit_mage_house_trigger = yes
+						}
+					}
+					has_building_or_higher = mage_house
+				}
+				trigger_if = {
+					limit = {
+						scope:host = {
+							may_visit_horned_temple_trigger = yes
+						}
+					}
+					has_building_or_higher = horned_god_house
+				}
+			}
+		}
+	}
+
+	province_description = {		
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					has_building_or_higher = witch_house
+				}
+				#desc = activity_magic_rite_province_desc
+				#desc = activity_magic_rite_province_power_place_desc
+				desc = mr_pop_witch_hut
+			}
+			triggered_desc = {
+				trigger = {
+					has_building_or_higher = horned_god_house
+				}
+				desc = mr_pop_horned_temple
+			}
+			triggered_desc = {
+				trigger = {
+					has_building_or_higher = mage_house
+				}
+				desc = mr_pop_magic_academy
+			}
+			desc = mr_standard_province
+		}
+	}
+
+	cooldown = {
+		years = new_magical_research_cooldown_value
+	}
+
+	max_route_deviation_mult = 3.0
+
+	cost = {
+		gold = {
+			add = {
+				value = feast_activity_cost
+				desc = hunt_base_cost
+			}
+			multiply = 1
+			add = 100
+		}
+	}
+
+	ui_predicted_cost = {
+		gold = {
+			# Base Cost
+			value = feast_activity_cost
+			# Make it a multiple of 5 (rounded up)
+			divide = 5 
+			ceiling = yes 
+			multiply = 5
+			add = 100
+		}
+	}
+
+	###################
+	# OPTIONS
+	###################
+	special_option_category = special_type
+	options = {
+		special_type = {
+			magical_research_standard = {
+				default = yes
+			}
+			magical_research_exp = {
+				is_valid = {
+					custom_description = {
+						text = magic_expedition_dest_required
+						OR = {
+							may_visit_witch_house_trigger = yes
+							may_visit_mage_house_trigger = yes
+							may_visit_horned_temple_trigger = yes
+						}
+					}
+				}
+				on_start = {
+					scope:activity = {
+						set_variable = activity_magic_expedition
+					}
+				}
+			}
+		}
+		funds_for_research_options = {
+			funds_for_searching_option1 = {
+				default = yes
+			}
+			funds_for_searching_option2 = {
+				is_shown = {
+					scope:special_option = flag:magical_research_standard
+				}
+				cost = {
+					gold = 100
+				}
+			}
+			funds_for_searching_option3 = {
+				is_shown = {
+					scope:special_option = flag:magical_research_standard
+				}
+				is_valid = {
+					custom_description = {
+						text = is_ambitious_or_learning_edu
+						OR = {
+							has_trait = ambitious
+							has_trait = education_learning_1
+							has_trait = education_learning_2
+							has_trait = education_learning_3
+							has_trait = education_learning_4
+							has_trait = education_learning_5
+						}
+					}
+				}
+				cost = {
+					gold = 200
+				}
+			}
+		}
+	}
+
+	###################
+	# PHASES
+	###################
+
+	phases = {
+		magical_research_phase = {
+			is_predefined = yes
+
+			on_phase_active = {
+				scope:host = {
+					#remove flags or other setup
+					if = {
+						limit = {
+							exists = var:mr_final_option
+						}
+						remove_variable = mr_final_option
+					}
+					if = {
+						limit = {
+							exists = var:mr_assistant
+						}
+						remove_variable = mr_assistant
+					}
+				}
+				if = {
+					limit = { this = scope:host }
+					scope:activity = {
+						#Phase progression
+						#progress_activity_phase_after = { months = 6 }	#used in the 'mr_launch_effect'
+						#initial progress boost
+						activity_location = { save_scope_as = location }
+						
+					}
+					#Arrival event
+					if = {
+						limit = {
+							scope:activity = {
+								has_variable = activity_magic_expedition
+							}
+							scope:location = {
+								has_building_or_higher = witch_house
+							}
+						}
+						trigger_event = magic_ev11.153
+					}
+					else_if = {
+						limit = {
+							scope:activity = {
+								has_variable = activity_magic_expedition
+							}
+							scope:location = {
+								has_building_or_higher = horned_god_house
+							}
+						}
+						trigger_event = magic_ev11.92
+					}
+					else_if = {
+						limit = {
+							scope:activity = {
+								has_variable = activity_magic_expedition
+							}
+							scope:location = {
+								has_building_or_higher = mage_house
+							}
+						}
+						trigger_event = magic_ev11.80
+					}
+					else = {
+						trigger_event = { on_action = magical_research_arrival_events }
+					}
+				}
+			}
+
+			on_monthly_pulse = {
+				if = {
+					limit = {
+						this = scope:host
+						exists = var:mr_final_option
+						scope:activity = {
+							NOT = { has_variable = activity_magic_expedition }
+						}
+					}
+					trigger_event = { on_action = magical_research_destination_events }				
+				}
+			}
+
+			on_end = {
+				if = {
+					limit = {
+						this = scope:host
+						scope:activity = {
+							NOT = { has_variable = activity_magic_expedition }
+						}
+					}
+					mr_resolve_research_effect = yes		
+				}
+			}
+		}
+		magical_research_calibration_phase = {
+			is_predefined = yes
+			on_enter_phase = {
+				if = {
+					limit = { this = scope:host }
+					if = {
+						limit = {
+							scope:activity = {
+								has_variable = activity_magic_expedition
+							}
+						}
+						#send_interface_toast = {
+						#	title = test
+						#}
+						scope:activity = {
+							progress_activity_phase_after = { days = 1 }
+						}
+					}
+				}
+			}
+			on_phase_active = {
+				if = {
+					limit = { this = scope:host }
+					if = {
+						limit = {
+							scope:activity = {
+								has_variable = activity_magic_expedition
+							}
+						}
+						#send_interface_toast = {
+						#	title = test2
+						#}
+						scope:activity = {
+							progress_activity_phase_after = { days = 1 }
+						}
+					}
+					else = {
+						mr_consider_additional_reward_from_bt_effect = yes
+					}
+					
+					#scope:activity = {
+					#	#Phase progression
+					#	progress_activity_phase_after = { days = 1 }
+					#	#initial progress boost
+					#	activity_location = { save_scope_as = location }
+					#}
+				}
+			}
+
+			on_monthly_pulse = {
+				
+			}
+
+			on_end = {
+				
+			}
+		}
+	}
+
+	###################
+	# GUEST HANDLING
+	###################
+
+	allow_zero_guest_invites = yes
+
+	can_be_activity_guest = {
+		is_adult = yes
+		# exclude travel leaders, travel companions, mercenaries, and sea captains
+		NOT = { current_travel_plan ?= scope:host.current_travel_plan }
+	}
+
+	max_guests = 1
+
+	host_intents = {
+		intents = { general_research_intent life_extension_intent combat_magic_intent creation_magic_intent }
+		default = general_research_intent
+	}
+
+	guest_intents = {
+		intents = { general_research_intent life_extension_intent combat_magic_intent creation_magic_intent }
+		default = general_research_intent
+	}
+
+	#travel_entourage_selection = {
+	#	weight = standard_travel_entourage_additions
+	#	max = 5
+	#	invite_rule_order = 1
+	#}
+
+	###################
+	# ACTIVITY-SPECIFIC PULSES
+	###################
+
+	pulse_actions = {
+		entries = {
+			amr_night_on_books
+		}
+		chance_of_no_event = 60
+	}
+
+	on_start = {
+		scope:activity ?= {
+			#Counter for the Activity Success Progress bar
+			activity_setup_special_type_progression_effect = yes
+			activity_location = { save_scope_as = location }
+			if = {
+				limit = {
+					has_activity_option = {
+						category = funds_for_research_options
+						option = funds_for_searching_option2
+					}
+				}
+				hidden_effect = {
+					change_variable = {
+						name = activity_special_type_progression
+						add = 5
+					}
+				}
+			}
+			else_if = {
+				limit = {
+					has_activity_option = {
+						category = funds_for_research_options
+						option = funds_for_searching_option3
+					}
+				}
+				hidden_effect = {
+					change_variable = {
+						name = activity_special_type_progression
+						add = 10
+					}
+				}
+			}
+			hidden_effect = {
+				change_variable = {
+					name = activity_special_type_progression
+					add = scope:host.mr_initial_progress_value
+				}
+			}
+		}
+	}
+	
+	on_enter_travel_state = {
+	
+	}
+
+	on_travel_state_pulse = {
+		
+	}
+
+	on_enter_passive_state = {
+		
+	}
+
+	on_passive_state_pulse = { }
+
+	on_enter_active_state = { }
+
+	on_active_state_pulse = { }
+
+	on_complete = {
+		
+	}
+
+	###################
+	# GRAPHICS
+	###################
+
+	# End Travel
+	background = {	#Western-ish University
+		trigger = {
+			scope:activity = {
+				NOT = { has_variable = activity_magic_expedition }
+			}
+			scope:host.location = scope:activity.activity_location
+			scope:host.location.culture = {
+				OR = {
+					has_graphical_western_culture_group_trigger = yes
+					has_graphical_norse_culture_group_trigger = yes
+					has_graphical_iberian_culture_group_trigger = yes
+					has_graphical_mediterranean_culture_group_trigger = yes
+				}
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/bp2_university.dds"
+		environment = "environment_bp2_university"
+		ambience = "event:/SFX/Events/Backgrounds/BP2/bp2_university"
+	}
+	background = {	#Indian garden
+		trigger = {
+			scope:activity = {
+				NOT = { has_variable = activity_magic_expedition }
+			}
+			scope:host.location = scope:activity.activity_location
+			scope:host.location.culture = { has_graphical_india_culture_group_trigger = yes }
+		}
+		texture = "gfx/interface/illustrations/event_scenes/bp2_indian_garden.dds"
+		environment = "environment_bp2_garden_india_day"
+		ambience = "event:/SFX/Events/Backgrounds/castle_garden_day"
+	}
+	background = {	#yaga bedroom
+		trigger = {
+			scope:activity = {
+				has_variable = activity_magic_expedition
+				#has_current_phase = magical_research_phase
+				is_current_phase_active = yes
+			}
+			scope:host.location = scope:activity.activity_location
+			scope:host.location = {
+				has_building_or_higher = witch_house
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/bedchamber.dds"
+		environment = "environment_event_bedchamber"
+		ambience = "event:/DLC/EP2/SFX/Events/Backgrounds/evn_background_bedroom"
+	}
+	background = {	#camp
+		trigger = {
+			scope:activity = {
+				has_variable = activity_magic_expedition
+			}
+			scope:host.location = scope:activity.activity_location
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep3_adventurer_background.dds"
+		environment = "environment_bp2_garden_india_day"
+		ambience = "event:/SFX/Events/Backgrounds/castle_garden_day"
+	}
+	background = {	#Fallback: Madrasa
+		texture = "gfx/interface/illustrations/event_scenes/bp2_university_mena.dds"
+		environment = environment_bp2_university_mena
+		ambience = "event:/SFX/Events/Backgrounds/meetingchamber_western"
+	}
+
+	### Plug in widgets
+	activity_window_widgets = {
+		activity_special_type_progression = "activity_plugin_widgets_summary"
+		#artifact_rewards = "activity_plugin_widgets_conclusion"
+		#trait_rewards = "activity_plugin_widgets_conclusion"
+	}
+
+	window_characters = {
+		noble_student = {
+			camera = camera_body
+			
+			effect = {
+				if = {
+					limit = {
+						scope:host.location = scope:activity.activity_location
+					}
+					scope:host = { add_to_list = characters }
+				}
+			}
+			scripted_animation = {	
+				#Fallback
+				animation = reading
+			}
+		}
+	}
+}

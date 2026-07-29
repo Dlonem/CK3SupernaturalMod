@@ -217,3 +217,401 @@ dark_champion_domain_supervision = {
 		}
 	}
 }
+
+mage_court_alchemy = {
+	court_position_types = { mage_court_position }
+	# Monthly cost for the task
+	cost = {
+		round = no
+		gold = {
+			add = {
+				value = monthly_court_position_task_cost_double
+				desc = COURT_POSITION_TASK_COST_BREAKDOWN_BASE
+				format = "BASE_VALUE_FORMAT_DECIMALS_PLUS_NEGATIVE"
+			}
+		}
+	}
+
+	employee_modifier = {
+		#monthly_prestige = minor_court_position_task_prestige_salary
+		stewardship = 1
+	}
+
+	base_employer_modifier = {
+		cm_task_1_terrain_cancel_negative_supply = yes
+	}
+	scaling_employer_modifiers = {
+		terrible = {
+			life_expectancy = 0
+		}
+		poor = {
+			life_expectancy = 0
+		}
+		average = {
+			life_expectancy = 1
+		}
+		good = {
+			life_expectancy = 5
+		}
+		excellent = {
+			life_expectancy = 10
+		}
+	}
+
+	is_shown = {  }
+	is_valid_showing_failures_only = { }
+
+	on_yearly = {
+		save_scope_as = cmage
+		if = {
+			limit = {
+				has_character_flag = cm_get_to_work_flag
+			}
+			trigger_event = {
+				id = magic_ev10.42
+				months = { 0 11 }
+			}
+		}
+		else = {
+			random = {
+				chance = 50
+				random_list = {
+					2 = {
+						trigger_event = {
+							id = magic_ev10.42
+							months = { 2 11 }
+						}
+					}
+					2 = {
+						trigger = {
+							NOT = {
+								has_character_flag = cm_ask_for_gold_flag
+							}
+						}
+						trigger_event = {
+							id = magic_ev10.57
+							months = { 2 11 }
+						}
+					}
+					1 = {
+						trigger = {
+							aptitude = {
+								court_position = mage_court_position
+								value > 4
+							}
+						}
+
+					}
+				}
+			}
+		}
+	}
+	on_start = {
+		hidden_effect_new_object = {
+			add_character_flag = cm_task_1_flag
+		}
+	}
+	on_end = {
+		hidden_effect_new_object = {
+			if = { limit = { is_alive = yes } remove_character_flag = cm_task_1_flag }
+		}
+	}
+
+	ai_will_do = {
+		value = 120
+		if = {
+			limit = {
+				has_trait = greedy
+			}
+			add = 80
+		}
+	}
+}
+
+mage_court_black_magic = {
+	court_position_types = { mage_court_position }
+	# Monthly cost for the task
+	cost = {
+		round = no
+		gold = {
+			add = {
+				value = monthly_court_position_task_cost
+				desc = COURT_POSITION_TASK_COST_BREAKDOWN_BASE
+				format = "BASE_VALUE_FORMAT_DECIMALS_PLUS_NEGATIVE"
+			}
+		}
+	}
+	employee_modifier = {
+		monthly_magic_lifestyle_xp_gain_mult = 0.1
+	}
+	base_employer_modifier = {
+		cm_task_2_terrain_cancel_negative_supply = yes
+	}
+	#scaling_employer_modifiers = {
+	#	terrible = {
+	#		monthly_county_control_growth_add = 0
+	#		domain_tax_mult = 0.01
+	#	}
+	#	poor = {
+	#		monthly_county_control_growth_add = 0.05
+	#		domain_tax_mult = 0.02
+	#	}
+	#	average = {
+	#		monthly_county_control_growth_add = 0.15
+	#		domain_tax_mult = 0.03
+	#	}
+	#	good = {
+	#		monthly_county_control_growth_add = 0.2
+	#		domain_tax_mult = 0.04
+	#	}
+	#	excellent = {
+	#		monthly_county_control_growth_add = 0.25
+	#		domain_tax_mult = 0.05
+	#	}
+	#}
+
+	is_shown = {  }
+	is_valid_showing_failures_only = { }
+
+	on_yearly = {
+		save_scope_as = cmage
+		if = {
+			limit = {
+				has_character_flag = cm_get_to_work_flag
+			}
+			random_list = {
+				3 = {
+					trigger_event = {
+						id = magic_ev10.50
+						months = { 0 11 }
+					}
+				}
+				2 = {
+					trigger = {
+						scope:liege = {
+							OR = {
+								is_at_war = yes
+								any_relation = {
+									type = rival
+								}
+							}
+						}
+					}
+					scope:liege = {
+						trigger_event = {
+							id = magic_ev10.51
+							months = { 0 11 }
+						}
+					}
+				}
+			}
+		}
+		else = {
+			random = {
+				chance = 50
+				random_list = {
+					3 = {
+						trigger_event = {
+							id = magic_ev10.50
+							months = { 2 11 }
+						}
+					}
+					2 = {
+						trigger = {
+							scope:liege = {
+								OR = {
+									is_at_war = yes
+									any_relation = {
+										type = rival
+									}
+								}
+							}
+						}
+						scope:liege = {
+							trigger_event = {
+								id = magic_ev10.51
+								months = { 2 11 }
+							}
+						}
+					}
+					1 = {
+						trigger = {
+							NOT = {
+								has_character_flag = cm_ask_for_gold_flag
+							}
+						}
+						trigger_event = {
+							id = magic_ev10.57
+							months = { 2 11 }
+						}
+					}
+				}
+			}
+		}
+	}
+
+	on_start = {
+		hidden_effect_new_object = {
+			add_character_flag = cm_task_2_flag
+		}
+	}
+	on_end = {
+		hidden_effect_new_object = {
+			if = { limit = { is_alive = yes } remove_character_flag = cm_task_2_flag }
+		}
+	}
+
+	ai_will_do = {
+		value = 0
+		if = {
+			limit = {
+				any_relation = {
+					type = rival
+				}
+			}
+			add = 100
+		}
+		if = {
+			limit = {
+				any_relation = {
+					type = nemesis
+				}
+			}
+			add = 100
+		}
+		if = {
+			limit = {
+				is_at_war = yes
+			}
+			add = 100
+		}
+	}
+}
+
+mage_court_rituals = {
+	court_position_types = { mage_court_position }
+	# Monthly cost for the task
+	cost = {
+		round = no
+		gold = {
+			add = {
+				value = monthly_court_position_task_cost
+				desc = COURT_POSITION_TASK_COST_BREAKDOWN_BASE
+				format = "BASE_VALUE_FORMAT_DECIMALS_PLUS_NEGATIVE"
+			}
+		}
+	}
+
+	employee_modifier = {
+		#monthly_prestige = minor_court_position_task_prestige_salary
+		learning = 1
+	}
+
+	scaling_employer_modifiers = {
+		terrible = {
+			monthly_magic_lifestyle_xp_gain_mult = 0.01
+			magic_gain_terrain_advantage = 0
+		}
+		poor = {
+			monthly_magic_lifestyle_xp_gain_mult = 0.05
+			magic_gain_terrain_advantage = 0
+		}
+		average = {
+			monthly_magic_lifestyle_xp_gain_mult = 0.1
+			magic_gain_terrain_advantage = 0
+		}
+		good = {
+			monthly_magic_lifestyle_xp_gain_mult = 0.15
+			magic_gain_terrain_advantage = 0.25
+		}
+		excellent = {
+			monthly_magic_lifestyle_xp_gain_mult = 0.2
+			magic_gain_terrain_advantage = 0.25
+		}
+	}
+
+	is_shown = {  }
+	is_valid_showing_failures_only = { }
+
+	on_yearly = {
+		random = {
+			chance = 30
+			save_scope_as = cmage
+			random_list = {
+				8 = {
+					trigger_event = {
+						id = magic_ev10.53
+						months = { 2 11 }
+					}
+				}
+				2 = {
+					trigger = {
+						is_ai = yes
+						is_imprisoned = no
+						scope:liege = {
+							is_witch_trigger = yes
+							can_unlock_arcane_focus_trigger = no
+							is_imprisoned = no
+						}
+						OR = {
+							has_relation_best_friend = scope:liege
+							has_relation_friend = scope:liege
+							has_relation_lover = scope:liege
+							has_relation_soulmate = scope:liege
+						}
+					}
+					save_scope_as = actor
+					scope:liege = {
+						save_scope_as = recipient
+						trigger_event = {
+							id = magic_ev3.10
+							months = { 0 2 }
+						}
+					}
+				}
+			}
+		}
+		if = {
+			limit = {
+				is_false_mage = yes
+			}
+			scope:liege = {
+				add_character_modifier = {
+					modifier = something_has_gone_wrong_modifier
+					days = 364
+				}
+			}
+		}
+	}
+	on_start = {
+		hidden_effect_new_object = {
+			add_character_flag = cm_task_3_flag
+		}
+	}
+	on_end = {
+		hidden_effect_new_object = {
+			if = { limit = { is_alive = yes } remove_character_flag = cm_task_3_flag }
+		}
+	}
+
+	ai_will_do = {
+		value = -10
+		if = {
+			limit = {
+				OR = {
+					has_focus = witch_focus
+					has_focus = arcane_focus
+				}
+			}
+			add = 140
+		}
+		if = {
+			limit = {
+				is_true_mage = yes
+				can_be_power_saturated_trigger = yes
+				has_at_least_minor_source_trigger = no
+			}
+			add = 140
+		}
+	}
+}

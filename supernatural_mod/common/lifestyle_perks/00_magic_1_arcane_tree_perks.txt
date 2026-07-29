@@ -1,67 +1,8 @@
-﻿protective_runes_perk = {
+﻿magical_experiments_p1_perk = {
 	lifestyle = magic_lifestyle
 	tree = magic
 	position = { 1.80 0 }
 	icon = node_magic
-	#can_be_picked = { 
-	#	has_trait = witch
-	# }
-	
-	auto_selection_weight = {
-		value = 0
-		if = {
-			limit = {
-				OR = {
-					has_trait = witch
-					any_secret = { secret_type = secret_witch }
-				}
-			}
-			add = 2000
-		}
-	}
-
-	can_be_picked = {
-		#OR = {
-		#	has_trait = witch
-		#	any_secret = { secret_type = secret_witch }
-		#}
-		has_focus=arcane_focus
-	}
-	
-	effect = {
-
-		custom_tooltip = protective_runes_perk_effect4
-		custom_tooltip = protective_runes_perk_effect2
-		custom_tooltip = protective_runes_perk_effect3
-
-		hidden_effect = {
-			if = {
-				limit = {
-					#is_ai = no
-					NOR = {
-						has_trait = supernatural_hunter
-						has_trait = witch_hunter
-					}
-				}
-				random = {
-					chance = 95
-					trigger_event = {
-						id = magic_ev2.46
-						months = { 3 125 }
-					}
-				}
-			}
-		}
-	}
-}
-
-magical_experiments_p1_perk = {
-	lifestyle = magic_lifestyle
-	tree = magic
-	position = { 0.35 1 }
-	icon = node_magic
-
-	parent = protective_runes_perk
 
 	auto_selection_weight = {
 		value = 0
@@ -69,7 +10,7 @@ magical_experiments_p1_perk = {
 			limit = {
 				OR = {
 					has_trait = witch
-					any_secret = { secret_type = secret_witch }
+					any_secret = { type = secret_witch }
 				}
 				OR = {
 					any_character_artifact = { has_variable = magic1 }
@@ -86,58 +27,69 @@ magical_experiments_p1_perk = {
 	}
 
 	can_be_picked = {
-		has_focus=arcane_focus
+		OR = {
+			has_focus = arcane_focus
+			is_true_mage = yes
+		}
 	}
 	
 	effect = {
-		
-		random_list = {
-			80 = {
-				send_interface_toast = {
-					title = magical_experiments_p1_perk_toast
-					add_learning_skill = 1
-				}
-				
+		if = {
+			limit = {
+				has_character_flag = special_magic_character
 			}
-			5 = {
-				trigger = {
-					NOT = {
-						has_trait = disfigured
+			add_learning_skill = 1
+		}
+		else = {
+			random_list = {
+				80 = {
+					send_interface_toast = {
+						title = magical_experiments_p1_perk_toast
+						add_learning_skill = 1
 					}
+					
 				}
-				add_trait = disfigured
-			}
-			5 = {
-				trigger = {
-					NOR = {
-						has_trait = wounded_1
-						has_trait = wounded_2
-						has_trait = wounded_3
+				5 = {
+					trigger = {
+						NOT = {
+							has_trait = disfigured
+						}
 					}
+					add_trait = disfigured
 				}
-				add_trait = wounded_1
-			}
-			5 = {
-				trigger = {
-					NOT = {
-						has_trait = one_eyed
+				5 = {
+					trigger = {
+						NOR = {
+							has_trait = wounded_1
+							has_trait = wounded_2
+							has_trait = wounded_3
+						}
 					}
+					add_trait = wounded_1
 				}
-				add_trait = one_eyed
-			}
-			5 = {
-				trigger = {
-					NOT = {
-						has_trait = one_legged
+				5 = {
+					trigger = {
+						NOT = {
+							has_trait = one_eyed
+						}
 					}
+					add_trait = one_eyed
 				}
-				add_trait = one_legged
+				5 = {
+					trigger = {
+						NOT = {
+							has_trait = one_legged
+						}
+					}
+					add_trait = one_legged
+				}
 			}
 		}
+		
 		#if = { limit = { NOT = { has_character_modifier = power_saturated1 } }
 		#	add_character_modifier = power_saturated1
 		#}
-		gain_source_ps_effect = yes
+		gain_standard_ps_effect = yes
 		custom_tooltip = magical_experiments_p1_perk_effect
 		hidden_effect = {
 			if = {
@@ -166,17 +118,26 @@ magical_experiments_p1_perk = {
 					}
 				}
 			}
+			if = {
+				limit = {
+					NOT = {
+						has_character_flag = special_magic_character
+					}
+					has_trait = archmage
+				}
+				remove_trait = archmage
+			}
 		}
 	}
 }
 
 mage_tower_p2_perk = {
+	name = magic_countermeasures_perk
 	lifestyle = magic_lifestyle
 	tree = magic
 	position = { 3.15 1 }
 	icon = node_magic
-
-	parent = protective_runes_perk
+	parent = magical_experiments_p1_perk
 
 	auto_selection_weight = {
 		value = 0
@@ -184,7 +145,7 @@ mage_tower_p2_perk = {
 			limit = {
 				OR = {
 					has_trait = witch
-					any_secret = { secret_type = secret_witch }
+					any_secret = { type = secret_witch }
 				}
 				OR = {
 					any_character_artifact = { has_variable = magic1 }
@@ -200,29 +161,74 @@ mage_tower_p2_perk = {
 	}
 
 	can_be_picked = {
-		has_focus = arcane_focus
+		OR = {
+			has_focus = arcane_focus
+			is_true_mage = yes
+		}
 	}
 
 	effect = {
-		custom_tooltip = mage_tower_p2_perk_effect
-		custom_tooltip = protective_runes_perk_effect4
-		custom_tooltip = protective_runes_perk_effect3
+		#if = {
+		#	limit = {
+		#		is_playable_character = yes
+		#		NOT = {
+		#			any_held_county = {
+		#				exists = title_province
+		#				title_province = {
+		#					OR = {
+		#						has_building_or_higher = mage_tower_02
+		#						has_variable = prepared_for_tower_constr
+		#					}
+		#					
+		#				}
+		#			}
+		#		}
+		#	}
+		#	if = {
+		#		limit = {
+		#			is_landed = yes
+		#			capital_province = {
+		#				has_special_building_slot = no
+		#			}
+		#		}
+		#		capital_province = {
+		#			add_special_building_slot = mage_tower_02
+		#			set_variable = prepared_for_tower_constr
+		#		}
+		#	}
+		#	else = {
+		#		trigger_event = {
+		#			id = magic_ev6.71
+		#			days = 1
+		#		}
+		#	}
+		#}
+		#custom_tooltip = mage_tower_p2_perk_effect
+		custom_tooltip = magic_countermeasures_perk_ct1
+		custom_tooltip = magic_countermeasures_perk_ct2
+		
 		hidden_effect = {
 			random = {
 				chance = 99
 				trigger_event = {
-					id = magic_ev2.56
+					id = magic_ev2.56	#transmutation
 					months = { 6 60 }
 				}
 			}
+			trigger_event = {
+				id = magic_ev6.71	#mage tower
+				months = { 10 70 }
+			}
 		}
+		#custom_tooltip = protective_runes_perk_effect4
+		#custom_tooltip = protective_runes_perk_effect3
 	}
 }
 
 magic_triangulation_p5_perk = {
 	lifestyle = magic_lifestyle
 	tree = magic
-	position = { 0.35 3 }
+	position = { 0.35 1 }
 	icon = node_magic
 
 	parent = magical_experiments_p1_perk
@@ -231,7 +237,7 @@ magic_triangulation_p5_perk = {
 	can_be_picked = {
 		OR = {
 			has_focus = arcane_focus
-			has_trait = archmage
+			is_true_mage = yes
 		}
 	}
 
@@ -239,92 +245,103 @@ magic_triangulation_p5_perk = {
 		custom_tooltip = magic_triangulation_p5_perk_effect
 		if = {
 			limit = {
-				has_trait = lifestyle_mystic
+				NOT = {
+					has_trait = archmage
+				}
 			}
-			add_trait_xp = {
-				trait = lifestyle_mystic
-				value = 20
+			if = {
+				limit = {
+					has_trait = lifestyle_mystic
+				}
+				add_trait_xp = {
+					trait = lifestyle_mystic
+					value = 20
+				}
 			}
 		}
 	}
 }
 
-healer_p9_perk = {
+healer_p9_perk = { #Caster
 	lifestyle = magic_lifestyle
 	tree = magic
-	position = { 3.15 2.98 }
+	position = { 3.18 3 }
 	icon = node_magic
 
 	parent = mage_tower_p2_perk
 
 	can_be_picked = {
-		has_focus = arcane_focus
+		OR = {
+			has_focus = arcane_focus
+			is_true_mage = yes
+		}
 	}
 
 	effect = {
 		#custom_tooltip = healer_p9_perk_eff
 		custom_tooltip = healer_p9_perk_eff1
 		custom_tooltip = healer_p9_perk_eff2
-		if = {
-			limit = {
-				has_character_flag = bless_land_flag
-			}
-			custom_tooltip = ev5.1.0.a_ct
-		}
-		else_if = {
-			limit = {
-				has_character_flag = healing_spell_flag
-			}
-			#custom_tooltip = healer_p9_perk_eff
-			custom_tooltip = ev5.1.0.healing_ct
-		}
-		else_if = {
-			limit = {
-				has_character_modifier = greedy_power_modifier
-			}
-			show_as_tooltip = {
-				add_character_modifier = greedy_power_modifier
-			}
-		}
-		else_if = {
-			limit = {
-				has_character_flag = shadowstep_flag
-			}
-			custom_tooltip = ev5.1.0.e_ct
-		}
-		else_if = {
-			limit = {
-				has_character_flag = plague_spell_flag
-			}
-			custom_tooltip = ev5.1.0.f_ct
-		}
+		#if = {
+		#	limit = {
+		#		has_character_flag = bless_land_flag
+		#	}
+		#	custom_tooltip = ev5.1.0.a_ct
+		#}
+		#else_if = {
+		#	limit = {
+		#		has_character_flag = healing_spell_flag
+		#	}
+		#	#custom_tooltip = healer_p9_perk_eff
+		#	custom_tooltip = ev5.1.0.healing_ct
+		#}
+		#else_if = {
+		#	limit = {
+		#		has_character_modifier = greedy_power_modifier
+		#	}
+		#	show_as_tooltip = {
+		#		add_character_modifier = greedy_power_modifier
+		#	}
+		#}
+		#else_if = {
+		#	limit = {
+		#		has_character_flag = shadowstep_flag
+		#	}
+		#	custom_tooltip = ev5.1.0.e_ct
+		#}
+		#else_if = {
+		#	limit = {
+		#		has_character_flag = plague_spell_flag
+		#	}
+		#	custom_tooltip = ev5.1.0.f_ct
+		#}
 		#else_if = {
 		#	limit = {
 		#		has_character_flag = unlock_magical_research_flag
 		#	}
 		#	custom_tooltip = ev5.1.0.g_ct
 		#}
-		else_if = {
-			limit = {
-				has_character_flag = hipercognition_flag
-			}
-			custom_tooltip = ev5.1.0.h_ct
-		}
-		else_if = {
-			limit = {
-				has_character_flag = firestorm_spell_flag
-			}
-			custom_tooltip = ev5.1.0.k_ct
-		}
-		else_if = {
-			limit = {
-				has_character_flag = aura_reading_spell
-			}
-			custom_tooltip = aura_reading_spell_got_it
-		}
-		else = {
-			custom_tooltip = healer_p9_perk_eff3
-		}
+		#else_if = {
+		#	limit = {
+		#		has_character_flag = hipercognition_flag
+		#	}
+		#	custom_tooltip = ev5.1.0.h_ct
+		#}
+		#else_if = {
+		#	limit = {
+		#		has_character_flag = firestorm_spell_flag
+		#	}
+		#	custom_tooltip = ev5.1.0.k_ct
+		#}
+		#else_if = {
+		#	limit = {
+		#		has_character_flag = aura_reading_spell
+		#	}
+		#	custom_tooltip = aura_reading_spell_got_it
+		#}
+		#else = {
+		#	custom_tooltip = healer_p9_perk_eff3
+		#}
+		custom_tooltip = healer_p9_perk_eff3
 		if = {
 			limit = {
 				NOT = {
@@ -333,12 +350,12 @@ healer_p9_perk = {
 			}
 			trigger_event = {
 				id = magic_ev5.1
-				days = 1
+				#days = 1
 			}
 		}
 		hidden_effect = {
 			random = {
-				chance = 40
+				chance = 30
 				trigger_event = {
 					id = magic_ev8.50	#a challenge to mage duel
 					years = { 10 30 }
@@ -347,23 +364,36 @@ healer_p9_perk = {
 		}
 	}
 }
-#Now its "Advcanced Alchemy" perk, but I remain old coding name, Update 2.05 (from WC)
+#Now its "Advcanced Alchemy" perk, but I remain old coding name
 combat_spells_p3_perk = {
 	lifestyle = magic_lifestyle
 	tree = magic
-	position = { 1.80 4.50 }
+	position = { 0.35 3 }
 	icon = node_magic
-	parent = healer_p9_perk
+
 	parent = magic_triangulation_p5_perk
 
+
 	can_be_picked = {
-		has_focus=arcane_focus
+		OR = {
+			has_focus = arcane_focus
+			is_true_mage = yes
+		}
 	}
 
 	#character_modifier = {
 	#	domain_tax_mult = 0.1
 	#}
-
+	government_character_modifier = {
+		flag = government_is_landless_adventurer
+		invert_check = yes
+		domain_tax_mult = 0.1
+	}
+	government_character_modifier = {
+		flag = government_is_landless_adventurer
+		invert_check = no
+		domicile_monthly_gold_mult = 0.25
+	}
 	effect = {
 		#custom_tooltip = combat_spells_p3_perk_effect
 		custom_description_no_bullet = { text = combat_spells_p3_effect }
@@ -373,17 +403,25 @@ combat_spells_p3_perk = {
 		#}
 		
 	}
+
 }
+
+
 
 forbidden_ritual_p7_perk = {
 	lifestyle = magic_lifestyle
 	tree = magic
-	position = { 1.80 2.95 }
+	position = { 1.80 4.30 }
 	icon = node_magic
+
 	parent = combat_spells_p3_perk
+	parent = healer_p9_perk
 
 	can_be_picked = {
-		has_focus = arcane_focus
+		OR = {
+			has_focus = arcane_focus
+			is_true_mage = yes
+		}
 	}
 
 	effect = {
@@ -432,7 +470,7 @@ forbidden_ritual_p7_perk = {
 mage_p4_perk = {
 	lifestyle = magic_lifestyle
 	tree = magic
-	position = { 1.80 1.55 }
+	position = { 1.80 2 }
 	icon = true_mage
 
 	parent = forbidden_ritual_p7_perk
@@ -441,13 +479,12 @@ mage_p4_perk = {
 	can_be_picked = {
 		OR = {
 			has_focus = arcane_focus
-			has_trait = archmage
+			is_true_mage = yes
 		}
 	}
 
 
 	effect = {
-		custom_tooltip = archmage_perk_tt
 		add_trait_force_tooltip = archmage
 		#custom_tooltip = mage_p4_perk_ctt
 		#custom_tooltip = mtriangulation_discount_ct
@@ -497,11 +534,11 @@ mage_p4_perk = {
 				limit = {
 					exists = dynasty
 					dynasty = {
-						has_dynasty_perk = witchcraft_legacy_3
+						has_dynasty_perk = witchcraft_legacy_4
 					}
 				}
 				send_interface_toast = {
-					title = witchcraft_legacy_3
+					title = witchcraft_legacy_4
 					add_trait_xp = {
 						trait = archmage
 						track = secret_knowledge
@@ -560,7 +597,10 @@ mage_p4_perk = {
 							years = { 5 30 }
 						}
 					}
-					20 = {
+					30 = {
+						trigger = {
+							has_trait = paranoid
+						}
 						#dominated?
 						trigger_event = {
 							id = magic_ev6.39
@@ -597,38 +637,36 @@ mage_p4_perk = {
 
 					}
 				}
-				if = {
-					limit = {
-						is_ai = no
-					}
-					#errant-knight
-					random = {
-						chance = 80
-						trigger_event = {
-							id = magic_ev2.24
-							years = { 5 15 }
-						}
+				#errant-knight
+				random = {
+					chance = 80
+					trigger_event = {
+						id = magic_ev2.24
+						years = { 5 15 }
 					}
 				}
-				if = {
-					limit = {
-						is_ai = no
-					}
-					#regular mage spawn
-					random = {
-						chance = 80
-						trigger_event = {
-							id = magic_ev2.58
-							years = { 15 25 }
-						}
-					}
-					#regular mage spawn
+				#regular mage spawn
+				#random = {
+				#	chance = 80
+				#	trigger_event = {
+				#		id = magic_ev2.58
+				#		years = { 15 25 }
+				#	}
+				#}
+				#regular mage spawn
+				random = {
+					chance = 80
 					trigger_event = {
 						id = magic_ev2.58
-						years = 100
+						years = 50
 					}
 				}
 				
+				#recognition
+				trigger_event = {
+					id = magic_ev11.2
+					days = 7
+				}
 				
 				if = {
 					limit = {
@@ -642,8 +680,40 @@ mage_p4_perk = {
 							years = { 10 14 }
 						}
 					}
+					#vassal distrusts mage liege
+					trigger_event = {
+						id = magic_ev10.155
+						years = { 30 40 }
+					}
 				}
-				
+			}
+			else = {
+				if = {
+					limit = {
+						is_landed_or_landless_administrative = yes
+					}
+					#additional knowledge
+					random = {
+						chance = 60
+						trigger_event = {
+							id = magic_ev7.135
+							years = { 10 14 }
+						}
+					}
+				}
+
+				#artifacts accumulation (ai)
+				#trigger_event = {
+				#	id = magic_ev2.60
+				#	months = { 11 13 }
+				#}
+
+				#striving for power - ai mages/true witches
+				trigger_event = {
+					id = magic_ev10.156
+					years = { 4 14 }
+				}
+				add_stress = massive_stress_loss
 			}
 			#if = {
 			#	limit = {

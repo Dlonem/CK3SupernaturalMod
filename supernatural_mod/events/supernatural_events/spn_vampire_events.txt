@@ -1,0 +1,166 @@
+﻿namespace = spn_vampire_events
+
+
+
+### "The Blood" - Initial Event ###
+spn_vampire_events.0102 = {
+    type = character_event
+    title = spn_vampire_events.0102.t
+    desc = spn_vampire_events.0102.desc
+    theme = intrigue
+
+	right_portrait = {
+		character = root
+		animation = thinking
+	}
+
+    trigger = {
+        has_character_flag = vampire_blood_in_system
+        NOT = { has_trait = supernatural_vampire }
+        NOT = { has_character_flag = spn_vampire_blood_event_cooldown } # Prevents repeat
+    }
+
+    immediate = {
+        add_character_flag = {
+            flag = spn_vampire_blood_event_cooldown
+            years = 5  # Prevents event from happening again for 5 years
+        }
+    }
+
+    option = {
+        name = spn_vampire_events.0102.a
+        custom_tooltip = spn_vampire_events.0102.a.tt  # Enjoy heightened senses
+
+        add_character_modifier = {
+            modifier = spn_heightened_senses_modifier
+            years = 1
+        }
+
+        ai_chance = {
+            base = 40
+			modifier = { add = 15 has_trait = lustful }
+			modifier = { add = 10 has_trait = gluttonous }
+			modifier = { add = 5 has_trait = gregarious }
+            modifier = { add = 10 has_trait = ambitious }
+            modifier = { add = -20 has_trait = temperate }
+        }
+    }
+
+    option = {
+        name = spn_vampire_events.0102.b
+        custom_tooltip = spn_vampire_events.0102.b.tt  # Resist it
+
+        stress_impact = {
+            temperate = minor_stress_loss
+            diligent = minor_stress_loss
+            lustful = minor_stress_gain
+        }
+
+        ai_chance = {
+            base = 45
+            modifier = { add = 15 has_trait = temperate }
+            modifier = { add = 10 has_trait = content }
+            modifier = { add = -20 has_trait = ambitious }
+        }
+    }
+
+    option = {
+        name = spn_vampire_events.0102.c
+        custom_tooltip = spn_vampire_events.0102.c.tt  # Investigate vampirism
+
+        trigger_event = {
+            id = spn_vampire_events.0103
+            days = { 7 49 }  # 1-7 weeks later
+        }
+
+        ai_chance = {
+            base = 15
+            modifier = { add = 20 learning > 12 }
+            modifier = { add = 10 has_trait = shrewd }
+            modifier = { add = 5 has_trait = curious }
+            modifier = { add = -10 has_trait = trusting }
+        }
+    }
+}
+
+### "The Blood: Part Two" - Follow-up Event ###
+spn_vampire_events.0103 = {
+    type = character_event
+    title = spn_vampire_events.0103.t
+    desc = spn_vampire_events.0103.desc
+    theme = intrigue
+
+	right_portrait = {
+		character = root
+		animation = thinking
+	}
+
+    trigger = {
+        has_character_flag = vampire_blood_in_system
+        NOT = { has_trait = supernatural_vampire }
+    }
+
+    option = {
+        name = spn_vampire_events.0103.a
+        custom_tooltip = spn_vampire_events.0103.a.tt  # Success - Become a Vampire
+
+        trigger = {
+            OR = {
+                learning > 15
+                any_relation = { type = friend has_trait = spn_known_vampire }
+            }
+        }
+
+        trigger_event = spn_initiate.0001 # Transform into vampire
+        #remove_character_flag = vampire_blood_in_system
+
+        # Apply opinion penalty to the sire if they exist and have the spn_conferred_sire flag
+        ai_chance = {
+            base = 20
+            modifier = { add = 25 learning > 15 }
+            modifier = { add = 20 any_relation = { type = friend has_trait = spn_known_vampire } }
+        }
+    }
+
+    option = {
+        name = spn_vampire_events.0103.b
+        custom_tooltip = spn_vampire_events.0103.b.tt  # Experimentation (Risky)
+
+        random_list = {
+            60 = {
+                death = {
+                    death_reason = spn_death_experimental_vampirism
+                }
+            }
+            20 = {
+                add_character_modifier = {
+                    modifier = spn_stomach_pains_modifier
+                    months = 6
+                }
+            }
+            20 = {
+                trigger_event = spn_initiate.0001 # Become a vampire
+                #remove_character_flag = vampire_blood_in_system
+            }
+        }
+
+        ai_chance = {
+            base = 10
+            modifier = { add = 15 has_trait = reckless }
+            modifier = { add = 10 has_trait = arbitrary }
+            modifier = { add = -20 has_trait = diligent }
+        }
+    }
+
+    option = {
+        name = spn_vampire_events.0103.c
+        custom_tooltip = spn_vampire_events.0103.c.tt  # Failure - No progress
+
+        ai_chance = {
+            base = 70
+            modifier = { add = 15 has_trait = patient }
+            modifier = { add = 10 learning < 10 }
+            modifier = { add = -20 learning > 14 }
+        }
+    }
+}

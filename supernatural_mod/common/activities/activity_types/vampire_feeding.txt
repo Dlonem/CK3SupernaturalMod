@@ -1,18 +1,25 @@
 ﻿vampire_feeding = {
 	is_shown = {
-		#is_landed_or_landless_administrative = yes
+		OR = {
+			is_landed_or_landless_administrative = yes
+			is_landless_adventurer = yes
+		}
 		#years_from_game_start >= 3
 		is_playable_character = yes
 		is_available_adult = yes
-
+		trigger_if = {
+			limit = {
+				is_ai = yes
+			}
 			is_at_war = no
+		}
 		OR = {
 			has_trait = supernatural_vampire
 			has_trait = supernatural_hybrid
 		}
 	}
 	
-	is_grand_activity = no
+	#is_grand_activity = no
 	
 	can_start_showing_failures_only = {
 		is_available = yes
@@ -33,9 +40,12 @@
 			has_variable = activity_invalidated
 		}
 		scope:host = {
+			OR = {
+				is_landed_or_landless_administrative = yes
+				is_landless_adventurer = yes
+			}
 			is_alive = yes
-			is_imprisoned = no
-			is_playable_character = yes
+			is_imprisoned = no			
 			NOT = { is_incapable = yes }
 		}
 		
@@ -44,6 +54,7 @@
 		#space for invitation event
 		every_living_character = {
 			limit = {
+				is_ai = no
 				NOT = {
 					THIS = scope:host
 				}
@@ -55,7 +66,12 @@
 					has_trait = supernatural_vampire
 				}
 			}
-			#trigger_event = supernatural_ev1.01
+			trigger_event = supernatural_ev1.01
+		}
+
+		# --- Success Chance bar (vanilla widget; mirrors Hunt / Inspection) ---
+		scope:activity ?= {
+			set_variable = { name = vampire_feeding_success_chance value = vf_feeding_success_chance }
 		}
 	}
 
@@ -83,6 +99,11 @@
 				name = activity_invalidated
 			}
 		}
+	}
+
+	### Bottom-of-window progress bar widget (vanilla) ###
+	activity_window_widgets = {
+		vampire_feeding_success_chance = "activity_plugin_widgets_summary"
 	}
 
 	###################
@@ -131,10 +152,8 @@
 	}
 	cooldown = { years = 7 }
 
-	province_filter = domicile_domain
-	ai_province_filter = domicile_domain
-	wait_time_before_start = { weeks = 2 }
-	max_guest_arrival_delay_time = { months = 2 }
+	wait_time_before_start = { weeks = 1 }
+	max_guest_arrival_delay_time = { months = 3 }
 	is_single_location = yes
 
 	###################
@@ -218,7 +237,7 @@
 	ai_check_interval = 60
 
 	ai_will_select_province = {
-		value = 20
+		value = { value = 20 add = scope:score }
 	}
 
 	###################
@@ -298,89 +317,53 @@
 			}
 		}
 		options_spoils = {
-			spoils_option_dead_respect = { #Gain Piety
+			spoils_option_dead_respect = { #Gain Piety (restrained)
 				default = yes
 				cost = {
 					gold = 0
 				}
 				ai_will_do = {
 					value = 0
-					# Financial preference.
-					add = activity_option_likes_heavy_expense_value
-					# Fanciness preference.
-					add = activity_option_likes_ostentatious_food_option_value
-					if = { # Ambitious
-						limit = { has_trait = greedy }
-						add = {
-							value = 20
-							desc = "Greedy"
-						}
-					}
-					if = { # Ambitious
-						limit = { has_trait = avaricious }
-						add = {
-							value = 20
-							desc = "Avaricious"
-						}
-					}
+					# Free option.
+					add = activity_option_likes_cheap_expense_value
+					# Honorable, restrained, pious characters prefer sparing the dead.
+					if = { limit = { has_trait = generous } add = { value = 20 desc = "Generous" } }
+					if = { limit = { has_trait = just } add = { value = 15 desc = "Just" } }
+					if = { limit = { has_trait = compassionate } add = { value = 15 desc = "Compassionate" } }
+					if = { limit = { has_trait = zealous } add = { value = 10 desc = "Zealous" } }
 				}
 			}
-			spoils_option_robbing = { #Gain Gold
-				default = yes
+			spoils_option_robbing = { #Gain Gold (rob the victim)
 				cost = {
 					piety = 20
 				}
 				ai_will_do = {
 					value = 0
-					# Financial preference.
-					add = activity_option_likes_heavy_expense_value
-					# Fanciness preference.
-					add = activity_option_likes_ostentatious_food_option_value
-					if = { # Ambitious
-						limit = { has_trait = greedy }
-						add = {
-							value = 20
-							desc = "Greedy"
-						}
-					}
-					if = { # Ambitious
-						limit = { has_trait = avaricious }
-						add = {
-							value = 20
-							desc = "Avaricious"
-						}
-					}
+					# No gold cost.
+					add = activity_option_likes_cheap_expense_value
+					# Greedy, dishonorable characters are drawn to robbing.
+					if = { limit = { has_trait = greedy } add = { value = 20 desc = "Greedy" } }
+					if = { limit = { has_trait = avaricious } add = { value = 20 desc = "Avaricious" } }
+					if = { limit = { has_trait = deceitful } add = { value = 10 desc = "Deceitful" } }
+					# Honorable characters avoid robbing the dead.
+					if = { limit = { has_trait = generous } add = { value = -15 desc = "Generous" } }
+					if = { limit = { has_trait = just } add = { value = -15 desc = "Just" } }
 				}
 			}
-			spoils_option_casing = { #Gain Extra Gold
+			spoils_option_casing = { #Gain Extra Gold (target the wealthy)
 				cost = {
 					gold = 50
 				}
-				
 				ai_will_do = {
 					value = 0
-					# Financial preference.
-					add = activity_option_likes_heavy_expense_value
-					# Fanciness preference.
-					add = activity_option_likes_ostentatious_food_option_value
-					if = { # Ambitious
-						limit = { has_trait = greedy }
-						add = {
-							value = 20
-							desc = "Greedy"
-						}
-					}
-					if = { # Ambitious
-						limit = { has_trait = avaricious }
-						add = {
-							value = 20
-							desc = "Avaricious"
-						}
-					}
-				}				
+					# Costs gold.
+					add = activity_option_likes_middling_expense_value
+					# Calculating, ambitious greed.
+					if = { limit = { has_trait = greedy } add = { value = 20 desc = "Greedy" } }
+					if = { limit = { has_trait = avaricious } add = { value = 20 desc = "Avaricious" } }
+					if = { limit = { has_trait = ambitious } add = { value = 15 desc = "Ambitious" } }
+				}
 			}
-			
-
 		}
 	}
 
@@ -514,12 +497,40 @@
 	province_filter = domicile_realm
 	ai_province_filter = domicile_realm
 
-	max_province_icons = 3
+	max_province_icons = 6
 	allow_zero_guest_invites = yes
 	open_invite = no
 	
+		province_score = {
+		value = 0
+		# Smooth development gradient: lower dev = greener = easier feeding. Guarded so no-county provinces don't error.
+		if = {
+			limit = { exists = county }
+			add = 150
+			add = { value = county.development_level multiply = -2.5 }
+			# Lawless counties (low control) feed easier (greener).
+			add = { value = county.county_control multiply = -0.4 }
+			# War / plague = chaos, a perfect cover to feed (much greener).
+			if = { limit = { county = { any_county_province_epidemic = { count >= 1 outbreak_intensity < apocalyptic } } } add = 30 }
+			if = { limit = { county = { holder ?= { is_at_war = yes } } } add = 20 }
+		}
+	}
 	province_description = {
-		desc = activity_camp_party_province_desc
+		desc = vf_prov_base
+		# Development (one tag via first_valid).
+		first_valid = {
+			triggered_desc = { trigger = { exists = county county = { development_level >= 55 } } desc = vf_tag_dev_terrible }
+			triggered_desc = { trigger = { exists = county county = { development_level >= 40 } } desc = vf_tag_dev_bad }
+			triggered_desc = { trigger = { exists = county county = { development_level < 15 } } desc = vf_tag_dev_best }
+			triggered_desc = { trigger = { exists = county county = { development_level < 25 } } desc = vf_tag_dev_good }
+		}
+		# County control (one tag via first_valid) - vanilla county.county_control.
+		first_valid = {
+			triggered_desc = { trigger = { exists = county county.county_control <= 25 } desc = vf_tag_control_best }
+			triggered_desc = { trigger = { exists = county county.county_control <= 50 } desc = vf_tag_control_good }
+			triggered_desc = { trigger = { exists = county county.county_control >= 90 } desc = vf_tag_control_bad }
+			triggered_desc = { trigger = { exists = county county.county_control >= 75 } desc = vf_tag_control_mid }
+		}
 	}
 	
 	###################
@@ -571,7 +582,7 @@
 
             #OR = {
             #    has_trait = spn_known_vampire
-            #    any_secret = { secret_type = secret_vampire }
+            #    any_secret = { type = secret_vampire }
             #}
 		}
 	}
@@ -671,17 +682,17 @@
 							add_trait_xp = {
 								trait = supernatural_vampire
 								track = vampirism
-								value = { 5 15 }  # Customize the range to fit your design
+								value = { 3 8 }  # Phase 1 balance
 							}
 						}
-						else = {
+						else_if = {
 							limit = {
 								has_trait = supernatural_hybrid 
 							}
 							add_trait_xp = {
 								trait = supernatural_hybrid
 								track = hybrid_vampirism
-								value = { 5 15 }  # Hybrid XP if applicable
+								value = { 3 8 }  # Hybrid XP if applicable
 							}
 						}
 						add_character_modifier = {

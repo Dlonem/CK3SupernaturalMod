@@ -1,7 +1,12 @@
 ﻿mage_court_position = {
+	sort_order = 699
 	skill = learning
 	max_available_positions = 1
-	category = court_position_category_common
+	#category = court_position_category_common
+	court_position_asset = {
+		animation = writing
+		background = "gfx/interface/illustrations/event_scenes/study_physician.dds"
+	}
 	is_shown = {
 		is_landed_or_landless_administrative = yes
 		highest_held_title_tier > tier_duchy
@@ -18,8 +23,8 @@
 		value = 1
 		add = {
 			value = learning
-			multiply = 1.2
-			max = 29
+			multiply = 0.75
+			max = 30
 			desc = court_position_skill_learning
 		}
 		if = {
@@ -27,7 +32,7 @@
 				has_trait = true_witch
 			}
 			add = {
-				value = 45
+				value = 35
 				desc = court_position_witch_trait
 			}
 		}
@@ -36,7 +41,7 @@
 				has_focus = witch_focus
 			}
 			add = {
-				value = 30
+				value = 25
 				desc = court_position_witch_trait
 			}
 		}
@@ -45,13 +50,37 @@
 				has_trait = witch
 			}
 			add = {
-				value = 20
+				value = 10
 				desc = court_position_witch_trait
 			}
 		}
+		
 		if = {
 			limit = {
+				is_false_mage = yes
+			}
+			add = {
+				value = 40
+				desc = court_position_archmage_trait
+			}
+		}
+		else_if = {
+			limit = {
 				is_legendary_mage_trigger = yes
+			}
+			add = {
+				value = 90
+				desc = court_position_archmage_trait
+			}
+		}
+		else_if = {
+			limit = {
+				has_trait = archmage
+				has_trait_xp = {
+					trait = archmage
+					track = secret_knowledge
+					value > 74
+				}
 			}
 			add = {
 				value = 80
@@ -60,13 +89,38 @@
 		}
 		else_if = {
 			limit = {
-				OR = {
-					has_trait = archmage
-					has_trait = demon
+				has_trait = archmage
+				has_trait_xp = {
+					trait = archmage
+					track = secret_knowledge
+					value > 49
+				}
+			}
+			add = {
+				value = 70
+				desc = court_position_archmage_trait
+			}
+		}
+		else_if = {
+			limit = {
+				has_trait = archmage
+				has_trait_xp = {
+					trait = archmage
+					track = secret_knowledge
+					value > 24
 				}
 			}
 			add = {
 				value = 60
+				desc = court_position_archmage_trait
+			}
+		}
+		else_if = {
+			limit = {
+				has_trait = archmage
+			}
+			add = {
+				value = 50
 				desc = court_position_archmage_trait
 			}
 		}
@@ -111,7 +165,7 @@
 	#valid_position = { 
 		#custom_description = {
 		#	text = witchcraft_illegal_custom
-		#	NOT = { trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = root.faith GENDER_CHARACTER = root } }
+		#	NOT = { trait_is_criminal_in_faith_trigger = { TRAIT = trait:witch FAITH = root.faith GENDER_CHARACTER = root } }
 		#}
 	#	custom_description = {
 	#		text = has_open_minded_custom
@@ -153,6 +207,7 @@
 		scope:employee = {
 			is_imprisoned = no
 			NOT = { has_trait = witch_hunter }
+			NOT = { has_trait = incapable }
 			#trigger_if = {
 			#	limit = { NOT = { has_court_position = mage_court_position } }
 			#	court_position_does_not_already_have_a_job_trigger = yes # This positions is considered a job, and cannot be held at the same tims as another similar position
@@ -185,8 +240,32 @@
 	salary = {
 		round = no
 		gold = {
+			#value = medium_court_position_salary
+			#value = court_position_physician_salary
+			#value = major_court_position_salary
 			value = medium_court_position_salary
 			# Set to 0 with Dynasty Perk Inner Circle
+			if = {
+				limit = {
+					scope:liege = {
+						employs_court_position = mage_court_position
+						any_court_position_holder = {
+							type = mage_court_position
+							has_trait = archmage
+							has_trait_xp = {
+								trait = archmage
+								track = secret_knowledge
+								value > 49
+							}
+						}
+					}
+				}
+				multiply = {
+					value = 2.0
+					desc = experienced_mage
+					format = "BASE_VALUE_FORMAT_DECIMALS_PLUS_NEGATIVE"
+				}
+			}
 			if = {
 				limit = {
 					scope:liege = {
@@ -234,21 +313,75 @@
 	}
 
 	modifier = {
-		monthly_prestige = medium_court_position_prestige_salary
+		monthly_prestige = 0.1
 		monthly_magic_lifestyle_xp_gain_mult = 0.1
 	}
 
 	on_court_position_received = {
 		basic_gained_court_position_effect = yes
+		hidden_effect = {
+			scope:employee = {
+				clear_all_cm_flags_effect = yes
+				trigger_event = {
+					id = magic_ev3.72
+					months = { 3 48 }
+				}
+				trigger_event = {
+					id = magic_ev10.60
+					years = { 2 4 }
+				}
+			}
+		}
 	}
 	on_court_position_revoked = { 
 		basic_revoked_court_position_effect = yes
+		hidden_effect = {
+			scope:employee = {
+				clear_all_cm_flags_effect = yes
+			}
+		}
 	}
 	on_court_position_invalidated = {
-
+		hidden_effect = {
+			scope:employee = {
+				clear_all_cm_flags_effect = yes
+			}
+		}
+	}
+	ai_position_score = {
+		value = 50
+		if = {
+			limit = {
+				scope:liege = {
+					OR = {
+						any_courtier = {
+							has_trait = archmage
+						}
+						any_vassal = {
+							has_trait = archmage
+						}
+					}
+				}
+			}
+			add = 100
+		}
+		if = {
+			limit = {
+				scope:liege = {
+					trait_is_criminal_in_faith_trigger = { TRAIT = trait:witch FAITH = this.faith GENDER_CHARACTER = this }
+					OR = {
+						has_trait = zealous
+						has_trait = theologian
+						is_theocratic_lessee = yes
+						has_trait = content
+					}
+				}
+			}
+			add = -800
+		}
 	}
 	# Scripted value to determine whether an AI will hire/fire a position or not. Hires over 0, fires under -50. Look in _court_positions.info for more extensive documentation!
-	candidate_score = {
+	ai_candidate_score = {
 		value = 50
 		add = scope:base_value
 		add = court_position_candidate_score_base_value
@@ -279,7 +412,18 @@
 		if = {
 			limit = {
 				scope:employee = {
-					has_character_flag = revoked_cmage
+					is_false_mage = yes
+				}
+			}
+			add = -10
+		}
+		if = {
+			limit = {
+				scope:employee = {
+					OR = {
+						has_character_flag = revoked_cmage
+						has_character_modifier = liar_liar_modifier
+					}
 				}
 			}
 			add = -800
@@ -296,15 +440,15 @@
 		#	}
 		#	add = -800
 		#}
+		
 		if = {
 			limit = {
 				scope:liege = {
-					trait_is_criminal_in_faith_trigger = { TRAIT = witch FAITH = this.faith GENDER_CHARACTER = this }
-					OR = {
-						has_trait = zealous
-						has_trait = theologian
-						is_theocratic_lessee = yes
-						has_trait = content
+					gold < 50
+				}
+				scope:employee = {
+					NOT = {
+						has_trait = archmage
 					}
 				}
 			}
@@ -313,22 +457,27 @@
 	}
 }
 dark_champion_court_position = {
+	sort_order = 698
 	max_available_positions = 1
-	category = court_position_category_special
+	#category = court_position_category_special
 	skill = intrigue
-	
+	court_position_asset = {
+		animation = throne_room_one_handed_passive_3
+		background = "gfx/interface/illustrations/event_scenes/ep3_military_tent.dds"
+	}
 	is_shown = {
 		OR = {
 			any_character_artifact = {
 				has_variable = magic_crown
 			}
-			AND = {
-				has_trait = demon
-				has_trait_xp = {
-					trait = demon
-					value > 74
-				}
-			}
+			#AND = {
+			#	is_a_demon_trigger = yes
+			#	has_trait_xp = {
+			#		trait = demon1
+			#		value > 74
+			#	}
+			#}
+			has_perk = deals_with_mortals_perk
 		}
 	}
 
@@ -374,7 +523,7 @@ dark_champion_court_position = {
 				OR = {
 					has_trait = witch
 					any_secret = {
-						secret_type = secret_witch
+						type = secret_witch
 					}
 				}
 				
@@ -413,7 +562,7 @@ dark_champion_court_position = {
 		}
 		if = {
 			limit = {
-				has_trait = demon
+				is_a_demon_trigger = yes
 			}
 			add = {
 				value = 20
@@ -426,6 +575,7 @@ dark_champion_court_position = {
 			}
 			add = {
 				value = 20
+				desc = court_position_witch_hunter2_trait
 			}
 		}
 		if = {
@@ -510,7 +660,7 @@ dark_champion_court_position = {
 				has_trait = corrupted
 				has_trait = cannibal
 				has_trait = true_witch
-				has_trait = demon
+				is_a_demon_trigger = yes
 				has_trait = archmage
 				has_trait = excommunicated
 				has_trait = golem
@@ -525,8 +675,7 @@ dark_champion_court_position = {
 
 	revoke_cost = {
 		prestige =  {
-			value = minor_court_position_prestige_revoke_cost 
-
+			value = minor_court_position_prestige_revoke_cost
 			multiply = 0
 		}
 	}
@@ -534,7 +683,7 @@ dark_champion_court_position = {
 	salary = {
 		round = no
 		gold = {
-			value = minor_court_position_salary
+			value = court_position_physician_salary
 			# Set to 0 with Dynasty Perk Inner Circle
 			if = {
 				limit = {
@@ -615,7 +764,7 @@ dark_champion_court_position = {
 	}
 
 	modifier = {
-		monthly_prestige = minor_court_position_prestige_salary
+		monthly_prestige = 0.1
 		dread_baseline_add = 10
 	}
 
@@ -667,8 +816,11 @@ dark_champion_court_position = {
 		}
 
 	}
+	ai_position_score = {
+		value = 100
+	}
 	# Scripted value to determine whether an AI will hire/fire a position or not. Hires over 0, fires under -50. Look in _court_positions.info for more extensive documentation!
-	candidate_score = {
+	ai_candidate_score = {
 		value = 50
 		scope:employee = {
 			# Does the liege have a better candidate that they should be hiring instead?
@@ -704,7 +856,7 @@ dark_champion_court_position = {
 
 cult_priest_camp_officer = {
 	max_available_positions = 1
-	category = court_position_category_officer
+	#category = court_position_category_officer
 	skill = diplomacy
 
 	opinion = {
@@ -829,7 +981,10 @@ cult_priest_camp_officer = {
 		}
 		add = court_position_aptitude_high_penalty_value
 	}
-
+	court_position_asset = {
+		animation = physician
+		background = "gfx/interface/illustrations/event_scenes/study_physician.dds"
+	}
 	is_shown = {
 		government_has_flag = government_is_landless_adventurer
 		has_ep3_dlc_trigger = yes
@@ -902,7 +1057,7 @@ cult_priest_camp_officer = {
 	}
 
 	modifier = {
-		monthly_prestige = minor_court_position_prestige_salary
+		monthly_prestige = 0.1
 		intrigue = 2
 		learning = 2
 	}
@@ -939,7 +1094,10 @@ cult_priest_camp_officer = {
 		basic_invalidated_camp_officer_effect = yes
 	}
 	# Scripted value to determine whether an AI will hire/fire a position or not. Hires over 0, fires under -50. Look in _court_positions.info for more extensive documentation!
-	candidate_score = {
+	ai_position_score = {
+		value = 100
+	}
+	ai_candidate_score = {
 		value = 500
 
 		add = court_position_candidate_score_base_value 

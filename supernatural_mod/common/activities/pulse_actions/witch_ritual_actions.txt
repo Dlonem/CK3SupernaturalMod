@@ -88,7 +88,11 @@ recited_witchcraft_treatise = {
 		is_current_phase_active = yes
 		any_attending_character = {
 			location = scope:province
-			has_lifestyle = learning_lifestyle
+			OR = {
+				has_lifestyle = learning_lifestyle
+				has_focus = witch_focus
+				has_focus = arcane_focus
+			}
 		}
 	}
 
@@ -100,7 +104,11 @@ recited_witchcraft_treatise = {
 		random_attending_character = {
 			limit = {
 				location = scope:province
-				has_lifestyle = learning_lifestyle
+				OR = {
+					has_lifestyle = learning_lifestyle
+					has_focus = witch_focus
+					has_focus = arcane_focus
+				}
 			}
 			save_scope_as = first
 		}
@@ -109,9 +117,17 @@ recited_witchcraft_treatise = {
 			key = recited_witchcraft_treatise
 			tags = { pulse_action }
 			character = scope:first
-			
 			scope:first = {
-				add_learning_lifestyle_xp = minor_lifestyle_xp
+				if = {
+					limit = {
+						has_focus = witch_focus
+						has_focus = arcane_focus
+					}
+					add_magic_lifestyle_xp = minor_lifestyle_xp
+				}
+				else = {
+					add_learning_lifestyle_xp = minor_lifestyle_xp
+				}
 			}
 		}
 	}
@@ -210,7 +226,7 @@ praised_horned_god_together = {
 		random_attending_character = {
 			limit = {
 				location = scope:province
-				NOT = { this = scope:first }
+				this != scope:first
 			}
 			save_scope_as = second
 		}
@@ -288,6 +304,61 @@ apa_imbued_artifact = {
 			
 			scope:artifact = {
 				add_artifact_modifier = artifact_monthly_piety_gain_mult_1_modifier
+			}
+		}
+	}
+}
+fixed_mamulet_artifact = {
+	icon = learning
+	is_valid = {
+		is_current_phase_active = yes
+		any_attending_character = {
+			location = scope:province
+			any_character_artifact = {
+				category = inventory
+				has_variable = mamulet
+				artifact_durability < 50
+				is_equipped = yes
+			}
+		}
+	}
+
+	weight = {
+		value = 1
+	}
+
+	effect = {			
+		random_attending_character = {
+			limit = {
+				location = scope:province
+				any_character_artifact = {
+					category = inventory
+					has_variable = mamulet
+					artifact_durability < 50
+					is_equipped = yes
+				}
+			}
+			save_scope_as = first
+		}
+		
+		scope:first = {
+			random_character_artifact = {
+				limit = {
+					category = inventory
+					has_variable = mamulet
+					artifact_durability < 50
+					is_equipped = yes
+				}
+				save_scope_as = artifact
+			}
+		}
+		
+		add_activity_log_entry = {
+			key = fixed_mamulet_artifact
+			tags = { pulse_action }
+			character = scope:first
+			scope:artifact = {
+				add_durability = 100
 			}
 		}
 	}

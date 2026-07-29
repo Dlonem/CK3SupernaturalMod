@@ -3,22 +3,13 @@
 #######################
 
 mage_tower_01 = {
-
 	construction_time = standard_construction_time
-
 	type_icon = "icon_structure_iron_pillar_of_dhar.dds"
-	
 	can_construct_potential = {
 		scope:holder = {
 			OR = {
 				has_perk = mage_tower_p2_perk
 				has_perk = mage_p4_perk
-				AND = {
-					exists = dynasty
-					dynasty = {
-						has_dynasty_perk = witchcraft_legacy_1
-					}
-				}
 			}
 		}
 	}
@@ -43,18 +34,22 @@ mage_tower_01 = {
 		}
 	}
 	
-	is_enabled = {
-		county.holder = { has_title = prev.duchy }
-	}
-	show_disabled = yes
-	
 	cost_gold = 300
 	next_building = mage_tower_02
 	character_modifier = {
-		monthly_magic_lifestyle_xp_gain_mult = 0.20
-		monthly_county_control_growth_factor = 0.05
-		diplomatic_range_mult = 0.5
-		liege_opinion = -10
+		monthly_magic_lifestyle_xp_gain_mult = 0.1
+		dread_decay_mult = -0.1
+		diplomatic_range_mult = 0.25
+		mtriangulation_terrain_cancel_negative_supply = yes
+		mr_progress_boost_terrain_advantage = 3
+	}
+
+	character_culture_modifier = {
+		parameter = mage_rulership_rule
+		monthly_prestige = 0.05
+		monthly_dynasty_prestige = 0.05
+		legitimacy_gain_mult = 0.1
+		monthly_influence_mult = 0.1
 	}
 	
 	county_modifier = {
@@ -62,15 +57,15 @@ mage_tower_01 = {
 		development_growth = 0.1
 	}
 	
-	duchy_capital_county_modifier = {
-		defender_holding_advantage = 1
-	}
-	
+	#province_modifier = {
+	#	fort_level = great_building_fort_level_tier_1
+	#}
+	flag = wc_mage_tower_flag
 	ai_value = {
 		base = 100
 	}
 	
-	type = duchy_capital
+	type = special
 }
 
 mage_tower_02 = {
@@ -119,10 +114,6 @@ mage_tower_02 = {
 	
 	}
 	
-	is_enabled = {
-		county.holder = { has_title = prev.duchy }
-	}
-	show_disabled = yes
 	
 	
 	cost_gold = 600
@@ -131,35 +122,42 @@ mage_tower_02 = {
 	character_modifier = {
 		monthly_magic_lifestyle_xp_gain_mult = 0.30
 		monthly_county_control_growth_factor = 0.1
-		dread_decay_mult = -0.5
+		dread_decay_mult = -0.1
 		diplomatic_range_mult = 0.5
-		liege_opinion = -10
+		enemy_hostile_scheme_success_chance_add = -5
+		mtriangulation_terrain_cancel_negative_supply = yes
+		mr_progress_boost_terrain_advantage = 4
 	}
 	
 	county_modifier = {
-		development_growth_factor = 0.15
-		development_growth = 0.15
+		development_growth = 0.1
+		development_growth_factor = 0.1
+		travel_danger = -10
+	}
+
+	character_culture_modifier = {
+		parameter = mage_rulership_rule
+		monthly_prestige = 0.05
+		monthly_dynasty_prestige = 0.05
+		legitimacy_gain_mult = 0.2
+		monthly_influence_mult = 0.2
 	}
 	
 	province_modifier = {
 		monthly_income = 4.0
 	}
-	
-	duchy_capital_county_modifier = {
-		defender_holding_advantage = 2
-	}
-	
+	flag = wc_mage_tower_flag
 	ai_value = {
 		base = 100
 	}
 	
-	type = duchy_capital
+	type = special
 }
 
 
 mage_tower_03 = {
 
-	construction_time = slow_construction_time
+	construction_time = standard_construction_time
 
 	type_icon = "icon_structure_iron_pillar_of_dhar.dds"
 	
@@ -181,32 +179,36 @@ mage_tower_03 = {
 	
 	can_construct_showing_failures_only = {
 		custom_description = {
-			text = not_have_mage_tower
+			text = already_has_ge_palace
 			scope:holder = {
 				NOT = {
-					any_held_title = {
+					any_held_county = {
 						exists = title_province
 						title_province = {
 							OR = {
-								#has_building = mage_tower_01
-								#has_building = mage_tower_02
-								has_building = mage_tower_03
+								has_building_or_higher = mage_tower_03
+								has_variable = magic_tower_t2_exists
 							}
 						}
 					}
-				}	
+				}
+			}
+		}
+		custom_description = {
+			text = mage_rulership_required
+			scope:holder = {
+				culture = {
+					has_cultural_tradition = mage_rulership_tradition
+				}
 			}
 		}
 	}
-	
-	is_enabled = {
-		county.holder = { has_title = prev.duchy }
-	}
 	show_disabled = yes
 	
-	cost_gold = 900
-	#next_building = mage_tower_03
 	
+	cost_gold = 900
+	cost_prestige = 1000
+
 	character_modifier = {
 		monthly_magic_lifestyle_xp_gain_mult = 0.40
 		monthly_county_control_growth_factor = 0.15
@@ -214,25 +216,31 @@ mage_tower_03 = {
 	}
 	
 	county_modifier = {
-		development_growth_factor = 0.20
-		development_growth = 0.20
+		development_growth_factor = 0.2
+		development_growth = 0.2
+		monthly_county_control_growth_add = 0.2
 	}
 	
 	province_modifier = {
 		monthly_income = 6.0
-		tax_mult = 0.05
 	}
-	
-	duchy_capital_county_modifier = {
-		defender_holding_advantage = 3
+	on_start = {
+		set_variable = magic_tower_t2_exists
 	}
-	
+	on_cancelled = {
+		remove_variable = magic_tower_t2_exists
+	}
+	on_complete = {
+		#remove_variable = magic_tower_t2_exists
+		county.holder = {
+			trigger_event = magic_ev10.100
+		}
+	}
 	ai_value = {
 		base = 100
 	}
-	
-	type = duchy_capital
-	flag = fully_upgraded_duchy_capital_building
+	#flag = wc_place_of_power
+	type = special
 }
 
 witch_house = {
@@ -264,6 +272,7 @@ witch_house = {
 		yaga_witch_house2_terrain_cancel_negative_supply = yes
 		arcane_terrain_cancel_negative_supply = yes
 		yaga_witch_house_terrain_cancel_negative_supply = yes
+		ultimate_spell_bonus_terrain_advantage = 0.05
 		men_at_arms_cap = 1
 	}
 
@@ -284,7 +293,7 @@ witch_house = {
 	ai_value = {
 		base = 100
 	}
-	
+	flag = wc_place_of_power
 	type = special
 }
 
@@ -317,7 +326,9 @@ horned_god_house = {
 		#cultists_toughness_mult = 0.5
 		#cultists_pursuit_mult = 0.5
 		#cultists_screen_mult = 0.5
+		monthly_demon_lifestyle_xp_gain_mult = 0.25
 		yaga_witch_house2_terrain_advantage = -0.5	#grand rite cooldown
+		ultimate_spell_bonus_terrain_advantage = 0.05
 	}
 
 	character_culture_modifier = {
@@ -345,7 +356,7 @@ horned_god_house = {
 	ai_value = {
 		base = 100
 	}
-	
+	flag = wc_place_of_power
 	type = special
 }
 
@@ -371,11 +382,13 @@ mage_house = {
 		learning_per_prestige_level = 3
 		monthly_magic_lifestyle_xp_gain_mult = 0.5
 		magic_gain_terrain_advantage = 0.5
-		md_doom_spell_terrain_advantage = 1
+		#md_doom_spell_terrain_advantage = 1
 		negate_health_penalty_add = 0.5
 		mage_house_learn_terrain_cancel_negative_supply = yes
 		arcane_terrain_cancel_negative_supply = yes
-		magic_epic_cooldown_terrain_advantage = -5
+		#magic_epic_cooldown_terrain_advantage = -5
+		mr_progress_boost_terrain_advantage = 3
+		ultimate_spell_bonus_terrain_advantage = 0.05
 	}
 
 	character_culture_modifier = {
@@ -399,7 +412,7 @@ mage_house = {
 	ai_value = {
 		base = 100
 	}
-	
+	flag = wc_place_of_power
 	type = special
 }
 
@@ -436,3 +449,4 @@ houska = {
 	}
 	type = special
 }
+#has_building_with_flag
