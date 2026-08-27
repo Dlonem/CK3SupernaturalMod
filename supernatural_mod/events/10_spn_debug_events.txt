@@ -53,3 +53,60 @@ spn_debug_events.0001 = {
 		name = spn_debug_events.0001.a
 	}
 }
+
+
+# ══════════════════════════════════════════════════════════════════════════════════════════════════
+# 0100 -- FORCE THE BATTLE-TRANSITION CHAIN.  Console:  event spn_debug_events.0100
+#
+# The chain needs a blooded character to take a mortal blow as a knight in a live battle, which is
+# not something you can arrange on demand. This does the whole setup on whoever runs it and then
+# runs the real effect -- the same one spn_blood_took_the_blow calls -- so what you see afterwards
+# is the production path, not a simulation of it.
+#
+#   1. puts vampire blood in you, and names a donor so the Maker bond has something to bind to
+#   2. runs spn_blood_took_the_blow_effect: knight status forbidden, commander removed, wounded,
+#      spn_in_transition set, spn_transition.0001 scheduled 1 day out
+#
+# Then unpause. Day 1 the waking (.0001), day 2 the recognition and the choice (.0002), and if you
+# refuse, day 4 the last of it (.0003). Check the Maker/Progeny relation on both characters after.
+#
+# Donor priority: your consort, else any adult courtier, else nobody (the chain still runs, you just
+# never get the "ask them" option). orphan = yes -- unreachable except from the console.
+# ══════════════════════════════════════════════════════════════════════════════════════════════════
+spn_debug_events.0100 = {
+	type = character_event
+	hidden = yes
+	orphan = yes
+
+	immediate = {
+		if = {
+			limit = { exists = primary_spouse }
+			spn_assign_vampire_blood_donor = { CHARACTER = root.primary_spouse }
+		}
+		else_if = {
+			limit = { any_courtier = { is_adult = yes } }
+			random_courtier = {
+				limit = { is_adult = yes }
+				save_scope_as = spn_debug_donor
+			}
+			# The donor has to actually BE a vampire or the .0002 "ask them for help" option stays
+			# hidden -- spn_transition_donor_present_trigger checks the trait, not just the variable.
+			# Testing the chain without this only ever exercises two of its three options.
+			scope:spn_debug_donor = {
+				if = {
+					limit = { spn_has_supernatural_trait = no }
+					add_trait = supernatural_vampire
+				}
+			}
+			spn_assign_vampire_blood_donor = { CHARACTER = scope:spn_debug_donor }
+		}
+		add_character_flag = vampire_blood_in_system
+		if = {
+			limit = { NOT = { has_character_modifier = ingested_vampire_blood_modifier } }
+			add_character_modifier = { modifier = ingested_vampire_blood_modifier }
+		}
+
+		# The real thing, not a copy of it.
+		spn_blood_took_the_blow_effect = yes
+	}
+}

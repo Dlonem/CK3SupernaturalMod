@@ -1,0 +1,78 @@
+﻿# 2.33 -- THE BLOOD REMEMBERS. Dying in battle with vampire blood in your system.
+#
+# ══════════════════════════════════════════════════════════════════════════════════════════════════
+# WHY IT IS BUILT THIS WAY, because the measurement decided the design.
+#
+# Q: Can we intercept the vanilla battle death?
+# A: No. `has_natural_death_second_chance` is the ONLY death-stopping rule in the game and it is
+#    natural-death only. `on_death` is reactive; CK3 cannot un-kill. And knight_killed calls
+#    `death = { death_reason = death_battle }` INLINE, twice -- there is no scripted effect to
+#    override. Overriding knight_killed itself means shipping a copy of a file AGOT has rewritten
+#    from 463 lines to 993, which silently reverts their work the day they touch it.
+#
+# Q: Then does adding our own entry "take the rolls that would have killed him"?
+# A: NO, AND THIS IS THE PART THAT IS EASY TO GET WRONG. Combat phase events are ONE weighted pick
+#    per pulse. Adding weight does not take weight from knight_killed -- it dilutes the whole pool.
+#    And the pool is dominated by knight_none at base 2000 (up to ~4700 with Stalwart Leader, an
+#    accolade and the warfare legacy). Against that, knight_killed at base 30 scaled by prowess is
+#    worth about 15 for a prowess-15 knight -- roughly 0.67% of picks.
+#      An added entry at weight 40 therefore reduces death by about 1.7%. Not by 75%.
+#
+# Q: So how do we get Thomas's actual requirement -- "if you fall under knight_killed and you have
+#    vampire blood, every chance of anything else happening should be zero"?
+# A: Take the character OUT of the lottery, then re-roll the death ourselves.
+#
+#    base = 100000 is not a hack; it is AGOT's own idiom for "this must win when it is valid"
+#    (knight_dragon_joined_battle, 00_agot_knight_phase_events.txt). With it, a blooded knight's
+#    pulses come here instead of to knight_killed -- which drops to 15/102250, about 0.015%.
+#    We then roll spn_blood_blow_chance, which reproduces knight_killed's own odds, and on a hit we
+#    run the transition instead of the death.
+#
+#    Net effect, which is exactly the brief: while the blood is in you, you effectively cannot die
+#    to knight_killed, and the first blow that WOULD have killed you turns you instead.
+#
+# THE ONE TRADE-OFF, stated plainly: while blooded, this character also stops drawing knight_wounded,
+# knight_maimed and the berserker events, because those picks come here too. That is a deliberate
+# accept -- vampire blood already carries `health = 0.4` and `max_combat_roll = 2`
+# (00_spn_modifiers.txt:1), so "the blood keeps him on his feet" is the behaviour the modifier
+# already describes. The window is bounded: the blood clears after 3 years
+# (spn_miscellaneous_events.0002) or the first time it is called upon, whichever comes first.
+# ══════════════════════════════════════════════════════════════════════════════════════════════════
+
+spn_blood_took_the_blow = {
+	type = knight
+
+	is_valid = {
+		is_alive = yes
+		has_character_flag = vampire_blood_in_system
+
+		# Already one of them -- nothing left to become.
+		spn_has_supernatural_trait = no
+		spn_has_hunter_trait = no
+
+		# The species gate. The dead do not transition, and with the AGOT patch loaded this is what
+		# keeps a wight who drank blood before he fell from waking up as a vampire.
+		spn_is_valid_supernatural_target = yes
+
+		# Shipped `always = yes`; the compatibility patch narrows it for AGOT dragonriders.
+		spn_can_be_battle_taken_trigger = yes
+
+		# One transition at a time.
+		NOT = { has_character_flag = spn_in_transition }
+	}
+
+	# See the header. This is AGOT's "must win when valid" idiom, not an arbitrary large number.
+	chance = {
+		base = 100000
+	}
+
+	effect = {
+		# Re-roll the death knight_killed would have rolled, at its own odds.
+		random = {
+			chance = spn_blood_blow_chance
+			spn_blood_took_the_blow_effect = yes
+		}
+		# On a miss nothing happens, and that is correct: the blood is holding him together. He stays
+		# eligible, so the next pulse rolls again.
+	}
+}

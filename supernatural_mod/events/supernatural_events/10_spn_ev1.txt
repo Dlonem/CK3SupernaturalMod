@@ -3,34 +3,90 @@
 #Vampire Feeding - Invitations for Vampires/Hybrids
 supernatural_ev1.01 = {
 	title = supernatural_ev1.01
-	desc = supernatural_ev1.01.desc
+	# 2.32 -- the letter now says something different depending on who sent it, because a letter
+	# from the vampire who MADE you does not read like a letter from an acquaintance.
+	desc = {
+		triggered_desc = {
+			trigger = { has_relation_mmaker = scope:host }
+			desc = supernatural_ev1.01.desc_sire
+		}
+		triggered_desc = {
+			trigger = { has_relation_pprogeny = scope:host }
+			desc = supernatural_ev1.01.desc_progeny
+		}
+		triggered_desc = {
+			trigger = {
+				OR = {
+					has_trait = spn_known_vampire
+					has_trait = spn_known_hybrid
+				}
+			}
+			desc = supernatural_ev1.01.desc_known
+		}
+		desc = supernatural_ev1.01.desc
+	}
 	theme = secret
-	left_portrait = root
-	right_portrait = scope:host
+	override_background = { reference = study }
+	left_portrait = { character = root animation = reading }
+	right_portrait = { character = scope:host animation = scheme }
 
 	trigger = {
 		is_alive = yes
 		is_imprisoned = no
-		NOR = {
-			has_character_modifier = vf_recently_fed_modifier
-			has_trait_xp = { trait = supernatural_vampire track = vampirism value > 99 }
-			has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 99 }
-		}
+		# 2.32 -- the two `value > 99` clauses are GONE. They stopped inviting a maxed character
+		# at exactly the point the capped-track conversion now makes the evening worth attending;
+		# together they were the dead end a maxed vampire sat in.
+		NOT = { has_character_modifier = vf_recently_fed_modifier }
 	}
 
 	cooldown = {
 		years = 2
 	}
-	
+
 	option = {
 		name = supernatural_ev1.01.a
 		custom_tooltip = supernatural_ev1.01.a.tt
-		
+
+		# 2.32 -- this option had NO effect block at all. It was a pure notification: accepting it
+		# did nothing and joined you to nothing, which is most of why the invitation felt hollow.
+		trigger = {
+			exists = scope:host.involved_activity
+			can_join_activity = scope:host.involved_activity
+		}
+		accept_activity_invite = scope:host.involved_activity
+		add_opinion = { target = scope:host modifier = pleased_opinion opinion = 15 }
+
 		ai_chance = {
 			base = 60
+			modifier = { add = 30 has_relation_mmaker = scope:host }
+			modifier = { add = 25 has_relation_pprogeny = scope:host }
 			modifier = { add = 20 has_trait = gluttonous }
 			modifier = { add = 15 has_trait = lustful }
+			modifier = { add = 15 has_trait = gregarious }
+			modifier = { add = -25 has_trait = paranoid }
+			modifier = { add = -20 has_trait = craven }
+			modifier = { add = -15 has_trait = content }
 			modifier = { add = -10 has_trait = shy }
+		}
+	}
+
+	option = {
+		name = supernatural_ev1.01.b
+		custom_tooltip = supernatural_ev1.01.b.tt
+
+		# Declining costs the host something small -- an invitation refused is still an invitation
+		# they extended, and they took a risk writing it down at all.
+		scope:host = { add_opinion = { target = root modifier = disappointed_opinion opinion = -10 } }
+		stress_impact = { base = minor_stress_impact_gain }
+
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = paranoid }
+			modifier = { add = 25 has_trait = craven }
+			modifier = { add = 20 has_trait = content }
+			modifier = { add = 15 has_trait = temperate }
+			modifier = { add = -30 has_relation_mmaker = scope:host }
+			modifier = { add = -20 has_trait = gluttonous }
 		}
 	}
 }
@@ -119,8 +175,13 @@ supernatural_ev1.03 = {
 		}
 		
 		hidden_effect = {
+			# 2.32 -- a random_list with ONE branch is 100%, so this summoned the hunter every single
+			# time. The weight of 2 reads as an intended 2% and the complementary branch was simply
+			# never written. This is the only one-branch random_list in the file; every other one
+			# (ev1.09 50/30/20, ev1.10 40/60, ev1.11 60/40 and 75/25, ev1.20 50/50) is correct.
 			random_list = {
 				2 = { trigger_event = supernatural_ev1.04 } # Hunter appears
+				98 = { }
 			}
 		}
 		ai_chance = {
@@ -361,9 +422,22 @@ supernatural_ev1.07 = {
 	}
 	option = {
 		name = supernatural_ev1.07.a
+		# 2.33 -- the two keys were the wrong way round. This option is "Respect their presence" --
+		# deferring to an Original. Deference costs an ARROGANT character and comes easily to a
+		# HUMBLE one, and the block said the opposite.
 		stress_impact = {
-			arrogant = minor_stress_loss
-			humble = minor_stress_gain
+			arrogant = minor_stress_gain
+			humble = minor_stress_loss
+		}
+		ai_chance = {
+			base = 60
+			modifier = { add = 20 has_trait = humble }
+			modifier = { add = 15 has_trait = compassionate }
+			modifier = { add = 15 has_trait = gregarious }
+			modifier = { add = 10 has_trait = trusting }
+			modifier = { add = -25 has_trait = arrogant }
+			modifier = { add = -15 has_trait = paranoid }
+			modifier = { add = -10 has_trait = deceitful }
 		}
 	}
 	option = {
@@ -376,6 +450,17 @@ supernatural_ev1.07 = {
 			compassionate = minor_stress_gain
 		}
 		custom_tooltip = supernatural_ev1.07.b.tt
+		# Staying in the shadows and reading the room.
+		ai_chance = {
+			base = 40
+			modifier = { add = 25 has_trait = paranoid }
+			modifier = { add = 20 has_trait = deceitful }
+			modifier = { add = 20 has_trait = shy }
+			modifier = { add = 15 has_trait = patient }
+			modifier = { add = 15 has_trait = shrewd }
+			modifier = { add = -20 has_trait = gregarious }
+			modifier = { add = -15 has_trait = humble }
+		}
 	}
 }
 
@@ -401,34 +486,35 @@ supernatural_ev1.08 = {
 		animation = shock
 	}
 	
+	# 2.32 -- this was `NOT = { A B C }`, which is NOT(A AND B AND C). The two traits are
+	# `opposites`, so the AND could never be true and the whole trigger was permanently TRUE.
+	# The obvious repair is NOR -- "an attendee who is not a vampire or hybrid" -- but that makes
+	# the event UNREACHABLE, because can_be_activity_guest requires every guest to be one or the
+	# other. Premise and guest list contradicted each other.
+	#
+	# Resolved by separating GUESTS from LOCALS, which is what the desc always described: the
+	# injured man walks in through the tavern door, he was never on the invite list. So the
+	# trigger asks for what the text actually needs -- another vampire here to help him inside
+	# ("one of the attendees instinctively helps him") -- and the victim comes from the location.
 	trigger = {
 		is_alive = yes
 		exists = scope:activity
 		scope:activity = {
 			any_attending_character = {
-				NOT = {
-					THIS=ROOT
-					has_trait = supernatural_vampire
-					has_trait = supernatural_hybrid
-				}
+				count >= 1
+				NOT = { this = root }
 			}
 		}
 	}
 	
 	immediate = {
 		hidden_effect = {
-			random_courtier = {
-				limit = {
-					NOR = {
-						scope_is_close_to_root_trigger = no
-						has_trait = supernatural_vampire
-						has_trait = supernatural_hybrid
-						is_adult = no
-					}
-				}
-				save_scope_as = local_courtier
-				add_trait = wounded_2
-			}
+			# 2.32 -- "the door creaks open to reveal an injured man stumbling inside." He is a
+			# local, and the code was drawing him from your own court. The old NOR also carried the
+			# same double negative as ev1.09: NOR negates each member, so
+			# `scope_is_close_to_root_trigger = no` resolved to `= yes` and REQUIRED a court member.
+			vf_select_victim_effect = { SCOPE_NAME = local_courtier GENDER_FEMALE_CHANCE = 0 }
+			scope:local_courtier = { add_trait = wounded_2 }
 			involved_activity = {
 				random_attending_character = {
 					limit = {
@@ -444,20 +530,22 @@ supernatural_ev1.08 = {
 
 	option = { #Feed on the Wounded Courtier
 		name = supernatural_ev1.08.a
-		add_trait_xp = {
-			trait = supernatural_vampire
-			track = vampirism
-			value = 10
+		# 2.32 -- both grants fired unconditionally. The traits are `opposites`, so the wrong half
+		# errored on every single firing. Option c of this same event already branched correctly.
+		if = {
+			limit = { has_trait = supernatural_vampire }
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = 10 }
 		}
-		add_trait_xp = {
-			trait = supernatural_hybrid
-			track = hybrid_vampirism
-			value = 10
-		}
-		scope:local_courtier = {
-			death = { death_reason = spn_death_drained }
+		else_if = {
+			limit = { has_trait = supernatural_hybrid }
+			add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = 10 }
 		}
 		remove_short_term_gold = { 5 15 }
+		# Standing rule: the irreversible step goes last, after every value that reads the
+		# pre-change state has been banked.
+		scope:local_courtier = {
+			death = { death_reason = spn_death_drained killer = root }
+		}
 		
 		ai_chance = {
 			base = 50
@@ -570,17 +658,15 @@ supernatural_ev1.09 = {
 	}
 
     immediate = {
+        # 2.32 -- the challenger is a patron of THIS tavern, which is what the desc always said:
+        # "Care to test your mind, stranger?" A stranger cannot be your own courtier.
+        #
+        # The old NOR carried a double negative. NOR negates every member, so
+        # `scope_is_close_to_root_trigger = no` resolved to `= yes` and the event actually
+        # REQUIRED someone from your own court -- the opposite of what it reads like, and it
+        # would have rejected every candidate once the pool moved to a foreign city.
         hidden_effect = {
-            random_courtier = {
-                limit = {
-                    NOR = {
-                        scope_is_close_to_root_trigger = no
-                        has_trait = supernatural_vampire
-                        has_trait = supernatural_hybrid
-                    }
-                }
-                save_scope_as = local_courtier
-            }
+            vf_select_victim_effect = { SCOPE_NAME = local_courtier GENDER_FEMALE_CHANCE = 50 }
         }
     }
 
@@ -804,6 +890,21 @@ supernatural_ev1.10 = { #The Catacombs Below
 		}
 		custom_tooltip = supernatural_ev1.10.d_tt
 
+		# 2.33 -- the only option here that had no weight, and the one that most needs it: it is
+		# offered only to a KNOWN vampire, so it competes with a/b/c exactly when someone has stopped
+		# pretending. Taking a volunteer is the openly-monstrous choice.
+		ai_chance = {
+			base = 45
+			modifier = { add = 25 has_trait = gluttonous }
+			modifier = { add = 20 has_trait = callous }
+			modifier = { add = 20 has_trait = arrogant }
+			modifier = { add = 15 has_trait = sadistic }
+			modifier = { add = 10 has_trait = lazy }
+			modifier = { add = -30 has_trait = compassionate }
+			modifier = { add = -20 has_trait = temperate }
+			modifier = { add = -15 has_trait = humble }
+		}
+
 		trigger_event = {
 			id = supernatural_ev1.11
 		}
@@ -819,7 +920,7 @@ supernatural_ev1.11 = { #The Catacombs Below: Part 2
 
     left_portrait = {
         character = root
-        animation = cautious
+        animation = nervous
     }
     right_portrait = {
         character = scope:hunter
@@ -1128,11 +1229,11 @@ supernatural_ev1.13 = { #Prepared for the Night - Ev1.13
 
     left_portrait = {
         character = root
-        animation = cautious
+        animation = nervous
     }
     right_portrait = {
         character = scope:random_guest
-        animation = confident
+        animation = personality_bold
     }
 
     trigger = {
@@ -1143,15 +1244,25 @@ supernatural_ev1.13 = { #Prepared for the Night - Ev1.13
 
     immediate = {
         scope:activity = {
+            # 2.32 -- the chance change is GONE from this loop and that is the N-squared fix.
+            # searching_phase.on_end fires once per attending character, and this loop then ran
+            # every_attending_character again, so N guests applied the bonus N x N times -- two
+            # guests picking Scout was +40, three pinned the 95 ceiling.
+            # It was also double-counted: vf_feeding_success_chance ALREADY reads this flag on
+            # the host (+10 scout / +20 trap), so the bonus lands from the flag alone. The flag
+            # still goes on every attendee, which is what the later events check.
             every_attending_character = {
                 add_character_flag = vf_scouted_location
-                vf_feeding_chance_change_effect = { VALUE = 10 }
             }
+            vf_feeding_chance_resync_effect = yes
         }
     }
 
     option = {
         name = supernatural_ev1.13.a
+        # 2.33 -- the only option on this event, so this weight is house convention rather than a
+        # decision: with nothing to choose between, ai_chance cannot change what the AI does.
+        ai_chance = { base = 100 }
         custom_tooltip = supernatural_ev1.13.a_tt
 
         scope:activity = {
@@ -1173,12 +1284,12 @@ supernatural_ev1.14 = { #The Trap
 
     center_portrait = {
         character = root
-        animation = scheming
+        animation = scheme
     }
 
 	right_portrait = {
 		character = scope:other_attendee
-		animation = cautious
+		animation = nervous
 	}
 
 	trigger = {
@@ -1196,16 +1307,26 @@ supernatural_ev1.14 = { #The Trap
 			}
 
 			# Add the character flag to all attending characters, including the player
+			# 2.32 -- the chance change is GONE from this loop and that is the N-squared fix.
+			# searching_phase.on_end fires once per attending character, and this loop then ran
+			# every_attending_character again, so N guests applied the bonus N x N times -- two
+			# guests picking Scout was +40, three pinned the 95 ceiling.
+			# It was also double-counted: vf_feeding_success_chance ALREADY reads this very flag
+			# on the host (+10 scout / +20 trap), so the bonus lands from the flag alone. The flag
+			# still goes on every attendee, which is what the later events check.
 			every_attending_character = {
 				add_character_flag = vf_laid_trap
-				vf_feeding_chance_change_effect = { VALUE = 20 }
 			}
+			vf_feeding_chance_resync_effect = yes
 		}
 	}
 
 
     option = {
         name = supernatural_ev1.14.a
+        # 2.33 -- the only option on this event, so this weight is house convention rather than a
+        # decision: with nothing to choose between, ai_chance cannot change what the AI does.
+        ai_chance = { base = 100 }
         custom_tooltip = supernatural_ev1.14.a_tt
 
         scope:activity = {
@@ -1232,7 +1353,7 @@ supernatural_ev1.15 = { # Tavern Gossip
 
     left_portrait = {
         character = scope:tavern_guest
-        animation = shocked
+        animation = shock
     }
 
     right_portrait = {
@@ -1327,7 +1448,7 @@ supernatural_ev1.16 = { # Hidden Passage in the Cellar
 
     center_portrait = {
         character = root
-        animation = scheming
+        animation = scheme
     }
 
     cooldown = {
@@ -1348,10 +1469,15 @@ supernatural_ev1.16 = { # Hidden Passage in the Cellar
         custom_tooltip = supernatural_ev1.16.a_tt
         vf_feeding_chance_change_effect = { VALUE = 10 }
 
-        add_trait_xp = {
-            trait = supernatural_vampire
-            track = vampirism
-            value = { 5 10 }
+        # 2.32 -- vampire-only, with no hybrid branch, while the tooltip promised the grant to
+        # everyone. A hybrid picking this option got the flag and nothing else.
+        if = {
+            limit = { has_trait = supernatural_vampire }
+            add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 5 10 } }
+        }
+        else_if = {
+            limit = { has_trait = supernatural_hybrid }
+            add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 5 10 } }
         }
         add_character_flag = vf_escape_route_known
 
@@ -1429,7 +1555,11 @@ supernatural_ev1.17 = { #A Moment of Solace
 
     trigger = {
         is_alive = yes
-        has_activity_intent = satiate_thirst_intent
+        # 2.32 -- was raw has_activity_intent, which only ever returns true for a PLAYER host.
+        # These three events carry 150 of the weekly pool's 400 weight, so 37.5%% of the pool
+        # was dead for every AI-hosted feeding. The AI-safe wrapper exists for exactly this and
+        # was already used correctly at ev1.07 and inside vf_feeding_success_chance.
+        has_st_satiate_thirst_intent_trigger = yes
     }
 
     immediate = {
@@ -1438,6 +1568,9 @@ supernatural_ev1.17 = { #A Moment of Solace
 
     option = {
         name = supernatural_ev1.17.a
+        # 2.33 -- this option is species-gated and its twin covers the other species, so exactly one
+        # is ever available. The weight is house convention; there is no choice here to steer.
+        ai_chance = { base = 100 }
 		trigger = {
 			has_trait = supernatural_vampire
 		}
@@ -1450,6 +1583,9 @@ supernatural_ev1.17 = { #A Moment of Solace
 
     option = {
         name = supernatural_ev1.17.b
+        # 2.33 -- this option is species-gated and its twin covers the other species, so exactly one
+        # is ever available. The weight is house convention; there is no choice here to steer.
+        ai_chance = { base = 100 }
 		trigger = {
 			has_trait = supernatural_hybrid
 		}
@@ -1483,7 +1619,11 @@ supernatural_ev1.18 = { #A Test of Restraint
 
     trigger = {
         is_alive = yes
-        has_activity_intent = strengthen_the_blood_intent
+        # 2.32 -- was raw has_activity_intent, which only ever returns true for a PLAYER host.
+        # These three events carry 150 of the weekly pool's 400 weight, so 37.5%% of the pool
+        # was dead for every AI-hosted feeding. The AI-safe wrapper exists for exactly this and
+        # was already used correctly at ev1.07 and inside vf_feeding_success_chance.
+        has_st_strengthen_the_blood_intent_trigger = yes
     }
 
     immediate = {
@@ -1506,6 +1646,9 @@ supernatural_ev1.18 = { #A Test of Restraint
 
     option = {
         name = supernatural_ev1.18.a
+        # 2.33 -- this option is species-gated and its twin covers the other species, so exactly one
+        # is ever available. The weight is house convention; there is no choice here to steer.
+        ai_chance = { base = 100 }
         trigger = {
             has_trait = supernatural_vampire
         }
@@ -1523,6 +1666,9 @@ supernatural_ev1.18 = { #A Test of Restraint
 
     option = {
         name = supernatural_ev1.18.b
+        # 2.33 -- this option is species-gated and its twin covers the other species, so exactly one
+        # is ever available. The weight is house convention; there is no choice here to steer.
+        ai_chance = { base = 100 }
         trigger = {
             has_trait = supernatural_hybrid
         }
@@ -1548,7 +1694,7 @@ supernatural_ev1.19 = { # A Moment of Respect - Ev1.19
 
     left_portrait = {
         character = root
-        animation = cautious
+        animation = nervous
     }
     right_portrait = {
         character = scope:deceased_body
@@ -1579,6 +1725,9 @@ supernatural_ev1.19 = { # A Moment of Respect - Ev1.19
 
     option = { # Show respect and move on.
         name = supernatural_ev1.19.a
+        # 2.33 -- the only option on this event, so this weight is house convention rather than a
+        # decision: with nothing to choose between, ai_chance cannot change what the AI does.
+        ai_chance = { base = 100 }
         custom_tooltip = supernatural_ev1.19.a_tt
 
         root = {
@@ -1604,7 +1753,7 @@ supernatural_ev1.20 = { #Whispers In The Dark
 
     center_portrait = {
         character = root
-        animation = listening
+        animation = interested
     }
 
     trigger = {
@@ -1676,15 +1825,14 @@ supernatural_ev1.21 = { # Wary Citizens
 
     center_portrait = {
         character = root
-        animation = cautious
+        animation = nervous
     }
 
     immediate = {
-        random_courtier = {
-            limit = { is_adult = yes }
-			add_character_flag = vf_human
-            save_scope_as = vf_human
-        }
+        # 2.32 -- picks the one person this whole stalk is about and stores them on the
+        # activity. Was: random_courtier with `is_adult` as its ONLY filter (so it could hand
+        # you a vampire) plus a permanent vf_human character flag that nothing ever cleared.
+        vf_bind_stalk_victim_effect = yes
     }
 
     option = { # Use your instincts and follow quietly.
@@ -1719,8 +1867,9 @@ supernatural_ev1.21 = { # Wary Citizens
 		}
 
         root = {
+            # 2.32 -- double-counted: the script value already reads this flag on the host.
             add_character_flag = vf_scouted_location
-            vf_feeding_chance_change_effect = { VALUE = 10 }
+            vf_feeding_chance_resync_effect = yes
         }
 
     }
@@ -1771,18 +1920,17 @@ supernatural_ev1.22 = { # Whispers of Danger
 
     right_portrait = {
         character = scope:vf_human
-        animation = afraid
+        animation = fear
     }
     center_portrait = {
         character = root
-        animation = sinister
+        animation = menacing
     }
 
     immediate = {
-        random_courtier = {
-            limit = { has_character_flag = vf_human }
-            save_scope_as = vf_human
-        }
+        # 2.32 -- the SAME person from Wary Citizens. This used to re-roll at random across
+        # every courtier ever stamped vf_human, in every feeding ever run, so the face changed.
+        vf_bind_stalk_victim_effect = yes
     }
 
     option = { # Close the distance with a burst of vampiric speed.
@@ -1921,19 +2069,13 @@ supernatural_ev1.23 = { # The Crimson Decision
 	theme = intrigue
 	override_background = { reference = alley_night }
 
-	right_portrait = { character = scope:vf_human animation = terrified }
-	center_portrait = { character = root animation = sinister }
+	right_portrait = { character = scope:vf_human animation = fear }
+	center_portrait = { character = root animation = menacing }
 
 	immediate = {
-		random_courtier_or_guest = {
-			limit = { is_adult = yes NOT = { has_trait = supernatural_vampire } NOT = { has_trait = supernatural_hybrid } }
-			save_scope_as = vf_human
-		}
-		# Fallback: a camp-based feeder may have no valid courtier/guest; create a local victim.
-		if = {
-			limit = { NOT = { exists = scope:vf_human } }
-			create_character = { location = root.location culture = root.culture faith = root.faith gender_female_chance = 50 save_scope_as = vf_human }
-		}
+		# 2.32 -- still the person we picked in Wary Citizens. The selector carries its own
+		# create_character fallback, so the camp case that this block used to cover is covered there.
+		vf_bind_stalk_victim_effect = yes
 
 		# --- P2: ensure the success-chance var exists, then roll clean vs botched off the live bar ---
 		if = { limit = { exists = scope:activity scope:activity = { NOT = { has_variable = vampire_feeding_success_chance } } } scope:activity = { set_variable = { name = vampire_feeding_success_chance value = vf_feeding_success_chance } } }
@@ -1943,7 +2085,7 @@ supernatural_ev1.23 = { # The Crimson Decision
 		}
 		if = { limit = { NOT = { has_character_flag = vf_feeding_clean } } add_character_flag = { flag = vf_feeding_botched days = 14 } }
 		# A successful feed leaves the city more downtrodden (lore: vampires keep development low; hunters push it back up).
-		if = { limit = { has_character_flag = vf_feeding_clean } add_prestige = 25 scope:activity ?= { activity_location.county ?= { change_development_level = -3 change_county_control = -3 } } }
+		if = { limit = { has_character_flag = vf_feeding_clean } add_prestige = 25 scope:activity ?= { activity_location.county ?= { spn_county_prosperity_change_effect = { VALUE = -3 } change_county_control = -3 } } }
 	}
 
 	# ===== CLEAN FEED =====
@@ -2035,7 +2177,7 @@ supernatural_ev1.23 = { # The Crimson Decision
 		}
 		root = {
 			add_gold = { 20 125 }
-			if = { limit = { exists = scope:activity scope:activity.activity_location = { exists = county } } add_gold = { value = scope:activity.activity_location.county.development_level multiply = 2 } }
+			if = { limit = { exists = scope:activity scope:activity.activity_location = { exists = county } } add_gold = { value = spn_activity_county_prosperity_value multiply = 2 } }
 			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 4 8 } } }
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 4 8 } } }
 		}
@@ -2055,7 +2197,7 @@ supernatural_ev1.23 = { # The Crimson Decision
 		}
 		root = {
 			add_gold = { 50 250 }
-			if = { limit = { exists = scope:activity scope:activity.activity_location = { exists = county } } add_gold = { value = scope:activity.activity_location.county.development_level multiply = 4 } }
+			if = { limit = { exists = scope:activity scope:activity.activity_location = { exists = county } } add_gold = { value = spn_activity_county_prosperity_value multiply = 4 } }
 			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 4 8 } } }
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 4 8 } } }
 		}
@@ -2119,7 +2261,11 @@ supernatural_ev1.24 = { # Reveling in the Night - Embrace the Night Intent
 
 	trigger = {
 		is_alive = yes
-		has_activity_intent = embrace_the_night_intent
+		# 2.32 -- was raw has_activity_intent, which only ever returns true for a PLAYER host.
+		# These three events carry 150 of the weekly pool's 400 weight, so 37.5%% of the pool
+		# was dead for every AI-hosted feeding. The AI-safe wrapper exists for exactly this and
+		# was already used correctly at ev1.07 and inside vf_feeding_success_chance.
+		has_st_embrace_the_night_intent_trigger = yes
 	}
 
 	option = { # Lose yourself in the revelry.
@@ -2154,7 +2300,7 @@ supernatural_ev1.25 = { # The Bleeding House
 	override_background = { reference = alley_night }
 
 	left_portrait = { character = scope:vf_physician animation = personality_rational }
-	center_portrait = { character = root animation = sinister }
+	center_portrait = { character = root animation = menacing }
 
 	cooldown = { years = 1 }
 
@@ -2200,8 +2346,13 @@ supernatural_ev1.26 = { # The Drunk's Ramblings
 	cooldown = { years = 1 }
 
 	immediate = {
-		random_courtier = { limit = { is_adult = yes } save_scope_as = vf_drunkard }
-		if = { limit = { NOT = { exists = scope:vf_drunkard } } hidden_effect = { create_character = { location = root.location culture = root.culture faith = root.faith gender = male save_scope_as = vf_drunkard } } }
+		# 2.31c -- the drunkard has to have blood in him. The only limit here was is_adult, so with the
+		# AGOT patch loaded this could hand you one of the walking dead to drink from. Same hook as
+		# everywhere else; `always = yes` without the patch, so standalone play is unchanged. If every
+		# courtier fails it the line below already creates one, so the event cannot end up empty.
+		# 2.32 -- a townsman of the city we are drinking in, not one of ours. Female chance 0:
+		# the desc and both options are written "him" throughout.
+		vf_select_victim_effect = { SCOPE_NAME = vf_drunkard GENDER_FEMALE_CHANCE = 0 }
 	}
 
 	option = { # Compel him for what he knows.

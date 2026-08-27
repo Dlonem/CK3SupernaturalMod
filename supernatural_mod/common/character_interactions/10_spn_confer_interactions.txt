@@ -67,6 +67,12 @@
 		scope:recipient = {
 			NOT = { has_character_flag = vampire_blood_in_system }
 		}
+		scope:recipient = {
+			custom_description = {
+				text = spn_cannot_be_turned_custom
+				spn_is_valid_supernatural_target = yes
+			}
+		}
 	}
 
 	greeting = positive
@@ -323,6 +329,12 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 		scope:recipient = {
 			has_character_flag = vampire_blood_in_system
 		}
+		scope:recipient = {
+			custom_description = {
+				text = spn_cannot_be_turned_custom
+				spn_is_valid_supernatural_target = yes
+			}
+		}
 	}
 	
 	greeting = positive
@@ -465,7 +477,9 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 		}
 		scope:actor = {
 			spn_assign_conferred_progeny = { CHARACTER = scope:recipient }
-			set_relation_pprogeny = scope:recipient
+			# 2.33 -- set_relation_pprogeny removed. mmaker declares `corresponding = pprogeny`, so
+			# line 468 already created this side of the pair; setting it again throws "Scripted
+			# relation already exists". The variable assignment above is the only work left here.
 		}
 
 		save_scope_as = target
@@ -562,6 +576,12 @@ spn_offer_gift = { #Offer Gift - begin werewolf turning incubation (consensual)
 	is_valid = {
 		scope:recipient = {
 			NOT = { has_trait = ww_infected_wound }   # can't offer to someone already incubating a wound
+		}
+		scope:recipient = {
+			custom_description = {
+				text = spn_cannot_be_turned_custom
+				spn_is_valid_supernatural_target = yes
+			}
 		}
 	}
 
@@ -803,6 +823,12 @@ spn_force_gift = { #Force Gift - forcibly begin werewolf turning incubation (hos
 				NOT = { has_character_flag = spn_force_gift_on_cooldown }
 			}
 		}
+		scope:recipient = {
+			custom_description = {
+				text = spn_cannot_be_turned_custom
+				spn_is_valid_supernatural_target = yes
+			}
+		}
 	}
 
 	on_accept = {
@@ -941,6 +967,12 @@ spn_turn_into_hybrid = { #Turn Character Into Hybrid
 	is_valid = {
 		scope:recipient = {
 		has_character_flag = vampire_blood_in_system
+		}
+		scope:recipient = {
+			custom_description = {
+				text = spn_cannot_be_turned_custom
+				spn_is_valid_supernatural_target = yes
+			}
 		}
 	}
 
@@ -1646,6 +1678,14 @@ spn_turn_into_hunter = { # Train Character as a Hunter
             has_trait = supernatural_hunter
         }
     }
+    is_valid_showing_failures_only = {
+        scope:recipient = {
+            custom_description = {
+                text = spn_cannot_be_turned_custom
+                spn_is_valid_supernatural_target = yes
+            }
+        }
+    }
 
     greeting = positive
     notification_text = SPN_OFFER_HUNTER_INTERACTION_NOTIFICATION
@@ -2286,6 +2326,12 @@ spn_ask_to_turn_into_vampire = { #Ask Character to Turn You Into Vampire
 			NOT = { has_character_flag = changed_mind_on_immortality }
 			NOT = { has_character_flag = vampire_blood_in_system }
 		}
+		scope:actor = {
+			custom_description = {
+				text = spn_cannot_be_turned_custom
+				spn_is_valid_supernatural_target = yes
+			}
+		}
 	}
 	greeting = positive
 	notification_text = SPN_ASK_FOR_VAMPIRISM_INTERACTION_NOTIFICATION
@@ -2677,10 +2723,102 @@ spn_ask_to_not_turn_into_vampire = { #Ask Character to Not Turn You Into Vampire
 	ai_min_reply_days = 1
 	ai_max_reply_days = 1
 
-	ai_accept = {
+ai_accept = {
+		# 2.33 -- PERSONALITY. A mortal with vampire blood in their veins is begging the vampire who
+		# knows it to let them stay mortal. Accepting means honouring that refusal; refusing means
+		# letting the blood take them when they die. Two things make this block read backwards from
+		# the other confer interactions, and both are deliberate:
+		#   * BONDS PUSH DOWN. A vampire who loves you wants you beside them forever, so a child,
+		#     spouse or soulmate makes them LESS willing to let you go.
+		#   * ENMITY PUSHES UP. Denying a rival immortality costs nothing and is its own small
+		#     revenge, so a nemesis is happy to grant the request.
+		# Base 20 = a mild default yes: no vampire is obliged to force the gift on anyone.
 		base = 20
 
-		#MAIN
+		# ===== WHOSE BLOOD IS IN THEM? =====
+		# If this vampire is the donor they have a stake in the outcome; if it was someone else's
+		# blood the decision costs them nothing.
+		modifier = {
+			desc = spn_notturn_accept_my_blood_tt
+			trigger = {
+				scope:actor = {
+					has_variable = spn_vampire_blood_donor
+					var:spn_vampire_blood_donor = scope:recipient
+				}
+			}
+			add = -30
+		}
+		modifier = {
+			desc = spn_notturn_accept_others_blood_tt
+			trigger = {
+				scope:actor = {
+					OR = {
+						NOT = { has_variable = spn_vampire_blood_donor }
+						NOT = { var:spn_vampire_blood_donor = scope:recipient }
+					}
+				}
+			}
+			add = 15
+		}
+
+		# ===== WHAT KIND OF VAMPIRE AM I? =====
+		modifier = { desc = spn_notturn_accept_compassionate_tt trigger = { scope:recipient = { has_trait = compassionate } } add = 25 }
+		modifier = { desc = spn_notturn_accept_humble_tt        trigger = { scope:recipient = { has_trait = humble } }        add = 10 }
+		modifier = { desc = spn_notturn_accept_forgiving_tt     trigger = { scope:recipient = { has_trait = forgiving } }     add = 10 }
+		modifier = { desc = spn_notturn_accept_zealous_tt       trigger = { scope:recipient = { has_trait = zealous } }       add = 20 }
+		modifier = { desc = spn_notturn_accept_craven_tt        trigger = { scope:recipient = { has_trait = craven } }        add = 10 }
+		modifier = { desc = spn_notturn_accept_callous_tt       trigger = { scope:recipient = { has_trait = callous } }       add = -20 }
+		modifier = { desc = spn_notturn_accept_sadistic_tt      trigger = { scope:recipient = { has_trait = sadistic } }      add = -35 }
+		modifier = { desc = spn_notturn_accept_arrogant_tt      trigger = { scope:recipient = { has_trait = arrogant } }      add = -25 }
+		modifier = { desc = spn_notturn_accept_ambitious_tt     trigger = { scope:recipient = { has_trait = ambitious } }     add = -15 }
+		modifier = { desc = spn_notturn_accept_vengeful_tt      trigger = { scope:recipient = { has_trait = vengeful } }      add = -10 }
+		ai_value_modifier = {
+			ai_compassion = medium_chance_impact_positive_ai_value
+			ai_greed      = -1
+		}
+
+		# ===== WHAT IS THIS PERSON TO ME? (bonds make letting go harder) =====
+		modifier = { desc = spn_notturn_accept_child_tt    trigger = { scope:actor = { is_child_of = scope:recipient } }  add = -35 }
+		modifier = { desc = spn_notturn_accept_spouse_tt   trigger = { scope:recipient = { is_spouse_of = scope:actor } } add = -30 }
+		modifier = { desc = spn_notturn_accept_soulmate_tt trigger = { scope:recipient = { has_relation_soulmate = scope:actor } } add = -35 }
+		modifier = {
+			desc = spn_notturn_accept_lover_tt
+			trigger = { scope:recipient = { has_relation_lover = scope:actor  NOT = { has_relation_soulmate = scope:actor } } }
+			add = -20
+		}
+		modifier = {
+			desc = spn_notturn_accept_family_tt
+			trigger = { scope:actor = { NOT = { is_child_of = scope:recipient }  is_close_family_of = scope:recipient } }
+			add = -12
+		}
+		modifier = {
+			desc = spn_notturn_accept_friend_tt
+			trigger = { scope:recipient = { OR = { has_relation_friend = scope:actor  has_relation_best_friend = scope:actor } } }
+			add = -10
+		}
+
+		# ===== ENMITY (an enemy denied immortality is an enemy who stays dead) =====
+		modifier = {
+			desc = spn_notturn_accept_rival_tt
+			trigger = { scope:recipient = { has_relation_rival = scope:actor  NOT = { has_relation_nemesis = scope:actor } } }
+			add = 25
+		}
+		modifier = { desc = spn_notturn_accept_nemesis_tt trigger = { scope:recipient = { has_relation_nemesis = scope:actor } } add = 45 }
+
+		# ===== AN IMMORTAL ALLY IS WORTH SOMETHING (rank makes the vampire reluctant) =====
+		modifier = { desc = spn_notturn_accept_powerful_tt trigger = { scope:actor = { highest_held_title_tier >= tier_kingdom } } add = -20 }
+		modifier = {
+			desc = spn_notturn_accept_duke_tt
+			trigger = { scope:actor = { highest_held_title_tier = tier_duchy } }
+			add = -10
+		}
+
+		# ===== INTIMIDATION =====
+		modifier = { desc = spn_notturn_accept_dread1_tt trigger = { scope:recipient = { has_dread_level_towards = { target = scope:actor level = 1 } } } add = 15 }
+		modifier = { desc = spn_notturn_accept_dread2_tt trigger = { scope:recipient = { has_dread_level_towards = { target = scope:actor level = 2 } } } add = 30 }
+
+		#MAIN -- kept from 2.32: a vampire of a hostile faith is content to damn a heretic.
+
 		modifier = { #Different faith, no pluralism.
 			desc = offer_vassalization_interaction_aibehavior_differentfaith_tt
 			trigger = {
@@ -2781,6 +2919,12 @@ spn_ask_for_gift = { #Ask a werewolf to claw you - begin turning incubation (con
 	is_valid = {
 		scope:actor = {
 			NOT = { has_trait = ww_infected_wound }   # can't ask if already incubating a wound
+		}
+		scope:actor = {
+			custom_description = {
+				text = spn_cannot_be_turned_custom
+				spn_is_valid_supernatural_target = yes
+			}
 		}
 	}
 
@@ -2897,6 +3041,14 @@ spn_ask_to_turn_into_hybrid = { #Ask Character to Make You Into Hybrid
 		NOT = { has_trait = supernatural_hunter }
 		}
 
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = spn_cannot_be_turned_custom
+				spn_is_valid_supernatural_target = yes
+			}
+		}
 	}
 
 	greeting = positive
@@ -3334,6 +3486,14 @@ spn_ask_to_turn_into_hunter = { #Ask Character to Train You As a Hunter
 					has_trait = supernatural_hybrid
 					}
 			spn_knows_about_character_being_hunter_trigger = { CHARACTER = scope:recipient }
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_description = {
+				text = spn_cannot_be_turned_custom
+				spn_is_valid_supernatural_target = yes
+			}
 		}
 	}
 

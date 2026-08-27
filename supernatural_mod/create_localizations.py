@@ -14,6 +14,7 @@ Usage:
 """
 
 from __future__ import annotations
+import re
 from pathlib import Path
 import argparse
 
@@ -61,8 +62,28 @@ def rewrite_header_to_lang(text: str, lang: str) -> str:
     # Return with CRLF endings; file open uses newline='\r\n' to preserve
     return "\r\n".join(lines) + "\r\n"
 
+def _has_real_translation(p: Path) -> bool:
+    """True if the file contains non-Latin text, i.e. somebody actually translated it."""
+    try:
+        t = p.read_text(encoding="utf-8-sig", errors="ignore")
+    except OSError:
+        return False
+    # Cyrillic, CJK, Hangul. Enough to catch the languages this mod ships.
+    return bool(re.search(r"[\u0400-\u04FF\u4E00-\u9FFF\uAC00-\uD7AF]", t))
+
+
 def process_file(src_file: Path, dst_file: Path, lang: str, overwrite: bool = False) -> bool:
     dst_file.parent.mkdir(parents=True, exist_ok=True)
+
+    # 2.32 -- HARD GUARD. --overwrite copies English over the destination wholesale. As of
+    # 27 Aug 2026 the Russian folder holds 8,079 hand-translated keys (93% of the file set),
+    # done by an actual Russian speaker. Overwriting those is unrecoverable from here.
+    # This refuses regardless of --overwrite. Use sync_localizations.py --sync instead, which
+    # is key-aware and append-only.
+    if dst_file.exists() and _has_real_translation(dst_file):
+        print(f"  REFUSED (contains real translation): {dst_file}")
+        return False
+
     if dst_file.exists() and not overwrite:
         return False
     text = src_file.read_text(encoding="utf-8-sig")

@@ -8969,6 +8969,20 @@ magic_ev2.82 = {
 				}
 			}
 		}
+		#When a player uses a save file from the base game, the crises may not have been calculated at the start of the game - we need to set them here (ty bornish...)
+		if = {
+			limit = {
+				NAND = {
+					exists = global_var:ready_4_crisis_var
+					exists = global_var:prepare_4_crisis_var
+				}
+			}
+			set_global_variable = prepare_4_crisis_var
+			trigger_event = {
+				id = magic_ev7.1378
+				years = magic_ciris_delay_value
+			}
+		}
 	}
 }
 #various stuff 2.
@@ -9064,14 +9078,18 @@ magic_ev2.83 = {
 			remove_trait = incapable
 		}
 		
-		#debug unstable source
-		random_living_character = {
-			limit = {
-				has_unstable_source_trigger = yes
-				age > 30
-			}
-			reduce_100_source_instability = yes
-		}
+		# 2.32 -- DEBUG SCAFFOLDING, was LIVE and firing every pulse in the shipped mod.
+		# Upstream Witchcraft has this block commented out; the live version is our own
+		# divergence and almost certainly unintentional -- it walked every living character
+		# each pulse and silently wiped source instability off one of them, quietly undoing
+		# the mechanic it belongs to. Restored to upstream's state.
+		#random_living_character = {
+		#	limit = {
+		#		has_unstable_source_trigger = yes
+		#		age > 30
+		#	}
+		#	reduce_100_source_instability = yes
+		#}
 		#random ruler doesnt trust mages
 		random = {
 			chance = 30

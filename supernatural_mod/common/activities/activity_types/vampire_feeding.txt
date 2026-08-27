@@ -52,19 +52,21 @@
 	}
 	on_start = {
 		#space for invitation event
-		every_living_character = {
+		#every_player instead of a full every_living_character walk - the old limit's first line
+		#was is_ai = no, so this was scanning ~190k characters to find the handful of players.
+		every_player = {
 			limit = {
-				is_ai = no
 				NOT = {
 					THIS = scope:host
 				}
-				is_alive = yes
 				is_adult = yes
 				is_imprisoned = no
 				OR = {
 					has_trait = supernatural_hybrid
 					has_trait = supernatural_vampire
 				}
+				#The host has to have some way of knowing what they are.
+				spn_host_knows_supernatural_trigger = { HOST = scope:host }
 			}
 			trigger_event = supernatural_ev1.01
 		}
@@ -163,6 +165,37 @@
 	# desc is only shown in debug AI watch window
 	ai_will_do = {
 		value = 30
+
+		# 2.33 -- PERSONALITY. Before this, ai_will_do read track progress and known-vampire status and
+		# NOTHING ELSE -- not one personality trait in the whole block, which is exactly the thing the
+		# design doc objects to: "I don't want a random lord who's content doing all these feedings."
+		# Root is the character evaluating the activity (_activity_type.info:441).
+		#
+		# Appetite pushes up; restraint, cowardice and contentment pull down. Paranoid is a pull
+		# because this is a party with witnesses, not because a paranoid vampire is less hungry.
+		if = { limit = { has_trait = gluttonous }    add = 20 }
+		if = { limit = { has_trait = sadistic }      add = 15 }
+		if = { limit = { has_trait = callous }       add = 10 }
+		if = { limit = { has_trait = ambitious }     add = 12 }
+		if = { limit = { has_trait = wrathful }      add = 10 }
+		if = { limit = { has_trait = arrogant }      add = 8 }
+		if = { limit = { has_trait = lustful }       add = 8 }
+		if = { limit = { has_trait = impatient }     add = 6 }
+
+		if = { limit = { has_trait = content }       add = -20 }
+		if = { limit = { has_trait = temperate }     add = -15 }
+		if = { limit = { has_trait = paranoid }      add = -15 }
+		if = { limit = { has_trait = calm }          add = -12 }
+		if = { limit = { has_trait = compassionate } add = -12 }
+		if = { limit = { has_trait = craven }        add = -10 }
+		if = { limit = { has_trait = zealous }       add = -10 }
+		if = { limit = { has_trait = shy }           add = -10 }
+		if = { limit = { has_trait = humble }        add = -8 }
+		if = { limit = { has_trait = chaste }        add = -8 }
+
+		# Hunger still overrides temperament. A starving vampire feeds whatever they are like.
+		if = { limit = { stress_level >= 2 } add = 15 }
+
 		
 		#Vampires
 		if = {
@@ -491,10 +524,22 @@
 	###################
 	
 	is_location_valid = {
+		# Cheapest test first: province_filter is `all` now, so this runs against every province
+		# in the world when the planner opens.
 		has_holding_type = city_holding
+		# 2.32 -- and this is the leash. `large` is vanilla's own "roughly one France away", which
+		# reaches a neighbour's capital or a friend's realm across the way without putting
+		# Constantinople on the menu from Ireland. Travel time does the rest of the limiting.
+		# This is the tuning knob if the range ever feels wrong: small / medium / large / huge.
+		# The threshold is its own script value so the AGOT patch can retune it for that map.
+		vf_host_distance_to_province <= spn_vf_max_feeding_distance
 	}
 
-	province_filter = domicile_realm
+	# 2.32 -- was domicile_realm for both, which meant every city on the picker was yours or a
+	# vassal's -- so "feed in a foreign city" was unreachable no matter what the victim code did.
+	# The player roams; the AI stays home, so no worldwide scan runs on every AI planner tick.
+	# Vanilla splits these the same way in monument_expedition (all / top_realm).
+	province_filter = all
 	ai_province_filter = domicile_realm
 
 	max_province_icons = 6
@@ -507,7 +552,7 @@
 		if = {
 			limit = { exists = county }
 			add = 150
-			add = { value = county.development_level multiply = -2.5 }
+			county = { add = { value = spn_county_prosperity_value multiply = -2.5 } }
 			# Lawless counties (low control) feed easier (greener).
 			add = { value = county.county_control multiply = -0.4 }
 			# War / plague = chaos, a perfect cover to feed (much greener).
@@ -519,10 +564,10 @@
 		desc = vf_prov_base
 		# Development (one tag via first_valid).
 		first_valid = {
-			triggered_desc = { trigger = { exists = county county = { development_level >= 55 } } desc = vf_tag_dev_terrible }
-			triggered_desc = { trigger = { exists = county county = { development_level >= 40 } } desc = vf_tag_dev_bad }
-			triggered_desc = { trigger = { exists = county county = { development_level < 15 } } desc = vf_tag_dev_best }
-			triggered_desc = { trigger = { exists = county county = { development_level < 25 } } desc = vf_tag_dev_good }
+			triggered_desc = { trigger = { exists = county county = { spn_county_prosperity_value >= 55 } } desc = vf_tag_dev_terrible }
+			triggered_desc = { trigger = { exists = county county = { spn_county_prosperity_value >= 40 } } desc = vf_tag_dev_bad }
+			triggered_desc = { trigger = { exists = county county = { spn_county_prosperity_value < 15 } } desc = vf_tag_dev_best }
+			triggered_desc = { trigger = { exists = county county = { spn_county_prosperity_value < 25 } } desc = vf_tag_dev_good }
 		}
 		# County control (one tag via first_valid) - vanilla county.county_control.
 		first_valid = {
@@ -579,12 +624,13 @@
 		OR = {
 			has_trait = supernatural_vampire
 			has_trait = supernatural_hybrid
-
-            #OR = {
-            #    has_trait = spn_known_vampire
-            #    any_secret = { type = secret_vampire }
-            #}
 		}
+		#root = the candidate, scope:host = the inviter.
+		#This is the chokepoint the guest list is filtered through, so it closes the invite-rule
+		#path as well as the letter. (The earlier commented-out attempt referenced secret_vampire,
+		#which does not exist in this mod - the real key is spn_secret_vampire - and had no
+		#is_known_by clause, so it tested "has the secret" rather than "the host knows it".)
+		spn_host_knows_supernatural_trigger = { HOST = scope:host }
 	}
 
 	host_intents = {
@@ -602,6 +648,41 @@
 	guest_join_chance = {
 		base = 20
 		base_activity_modifier = yes
+
+		# 2.33 -- PERSONALITY, both ends of the invitation. This block also had zero personality in it.
+		# Root is the candidate guest; scope:host is the inviter (_activity_type.info:726).
+		#
+		# THE HOST'S END is why "a paranoid lord shouldn't invite a whole bunch of people" lands here
+		# rather than on max_guests: max_guests is scriptable, but no vanilla activity reads a character
+		# trait inside it and its root is not documented, so using has_trait there would be a guess.
+		# Suppressing acceptances gets the same small gathering through a scope the docs guarantee.
+		modifier = {
+			scope:host = { has_trait = paranoid }
+			add = -25
+			desc = vf_join_host_paranoid
+		}
+		modifier = {
+			scope:host = { has_trait = shy }
+			add = -10
+			desc = vf_join_host_shy
+		}
+		modifier = {
+			scope:host = { has_trait = gregarious }
+			add = 15
+			desc = vf_join_host_gregarious
+		}
+
+		# THE GUEST'S END -- would this vampire travel to somebody else's feeding?
+		modifier = { has_trait = gluttonous   add = 15  desc = vf_join_guest_eager }
+		modifier = { has_trait = gregarious   add = 12  desc = vf_join_guest_eager }
+		modifier = { has_trait = lustful      add = 8   desc = vf_join_guest_eager }
+		modifier = { has_trait = brave        add = 5   desc = vf_join_guest_eager }
+		modifier = { has_trait = paranoid     add = -20 desc = vf_join_guest_wary }
+		modifier = { has_trait = shy          add = -15 desc = vf_join_guest_wary }
+		modifier = { has_trait = temperate    add = -12 desc = vf_join_guest_wary }
+		modifier = { has_trait = content      add = -10 desc = vf_join_guest_wary }
+		modifier = { has_trait = craven       add = -10 desc = vf_join_guest_wary }
+
 
 		# Scripted Modifiers
 		activity_guest_shared_ai_accept_modifier = yes
@@ -675,26 +756,10 @@
 
 					# Award XP to all attending characters
 					every_attending_character = {
-						if = {
-							limit = {
-								has_trait = supernatural_vampire
-							}
-							add_trait_xp = {
-								trait = supernatural_vampire
-								track = vampirism
-								value = { 3 8 }  # Phase 1 balance
-							}
-						}
-						else_if = {
-							limit = {
-								has_trait = supernatural_hybrid 
-							}
-							add_trait_xp = {
-								trait = supernatural_hybrid
-								track = hybrid_vampirism
-								value = { 3 8 }  # Hybrid XP if applicable
-							}
-						}
+						# 2.32 -- routed through the capped-track conversion. Identical below 100; at 100 the
+						# reward arrives as lifestyle XP for that creature's own tree instead of being thrown
+						# away. This is the ONLY place in 2.32 that grants creature lifestyle XP.
+						spn_capped_track_lifestyle_convert_effect = { AMOUNT_MIN = 3 AMOUNT_MAX = 8 }
 						add_character_modifier = {
 							modifier = vf_recently_fed_modifier
 							years = 3

@@ -1,28 +1,36 @@
 ﻿# Root = character
 # Triggered when someone is about to die from a natural death but is given a second chance by meeting
-# the has_natural_death_second_chance scripted rule
+# the has_natural_death_second_chance scripted rule (see common/scripted_rules/10_rules.txt).
+#
+# v2.29 FIX: this file previously declared an `effect = { }` block directly on on_natural_death_second_chance.
+# An on_action can hold only ONE effect block, and vanilla (and AGOT) already define one. Parse order across the
+# merged VFS is by FILENAME, and 10_death.txt sorts before death.txt -- so death.txt parsed last and won, our block
+# was discarded, and the engine logged:
+#     [E][jomini_onaction.cpp:161]: There is more than one 'effect' defined using most recent: ... death.txt
+# The practical result: the whole vampire second-chance path never ran. spn_initiate.0001 never fired, and
+# ingested_vampire_blood_modifier / vampire_blood_in_system were never cleared, so the flag persisted and quietly
+# re-granted a second chance at every later natural death.
+#
+# The `on_actions = { }` sub-list merges instead of colliding, so this now coexists with whatever vanilla or AGOT
+# define. The `else` branch is gone deliberately -- it duplicated the vanilla know_thyself path that already runs.
 on_natural_death_second_chance = {
+	on_actions = {
+		spn_vampire_blood_second_chance
+	}
+}
+
+spn_vampire_blood_second_chance = {
+	trigger = {
+		has_character_flag = vampire_blood_in_system
+	}
 	effect = {
+		# Before spn_initiate.0001, and before the flag goes: the donor becomes the Maker.
+		spn_bind_blood_donor_as_maker_effect = yes
+		trigger_event = spn_initiate.0001
 		if = {
-			limit = {
-				has_character_flag = vampire_blood_in_system
-			}
-			trigger_event = spn_initiate.0001
+			limit = { has_character_modifier = ingested_vampire_blood_modifier }
 			remove_character_modifier = ingested_vampire_blood_modifier
-			remove_character_flag = vampire_blood_in_system
 		}
-		else = {
-			add_character_flag = know_thyself_has_triggered_delay
-			trigger_event = death_management.9998
-			trigger_event = {
-				id = death_management.9999
-				days = { 340 380 }
-			}		
-		
-			add_character_flag = {
-				flag = know_thyself_perk_delay_period
-				days = 390
-			}
-		}
+		remove_character_flag = vampire_blood_in_system
 	}
 }

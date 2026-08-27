@@ -2,22 +2,25 @@
 ### VAMPIRE - UNDEAD IMMORTALITY PERKS
 #
 # Tree layout = a "drop of blood" teardrop, symmetric about column x = 1.0:
-#       row0            Daywalker (1)                <- top point
-#       row1        Kiss (0)      Celerity (2)
-#       row2   MasterShadows(-0.5) Compulsion(1) Domination(2.5)  <- widest bulge
-#       row3      VampNest(0)   Bloodthirsty(1)   Retinue(2)
-#       row4            TrueVampire (1)            <- bottom point
+#       row0            Daywalker (1.5)                <- top point
+#       row1        Kiss (0.5)      Celerity (2.5)
+#       row2   MasterShadows(0)  Compulsion(1.5)  Domination(3)   <- widest bulge
+#       row3      VampNest(0)    Bloodthirsty(1.5)  Retinue(3)
+#       row4            TrueVampire (1.5)            <- bottom point
 #
-# IMPORTANT: keep x within roughly [-0.5, 2.5]. Nodes further left (x <= -1)
-# still RENDER but fall outside the tree's clickable area and can't be hovered
-# or selected. -0.5 and 2.5 are confirmed-clickable extremes; stay inside them.
+# IMPORTANT: keep x >= 0. The old layout put MasterShadows and VampNest at x = -0.5;
+# both rendered and NEITHER could be hovered, tooltipped or clicked, which severed the
+# tree (reported by CleverPolarBear, Lord Zymeth, Noa3 and TobbieR between Dec 2025 and
+# Jun 2026, one of them reproduced with Supernatural as the only active mod).
+# The whole teardrop was shifted +0.5 rather than reshaped, so the silhouette is identical.
+# Across all 18 vanilla lifestyle_perks files the complete set of X values is {0,1,2,3,4}.
 
 
 # Become a Daywalker
 daywalker_perk = {
 	lifestyle = vampire_lifestyle
 	tree = vampirism
-	position = { 1 0 }
+	position = { 1.5 0 }
 	icon = node_vampire
 
 	can_be_picked = {
@@ -60,7 +63,23 @@ daywalker_perk = {
 vampire_seduction_perk = {
 	lifestyle = vampire_lifestyle
 	tree = vampirism
-	position = { 0 1 }
+	auto_selection_weight = {
+		# 2.32 -- only the ROOT perk of each of the six trees carried a weight, so the AI had
+		# nothing telling it to climb toward the capstone: it entered a tree and stopped.
+		# Witchcraft's demon tree weights all sixteen of its perks and was the template.
+		# Same shape as the root -- interested characters push hard, the matching focus
+		# multiplies -- so progression stays personality-driven rather than flat.
+		value = 11
+		if = {
+			limit = { has_vampire_interest_trigger = yes }
+			add = 3000
+		}
+		if = {
+			limit = { has_focus = vampire_vampirism_focus }
+			multiply = 5
+		}
+	}
+	position = { 0.5 1 }
 	icon = node_vampire
 
 	can_be_picked = {
@@ -89,7 +108,18 @@ vampire_seduction_perk = {
 celerity_of_ages_perk = {
 	lifestyle = vampire_lifestyle
 	tree = vampirism
-	position = { 2 1 }
+	auto_selection_weight = {
+		value = 11
+		if = {
+			limit = { has_vampire_interest_trigger = yes }
+			add = 3000
+		}
+		if = {
+			limit = { has_focus = vampire_vampirism_focus }
+			multiply = 5
+		}
+	}
+	position = { 2.5 1 }
 	icon = node_vampire
 
 	can_be_picked = {
@@ -109,7 +139,18 @@ celerity_of_ages_perk = {
 domination_perk = {
 	lifestyle = vampire_lifestyle
 	tree = vampirism
-	position = { 2.5 2 }
+	auto_selection_weight = {
+		value = 11
+		if = {
+			limit = { has_vampire_interest_trigger = yes }
+			add = 3000
+		}
+		if = {
+			limit = { has_focus = vampire_vampirism_focus }
+			multiply = 5
+		}
+	}
+	position = { 3 2 }
 	icon = node_vampire
 
 	can_be_picked = {
@@ -137,7 +178,18 @@ domination_perk = {
 retinue_of_night_perk = {
     lifestyle = vampire_lifestyle
 	tree = vampirism
-	position = { 2.5 3 }
+	auto_selection_weight = {
+		value = 11
+		if = {
+			limit = { has_vampire_interest_trigger = yes }
+			add = 3000
+		}
+		if = {
+			limit = { has_focus = vampire_vampirism_focus }
+			multiply = 5
+		}
+	}
+	position = { 3 3 }
 	icon = node_vampire
 
 	can_be_picked = {
@@ -162,7 +214,18 @@ retinue_of_night_perk = {
 compulsion_perk = {
 	lifestyle = vampire_lifestyle
 	tree = vampirism
-	position = { 1 2 }
+	auto_selection_weight = {
+		value = 11
+		if = {
+			limit = { has_vampire_interest_trigger = yes }
+			add = 3000
+		}
+		if = {
+			limit = { has_focus = vampire_vampirism_focus }
+			multiply = 5
+		}
+	}
+	position = { 1.5 2 }
 	icon = node_vampire
 
 	can_be_picked = {
@@ -184,9 +247,20 @@ compulsion_perk = {
 master_shadows_perk = {
 	lifestyle = vampire_lifestyle
 	tree = vampirism
+	auto_selection_weight = {
+		value = 11
+		if = {
+			limit = { has_vampire_interest_trigger = yes }
+			add = 3000
+		}
+		if = {
+			limit = { has_focus = vampire_vampirism_focus }
+			multiply = 5
+		}
+	}
 	# Left edge of the widest row. -0.5 is the confirmed-clickable left limit
 	# (see tree-layout note at top of file); do not push this further left.
-	position = { -0.5 2 }
+	position = { 0 2 }
 	icon = node_vampire
 
 	can_be_picked = {
@@ -216,8 +290,19 @@ master_shadows_perk = {
 vampire_nest_perk = {
 	lifestyle = vampire_lifestyle
 	tree = vampirism
+	auto_selection_weight = {
+		value = 11
+		if = {
+			limit = { has_vampire_interest_trigger = yes }
+			add = 3000
+		}
+		if = {
+			limit = { has_focus = vampire_vampirism_focus }
+			multiply = 5
+		}
+	}
 	# Bottom row spread wide (-0.5 .. 2.5) for a bottom-heavy teardrop + no label overlap.
-	position = { -0.5 3 }
+	position = { 0 3 }
 	icon = node_vampire
 
 	can_be_picked = {
@@ -246,7 +331,18 @@ vampire_nest_perk = {
 bloodthirsty_perk = {
 	lifestyle = vampire_lifestyle
 	tree = vampirism
-	position = { 1 3 }
+	auto_selection_weight = {
+		value = 11
+		if = {
+			limit = { has_vampire_interest_trigger = yes }
+			add = 3000
+		}
+		if = {
+			limit = { has_focus = vampire_vampirism_focus }
+			multiply = 5
+		}
+	}
+	position = { 1.5 3 }
 	icon = node_vampire
 
 	can_be_picked = {
@@ -284,7 +380,18 @@ bloodthirsty_perk = {
 true_vampire_perk = {
 	lifestyle = vampire_lifestyle
 	tree = vampirism
-	position = { 1 4 }
+	auto_selection_weight = {
+		value = 11
+		if = {
+			limit = { has_vampire_interest_trigger = yes }
+			add = 3000
+		}
+		if = {
+			limit = { has_focus = vampire_vampirism_focus }
+			multiply = 5
+		}
+	}
+	position = { 1.5 4 }
 	icon = true_vampire
 
 	can_be_picked = {

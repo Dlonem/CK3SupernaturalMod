@@ -1,4 +1,5 @@
 ﻿supernatural_vampire = {
+	flag = blocks_getting_non_epidemic_disease # vanilla can_get_non_epidemic_disease_trigger reads this
 	icon = supernatural_vampire.dds
 	immortal = yes
 	flag = is_immortal
@@ -264,6 +265,7 @@ spn_known_vampire = { #Known Vampire Trait
 
 #Werewolf Traits
 supernatural_werewolf = {
+	flag = blocks_getting_non_epidemic_disease # vanilla can_get_non_epidemic_disease_trigger reads this
 	icon = supernatural_werewolf.dds
 	life_expectancy = 10
 	immortal = no
@@ -278,6 +280,66 @@ supernatural_werewolf = {
 	ruler_designer_cost = 100
 	physical = yes
 	
+	# 2.32 -- the werewolf had NO name block at all, while the vampire renames by tier
+	# (Fledgling -> Vampire -> Revered -> Elder). Five power tiers were invisible in the UI, so a
+	# track that IS advancing read as nothing happening -- which is a large part of why werewolf
+	# progress felt absent as well as slow.
+	#
+	# The 50 boundary is deliberate: lycanthropy >= 50 is what unlocks the `werewolves` MAA
+	# regiment, so the name changes exactly when the player gains something real.
+	# These are loc keys -- rename freely in 10_spn_traits_l_english.yml.
+	name = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { NOT = { exists = this } }
+				desc = supernatural_werewolf
+			}
+			triggered_desc = {
+				trigger = { NOT = { has_trait = supernatural_werewolf } }
+				desc = supernatural_werewolf
+			}
+			triggered_desc = {
+				trigger = {
+					has_trait_xp = { trait = supernatural_werewolf track = lycanthropy value < 20 }
+				}
+				desc = trait_supernatural_werewolf_1  # Fledgling Werewolf
+			}
+			triggered_desc = {
+				trigger = {
+					AND = {
+						has_trait_xp = { trait = supernatural_werewolf track = lycanthropy value >= 20 }
+						has_trait_xp = { trait = supernatural_werewolf track = lycanthropy value < 50 }
+					}
+				}
+				desc = trait_supernatural_werewolf_2  # Werewolf
+			}
+			triggered_desc = {
+				trigger = {
+					AND = {
+						has_trait_xp = { trait = supernatural_werewolf track = lycanthropy value >= 50 }
+						has_trait_xp = { trait = supernatural_werewolf track = lycanthropy value < 80 }
+					}
+				}
+				desc = trait_supernatural_werewolf_3  # Feral Werewolf - MAA regiment unlocks here
+			}
+			triggered_desc = {
+				trigger = {
+					AND = {
+						has_trait_xp = { trait = supernatural_werewolf track = lycanthropy value >= 80 }
+						has_trait_xp = { trait = supernatural_werewolf track = lycanthropy value < 100 }
+					}
+				}
+				desc = trait_supernatural_werewolf_4  # Dread Werewolf
+			}
+			triggered_desc = {
+				trigger = {
+					has_trait_xp = { trait = supernatural_werewolf track = lycanthropy value >= 100 }
+				}
+				desc = trait_supernatural_werewolf_5  # Primal Werewolf
+			}
+		}
+	}
+
 	desc = {
 		first_valid = {
 			triggered_desc = {
@@ -452,6 +514,7 @@ spn_true_werewolf = {
 
 #Hybrid Traits
 supernatural_hybrid = {
+	flag = blocks_getting_non_epidemic_disease # vanilla can_get_non_epidemic_disease_trigger reads this
 	icon = supernatural_hybrid.dds
 	immortal = yes
 	flag = is_immortal
@@ -881,5 +944,217 @@ ww_infected_wound = {
 				dread_baseline_add = -5
 			}
 		}
+	}
+}
+
+########################################################################################
+# education_learning_5 - RESTORED FROM VANILLA 1.19
+#
+# 00_traits_magic.txt (witchcraft half) overrides this vanilla trait. Its copy predates a
+# vanilla update and lost two things that were never meant to change:
+#   - domain_limit 3 -> 1   (every other level-5 education gives 3; this quietly cost two
+#                            domain slots to EVERY Scholarly-educated ruler in the game, AI
+#                            included). Reported by Angel DeStaar, Jun 2026.
+#   - county_fertility_growth_mult was deleted outright.
+# The only deliberate change was intrigue lifestyle XP -> magic lifestyle XP, which is kept.
+# This file loads after 00_traits_magic.txt and traits replace wholesale, so re-declaring the
+# whole trait here restores vanilla without editing the witchcraft author's file.
+########################################################################################
+education_learning_5 = {
+	minimum_age = 16
+	learning = 10
+	intrigue = 3
+	category = education
+	monthly_learning_lifestyle_xp_gain_mult = 0.5
+	monthly_magic_lifestyle_xp_gain_mult = 0.25
+	development_growth = 0.1
+	county_fertility_growth_mult = small_county_fertility_growth_gain
+	domain_limit = 3
+
+	culture_modifier = {
+		parameter = prowess_from_religious_traits
+		prowess = 4
+	}
+
+	culture_modifier = {
+		parameter = innovation_from_learning_traits
+		cultural_head_fascination_mult = 0.25
+	}
+
+	culture_modifier = {
+		parameter = build_bonuses_on_religious_traits
+		church_holding_build_speed = -0.2
+		church_holding_holding_build_speed = -0.2
+		church_holding_build_gold_cost = -0.05
+	}
+
+	culture_modifier = {
+		parameter = elephant_bonuses_for_rank_4_education
+		world_innovation_elephants_development_growth_factor = 0.3
+		elephant_cavalry_maintenance_mult = -0.2
+		elephant_cavalry_toughness_mult = 0.1
+		elephant_cavalry_screen_add = 20
+		jungle_attrition_mult = -0.35
+	}
+
+	ruler_designer_cost = 150
+
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					NOT = { exists = this }
+				}
+				desc = trait_education_learning_5_desc
+			}
+			desc = trait_education_learning_5_character_desc
+		}
+	}
+
+	random_creation_weight = 0
+	group = education_learning
+	level = 5
+	flag = level_5_education
+	flag = civilian_province
+}
+
+########################################################################################
+# heresiarch - RESTORED FROM VANILLA 1.19
+# 00_traits_magic.txt's copy predates a vanilla update and lost monthly_influence = 0.75
+# (the Roads to Power influence yield). Supernatural's magic XP and the higher ruler-designer
+# cost are kept; everything else is vanilla's current text.
+########################################################################################
+heresiarch = {
+	category = fame
+	martial = 2
+	learning = 2
+	prowess = 2
+
+	same_faith_opinion = 10
+
+	monthly_influence = 0.75          # restored from vanilla
+	monthly_magic_lifestyle_xp_gain_mult = 0.1   # Supernatural
+
+	advantage_against_coreligionists = 5
+
+	ai_war_chance = 1
+
+	ruler_designer_cost = 70          # Supernatural (vanilla is 50)
+
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					NOT = { exists = this }
+				}
+				desc = trait_heresiarch_desc
+			}
+			desc = trait_heresiarch_character_desc
+		}
+	}
+
+	ai_zeal = 20
+}
+
+########################################################################################
+# leper - RESTORED FROM VANILLA 1.19, VERBATIM
+# The copy in 00_traits_magic.txt contains NOTHING Supernatural. Its only difference from
+# vanilla is prowess = -10, which is simply vanilla's OWN older value: Paradox since replaced
+# it with prowess_mult = -0.8 and added dread_baseline_add / dread_loss_mult. Pure staleness.
+########################################################################################
+leper = {
+	health = -1.5
+	prowess_mult = -0.8
+	fertility = -0.95
+	category = health
+
+	dread_baseline_add = -20
+	dread_loss_mult = 1
+
+	attraction_opinion = -35
+	general_opinion = -10
+
+	ruler_designer_cost = -30
+
+	flag = illness
+	flag = debilitating_illness
+	flag = blocks_getting_non_epidemic_disease
+
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					NOT = { exists = this }
+				}
+				desc = trait_leper_desc
+			}
+			desc = trait_leper_character_desc
+		}
+	}
+
+	ai_energy = -15
+}
+
+########################################################################################
+# scholar - RESTORED FROM VANILLA 1.19
+# The copy lost development_decline_factor and county_fertility_growth_mult. Supernatural's
+# deliberate work is kept: learning 3 -> 5, magic lifestyle XP, mr_add_option_terrain_advantage.
+########################################################################################
+scholar = {
+	category = lifestyle
+
+	learning = 5                                 # Supernatural (vanilla is 3)
+	owned_personal_scheme_success_chance_add = 10
+	owned_hostile_scheme_success_chance_add = 10
+	development_growth_factor = 0.15
+	development_decline_factor = -0.15           # restored from vanilla
+	county_fertility_growth_mult = 0.15          # restored from vanilla
+	monthly_magic_lifestyle_xp_gain_mult = 0.2   # Supernatural
+	mr_add_option_terrain_advantage = 1          # Supernatural
+
+	ruler_designer_cost = 50
+
+	culture_modifier = {
+		parameter = prowess_from_religious_traits
+		prowess = 2
+	}
+
+	culture_modifier = {
+		parameter = innovation_from_learning_traits
+		cultural_head_fascination_mult = 0.1
+	}
+
+	culture_modifier = {
+		parameter = build_bonuses_on_religious_traits
+		church_holding_build_speed = -0.1
+		church_holding_holding_build_speed = -0.1
+		church_holding_build_gold_cost = -0.05
+		church_holding_holding_build_gold_cost = -0.05
+	}
+
+	culture_modifier = { #for FP3's "Irrigation Expert" tradition
+		parameter = innovative_traits_more_valued
+		drylands_tax_mult = 0.1
+		desert_tax_mult = 0.1
+		desert_mountains_tax_mult = 0.1
+	}
+
+	ai_rationality = 30
+
+	compatibility = {
+		whole_of_body = @pos_compat_medium
+		scholar = @pos_compat_medium
+		theologian = @pos_compat_medium
+		lifestyle_gardener = @pos_compat_medium
+		intellect_good_1 = @pos_compat_low
+		intellect_good_2 = @pos_compat_low
+		intellect_good_3 = @pos_compat_low
+		pensive = @pos_compat_low
+		shrewd = @pos_compat_low
+		diligent = @pos_compat_low
+		lazy = @neg_compat_low
+		intellect_bad_1 = @neg_compat_low
+		intellect_bad_2 = @neg_compat_low
+		intellect_bad_3 = @neg_compat_low
 	}
 }

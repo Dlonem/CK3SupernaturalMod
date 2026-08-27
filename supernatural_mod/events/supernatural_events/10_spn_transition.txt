@@ -1,0 +1,281 @@
+﻿namespace = spn_transition
+
+# 2.33 -- THE BLOOD REMEMBERS. What happens after spn_blood_took_the_blow catches a mortal wound.
+# Mechanism and the measurement behind it: common/combat_phase_events/10_spn_combat.txt.
+#
+# THREE BEATS, and the order is the whole point (Thomas, 27 Aug):
+#
+#   .0001  THE WAKING       You are alive and you should not be. Something is wrong with the wound.
+#                           No hunger yet, no explanation, and the blood is never named. One option:
+#                           get up. Nothing is decided here.
+#   .0002  THE RECOGNITION  The hunger arrives, and with it the memory of a cup offered months ago.
+#                           If the one who gave it to you is on this field, they are standing right
+#                           there. THIS is where the choice is made -- feed, ask them, or refuse.
+#   .0003  THE LAST OF IT   You refused. A fortnight on, the argument ends one way or the other.
+#
+# Splitting .0001 and .0002 is not decoration. The player has to be allowed to not know first, or
+# the realisation in .0002 has nothing to land on.
+#
+# HOUSE STYLE -- corrected 27 Aug 2026 after Thomas read the first draft: "way too flavourful and
+# I couldn't tell what it was." He was right, and the style I had written in this header was my
+# own invention, not the mod's. The mod's actual voice, measured against the embrace and
+# wound-incubation chains:
+#
+#   * SECOND PERSON. "You wake in a tent." Never first-person interior monologue.
+#   * Concrete and physical. Say what happens and what it looks like; no literary asides.
+#   * Short declarative sentences. Compare spn_embrace.3001: "A scream awakens you in the night.
+#     You take a moment to light a candle and grab a knife."
+#   * Options are short first-person intent, not spoken dialogue -- "Rest and fight it off",
+#     "I refuse to become a monster". Hyphen for the aside, not an em dash.
+#   * Other characters named with [scope.GetTitledFirstName]; dialogue in quotes.
+#
+# Unchanged: no outcome telegraphed in a tooltip, ai_chance on every option that has a sibling.
+#
+# PACING: 3 days to wake, then a fortnight to each beat -- about a month end to end, so it reads
+# as a transition rather than a bad afternoon.
+#
+# WINDOW: spn_in_transition does not expire (see 20_spn_transition_effects.txt). Every event below
+# can be answered on day 3 or day 300 and the chain still completes -- 5x speed is safe.
+
+##########################################################
+### 0001 -- The waking. You do not know why yet.        ##
+##########################################################
+spn_transition.0001 = {
+	type = character_event
+	title = spn_transition.0001.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = var:spn_felled_by }
+				desc = spn_transition.0001.desc_felled
+			}
+			desc = spn_transition.0001.desc
+		}
+	}
+	theme = death
+	override_background = { reference = battlefield }
+
+	left_portrait = scope:spn_the_one_who_felled_me
+	right_portrait = { character = root animation = pain }
+
+	immediate = {
+		if = {
+			limit = { exists = var:spn_felled_by  var:spn_felled_by ?= { is_alive = yes } }
+			var:spn_felled_by = { save_scope_as = spn_the_one_who_felled_me }
+		}
+	}
+
+	# One option. Nothing is resolved, nothing is revealed, and the AI needs no weighting because
+	# there is nothing here to choose between.
+	option = {
+		name = spn_transition.0001.a
+		# A fortnight. The hunger is supposed to arrive by degrees, not by the next morning.
+		trigger_event = { id = spn_transition.0002 days = 14 }
+	}
+}
+
+
+##########################################################
+### 0002 -- The recognition, and the choice             ##
+##########################################################
+spn_transition.0002 = {
+	type = character_event
+	title = spn_transition.0002.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { spn_transition_donor_present_trigger = yes }
+				desc = spn_transition.0002.desc_donor
+			}
+			desc = spn_transition.0002.desc
+		}
+	}
+	theme = death
+	override_background = { reference = battlefield }
+
+	# The donor gets the left slot when they are here: this is the beat where the player is meant to
+	# look at their face and understand what was done to them.
+	# The donor when they are here, and ALWAYS the prey -- the man the first option kills was saved in
+	# immediate and then never shown, so the player was being asked to spend a life they never saw.
+	left_portrait = scope:spn_the_donor
+	lower_left_portrait = scope:spn_the_prey
+	right_portrait = { character = root animation = shock }
+
+	trigger = {
+		is_alive = yes
+		has_character_flag = spn_in_transition
+	}
+
+	immediate = {
+		spn_transition_find_prey_effect = { SCOPE_NAME = spn_the_prey }
+		if = {
+			limit = { spn_transition_donor_present_trigger = yes }
+			var:spn_vampire_blood_donor = { save_scope_as = spn_the_donor }
+		}
+	}
+
+	# ── FEED ──────────────────────────────────────────────────────────────────────────────────────
+	option = {
+		name = spn_transition.0002.a
+		custom_tooltip = spn_transition.0002.a_tt
+		trigger = { exists = scope:spn_the_prey }
+
+		ai_chance = {
+			base = 60
+
+			# AGE. Thomas's line: "a young person with their entire life ahead of them is more likely
+			# to do it." Someone at twenty is being offered the rest of a life they have not had yet;
+			# someone at seventy is being asked to keep going after the natural end of one.
+			modifier = { add = 35  age < 25 }
+			modifier = { add = 20  age >= 25  age < 40 }
+			modifier = { add = -15 age >= 55  age < 70 }
+			modifier = { add = -30 age >= 70 }
+
+			# Appetite and nerve
+			modifier = { add = 30 has_trait = gluttonous }
+			modifier = { add = 25 has_trait = ambitious }
+			modifier = { add = 20 has_trait = callous }
+			modifier = { add = 20 has_trait = craven }
+			modifier = { add = 15 has_trait = arrogant }
+			modifier = { add = -30 has_trait = temperate }
+			modifier = { add = -25 has_trait = compassionate }
+			modifier = { add = -20 has_trait = zealous }
+			modifier = { add = -20 has_trait = chaste }
+			modifier = { add = -25 has_trait = stubborn }
+			ai_value_modifier = {
+				ai_boldness = medium_chance_impact_positive_ai_value
+				ai_compassion = -1
+			}
+
+			# Something left to finish
+			modifier = { add = 20 any_child = { is_alive = yes  is_adult = no } }
+			modifier = { add = 15 is_ruler = yes  highest_held_title_tier >= tier_kingdom }
+		}
+
+		stress_impact = { base = major_stress_impact_gain }
+		# Deaths go last: everything reading the pre-change state is banked before this.
+		scope:spn_the_prey = { death = { death_reason = spn_death_drained killer = root } }
+		spn_transition_completed_effect = yes
+	}
+
+	# ── THE DONOR HELPS ───────────────────────────────────────────────────────────────────────────
+	option = {
+		name = spn_transition.0002.b
+		custom_tooltip = spn_transition.0002.b_tt
+		trigger = { spn_transition_donor_present_trigger = yes }
+
+		ai_chance = {
+			base = 80
+			modifier = { add = 25 age < 25 }
+			modifier = { add = 25 has_trait = craven }
+			modifier = { add = 20 has_trait = compassionate }
+			modifier = { add = 20 has_trait = trusting }
+			modifier = { add = -20 has_trait = arrogant }
+			modifier = { add = -20 has_trait = paranoid }
+			opinion_modifier = { who = root  opinion_target = scope:spn_the_donor  multiplier = 0.3 }
+		}
+
+		# Nobody dies, and no body has to be explained. The cost is that they now have something over
+		# you -- spn_bind_blood_donor_as_maker_effect makes them your Maker either way, but this is
+		# the version where you had to ask.
+		stress_impact = { base = medium_stress_impact_gain }
+		scope:spn_the_donor = {
+			add_opinion = { target = root modifier = pleased_opinion opinion = 20 }
+		}
+		spn_transition_completed_effect = yes
+	}
+
+	# ── REFUSE ────────────────────────────────────────────────────────────────────────────────────
+	option = {
+		name = spn_transition.0002.c
+		custom_tooltip = spn_transition.0002.c_tt
+
+		ai_chance = {
+			base = 25
+
+			# The mirror of the age curve above.
+			modifier = { add = -25 age < 25 }
+			modifier = { add = 25  age >= 55  age < 70 }
+			modifier = { add = 45  age >= 70 }
+
+			modifier = { add = 40 has_trait = stubborn }
+			modifier = { add = 30 has_trait = zealous }
+			modifier = { add = 25 has_trait = temperate }
+			modifier = { add = 20 has_trait = chaste }
+			modifier = { add = 20 has_trait = compassionate }
+			modifier = { add = 15 has_trait = humble }
+			modifier = { add = -35 has_trait = craven }
+			modifier = { add = -25 has_trait = gluttonous }
+			modifier = { add = -20 has_trait = ambitious }
+			ai_value_modifier = { ai_zeal = medium_chance_impact_positive_ai_value }
+
+			# A parent of small children does not choose this lightly.
+			modifier = { add = -20 any_child = { is_alive = yes  is_adult = no } }
+		}
+
+		# One chance to change your mind, because a single
+		# misclick should not end a playthrough.
+		# Another fortnight to sit with the refusal before it becomes final.
+		trigger_event = { id = spn_transition.0003 days = 14 }
+	}
+}
+
+
+##########################################################
+### 0003 -- The last of it                              ##
+##########################################################
+spn_transition.0003 = {
+	type = character_event
+	title = spn_transition.0003.t
+	desc = spn_transition.0003.desc
+	theme = death
+	override_background = { reference = battlefield }
+
+	lower_left_portrait = scope:spn_the_prey
+	right_portrait = { character = root animation = sick }
+
+	trigger = {
+		is_alive = yes
+		has_character_flag = spn_in_transition
+	}
+
+	immediate = {
+		spn_transition_find_prey_effect = { SCOPE_NAME = spn_the_prey }
+	}
+
+	option = {
+		name = spn_transition.0003.a
+		custom_tooltip = spn_transition.0003.a_tt
+		trigger = { exists = scope:spn_the_prey }
+
+		ai_chance = {
+			base = 70
+			modifier = { add = 30 age < 25 }
+			modifier = { add = -25 age >= 70 }
+			modifier = { add = 30 has_trait = craven }
+			modifier = { add = -40 has_trait = stubborn }
+			modifier = { add = -30 has_trait = zealous }
+			modifier = { add = 20 any_child = { is_alive = yes  is_adult = no } }
+		}
+
+		stress_impact = { base = major_stress_impact_gain }
+		scope:spn_the_prey = { death = { death_reason = spn_death_drained killer = root } }
+		spn_transition_completed_effect = yes
+	}
+
+	option = {
+		name = spn_transition.0003.b
+		custom_tooltip = spn_transition.0003.b_tt
+
+		ai_chance = {
+			base = 30
+			modifier = { add = -25 age < 25 }
+			modifier = { add = 35 age >= 70 }
+			modifier = { add = 50 has_trait = stubborn }
+			modifier = { add = 40 has_trait = zealous }
+			modifier = { add = -40 has_trait = craven }
+		}
+
+		spn_transition_refused_effect = yes
+	}
+}

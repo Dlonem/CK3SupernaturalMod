@@ -17,10 +17,10 @@ magic_ev.99 = {
 		}
 	}
 	immediate = {
-		random_living_character = {
-			limit = {
-				is_ai = no
-			}
+		# 2.30 bugfix: was random_living_character (every living character scanned, every pulse) and
+		# in observer mode it found nobody, leaving scope:player0 unset -- 14,000+ errors in one
+		# evening's log. random_player is the same characters, without the scan.
+		random_player = {
 			save_scope_as = player0
 		}
 		if = {
@@ -160,7 +160,11 @@ magic_ev.99 = {
 								has_variable=ev1used
 							}
 						}
-						in_diplomatic_range = scope:player0
+						# 2.30 bugfix: guarded -- unset in observer mode
+						trigger_if = {
+							limit = { exists = scope:player0 }
+							in_diplomatic_range = scope:player0
+						}
 					}
 					random_list = {
 						#necro
@@ -1272,6 +1276,9 @@ magic_ev.4 = {
 		if = {
 			limit = {
 				is_ai = no
+				NOT = {
+					domicile ?= { has_domicile_parameter = mtriangulation_free_unlocked }
+				}
 			}
 			remove_short_term_gold = potion_gold_value
 		}
@@ -1661,9 +1668,36 @@ magic_ev.5 = {
 		}
 		random_in_list = {
 			list = potential_sacrifices
+			limit = {
+				is_powerful_being = no
+				NOR = {
+					has_perk = mage_tower_p2_perk
+					has_focus = witch_focus
+					has_focus = arcane_focus
+					has_trait = true_witch
+				}
+			}
 			save_scope_as = potential_sacrifice
 		}
-		
+		if = {
+			limit = {
+				NOT = {
+					exists = scope:potential_sacrifice
+				}
+			}
+			random_courtier = {
+				limit = {
+					is_powerful_being = no
+					NOR = {
+						has_perk = mage_tower_p2_perk
+						has_focus = witch_focus
+						has_focus = arcane_focus
+						has_trait = true_witch
+					}
+				}
+				save_scope_as = potential_sacrifice
+			}
+		}
 	}
 	option = {
 		name = ev5.0.a

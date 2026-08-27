@@ -1,6 +1,9 @@
 ﻿#For when a spn genetic birth occurs
 spn_on_genetic_birth = {
 	trigger = {
+		# SPECIES GATE -- see common/scripted_triggers/zz_spn_species_triggers.txt. Nothing that is
+		# not a person inherits any of this, whatever its parents are.
+		spn_is_valid_supernatural_target = yes
 		OR = {
 			AND = { #Werewolf / Vampire / Hybrid path (original behaviour)
 				NOR = {
@@ -35,6 +38,13 @@ spn_on_genetic_birth = {
 			random = {
 				chance = spn_demon_birth_chance
 				add_trait = demon0
+				#demon0 on its own is personality flavour - no immortality, no powers. Without a
+				#maturation event the child stays demon-blooded for life. The witchcraft half's
+				#on_action_demon_inherited schedules this, but only when BOTH parents are demons,
+				#so the Demon+Human default (which the game rule advertises) never matured anyone.
+				#Reported by Omni, Jun 2026. Double-scheduling is harmless: magic_ev3.75 requires
+				#has_trait = demon0 and the first firing removes it.
+				trigger_event = { id = magic_ev3.75 years = { 20 21 } }
 				spn_update_number_of_supernatural_children_for_parents = yes
 			}
 		}
@@ -188,7 +198,7 @@ spn_on_immortality_birthday = {
 			has_trait = supernatural_vampire
 			has_trait = supernatural_hybrid
 		}
-		NOT = { has_variable = spn_overwrite_visual_age }
+		NOT = { has_character_flag = spn_overwrite_visual_age }
 		NOT = { has_game_rule = spn_no_automatic_ageing }
 	}
 

@@ -20,16 +20,11 @@ spn_gain_power.4010 = {
 	}
 	
 	immediate = { 
-		random_courtier = {
-			limit = {
-				NOR = {
-					has_trait = supernatural_vampire
-					has_trait = supernatural_werewolf
-					is_adult = no
-				}
-			}
-			save_scope_as = courtier_from_realm 
-		}
+		# 2.32 -- routed through the shared selector: the local holder's people first, then a
+		# neighbouring county, and only then your own court. The old NOR excluded vampires and
+		# werewolves but not supernatural_hybrid and not supernatural_hunter, so your court could
+		# hand you a hybrid or a monster hunter as prey, and it never touched the species gate.
+		vf_select_victim_effect = { SCOPE_NAME = courtier_from_realm GENDER_FEMALE_CHANCE = 50 }
 	}
 
 
@@ -89,10 +84,44 @@ spn_gain_power.4010 = {
 	option = {
 		name = spn_gain_power.4010.b
 		custom_tooltip = spn_gain_power.4010.b.tt
-		
-		stress_impact = {
-			supernatural_vampire = activity_stress_gain_impact
+
+		# 2.32 -- this option used to cost stress and grant NOTHING, and its own tooltip admitted it:
+		# "no power gain possible." A decline strictly worse than not clicking the decision is not a
+		# choice. It is now the safe floor -- less blood, no risk -- and it is landless-native by
+		# construction, because the traveller is created on the spot rather than drawn from a court.
+		ai_chance = {
+			base = 30
+			modifier = { add = 25 has_trait = temperate }
+			modifier = { add = 20 has_trait = craven }
+			modifier = { add = 20 has_trait = paranoid }
+			modifier = { add = 15 has_trait = compassionate }
+			modifier = { add = -20 has_trait = gluttonous }
+			modifier = { add = -15 has_trait = sadistic }
 		}
+		trigger_event = spn_gain_power.4015
+	}
+
+	option = {
+		name = spn_gain_power.4010.c
+		custom_tooltip = spn_gain_power.4010.c.tt
+
+		# 2.32 -- blood you paid for. The risk is a wasted cost, never a death roll.
+		# minor_gold_value is vanilla's own income-scaled amount (about three months' income,
+		# clamped and rounded, and it already handles the landless and vassal cases) -- a better
+		# choice than the hand-rolled formula in the commented-out hunt decision, and Paradox
+		# maintains it.
+		trigger = { gold >= minor_gold_value }
+		ai_chance = {
+			base = 25
+			modifier = { add = 25 has_trait = greedy }
+			modifier = { add = 20 has_trait = paranoid }
+			modifier = { add = 15 has_trait = calm }
+			modifier = { add = 15 has_trait = shrewd }
+			modifier = { add = -25 has_trait = arrogant }
+			modifier = { add = -15 has_trait = wrathful }
+		}
+		remove_short_term_gold = minor_gold_value
+		trigger_event = spn_gain_power.4016
 	}
 }
 
@@ -243,19 +272,12 @@ spn_gain_power.4013 = {
 			supernatural_vampire = 30
 		}
 		
-		random_list = {
-			100 = { #Chance of Upgrading Trait
-				if = {
-					limit = { has_trait = supernatural_vampire
-					}
-					add_trait_xp = {
-						trait = supernatural_vampire
-						track = vampirism
-						value = { 15 35 }
-					}
-				}
-			}
-			0 = { }
+		# 2.32 -- was a random_list of `100 = {...}` and `0 = {}`, i.e. a 100% branch and a dead
+		# one. Flattened; the option is already gated on the vampire trait by its own trigger.
+		add_trait_xp = {
+			trait = supernatural_vampire
+			track = vampirism
+			value = { 15 35 }
 		}
 	}
 
@@ -271,8 +293,10 @@ spn_gain_power.4013 = {
 			flag = kill_courtier_from_realm
 		}
 		
+		# 2.32 -- was `supernatural_vampire = 30` on this HYBRID-gated option. stress_impact keys
+		# off a trait the character does not have, so hybrids silently took ZERO stress for the kill.
 		stress_impact = {
-			supernatural_vampire = 30
+			supernatural_hybrid = 30
 		}
 		
 		add_trait_xp = {
@@ -327,27 +351,24 @@ spn_gain_power.4020 = {
 	}
 	
 	immediate = { 
+		# 2.32 -- the comment below was yours and it was right; this is that fix.
 		random_vassal_or_below = {
-			limit = {
-				NOR = { #Change to is supernatural, trigger
-					has_trait = supernatural_vampire
-					has_trait = supernatural_werewolf
-					is_adult = no
-				}
-			}
+			limit = { vf_valid_victim_trigger = yes }
 			save_scope_as = vassal_from_realm
 		}
-
-		random_courtier = {
-			limit = {
-				NOR = {
-					has_trait = supernatural_vampire
-					has_trait = supernatural_werewolf
-					is_adult = no
-				}
-			}
-			save_scope_as = courtier_from_realm 
+		# A landless werewolf has no vassals, so this entire 20% branch used to do nothing at all:
+		# 4023 opened with a blank left portrait and 4025's death had no target. Fall back to a
+		# local victim so the branch resolves for a camp the same way it does for a realm.
+		if = {
+			limit = { NOT = { exists = scope:vassal_from_realm } }
+			vf_select_victim_effect = { SCOPE_NAME = vassal_from_realm GENDER_FEMALE_CHANCE = 50 }
 		}
+
+		# 2.32 -- routed through the shared selector: the local holder's people first, then a
+		# neighbouring county, and only then your own court. The old NOR excluded vampires and
+		# werewolves but not supernatural_hybrid and not supernatural_hunter, so your court could
+		# hand you a hybrid or a monster hunter as prey, and it never touched the species gate.
+		vf_select_victim_effect = { SCOPE_NAME = courtier_from_realm GENDER_FEMALE_CHANCE = 50 }
 	}
 	
 	
@@ -415,7 +436,51 @@ spn_gain_power.4020 = {
 			}
 		}
 	}
-	
+
+	option = {
+		name = spn_gain_power.4020.b
+		custom_tooltip = spn_gain_power.4020.b.tt
+
+		# 2.32 -- 4020 had NO decline option at all where its vampire twin (4010) had one. That
+		# asymmetry is most of what "as a werewolf you only get the one thing" actually was.
+		# Running the border costs a neighbour's goodwill instead of a 2% death roll.
+		ai_chance = {
+			base = 35
+			modifier = { add = 25 has_trait = paranoid }
+			modifier = { add = 20 has_trait = patient }
+			modifier = { add = 15 has_trait = shrewd }
+			modifier = { add = 15 has_trait = deceitful }
+			modifier = { add = -20 has_trait = arrogant }
+			modifier = { add = -15 has_trait = brave }
+		}
+		trigger_event = spn_gain_power.4026
+	}
+
+	option = {
+		name = spn_gain_power.4020.c
+		custom_tooltip = spn_gain_power.4020.c.tt
+
+		# 2.32 -- another wolf's ground. This is the only thing in the mod that reads
+		# spn_born_werewolf / spn_turned_werewolf, which are set at 10_spn_initiate_events.txt:227
+		# with the comment "for the gathering activity & future content" and have never been read
+		# by anything. It makes two dormant flags load-bearing and lays a thread toward the pack
+		# system without committing to designing it.
+		trigger = {
+			OR = {
+				has_character_flag = spn_born_werewolf
+				has_character_flag = spn_turned_werewolf
+			}
+		}
+		ai_chance = {
+			base = 20
+			modifier = { add = 25 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = 20 has_trait = ambitious }
+			modifier = { add = -25 has_trait = craven }
+			modifier = { add = -15 has_trait = content }
+		}
+		trigger_event = spn_gain_power.4027
+	}
 }
 
 ######################################
@@ -545,6 +610,28 @@ spn_gain_power.4023 = {
 		
 		stress_impact = {
 			supernatural_werewolf = activity_stress_gain_impact
+			supernatural_hybrid = activity_stress_gain_impact
+		}
+		
+		# 2.32 -- this branch granted NOTHING. Its vampire twin (4013) grants { 15 35 } for the
+		# identical outcome, so the 20% kill roll was pure punishment on the werewolf side and a
+		# straight reward on the vampire side. That asymmetry is most of why the wolf track feels
+		# unreachable. XP is banked here, in 4023; the death itself happens later in 4025.
+		if = {
+			limit = { has_trait = supernatural_werewolf }
+			add_trait_xp = {
+				trait = supernatural_werewolf
+				track = lycanthropy
+				value = { 10 25 }
+			}
+		}
+		else_if = {
+			limit = { has_trait = supernatural_hybrid }
+			add_trait_xp = {
+				trait = supernatural_hybrid
+				track = hybrid_lycanthropy
+				value = { 10 25 }
+			}
 		}
 	}
 	
@@ -586,8 +673,24 @@ spn_gain_power.4024 = {
 		name = spn_gain_power.4024.a
 		custom_tooltip = spn_gain_power.4024.a.tt
 
-		death = {
-			death_reason = spn_death_silver_arrow_by_hunter_as_werewolf
+		# 2.32 -- HYBRID GUARD. Hybrids are immortal and this killed them anyway, so ~1% of every
+		# hybrid satiate click was instant death (50% wolf route x 2% here) with nothing warning of
+		# it. A hybrid now survives the arrow -- and the hunter who loosed it walks away KNOWING,
+		# which is a cost that feeds the suspicion chain instead of ending the playthrough.
+		# Standing rule: the irreversible step goes last, after everything else has been banked.
+		if = {
+			limit = { has_trait = supernatural_hybrid }
+			increase_wounds_no_death_effect = { REASON = spn_death_silver_arrow_by_hunter_as_werewolf }
+			add_stress = major_stress_impact_gain
+			if = {
+				limit = { exists = scope:spn_new_created_hunter }
+				spn_give_knowledge_of_hybrid_secret = { CHARACTER = scope:spn_new_created_hunter }
+			}
+		}
+		else = {
+			death = {
+				death_reason = spn_death_silver_arrow_by_hunter_as_werewolf
+			}
 		}
 	}
 	
@@ -609,5 +712,191 @@ spn_gain_power.4025 = {
 			}
 			remove_character_flag = kill_vassal_from_realm
 		}
+	}
+}
+
+
+##########################################################
+### 2.32 -- NEW. The vampire's safe floor and paid blood ##
+##########################################################
+
+# The road, not the castle. A traveller asleep by his cart; compelled, drained a little, sent on.
+# create_character at root.location, so this works identically for a landed ruler and a camp.
+spn_gain_power.4015 = {
+	type = character_event
+	title = spn_gain_power.4015.t
+	desc = spn_gain_power.4015.desc
+	theme = intrigue
+	override_background = { reference = alley_night }
+
+	immediate = {
+		hidden_effect = {
+			create_character = {
+				location = root.location
+				culture = root.location.culture
+				faith = root.location.faith
+				gender_female_chance = 40
+				save_scope_as = vf_traveller
+			}
+		}
+	}
+
+	# 2.32 -- matches the rest of this chain: root on the right, the other character on the
+	# left. These four were the only events here using center_portrait, which CK3 renders as
+	# a floating head at the bottom of the window.
+	right_portrait = { character = root animation = menacing }
+	left_portrait = { character = scope:vf_traveller animation = sitting }
+
+	option = {
+		name = spn_gain_power.4015.a
+		custom_tooltip = spn_gain_power.4015.a.tt
+		ai_chance = { base = 100 }
+
+		if = {
+			limit = { has_trait = supernatural_vampire }
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 5 12 } }
+		}
+		else_if = {
+			limit = { has_trait = supernatural_hybrid }
+			add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 5 12 } }
+		}
+		# He wakes on the verge with a headache and a story nobody believes. Same modifier the
+		# feeding activity leaves on its survivors, so the suspicion chain can read it later.
+		scope:vf_traveller = { add_character_modifier = { modifier = vf_recently_fed_on_modifier years = 3 } }
+		stress_impact = { base = minor_stress_impact_loss }
+	}
+}
+
+
+# Blood you paid for. A butcher, a physician's leech-jars, a man who will sell a cup a week.
+# Zero risk to your body; the cost is gold, and a small chance the seller talks.
+spn_gain_power.4016 = {
+	type = character_event
+	title = spn_gain_power.4016.t
+	desc = spn_gain_power.4016.desc
+	theme = intrigue
+	override_background = { reference = market }
+
+	immediate = {
+		# A local tradesman -- the shared selector, so he belongs to wherever you are standing.
+		vf_select_victim_effect = { SCOPE_NAME = vf_seller GENDER_FEMALE_CHANCE = 25 }
+	}
+
+	right_portrait = { character = root animation = thinking }
+	left_portrait = { character = scope:vf_seller animation = shame }
+
+	option = {
+		name = spn_gain_power.4016.a
+		custom_tooltip = spn_gain_power.4016.a.tt
+		ai_chance = { base = 100 }
+
+		if = {
+			limit = { has_trait = supernatural_vampire }
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 10 20 } }
+		}
+		else_if = {
+			limit = { has_trait = supernatural_hybrid }
+			add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 10 20 } }
+		}
+		stress_impact = { base = minor_stress_impact_loss }
+
+		# The only downside, and it is a rumour rather than a wound. Routes into the existing
+		# secrets chain instead of inventing a parallel one.
+		hidden_effect = {
+			random = {
+				chance = 12
+				trigger_event = { id = spn_secrets.1001 days = 3 }
+			}
+		}
+	}
+}
+
+
+##########################################################
+### 2.32 -- NEW. The werewolf's two missing branches    ##
+##########################################################
+
+# Run the border. Hunt across the county line rather than in your own woods.
+spn_gain_power.4026 = {
+	type = character_event
+	title = spn_gain_power.4026.t
+	desc = spn_gain_power.4026.desc
+	theme = hunting
+	override_background = { reference = wilderness_forest_pine }
+
+	immediate = {
+		# The herdsman whose livestock you disturbed. The shared selector prefers the local
+		# holder's people and then the next county's, so this reads the same for a landed ruler
+		# and for a camp -- and it is the whole point of the option.
+		vf_select_victim_effect = { SCOPE_NAME = vf_herdsman GENDER_FEMALE_CHANCE = 20 }
+	}
+
+	right_portrait = { character = root animation = war_attacker }
+	left_portrait = { character = scope:vf_herdsman animation = anger }
+
+	option = {
+		name = spn_gain_power.4026.a
+		custom_tooltip = spn_gain_power.4026.a.tt
+		ai_chance = { base = 100 }
+
+		if = {
+			limit = { has_trait = supernatural_werewolf }
+			add_trait_xp = { trait = supernatural_werewolf track = lycanthropy value = { 12 25 } }
+		}
+		else_if = {
+			limit = { has_trait = supernatural_hybrid }
+			add_trait_xp = { trait = supernatural_hybrid track = hybrid_lycanthropy value = { 12 25 } }
+		}
+		stress_impact = { base = minor_stress_impact_loss }
+
+		# The cost: somebody across the line is short a few animals and knows which direction the
+		# tracks led. No death roll.
+		scope:vf_herdsman = { add_opinion = { target = root modifier = suspicion_opinion opinion = -20 } }
+		hidden_effect = { vf_local_hunter_notices_effect = yes }
+	}
+}
+
+
+# Another wolf's ground. You find a kill that is not yours.
+# The ONLY reader of spn_born_werewolf / spn_turned_werewolf in the mod.
+spn_gain_power.4027 = {
+	type = character_event
+	title = spn_gain_power.4027.t
+	desc = {
+		triggered_desc = {
+			trigger = { has_character_flag = spn_born_werewolf }
+			desc = spn_gain_power.4027.desc_born
+		}
+		desc = spn_gain_power.4027.desc_turned
+	}
+	theme = hunting
+	override_background = { reference = wilderness_forest_pine }
+
+	immediate = {
+		vf_select_victim_effect = { SCOPE_NAME = vf_other_wolf GENDER_FEMALE_CHANCE = 50 }
+	}
+
+	right_portrait = { character = root animation = anger }
+	left_portrait = { character = scope:vf_other_wolf animation = threatening }
+
+	option = {
+		name = spn_gain_power.4027.a
+		custom_tooltip = spn_gain_power.4027.a.tt
+		ai_chance = { base = 100 }
+
+		if = {
+			limit = { has_trait = supernatural_werewolf }
+			add_trait_xp = { trait = supernatural_werewolf track = lycanthropy value = { 15 30 } }
+		}
+		else_if = {
+			limit = { has_trait = supernatural_hybrid }
+			add_trait_xp = { trait = supernatural_hybrid track = hybrid_lycanthropy value = { 15 30 } }
+		}
+		stress_impact = { base = minor_stress_impact_loss }
+
+		# A thread toward the pack system, written with the relations that already exist rather
+		# than a new flag. Deliberately just an acquaintance for now -- ww_clawed is the turning
+		# bond and must not be claimed by a chance meeting in the woods.
+		scope:vf_other_wolf = { add_opinion = { target = root modifier = suspicion_opinion opinion = -10 } }
 	}
 }

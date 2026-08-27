@@ -335,46 +335,61 @@ spn_abandon_hunter_decision = {
 #############################################
 ### Vampire Feeding | Satiate Bloodthirst ###
 #############################################
-#spn_satiate_bloodlust_decision = {
-# 	ai_check_interval = 0
-#	picture = {
-#		reference = "gfx/interface/illustrations/decisions/decision_activity.dds"
-#	}
-#	desc = spn_satiate_bloodlust_decision_desc
-#	selection_tooltip = spn_satiate_bloodlust_decision_tooltip
-# 	cooldown = { years = 7 }
-#	
-# 	is_shown = {
-#		has_trait = supernatural_vampire
-#	}
-#	
-#	is_valid = {
-#		has_trait_xp = {
-#			trait = supernatural_vampire
-#			track = vampirism
-#			value <= 100
-#		}
-#		is_imprisoned = no
-#		years_from_game_start >= 1
-# 	}
-#
-#	effect = {
-#		show_as_tooltip = {
-#			custom_tooltip = spn_msg_tooltip_satiate_bloodlust_desc
-#		}
-#		
-#		stress_impact = { #Stress loss
-#			base = hunt_stress_loss_value
-#			supernatural_vampire = activity_stress_loss_impact
-#			#supernatural_hybrid = activity_stress_loss_impact
-#		}
-#		
-# 		trigger_event = {
-#			id = spn_gain_power.4010 #Determine Which Hunt Event to Trigger
-#			days = 3
-#		}
-#	}
-#}
+spn_satiate_bloodlust_decision = {
+	ai_check_interval = 0
+	picture = {
+		reference = "gfx/interface/illustrations/decisions/decision_activity.dds"
+	}
+	desc = spn_satiate_bloodlust_decision_desc
+	selection_tooltip = spn_satiate_bloodlust_decision_tooltip
+	cooldown = { years = 7 }
+
+	# 2.32 -- revived. This was 100% commented out, which meant PURE VAMPIRES HAD NO FEEDING
+	# DECISION AT ALL: the 50/50 that felt familiar belongs to the hybrid decision below.
+	# All six loc keys have been shipping in eight languages the whole time.
+	# Player-only, matching every other live decision in this file.
+	ai_potential = {
+		always = no
+	}
+
+	ai_will_do = {
+		base = 0
+	}
+
+	is_shown = {
+		has_trait = supernatural_vampire
+	}
+
+	is_valid = {
+		# 2.32 -- was `<= 100`, and the track caps at 100, so the gate could never fail and the
+		# decision never locked out at max power. `< 100` was meant.
+		has_trait_xp = {
+			trait = supernatural_vampire
+			track = vampirism
+			value < 100
+		}
+		is_imprisoned = no
+		years_from_game_start >= 1
+	}
+
+	effect = {
+		show_as_tooltip = {
+			custom_tooltip = spn_msg_tooltip_satiate_bloodlust_desc
+		}
+
+		# The stress dump is the reason this decision earns its place next to the 7-year
+		# activity -- it is the on-the-fly release the activity cannot give you. Keep it.
+		stress_impact = {
+			base = hunt_stress_loss_value
+			supernatural_vampire = activity_stress_loss_impact
+		}
+
+		trigger_event = {
+			id = spn_gain_power.4010
+			days = 3
+		}
+	}
+}
 
 
 #########################################
@@ -404,7 +419,7 @@ spn_abandon_hunter_decision = {
 		has_trait_xp = {
 			trait = supernatural_werewolf
 			track = lycanthropy
-			value <= 100
+			value < 100
 		}
 		is_imprisoned = no
 		years_from_game_start >= 1
@@ -455,7 +470,7 @@ spn_abandon_hunter_decision = {
 		has_trait_xp = {
 			trait = supernatural_hybrid
 			track = hybrid_lycanthropy
-			value <= 100
+			value < 100
 		}
 		is_imprisoned = no
 		years_from_game_start >= 1
@@ -463,7 +478,10 @@ spn_abandon_hunter_decision = {
 
  	effect = {
 		show_as_tooltip = {
-			custom_tooltip = spn_msg_tooltip_satiate_hunger_desc
+			# 2.32 -- the hybrid decision was showing the WEREWOLF tooltip. Its own key has been
+			# written and shipping in eight languages this whole time, unused -- and it is the
+			# better line: the only one that mentions the kill branch, which hybrids can roll.
+			custom_tooltip = spn_msg_tooltip_satiate_bloodhunger_desc
 		}
 	
 		stress_impact = { #Stress loss
@@ -520,27 +538,27 @@ spn_abandon_hunter_decision = {
 #						has_trait_xp = {
 #							trait = supernatural_hybrid
 #							track = hybrid_vampirism
-#							value <= 100
+#							value < 100
 #						}
 #						has_trait_xp = {
 #							trait = supernatural_hybrid
 #							track = hybrid_lycanthropy
-#							value <= 100
+#							value < 100
 #						}
 #						has_trait_xp = {
 #							trait = supernatural_werewolf
 #							track = lycanthropy
-#							value <= 100
+#							value < 100
 #						}
 #						has_trait_xp = {
 #							trait = supernatural_vampire
 #							track = vampirism
-#							value <= 100
+#							value < 100
 #						}
 #						has_trait_xp = {
 #							trait = supernatural_hunter
 #							track = monster_hunting
-#							value <= 100
+#							value < 100
 #						}
 # 					}
 # 				}

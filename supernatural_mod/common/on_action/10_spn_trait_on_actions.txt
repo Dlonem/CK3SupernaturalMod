@@ -128,3 +128,51 @@ spn_check_hunter_skill_traits = {		#Updated in 2.05 to set the variable, no more
 		}
 	}
 }
+
+# YEARLY DISTRIBUTION -- one character at a time, added 21 Aug 2026.
+#
+# The six on_actions above are the GAME-START sweep and are correct as they are: one complete walk,
+# once, latched behind a game rule. They were ALSO hung on yearly_global_pulse, which meant a full
+# every_living_character walk every 1 January for the life of the campaign -- and in an AGOT game
+# that is the whole ~191,000-character population evaluating a seven-clause trigger in a single tick.
+#
+# random_yearly_everyone_pulse does exactly the same job for free. Vanilla's own comment on it
+# (game/common/on_action/yearly_on_actions.txt:2675): "Called from code once a year for all
+# characters, at a random point that year (individually for each character). Root is the character."
+# Same population, same once-a-year cadence per character, no global iteration, and spread across the
+# year instead of spiking on one day. Supernatural already hangs eight other checks on that pulse.
+#
+# The rule-to-tier mapping below is copied from the six blocks above and must stay in step with them.
+spn_npc_trait_dist_yearly = {
+	trigger = {
+		OR = {
+			AND = {
+				has_game_rule = spn_yes_npc_trait_dist
+				spn_meets_dist_criteria = { TIER = tier_empire }
+			}
+			AND = {
+				has_game_rule = spn_kings_npc_trait_dist
+				spn_meets_dist_criteria = { TIER = tier_kingdom }
+			}
+			AND = {
+				has_game_rule = spn_dukes_npc_trait_dist
+				spn_meets_dist_criteria = { TIER = tier_duchy }
+			}
+			AND = {
+				has_game_rule = spn_counts_npc_trait_dist
+				spn_meets_dist_criteria = { TIER = tier_county }
+			}
+			AND = {
+				has_game_rule = spn_barons_npc_trait_dist
+				spn_meets_dist_criteria = { TIER = tier_barony }
+			}
+			AND = {
+				has_game_rule = spn_no_ruler_npc_trait_dist
+				spn_meets_dist_criteria = { TIER = tier_unlanded }
+			}
+		}
+	}
+	events = {
+		spn_trait_dist.0001
+	}
+}

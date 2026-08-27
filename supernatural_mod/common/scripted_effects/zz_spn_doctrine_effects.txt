@@ -1,0 +1,65 @@
+﻿# Supernatural -- the immortality doctrine assignment.
+#
+# Split out of common/on_action/10_spn_doctrine_on_actions.txt on 21 Aug 2026 so that a compatibility
+# patch can override THIS one effect instead of redefining the on_action. Two on_action declarations
+# that each carry an `effect` block make the engine log
+#     "There is more than one 'effect' defined using most recent: <file>"
+# on every load, and the loser is discarded silently. One indirection removes both problems.
+#
+# The rule: a faith in the pagan religion family SHUNS vampirism, lycanthropy and hybrids; every other
+# faith makes them crimes. Hunters are welcome everywhere.
+
+spn_assign_immortal_doctrines_effect = {
+	every_religion_global = {
+		limit = {
+			is_in_family = rf_pagan
+		}
+		every_faith = {
+			if = {
+				limit = { NOT = { has_doctrine = spn_doctrine_vampirism_shunned } }
+				add_doctrine = spn_doctrine_vampirism_shunned
+			}
+
+			if = {
+				limit = { NOT = { has_doctrine = spn_doctrine_lycanthropy_shunned } }
+				add_doctrine = spn_doctrine_lycanthropy_shunned
+			}
+
+			if = {
+				limit = { NOT = { has_doctrine = spn_doctrine_hybrid_shunned } }
+				add_doctrine = spn_doctrine_hybrid_shunned
+			}
+
+			if = {
+				limit = { NOT = { has_doctrine = spn_doctrine_hunter_accepted } }
+				add_doctrine = spn_doctrine_hunter_accepted
+			}
+		}
+	}
+	every_religion_global = {
+		limit = {
+			NOT = { is_in_family = rf_pagan }
+		}
+		every_faith = {
+			if = {
+				limit = { NOT = { has_doctrine = spn_doctrine_vampirism_crime } }
+				add_doctrine = spn_doctrine_vampirism_crime
+			}
+
+			if = {
+				limit = { NOT = { has_doctrine = spn_doctrine_lycanthropy_crime } }
+				add_doctrine = spn_doctrine_lycanthropy_crime
+			}
+
+			if = {
+				limit = { NOT = { has_doctrine = spn_doctrine_hybrid_crime } }
+				add_doctrine = spn_doctrine_hybrid_crime
+			}
+
+			if = {
+				limit = { NOT = { has_doctrine = spn_doctrine_hunter_accepted } }
+				add_doctrine = spn_doctrine_hunter_accepted
+			}
+		}
+	}
+}

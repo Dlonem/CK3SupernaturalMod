@@ -46,7 +46,7 @@ spn_embrace.0001 = {
 			limit = { has_character_flag = spn_embrace_lycan_dec }
 			random_list = {
 				75 = {
-					custom_tooltip = spn_embrace.0002.t
+					custom_tooltip = spn_embrace.0001.a.live.tt
 					modifier = {
 						add = {
 							value = health
@@ -61,6 +61,7 @@ spn_embrace.0001 = {
 					trigger_event = spn_embrace.0002
 				}
 				25 = {
+					custom_tooltip = spn_embrace.0001.a.die.tt
 					modifier = {
 						add = {
 							value = health
@@ -82,7 +83,7 @@ spn_embrace.0001 = {
 			limit = { has_character_flag = spn_embrace_vampire_dec }
 			random_list = {
 				75 = {
-					custom_tooltip = spn_embrace.0003.t
+					custom_tooltip = spn_embrace.0001.a.live.tt
 					modifier = {
 						add = {
 							value = health
@@ -97,6 +98,7 @@ spn_embrace.0001 = {
 					trigger_event = spn_embrace.0003
 				}
 				25 = {
+					custom_tooltip = spn_embrace.0001.a.die.tt
 					modifier = {
 						add = {
 							value = health
@@ -116,8 +118,13 @@ spn_embrace.0001 = {
 		}
 		else = {
 			random_list = {
-				50 = {
-					custom_tooltip = spn_embrace.0002.t
+				#Three visible outcomes, none of which names a creature. WHICH one you become is
+				#rolled in the hidden_effect below, so the tooltip no longer reads "50% Pale Moon,
+				#50% Crimson Night". Death is down from an effective 20% to 15%; that and more has
+				#gone into simply being swindled, so the 25 gold is a real gamble instead of a
+				#guaranteed transformation with a death tax.
+				55 = {
+					custom_tooltip = spn_embrace.0001.a.live.tt
 					modifier = {
 						add = {
 							value = health
@@ -129,24 +136,19 @@ spn_embrace.0001 = {
 							}
 						}
 					}
-					trigger_event = spn_embrace.0002
-				}
-				50 = {
-					custom_tooltip = spn_embrace.0003.t
-					modifier = {
-						add = {
-							value = health
-							subtract = {
-								value = 4
-							}
-							multiply = {
-								value = 2
-							}
+					hidden_effect = {
+						random_list = {
+							50 = { trigger_event = spn_embrace.0002 } #Pale Moon
+							50 = { trigger_event = spn_embrace.0003 } #Crimson Night
 						}
 					}
-					trigger_event = spn_embrace.0003
 				}
-				25 = {
+				30 = {
+					custom_tooltip = spn_embrace.0001.a.nothing.tt
+					trigger_event = spn_embrace.0005 #Nothing At All
+				}
+				15 = {
+					custom_tooltip = spn_embrace.0001.a.die.tt
 					modifier = {
 						add = {
 							value = health
@@ -161,7 +163,7 @@ spn_embrace.0001 = {
 					death = {
 						death_reason = death_poison
 					}
-				} 
+				}
 			}
 		}
 		if = {
@@ -264,6 +266,27 @@ spn_embrace.0004 = {
 			}
 			remove_character_flag = spn_dissappear_spn_new_created_witch
 		}
+	}
+}
+
+#Nothing At All
+spn_embrace.0005 = {
+	type = character_event
+	title = spn_embrace.0005.t
+	desc = spn_embrace.0005.desc
+	theme = intrigue
+
+	override_background = {
+		reference = bedchamber
+	}
+
+	right_portrait = {
+		character = root
+		animation = disbelief
+	}
+
+	option = {
+		name = spn_embrace.0005.a
 	}
 }
 
@@ -1066,7 +1089,7 @@ spn_embrace.2003 = {
 
 	right_portrait = {
 		character = root
-		animation = lunatic
+		animation = manic
 	}
 
 	option = { 
@@ -1118,7 +1141,9 @@ spn_embrace.2005 = {
 	option = { 
 		name = spn_embrace.2005.a
 		custom_tooltip = spn_embrace.2005.a.tt
-		trigger_event = spn_initiate.1001 #Initialize Werewolf
+		#A Lycan wound incubates in this mod - it does not turn you on the spot.
+		#No sire: the beast fled and nothing was left to remember.
+		spn_begin_werewolf_bite_effect = { SEVMIN = 10  SEVMAX = 25  TURNTYPE = forced_turning }
 	}
 }
 
@@ -1291,7 +1316,7 @@ spn_embrace.2012 = {
 
 	
 	left_portrait = {
-		character = scope:spn_created_lycan
+		character = scope:spn_new_created_lycan
 		animation = war_defender
 	}
 
@@ -1349,8 +1374,15 @@ spn_embrace.2013 = {
 	option = { 
 		name = spn_embrace.2013.a
 		custom_tooltip = spn_embrace.2013.a.tt
-		trigger_event = spn_initiate.1001 #Initialize Werewolf
-		spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_lycan }
+		#He bit an unconscious man, however kindly he meant it - forced_turning.
+		#He dies in the after block below; the is_alive guards in 10_spn_bite_incubation.txt and
+		#spn_complete_wound_turn keep the sire arc from firing on a corpse.
+		spn_begin_werewolf_bite_sired_effect = {
+			SEVMIN = 10
+			SEVMAX = 25
+			TURNTYPE = forced_turning
+			SIRE = scope:spn_new_created_lycan
+		}
 	}
 
 	after = {
@@ -1562,7 +1594,7 @@ spn_embrace.3001 = {
 			    custom_tooltip = spn_embrace.1002.surv.tt
 				trigger_event = spn_embrace.3005 #The creature left you alone
 				modifier = { add = 10 has_trait = craven }
-				modifier = { add = 5 has_trait = lunatic }
+				modifier = { add = 5 has_trait = lunatic_1 }
 				modifier = { add = -5 has_trait = intellect_good_3 }
 				modifier = { add = -5 has_trait = intellect_good_2 }
 				modifier = { add = -5 has_trait = intellect_good_1 }
@@ -1572,7 +1604,7 @@ spn_embrace.3001 = {
 			25 = { #Die
 				death = { death_reason = spn_death_devoured_in_bed }
 				modifier = { add = -10 has_trait = craven }
-				modifier = { add = -5 has_trait = lunatic }
+				modifier = { add = -5 has_trait = lunatic_1 }
 				modifier = { add = 5 has_trait = intellect_good_3 }
 				modifier = { add = 5 has_trait = intellect_good_2 }
 				modifier = { add = 5 has_trait = intellect_good_1 }
@@ -1677,7 +1709,6 @@ spn_embrace.3003 = {
 			add_character_flag = {
 				flag = supernatural_embrace_hunter
 			}
-			trigger_event = spn_initiate.3001 #Initiate Hunter
 			hidden_effect = {
 				add_trait_xp = {
 					trait = supernatural_hunter
@@ -1802,9 +1833,8 @@ spn_embrace.3006 = {
 		spn_create_skilled_hunter_effect = { WHO = root }
 		scope:spn_created_hunter = {
 			add_character_flag = {
-				flag = supernatural_hunter
+				flag = supernatural_embrace_hunter
 			}
-			trigger_event = spn_initiate.3001 #Initiate Hunter
 			hidden_effect = {
 				add_trait_xp = {
 					trait = supernatural_hunter
@@ -1821,17 +1851,25 @@ spn_embrace.3006 = {
 		custom_tooltip = spn_embrace.3006.a.tt
 
 		random_list = {
-			75 = { #Survive, only to be put to death by the hunter
+			80 = { #You talk him down. Only the blade is settled here - the bite is not.
 				custom_tooltip = spn_embrace.1002.surv.tt
-				trigger_event = spn_embrace.3007 #Survive only to potentially die by Hunter's hand
 
 				modifier = {
 					add = {
 						value = diplomacy
 					}
 				}
+
+				random_list = {
+					50 = { #He burns the wound clean. It holds. Training proceeds.
+						trigger_event = spn_embrace.3007 #Difficult Journey
+					}
+					50 = { #He was right. It was a bite, and it takes.
+						trigger_event = spn_embrace.3008 #What He Left You
+					}
+				}
 			}
-			25 = { #Die
+			20 = { #Die
 				add_character_flag = {
 					flag = dissappear_spn_new_created_hunter
 				}
@@ -1860,7 +1898,7 @@ spn_embrace.3006 = {
 spn_embrace.3007 = {
 	type = character_event
 	title = spn_embrace.3007.t
-	desc = spn_embrace.3004.desc
+	desc = spn_embrace.3007.desc
 	theme = intrigue
 
 	left_portrait = {
@@ -1893,5 +1931,202 @@ spn_embrace.3007 = {
 		}
 
 		set_relation_mentor = scope:spn_new_created_hunter
+	}
+}
+
+#The bite takes. The Hunter's offer is held open, not withdrawn.
+spn_embrace.3008 = {
+	type = character_event
+	title = spn_embrace.3008.t
+	desc = spn_embrace.3008.desc
+	theme = intrigue
+
+	right_portrait = {
+		character = root
+		animation = pain
+	}
+
+	left_portrait = {
+		character = scope:spn_new_created_hunter
+		animation = idle
+	}
+
+	immediate = {
+		#He will not finish it, and he will not take you on either - not with that in you.
+		#The offer waits on the wound. spn_embrace.3009 collects it if the fever leaves you human.
+		set_variable = {
+			name = spn_deferred_hunter_trainer
+			value = scope:spn_new_created_hunter
+		}
+		add_character_flag = spn_hunter_training_deferred
+
+		#How deep it went. Hidden - the card only ever promised you survived the blade.
+		#Severities are the confer interactions' own numbers (10_spn_confer_interactions.txt).
+		random_list = {
+			50 = { #a deep one
+				spn_begin_werewolf_bite_effect = { SEVMIN = 40  SEVMAX = 40  TURNTYPE = forced_turning }
+			}
+			50 = { #a shallow one
+				spn_begin_werewolf_bite_effect = { SEVMIN = 5  SEVMAX = 15  TURNTYPE = forced_turning }
+			}
+		}
+	}
+
+	option = {
+		name = spn_embrace.3008.a
+		custom_tooltip = spn_embrace.3008.a.tt
+	}
+}
+
+#He comes back. Fired from the two non-turn outcomes of the incubation climax.
+spn_embrace.3009 = {
+	type = character_event
+	title = spn_embrace.3009.t
+	desc = spn_embrace.3009.desc
+	theme = intrigue
+
+	trigger = {
+		exists = var:spn_deferred_hunter_trainer
+		spn_has_supernatural_trait = no
+		spn_has_hunter_trait = no
+		NOT = { has_trait = ww_infected_wound }
+	}
+
+	immediate = {
+		var:spn_deferred_hunter_trainer = { save_scope_as = spn_new_created_hunter }
+	}
+
+	left_portrait = {
+		character = scope:spn_new_created_hunter
+		animation = idle
+	}
+
+	right_portrait = {
+		character = root
+		animation = happiness
+	}
+
+	option = { #Finish what we started
+		name = spn_embrace.3009.a
+		custom_tooltip = spn_embrace.3009.a.tt
+
+		remove_character_flag = spn_hunter_training_deferred
+		remove_variable = spn_deferred_hunter_trainer
+
+		trigger_event = spn_initiate.3001 #Initiate Hunter
+		add_trait_xp = {
+			trait = supernatural_hunter
+			track = monster_hunting
+			value = { 5 20 }
+		}
+		spn_assign_hunter_trainer = { CHARACTER = scope:spn_new_created_hunter }
+		spn_give_knowledge_of_hunter_secret = {
+			CHARACTER = scope:spn_new_created_hunter
+		}
+		scope:spn_new_created_hunter = {
+			spn_give_knowledge_of_hunter_secret = {
+				CHARACTER = root
+			}
+		}
+
+		set_relation_mentor = scope:spn_new_created_hunter
+
+		# 2.33 -- AI weighting. 3009 is genuinely AI-reachable: spn_offer_gift / spn_force_gift /
+		# spn_ask_for_gift can all land an infected wound on an AI character, and when the fever
+		# breaks back to human this offer collects the hunter trainer who was waiting on it.
+		# Before this it was an unweighted coin flip. Taking up the spear is a matter of nerve,
+		# grudge, and whether you have the time -- so boldness, martial aptitude and the debt owed
+		# to the trainer push up; caution, contentment and the burden of a crown push down.
+		ai_chance = {
+			base = 40
+
+			# --- nerve ---
+			modifier = { has_trait = brave      add = 30 }
+			modifier = { has_trait = craven     add = -35 }
+			modifier = { has_trait = wrathful   add = 12 }
+			modifier = { has_trait = calm       add = -8 }
+
+			# --- appetite for the work ---
+			modifier = { has_trait = ambitious  add = 18 }
+			modifier = { has_trait = content    add = -30 }
+			modifier = { has_trait = diligent   add = 15 }
+			modifier = { has_trait = lazy       add = -20 }
+			modifier = { has_trait = vengeful   add = 18 }
+			modifier = { has_trait = forgiving  add = -10 }
+			modifier = { has_trait = zealous    add = 22 }
+			modifier = { has_trait = cynical    add = -12 }
+			modifier = { has_trait = just       add = 10 }
+			modifier = { has_trait = paranoid   add = -10 }
+			modifier = { has_trait = shy        add = -8 }
+			ai_value_modifier = {
+				ai_boldness      = high_chance_impact_positive_ai_value
+				ai_vengefulness  = low_chance_impact_positive_ai_value
+				ai_zeal          = low_chance_impact_positive_ai_value
+			}
+
+			# --- can I actually do this? ---
+			modifier = { has_trait = education_martial add = 20 }
+			modifier = { add = { value = prowess  subtract = 8  multiply = 2  min = -20  max = 25 } }
+			modifier = { age > 55  add = -20 }
+			modifier = { has_trait = wounded  add = -10 }
+
+			# --- the debt to the one who stood over you ---
+			modifier = {
+				OR = {
+					has_relation_friend = scope:spn_new_created_hunter
+					has_relation_best_friend = scope:spn_new_created_hunter
+				}
+				add = 20
+			}
+			modifier = { is_close_family_of = scope:spn_new_created_hunter  add = 15 }
+			modifier = {
+				OR = {
+					has_relation_rival = scope:spn_new_created_hunter
+					has_relation_nemesis = scope:spn_new_created_hunter
+				}
+				add = -40
+			}
+			opinion_modifier = { who = root  opinion_target = scope:spn_new_created_hunter  multiplier = 0.3 }
+
+			# --- a crown leaves no time for the hunt ---
+			modifier = { highest_held_title_tier = tier_duchy    add = -15 }
+			modifier = { highest_held_title_tier = tier_kingdom  add = -30 }
+			modifier = { highest_held_title_tier >= tier_empire  add = -45 }
+		}
+	}
+
+	option = { #I have seen enough of monsters
+		name = spn_embrace.3009.b
+		custom_tooltip = spn_embrace.3009.b.tt
+
+		remove_character_flag = spn_hunter_training_deferred
+		remove_variable = spn_deferred_hunter_trainer
+
+		stress_impact = {
+			brave = minor_stress_impact_gain
+			craven = minor_stress_impact_loss
+		}
+
+		# The mirror of .a: flat floor so the offer is never a certainty, lifted by the same
+		# temperaments that make a person walk away from a spear.
+		ai_chance = {
+			base = 40
+
+			modifier = { has_trait = craven     add = 30 }
+			modifier = { has_trait = content    add = 25 }
+			modifier = { has_trait = lazy       add = 20 }
+			modifier = { has_trait = calm       add = 10 }
+			modifier = { has_trait = shy        add = 8 }
+			modifier = { has_trait = forgiving  add = 10 }
+			modifier = { has_trait = cynical    add = 12 }
+			modifier = { has_trait = brave      add = -25 }
+			modifier = { has_trait = ambitious  add = -15 }
+			modifier = { has_trait = zealous    add = -20 }
+			modifier = { has_trait = vengeful   add = -15 }
+			modifier = { has_trait = education_martial add = -15 }
+			modifier = { age > 55  add = 20 }
+			modifier = { highest_held_title_tier >= tier_kingdom  add = 30 }
+			ai_value_modifier = { ai_boldness = -1 }
+		}
 	}
 }

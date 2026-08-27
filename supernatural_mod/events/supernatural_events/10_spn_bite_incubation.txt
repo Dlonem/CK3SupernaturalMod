@@ -58,7 +58,7 @@ spn_wound_incubation.0001 = {
 				trigger_event = spn_wound_incubation.0020
 			}
 			6 = { # The one who clawed you (any turning) - one-shot
-				trigger = { has_variable = spn_conferred_sire  NOT = { has_variable = spn_sire_choice_made } }
+				trigger = { has_variable = spn_conferred_sire  var:spn_conferred_sire = { is_alive = yes }  NOT = { has_variable = spn_sire_choice_made } }
 				set_variable = { name = spn_last_wound_event value = 21 }
 				trigger_event = spn_wound_incubation.0021
 			}
@@ -95,7 +95,7 @@ spn_wound_incubation.0010 = {
 	desc = spn_wound_incubation.0010.desc
 	theme = mental_break
 	trigger = { has_trait = ww_infected_wound }
-	left_portrait = { character = root  animation = sick_idle_add }
+	left_portrait = { character = root  animation = sick }
 
 	option = { # Rest and fight it (lower XP, costs stress)
 		name = spn_wound_incubation.0010.a
@@ -160,7 +160,7 @@ spn_wound_incubation.0011 = {
 	desc = spn_wound_incubation.0011.desc
 	theme = mental_break
 	trigger = { has_trait = ww_infected_wound }
-	left_portrait = { character = root  animation = sick_idle_add }
+	left_portrait = { character = root  animation = sick }
 
 	option = { # Endure it (lower XP, costs stress)
 		name = spn_wound_incubation.0011.a
@@ -292,7 +292,7 @@ spn_wound_incubation.0012 = {
 		add_character_flag = spn_had_healer_event
 		random_courtier = { limit = { has_trait = lifestyle_physician } save_scope_as = healer }
 	}
-	left_portrait = { character = root  animation = sick_idle_add }
+	left_portrait = { character = root  animation = sick }
 	right_portrait = { character = scope:healer  animation = personality_compassionate }
 
 	option = { # Accept their full care (big lower; small chance they suspect)
@@ -442,6 +442,7 @@ spn_wound_incubation.0021 = {
 	trigger = {
 		has_trait = ww_infected_wound
 		has_variable = spn_conferred_sire
+		var:spn_conferred_sire = { is_alive = yes } # dead sires cannot be portraited or hold a relation
 		NOT = { has_variable = spn_sire_choice_made }
 	}
 	immediate = { var:spn_conferred_sire = { save_scope_as = sire } }
@@ -522,6 +523,7 @@ spn_wound_incubation.0022 = {
 		has_trait = ww_infected_wound
 		has_character_flag = spn_sire_involved
 		has_variable = spn_conferred_sire
+		var:spn_conferred_sire = { is_alive = yes } # portraited below - a corpse cannot be
 	}
 	immediate = { var:spn_conferred_sire = { save_scope_as = sire } }
 	left_portrait = { character = root  animation = personality_compassionate }
@@ -575,7 +577,7 @@ spn_wound_incubation.0023 = {
 	title = spn_wound_incubation.0023.t
 	desc = spn_wound_incubation.0023.desc
 	theme = secret
-	trigger = { has_variable = spn_conferred_sire }
+	trigger = { has_variable = spn_conferred_sire  var:spn_conferred_sire = { is_alive = yes } }
 	immediate = { var:spn_conferred_sire = { save_scope_as = sire } }
 	left_portrait = { character = root  animation = personality_compassionate }
 	right_portrait = { character = scope:sire  animation = personality_compassionate }
@@ -745,7 +747,7 @@ spn_wound_incubation.9000 = {
 	option = { # [Guided] Lean on the one who saw me through it (they gain a weak hook on you)
 		name = spn_wound_incubation.9000.e
 		custom_tooltip = spn_wound_incubation.9000.e.tt
-		trigger = { has_character_flag = spn_sire_involved  exists = var:spn_conferred_sire }
+		trigger = { has_character_flag = spn_sire_involved  exists = var:spn_conferred_sire  var:spn_conferred_sire = { is_alive = yes } }
 		save_scope_value_as = { name = climax_lean  value = 2 }
 		hidden_effect = {
 			var:spn_conferred_sire = { add_hook = { type = loyalty_hook  target = root } }
@@ -816,10 +818,24 @@ spn_wound_incubation.9020 = {
 		name = spn_wound_incubation.9020.a
 		if = { limit = { NOT = { has_trait = strong } } add_trait = strong }
 		spn_clear_wound_incubation_state = yes
+		#A Hunter who held his offer open while you fevered (spn_embrace.3008) can collect it now.
+		if = {
+			limit = {
+				has_character_flag = spn_hunter_training_deferred
+				exists = var:spn_deferred_hunter_trainer
+				var:spn_deferred_hunter_trainer = { is_alive = yes }
+			}
+			trigger_event = { id = spn_embrace.3009 days = { 7 30 } }
+		}
+		else_if = {
+			limit = { has_character_flag = spn_hunter_training_deferred }
+			remove_character_flag = spn_hunter_training_deferred
+			remove_variable = spn_deferred_hunter_trainer
+		}
 	}
 }
 
-# ---- 9021 : Scarred Non-Turn (no werewolf, maimed) ----
+# ---- 9021 : Scarred Non-Turn (no werewolf, wounded 1 or 2 by infection severity) ----
 spn_wound_incubation.9021 = {
 	type = character_event
 	title = spn_wound_incubation.9021.t
@@ -830,8 +846,33 @@ spn_wound_incubation.9021 = {
 	option = {
 		name = spn_wound_incubation.9021.a
 		add_stress = 20
-		if = { limit = { NOT = { has_trait = maimed } } add_trait = maimed }
+		#Was add_trait = maimed, which reads as a lost limb. A wound that heals fits better, and it
+		#scales with how far the infection actually got. Read the track BEFORE
+		#spn_clear_wound_incubation_state removes the trait.
+		#set_trait_rank, not add_trait: add_trait is a silent no-op on a character already holding
+		#another rung of the same ladder. Vanilla uses this form in 00_secret_effects.txt:365.
+		if = {
+			limit = { has_trait_xp = { trait = ww_infected_wound track = infection value >= 60 } }
+			set_trait_rank = { trait = wounded  rank = 2 }
+		}
+		else = {
+			set_trait_rank = { trait = wounded  rank = 1 }
+		}
 		spn_clear_wound_incubation_state = yes
+		#A Hunter who held his offer open while you fevered (spn_embrace.3008) can collect it now.
+		if = {
+			limit = {
+				has_character_flag = spn_hunter_training_deferred
+				exists = var:spn_deferred_hunter_trainer
+				var:spn_deferred_hunter_trainer = { is_alive = yes }
+			}
+			trigger_event = { id = spn_embrace.3009 days = { 7 30 } }
+		}
+		else_if = {
+			limit = { has_character_flag = spn_hunter_training_deferred }
+			remove_character_flag = spn_hunter_training_deferred
+			remove_variable = spn_deferred_hunter_trainer
+		}
 	}
 }
 

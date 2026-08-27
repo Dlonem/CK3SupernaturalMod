@@ -24,9 +24,17 @@ spn_hunters.0001 = { # Someone spotted a witch
 	trigger = {
 		basic_is_valid_for_yearly_events_trigger = yes
 		faith = { NOT = { has_doctrine = doctrine_witchcraft_accepted } }
-		capital_province = {
-			geographical_region = world_europe
-		}
+		#world_europe is a VANILLA region that AGOT does not define, so under AGOT this whole
+		#trigger PostValidate-failed and "Someone spotted a witch" never fired at all - the chain
+		#was simply absent in Westeros, and it logged 2 errors a session saying so.
+		#Same fix already applied three times in this mod: mages_summit.txt:761,
+		#vampire_feeding.txt:751, witch_ritual.txt:598. The sibling event spn_hunters.0010
+		#(Monster Sighting) never had a geographic gate at all.
+		#The faith doctrine line above is the gate that actually carries the meaning - witch hunts
+		#happen where witchcraft is condemned - and it is portable to any playset.
+		#capital_province = {
+		#	geographical_region = world_europe
+		#}
 	}
 	
 	weight_multiplier = {
@@ -251,7 +259,7 @@ spn_hunters.0002 = { # Witch Spotted (Part 2)
 	}
 	left_portrait = {
 		character = scope:witch
-		animation = wam_bonfire
+		animation = prayer
 	}
 	
 	option = { # Attempt to follow her tracks
@@ -398,7 +406,7 @@ spn_hunters.00021 = {
 	
 	right_portrait = {
 		character = root
-		animation = sad
+		animation = sadness
 	}
 	
 	option = { # Hopefully someone else gets her..
@@ -1118,7 +1126,7 @@ spn_hunters.0013 = { # Hunter: Tavern Talk
 				modifier = { add = 10 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 25 } }
 				modifier = { add = 15 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 45 } }
 				modifier = { add = 20 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 65 } }
-				modifier = { add = 25 has_trait_xp = { trait = supernatural_hunter track = monster_huntingg value >= 85 } }
+				modifier = { add = 25 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 85 } }
 			}
 			
 			30 = { # Chance of monster getting away
@@ -1151,13 +1159,14 @@ spn_hunters.0013 = { # Hunter: Tavern Talk
 			10 = { # Chance of getting forcibly turned
 				custom_tooltip = spn_hunters.0013.ac.t
 				
-				add_character_flag = {
-					flag = supernatural_embrace_werewolf
+				#It mauls you. In this mod a Lycan wound incubates for 1-3 years before it decides
+				#(10_spn_bite_incubation.txt) - it no longer turns you where you stand.
+				spn_begin_werewolf_bite_sired_effect = {
+					SEVMIN = 40
+					SEVMAX = 40
+					TURNTYPE = forced_turning
+					SIRE = scope:spn_new_created_werewolf
 				}
-
-				trigger_event = spn_initiate.1001 #Initialize Werewolf
-				add_trait_force_tooltip = supernatural_werewolf				
-				spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_werewolf }
 				
 				modifier = { add = 15 has_trait = intellect_bad_1 }
 				modifier = { add = 5 has_trait = brave }
@@ -1255,12 +1264,14 @@ spn_hunters.0013 = { # Hunter: Tavern Talk
 				increase_wounds_no_death_effect = { REASON = battle }
 			}
 			20 = {
-				add_character_flag = {
-					flag = supernatural_embrace_werewolf
+				custom_tooltip = spn_hunters.0013.b.bite.tt
+				#You asked for this one, so it starts the way an accepted offer starts.
+				spn_begin_werewolf_bite_sired_effect = {
+					SEVMIN = 5
+					SEVMAX = 15
+					TURNTYPE = voluntary_turning
+					SIRE = scope:spn_new_created_werewolf
 				}
-				trigger_event = spn_initiate.1001 #Initialize Werewolf
-				spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_werewolf }
-				add_trait_force_tooltip = supernatural_werewolf			
 			}
 		
 		}
@@ -1415,7 +1426,7 @@ spn_hunters.0014 = { # Hunter: Tavern Talk
 				modifier = { add = 10 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 15 } }
 				modifier = { add = 15 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 35 } }
 				modifier = { add = 20 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 55 } }
-				modifier = { add = 25 has_trait_xp = { trait = supernatural_hunter track = monster_huntingg value >= 75 } }
+				modifier = { add = 25 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 75 } }
 			}
 			
 			20 = { # Chance of monster getting away
@@ -1448,13 +1459,13 @@ spn_hunters.0014 = { # Hunter: Tavern Talk
 			10 = { # Chance of getting forcibly turned
 				custom_tooltip = spn_hunters.0014.ac.t
 				
-				add_character_flag = {
-					flag = supernatural_embrace_werewolf
+				#Same as 0013: the wound incubates, it does not turn you on the spot.
+				spn_begin_werewolf_bite_sired_effect = {
+					SEVMIN = 40
+					SEVMAX = 40
+					TURNTYPE = forced_turning
+					SIRE = scope:spn_new_created_werewolf
 				}
-
-				trigger_event = spn_initiate.1001 #Initialize Werewolf
-				spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_werewolf }
-				add_trait_force_tooltip = supernatural_werewolf				
 				
 				modifier = { add = 15 has_trait = intellect_bad_1 }
 				modifier = { add = -5 health >= 5.0 }
@@ -1554,12 +1565,14 @@ spn_hunters.0014 = { # Hunter: Tavern Talk
 				increase_wounds_no_death_effect = { REASON = battle }
 			}
 			40 = {
-				add_character_flag = {
-					flag = supernatural_embrace_werewolf
+				custom_tooltip = spn_hunters.0013.b.bite.tt
+				#You asked for this one, so it starts the way an accepted offer starts.
+				spn_begin_werewolf_bite_sired_effect = {
+					SEVMIN = 5
+					SEVMAX = 15
+					TURNTYPE = voluntary_turning
+					SIRE = scope:spn_new_created_werewolf
 				}
-				trigger_event = spn_initiate.1001 #Initialize Werewolf
-				spn_assign_conferred_sire = { CHARACTER = scope:spn_new_created_werewolf }
-				add_trait_force_tooltip = supernatural_werewolf
 
 				modifier = { add = 5 diplomacy > 10 }
 				modifier = { add = 5 diplomacy > 15 }

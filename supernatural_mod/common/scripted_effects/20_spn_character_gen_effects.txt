@@ -137,11 +137,22 @@ spn_create_skilled_hunter_effect = {
 	#Create them
 	create_character = {
 		save_temporary_scope_as = spn_created_hunter
-		location = $WHO$.capital_province
+		# 2.32 -- was `$WHO$.capital_province`, which a landless adventurer does not have, so the
+		# hunter that 4024 spawns to shoot you had nowhere to be born. The effect 15 lines below
+		# this one (spawn_monster_hunter_full_chance_effect) already branched correctly; that
+		# branch was just never applied here.
+		location = $WHO$.location
 		culture = $WHO$.culture
 		gender_female_chance = 50
 		faith = $WHO$.faith
 		template = spn_skilled_hunter_template
+	}
+	# spn_skilled_hunter_template already grants supernatural_hunter, so spn_initiate.3001 can never
+	# run on these characters (its trigger is NOT = { has_trait = supernatural_hunter }). Every caller
+	# fired it anyway and it was a silent no-op, so created hunters never received the social half of
+	# the trait. Do it here, once, for every caller.
+	scope:spn_created_hunter = {
+		spn_give_hunter_secret_or_trait_effect = yes
 	}
 }
 

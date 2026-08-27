@@ -51,8 +51,14 @@ spn_pregnancy_chance = {
 			has_character_flag = spn_has_supernatural_children
 			spn_has_supernatural_trait = yes
 		}
-		add = var:spn_number_of_supernatural_children
-		multiply = -5
+		#-5 per supernatural child already born. The multiply used to sit here at the if-block
+		#level, which multiplied the ENTIRE running total: after one child a couple computed
+		#(80 + 1) x -5 = -405, clamped to a flat 5%, and every later pregnancy was silently
+		#ended at reveal. Nesting it inside the add is what was meant.
+		add = {
+			value = var:spn_number_of_supernatural_children
+			multiply = -5
+		}
 	}
 
 	if = { #If father has had Supernatural children already
@@ -63,9 +69,11 @@ spn_pregnancy_chance = {
 			}
 		}
 		scope:real_father = {
-			add = var:spn_number_of_supernatural_children
+			add = {
+				value = var:spn_number_of_supernatural_children
+				multiply = -5
+			}
 		}
-		multiply = -5
 	}
 	
 	if = { #If Mother and/or Father are Vampire
@@ -131,7 +139,7 @@ spn_calc_gradual_visual_age = {
 	add = age
 
 	if = {
-		limit = { var:spn_age_aquired_immortality > 16 }
+		limit = { exists = var:spn_age_aquired_immortality  var:spn_age_aquired_immortality > 16 }
 		subtract = var:spn_age_aquired_immortality
 	}
 	else = {
@@ -504,7 +512,7 @@ vf_feeding_success_chance = {
 	# Evaluated with the ACTIVITY as root (on_start + GUI breakdown): use activity_host / activity_location / any_attending_character.
 
 	add = { value = vf_power_bonus desc = vf_sc_power }
-	if = { limit = { activity_location = { exists = county } } add = { value = activity_location.county.development_level multiply = -0.2 desc = vf_sc_development } }
+	if = { limit = { activity_location = { exists = county } } activity_location.county = { add = { value = spn_county_prosperity_value multiply = -0.2 desc = vf_sc_development } } }
 	if = { limit = { activity_location = { exists = county } } add = { value = activity_location.county.county_control multiply = -0.15 desc = vf_sc_control } }
 	if = { limit = { activity_location = { county ?= { any_county_province_epidemic = { count >= 1 outbreak_intensity < apocalyptic } } } } add = { value = 12 desc = vf_sc_plague } }
 	if = { limit = { activity_location = { county ?= { holder ?= { is_at_war = yes } } } } add = { value = 8 desc = vf_sc_war } }
@@ -526,6 +534,136 @@ vf_feeding_success_chance = {
 	if = { limit = { activity_host = { has_trait = reckless } } add = { value = -5 desc = vf_sc_reckless } }
 	# Easter egg: an Original at the table - uses the mod's existing is_mikaelson_trigger (dynasty 5000001).
 	if = { limit = { any_attending_character = { is_mikaelson_trigger = yes } } add = { value = 15 desc = vf_sc_mikaelson } }
+	# 2.32 -- EVENTS. Everything the player actually chose during the run. This is the term that
+	# was missing, and its absence is why the bar and its own tooltip could never agree: the bar
+	# read a variable snapshotted at on_start, the tooltip re-evaluated this value live, and the
+	# fourteen in-run choices existed only in the variable. Vanilla's hunt bar solves it exactly
+	# here -- 04_ep2_hunt_values.txt:815 adds `var:hunt_success_chance_event` the same way.
+	if = {
+		limit = { exists = var:vf_feeding_chance_event }
+		add = { value = var:vf_feeding_chance_event desc = vf_sc_events }
+	}
 	min = 5
 	max = 95
+}
+
+# 2.32 -- How far is this city from where the host actually lives?
+# root = the province being considered. scope:host = the would-be feeder.
+#
+# province_filter on the feeding activity is `all` now, so the planner offers the whole
+# world; this value is what puts "nearby" back. Anchored on the capital for a landed ruler
+# and on the domicile for a camp, because a landless adventurer has no capital_province and
+# would otherwise evaluate against nothing.
+#
+# Vanilla ships the same idiom in monument_expedition and 00_activity_values.txt:2170.
+vf_host_distance_to_province = {
+	if = {
+		limit = { scope:host = { exists = capital_province } }
+		value = "scope:host.capital_province.squared_distance(root)"
+	}
+	else_if = {
+		limit = { scope:host = { exists = domicile } }
+		value = "scope:host.domicile.domicile_location.squared_distance(root)"
+	}
+	else = {
+		value = "scope:host.location.squared_distance(root)"
+	}
+}
+
+# 2.32 -- what a capped creature track converts into.
+# Calibrated against the game folder, not guessed: vanilla is 1,000 XP per perk
+# (00_lifestyle_values.txt -- massive_lifestyle_xp = 500, "Half of xp needed for 1 perk point"),
+# and the workhorse grant inside vanilla ACTIVITIES is medium_lifestyle_xp = 100. The creature
+# trees cost 1,500 a perk (vampire and hybrid), so the honest equivalent is that constant x1.5.
+# Written against the constant rather than as a bare 150 so it tracks if Paradox retunes it.
+#
+# NOTE: this is deliberately NOT calibrated against the mod's four hand-typed lifestyle grants
+# (ev1.09 {100 400} learning, ev1.20 {100 300} and ev1.26 {50 150} intrigue). Those sit on
+# VANILLA trees at 1,000/perk -- a different currency, and not a precedent for this one.
+spn_creature_lifestyle_xp_converted = {
+	value = medium_lifestyle_xp
+	multiply = 1.5
+}
+
+# ============================================================================
+# 2.32 -- THE PROSPERITY WRAPPERS.
+# Paradox intends to replace `development` with prosperity, and something further after that.
+# Every read of development_level in Supernatural now goes through this value and every write
+# through spn_county_prosperity_change_effect, so the eventual swap is two definitions rather
+# than a search-and-replace across events, script values and activity tags.
+#
+# Evaluated in COUNTY scope. Script values cannot be dereferenced through a scope path in CK3
+# (no vanilla precedent for it), so callers enter the county scope first -- which is the same
+# idiom vanilla's hunt_success_chance_value uses with activity_host.
+# ============================================================================
+spn_county_prosperity_value = {
+	value = development_level
+}
+
+# Convenience wrapper for the two gold-scaling sites, which need the activity's county and sit
+# inside an effect rather than a scope block.
+spn_activity_county_prosperity_value = {
+	value = 0
+	if = {
+		limit = { exists = scope:activity  scope:activity.activity_location = { exists = county } }
+		scope:activity.activity_location.county = { add = spn_county_prosperity_value }
+	}
+}
+
+# 2.32 -- how far a vampire will travel to feed, as a SQUARED map-pixel distance.
+#
+# Pulled out into its own value so the compatibility patch can override it for AGOT's map without
+# touching this file. `squared_distance_large` is vanilla's own "roughly one France away" (650 px),
+# which on the base map is about 11.5 provinces of reach.
+#
+# AGOT's map is the same 9216 px wide but 6144 tall with far fewer, larger provinces -- measured at
+# 78 px across against vanilla's 57, i.e. 1.37x wider -- so the same radius there reaches only about
+# half as many counties. The patch raises this to squared_distance_huge for that reason.
+spn_vf_max_feeding_distance = {
+	value = squared_distance_large
+}
+
+# 2.33 -- "would this blow have killed me?", as a PERCENTAGE, mirroring vanilla knight_killed.
+#
+# WHY THIS EXISTS. spn_blood_took_the_blow wins essentially every combat pulse for a blooded
+# character (base 100000, the same idiom AGOT uses for knight_dragon_joined_battle), because a
+# weighted pool cannot be made to intercept another entry -- adding weight only DILUTES the pool.
+# So the entry takes the character out of the lottery and then re-rolls the death itself, here.
+#
+# The three factors are copied from knight_killed's own chance block (00_knight_phase_events.txt:971):
+#   base 30, scaled by (30 - prowess)/30 floored at 0.1 ("Everyone dies"), scaled again by
+#   outnumbering, and zeroed when vastly outnumbering.
+# The final divide converts a POOL WEIGHT into a PERCENTAGE: knight_none alone is base 2000, and
+# the rest of the table adds ~250, so a weight of W was worth about W/2250 of the picks.
+# 22.5 = 2250/100. Approximate on purpose -- knight_none carries modifiers that can raise it to
+# ~4700 for a decorated player, which makes this slightly generous rather than slightly harsh.
+# THIS IS THE TUNING KNOB for how often the blood is called upon.
+spn_blood_blow_chance = {
+	value = 30
+	multiply = {
+		value = 30
+		subtract = prowess
+		divide = 30
+		min = 0.1
+	}
+	if = {
+		limit = {
+			exists = scope:combat_side
+			scope:combat_side.side_strength > scope:combat_side.enemy_side.side_strength
+		}
+		multiply = {
+			value = scope:combat_side.enemy_side.side_strength
+			divide = scope:combat_side.side_strength
+			multiply = 1.4
+			max = 1
+		}
+	}
+	if = {
+		limit = {
+			exists = scope:combat_side
+			scope:combat_side.side_strength > scope:combat_side.enemy_side.vastly_outnumbered_combat_side_threshold
+		}
+		multiply = 0
+	}
+	divide = 22.5
 }

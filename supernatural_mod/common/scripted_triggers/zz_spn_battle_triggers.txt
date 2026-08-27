@@ -1,0 +1,37 @@
+﻿# 2.33 -- CAN THE BLOOD TAKE THIS ONE ON A BATTLEFIELD?
+#
+# Shipped as `always = yes` so Supernatural needs no patch to work on its own. The compatibility
+# patch overrides this ONE key to add A Game of Thrones' exclusions -- exactly the way
+# spn_is_valid_supernatural_target works (zz_spn_species_triggers.txt). Nothing in AGOT is touched
+# and nothing here is shadowed.
+#
+# The case it exists for: AGOT dragonriders are resolved by their own combat entry
+# (knight_dragon_joined_battle, base 100000), and a rider in the air is not in the knight lottery at
+# all. A blooded dragonrider therefore keeps AGOT's behaviour and simply does not get this. Covering
+# most of the cases cleanly beats covering all of them by fighting another mod for the same slot.
+
+spn_can_be_battle_taken_trigger = {
+	always = yes
+}
+
+
+# 2.33 -- is the vampire who gave you the blood close enough to walk you through it?
+#
+# The variable is set by spn_assign_vampire_blood_donor when the blood is offered, so this costs
+# nothing to ask. `?=` throughout: the donor may be dead, may have been the one who fell, or may
+# never have existed if the blood came from somewhere the mod does not track.
+#
+# Deliberately just a location test. `army_commander` is an army-scope link, not a character one,
+# and there is no verified character-side "is in the same army as" trigger -- standing on the same
+# province is the honest version of "close enough to reach you before the window closes".
+spn_transition_donor_present_trigger = {
+	has_variable = spn_vampire_blood_donor
+	var:spn_vampire_blood_donor ?= {
+		is_alive = yes
+		OR = {
+			has_trait = supernatural_vampire
+			has_trait = supernatural_hybrid
+		}
+		location = root.location
+	}
+}

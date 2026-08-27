@@ -1,0 +1,169 @@
+﻿# 2.33 -- THE BLOOD REMEMBERS: the effects behind spn_blood_took_the_blow.
+# See common/combat_phase_events/10_spn_combat.txt for why the mechanism is shaped this way.
+
+# You took the blow that would have killed you. You are not dead. You are also not getting up.
+spn_blood_took_the_blow_effect = {
+	save_scope_as = spn_the_fallen
+
+	# ── OUT OF THE FIGHT ──────────────────────────────────────────────────────────────────────────
+	# This is the load-bearing line, not flavour. knight_killed has NO is_valid block -- it applies
+	# to every knight in the combat -- so the only way out of its reach is to stop being one.
+	# Vanilla does exactly this in knight_becomes_incapable, which conks a knight out and thereby
+	# removes him from every later pulse of the battle.
+	#
+	# It is also what Thomas asked for in his own words: "arguably if that roll occurred, you
+	# shouldn't be commander anymore -- it should replace you and you should go home."
+	# GUARDED, and we remember that we did it. set_knight_status errors with "Target character is
+	# not a potential knight in the scoped characters court" for anyone who is not in a court's
+	# knight pool -- a landless adventurer, for one. The production path is a type = knight combat
+	# event so the character IS a knight there, but the debug entry proved the effect can be
+	# reached otherwise. The flag makes the restore below symmetric: we only ever put back what we
+	# actually took, so neither call can throw.
+	if = {
+		limit = { is_knight = yes }
+		set_knight_status = forbid
+		add_character_flag = spn_knight_status_forbidden
+	}
+	if = {
+		limit = { is_commanding_army = yes }
+		remove_commander = yes
+	}
+
+	# Everyone saw him go down, and he is not walking it off in front of them.
+	increase_wounds_no_death_effect = { REASON = death_battle }
+	# NO EXPIRY, deliberately. This flag used to carry days = 7, which raced the player: .0001 arrives
+	# on day 2 and .0002 two days after it is answered, but a CK3 character event sits in the queue
+	# until the player opens it. Defer .0001 past day 7 and the flag was gone before .0002's trigger
+	# checked for it -- .0002 never fired, and the character was left set_knight_status = forbid with
+	# no path back, permanently. The two resolution effects below are the only things that clear this
+	# flag now, so the chain can be answered on day 2 or day 200 and still completes.
+	# spn_transition_stuck_cleanup (10_spn_misc_on_actions.txt) is the backstop for the one case the
+	# chain cannot finish on its own: the blood expiring at 3 years while the event is still unread.
+	add_character_flag = spn_in_transition
+
+	# Who fought him. Worth banking now: by the time he wakes, the battle may be over and the scope
+	# gone, and "the man who put you down" is the best flavour this chain has.
+	if = {
+		limit = {
+			exists = scope:combat_side
+			scope:combat_side.enemy_side ?= { any_side_knight = { count >= 1 } }
+		}
+		scope:combat_side.enemy_side = {
+			random_side_knight = { save_scope_as = spn_the_one_who_felled_me }
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_the_one_who_felled_me }
+		set_variable = { name = spn_felled_by value = scope:spn_the_one_who_felled_me }
+	}
+
+	# Three days before you come round -- long enough to have been carried off the field. The hunger
+	# then takes a fortnight to arrive (.0002), and the refusal a fortnight more to become final (.0003).
+	trigger_event = { id = spn_transition.0001 days = 3 }
+}
+
+
+# The window closed and he would not feed. The lore's own ending.
+spn_transition_refused_effect = {
+	# Standing rule: everything that reads the pre-change state is banked before the irreversible step.
+	if = {
+		limit = { has_character_modifier = ingested_vampire_blood_modifier }
+		remove_character_modifier = ingested_vampire_blood_modifier
+	}
+	remove_character_flag = vampire_blood_in_system
+	remove_character_flag = spn_in_transition
+	remove_variable = spn_vampire_blood_donor
+	if = {
+		limit = { has_character_flag = spn_knight_status_forbidden }
+		set_knight_status = default
+		remove_character_flag = spn_knight_status_forbidden
+	}
+	death = { death_reason = spn_death_transition_refused }
+}
+
+
+# He fed, and the transition completes. Routed through spn_initiate.0001 rather than adding the
+# trait here -- that event is the ONLY sanctioned door into the creature traits and carries the
+# species gate, and it already turns spn_vampire_blood_donor into the sire bond on its own.
+spn_transition_completed_effect = {
+	remove_character_flag = spn_in_transition
+
+	# Symmetric with the forbid in spn_blood_took_the_blow_effect -- we only put back what we took, so
+	# set_knight_status can never throw for someone who was never in a court's knight pool.
+	if = {
+		limit = { has_character_flag = spn_knight_status_forbidden }
+		set_knight_status = default
+		remove_character_flag = spn_knight_status_forbidden
+	}
+
+	# The blood knits you back together -- the same regeneration spn_recover_immortal_wounds gives every
+	# vampire on the yearly pulse, applied now instead of up to a year later. Without this you walk away
+	# from your own turning still carrying the wound that killed you.
+	spn_remove_wounds = yes
+
+	# The maker bond, shared with the four other paths where the blood finishes the job on its own.
+	# MUST run before the blood is cleared below: it reads spn_vampire_blood_donor.
+	spn_bind_blood_donor_as_maker_effect = yes
+
+	# THE BLOOD IS SPENT. Restored 27 Aug 2026 -- these two lines were destroyed when the inline maker
+	# block was replaced by the shared effect, because they sat between the two anchors. Without them a
+	# turned vampire kept vampire_blood_in_system forever, which meant ingested_vampire_blood_modifier
+	# (health and combat roll) never expired AND spn_vampire_blood_second_chance would hand them another
+	# second chance at every later natural death.
+	if = {
+		limit = { has_character_modifier = ingested_vampire_blood_modifier }
+		remove_character_modifier = ingested_vampire_blood_modifier
+	}
+	remove_character_flag = vampire_blood_in_system
+
+	trigger_event = spn_initiate.0001
+}
+
+
+
+# Who is within reach when you wake on a battlefield, in order of how little it costs you.
+# SCOPE_NAME = the scope to save them as.
+spn_transition_find_prey_effect = {
+	# 1. A captain who is already dying. Costs the realm nothing it had not already lost.
+	if = {
+		limit = { exists = scope:combat_side }
+		scope:combat_side = {
+			random_side_knight = {
+				limit = {
+					NOT = { this = root }
+					vf_valid_victim_trigger = yes
+					OR = {
+						has_trait = wounded_2
+						has_trait = wounded_3
+						has_trait = incapable
+					}
+				}
+				save_scope_as = $SCOPE_NAME$
+			}
+		}
+	}
+	# 2. Any knight still standing on your own side -- a captain, in Thomas's framing.
+	if = {
+		limit = { NOT = { exists = scope:$SCOPE_NAME$ } exists = scope:combat_side }
+		scope:combat_side = {
+			random_side_knight = {
+				limit = { NOT = { this = root } vf_valid_victim_trigger = yes }
+				save_scope_as = $SCOPE_NAME$
+			}
+		}
+	}
+	# 3. The field is full of men. Conjure one -- and this is what makes the chain work for a
+	#    landless adventurer with no court and no knights of his own.
+	if = {
+		limit = { NOT = { exists = scope:$SCOPE_NAME$ } }
+		hidden_effect = {
+			create_character = {
+				location = root.location
+				culture = root.location.culture
+				faith = root.location.faith
+				gender_female_chance = 0
+				save_scope_as = $SCOPE_NAME$
+			}
+		}
+	}
+}

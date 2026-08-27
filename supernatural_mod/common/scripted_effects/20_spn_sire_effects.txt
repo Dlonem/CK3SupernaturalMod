@@ -24,6 +24,49 @@ spn_assign_vampire_blood_donor = {
 	}
 }
 
+# 2.33 -- THE MAKER BOND, in one place.
+#
+# spn_initiate.0001 records spn_conferred_sire (a VARIABLE, which drives the trait description) but
+# it does NOT create the mmaker/pprogeny RELATION. Before this, the relation was set in exactly one
+# place in the whole mod -- spn_turn_into_vampire's on_accept -- so it worked perfectly when you were
+# turned by the interaction and not at all on any of the four paths where the blood in your system
+# finishes the job on its own:
+#
+#   1. 10_death.txt                      spn_vampire_blood_second_chance   (natural death)
+#   2. spn_miscellaneous_events.0003     you asked to be turned, and were
+#   3. spn_vampire_events.0103 opt a     you worked out what was in you
+#   4. spn_vampire_events.0103 opt b     you experimented, and it took
+#   5. 20_spn_transition_effects.txt     you fell in battle            (2.33, new)
+#
+# A vampire made by any of those had no Maker in the UI, no +400 relation opinion, no invoke_the_bond
+# or command_pprogeny, and fell outside the sire/progeny guest-invite rule. Same two-sided pattern as
+# the interaction, because mmaker/pprogeny are a corresponding pair and it sets both arms explicitly.
+#
+# Safe to call unconditionally: it no-ops when there is no donor, when the donor is dead, and when the
+# donor is the character themselves. Call it BEFORE anything that removes spn_vampire_blood_donor.
+spn_bind_blood_donor_as_maker_effect = {
+	if = {
+		limit = {
+			has_variable = spn_vampire_blood_donor
+			var:spn_vampire_blood_donor ?= { is_alive = yes }
+			NOT = { var:spn_vampire_blood_donor = this }
+		}
+		# Bind BOTH characters to explicit scopes. This effect is called from an on_action effect, from
+		# two event options and from inside a random_list branch -- `root` is not the same character in
+		# every one of those, but `this` always is at the point of call.
+		save_scope_as = spn_the_turned
+		var:spn_vampire_blood_donor = { save_scope_as = spn_the_maker }
+		spn_assign_conferred_sire = { CHARACTER = scope:spn_the_maker }
+		set_relation_mmaker = scope:spn_the_maker
+		scope:spn_the_maker = {
+			# NO set_relation_pprogeny here. mmaker declares `corresponding = pprogeny`, so the engine
+			# creates the reciprocal itself -- setting it a second time throws "Scripted relation
+			# already exists". Only the variable needs setting on this side.
+			spn_assign_conferred_progeny = { CHARACTER = scope:spn_the_turned }
+		}
+	}
+}
+
 spn_assign_conferred_vampire_blood = {
     set_variable = {
 		name = spn_conferred_sire
@@ -103,6 +146,48 @@ spn_kickoff_wound_incubation = {
 	trigger_event = { id = spn_wound_incubation.0002 days = 30 }
 }
 
+# Start a werewolf bite taken in an EVENT (as opposed to the two confer interactions).
+# Mirrors the confer on_accept blocks exactly - see 10_spn_confer_interactions.txt - so both
+# routes into lycanthropy run the same machinery and the same pulse/climax chain.
+#   SEVMIN / SEVMAX = starting infection XP range (pass the same number twice for a fixed value).
+#             Confer uses 5-15 for an asked-for bite and a flat 40 for a forced one; event bites
+#             that are neither sit between at 10-25. Kept as two bare integers on purpose - a
+#             brace-valued parameter is not reliably substitutable.
+#   TURNTYPE = voluntary_turning | forced_turning. Read by spn_resolve_wound_climax and by the
+#             sire arc in spn_wound_incubation.0021 - a mauling is always forced.
+# Callers MUST gate on: NOT = { has_trait = ww_infected_wound }, spn_has_supernatural_trait = no,
+# NOT = { has_trait = supernatural_hunter }  (the mod forbids infected hunters).
+spn_begin_werewolf_bite_effect = {
+	if = {
+		limit = {
+			#ONLY IF: still human, still clean, and not already incubating something.
+			# 2.31c -- and a person at all. The hunter chain (spn_hunters.0013/.0014) reaches this from
+			# random_yearly_playable_pulse with no is_ai filter anywhere on the way. The turn itself is
+			# already refused at spn_initiate.1001, so what this prevents is the dead end: an infected
+			# wound and a one-to-three-year incubation on something that can never become a werewolf.
+			spn_is_valid_supernatural_target = yes
+			spn_has_supernatural_trait = no
+			NOT = { has_trait = ww_infected_wound }
+			#NEVER IF: a Hunter. spn_initiate.1001 refuses spn_has_hunter_trait = yes, so an
+			#infected Hunter would reach the climax and silently fail to turn.
+			NOT = { has_trait = supernatural_hunter }
+		}
+		add_trait = ww_infected_wound
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = $SEVMIN$ max = $SEVMAX$ } } }
+		add_character_flag = $TURNTYPE$
+		set_variable = { name = spn_wound_incubation_start value = current_date }
+		spn_kickoff_wound_incubation = yes
+	}
+}
+
+# Same, when there is a real biter worth remembering (drives "Clawed By" and the sire arc).
+# SIRE must be a living character - a dead one cannot hold a relation.
+spn_begin_werewolf_bite_sired_effect = {
+	#SEVMIN / SEVMAX / TURNTYPE / SIRE
+	spn_assign_conferred_sire = { CHARACTER = $SIRE$ }
+	spn_begin_werewolf_bite_effect = { SEVMIN = $SEVMIN$  SEVMAX = $SEVMAX$  TURNTYPE = $TURNTYPE$ }
+}
+
 # Tear down the incubation state (called by the climax on resolution).
 # Keeps spn_conferred_sire (drives the "Clawed By" trait description if they turned).
 spn_clear_wound_incubation_state = {
@@ -126,7 +211,10 @@ spn_clear_wound_incubation_state = {
 # canonical werewolf init. Reads turning-type flags BEFORE clearing them.
 spn_complete_wound_turn = {
 	if = {
-		limit = { has_variable = spn_conferred_sire }
+		limit = {
+			has_variable = spn_conferred_sire
+			var:spn_conferred_sire = { is_alive = yes } # a dead sire cannot hold a relation or an opinion
+		}
 		var:spn_conferred_sire = { save_scope_as = the_sire }
 		hidden_effect = {
 			if = {
@@ -143,6 +231,12 @@ spn_complete_wound_turn = {
 		}
 	}
 	add_character_flag = spn_turned_werewolf
+	# A Hunter's offer cannot survive the turning - the mod forbids infected or supernatural hunters.
+	if = {
+		limit = { has_character_flag = spn_hunter_training_deferred }
+		remove_character_flag = spn_hunter_training_deferred
+		remove_variable = spn_deferred_hunter_trainer
+	}
 	spn_clear_wound_incubation_state = yes
 	trigger_event = spn_initiate.1001 # Initialize Werewolf (immortality, disease immunity, secret)
 	trigger_event = spn_message.1001  # Send messages
@@ -191,7 +285,7 @@ spn_resolve_wound_climax = {
 			modifier = { add = 6  scope:climax_lean = 0 }
 			trigger_event = spn_wound_incubation.9020
 		}
-		# --- Scarred Non-Turn (survive, no werewolf, maimed) ---
+		# --- Scarred Non-Turn (survive, no werewolf, wounded by infection severity) ---
 		6 = {
 			modifier = { add = 10  has_trait_xp = { trait = ww_infected_wound track = infection value >= 60 value < 80 } }
 			modifier = { add = 12  has_trait_xp = { trait = ww_infected_wound track = infection value >= 80 } }

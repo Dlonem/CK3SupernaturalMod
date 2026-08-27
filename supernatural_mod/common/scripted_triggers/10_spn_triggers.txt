@@ -25,7 +25,10 @@ spn_has_physical_contact = {
 					}
 				}
 			}
-			scope:actor.location = scope:recipient.location
+			trigger_if = {
+				limit = { exists = scope:actor.location  exists = scope:recipient.location }
+				scope:actor.location = scope:recipient.location
+			}
 		}
 		# GENUINE proximity / in-your-power only (no relationship shortcuts - a hostile clawing
 		# needs you to actually reach them, not just be their distant friend).
@@ -126,11 +129,43 @@ is_mikaelson_trigger = {
 	dynasty = dynasty:5000001 # Mikaelson
 }
 
+# Can $HOST$ plausibly know what this character is? Gates feeding-activity invitations.
+# Evaluated in the CANDIDATE's scope. $HOST$ is the inviter.
+#   ONLY IF: they carry the known trait openly, OR the host actually knows their secret,
+#            OR they are the host's spouse or close family - those people already know.
+#   NEVER IF: none of the above. An inviter cannot know what nobody has told them.
+spn_host_knows_supernatural_trigger = {
+	OR = {
+		has_trait = spn_known_vampire
+		has_trait = spn_known_hybrid
+		any_secret = {
+			type = spn_secret_vampire
+			is_known_by = $HOST$
+		}
+		any_secret = {
+			type = spn_secret_hybrid
+			is_known_by = $HOST$
+		}
+		is_spouse_of = $HOST$
+		is_close_family_of = $HOST$
+		# 2.32 -- THE SIRE BOND, and it is deliberately NOT a secret check.
+		# A maker knows what their progeny is because they made them. Routing that through
+		# "the host knows their secret" would be both wrong and harmful: holding someone's
+		# secret is exactly what enables exposure and blackmail, and a sire needs neither to
+		# know. Both directions, because either of them can be the one throwing the evening.
+		has_relation_mmaker = $HOST$
+		has_relation_pprogeny = $HOST$
+	}
+}
+
 is_shapeshifted_trigger = {
 	OR = {
-		has_character_flag = lupus
+		#"lupus" was only ever a send_option flag on the shapeshift interaction - that is a scope,
+		#not a character flag, so this arm never matched. And glabro form was not checked at all,
+		#so a werewolf in glabro kept their hair. Both modifiers exist in 00_spn_modifiers.txt.
 		has_character_flag = POD_bald_look_flag
 		has_character_modifier = POD_werewolf_form_lupus_modifier
+		has_character_modifier = POD_werewolf_form_glabro_modifier
 	}
 }
 
@@ -177,6 +212,11 @@ has_st_embrace_the_night_intent_trigger = {
 
 #Trait distribution criteria in one place
 spn_meets_dist_criteria = {
+	# 2.31c -- the game-start sweep and the yearly pulse both select through this, and the creature
+	# traits they hand out are gated four events downstream. Selecting a target that will be refused
+	# is not free: spn_initiate.0006/.1006/.3006 call add_trait_xp unconditionally beside the
+	# trigger_event, so a refused pick still writes XP for a trait nobody has. Filter the pick.
+	spn_is_valid_supernatural_target = yes
 	is_ai = yes
 	is_adult = yes
 	spn_has_supernatural_trait = no
@@ -383,4 +423,27 @@ spn_gfx_not_pale_culture_group = {
 		culture = { has_cultural_pillar = heritage_sahelian }
 		culture = { has_cultural_pillar = heritage_senegambian }
 	}
+}
+
+# 2.32 -- ONE definition of "can I drink this person?", shared by every feeding site.
+# Evaluated in the CANDIDATE's scope; root is the feeder.
+#
+# The per-site filters had drifted apart. Most excluded vampires and werewolves but not
+# supernatural_hybrid and not supernatural_hunter, so your own court could hand you a
+# hybrid or a monster hunter as prey. And only supernatural_ev1.26 routed through
+# spn_is_valid_supernatural_target -- the AGOT patch's species hook -- so everywhere else,
+# with the patch loaded, you could drink from one of the walking dead.
+vf_valid_victim_trigger = {
+	is_adult = yes
+	is_alive = yes
+	is_imprisoned = no
+	NOT = { this = root }
+	NOR = {
+		has_trait = supernatural_vampire
+		has_trait = supernatural_werewolf
+		has_trait = supernatural_hybrid
+		has_trait = supernatural_hunter
+	}
+	# `always = yes` in standalone play, overridden by the AGOT patch. The dead have no blood.
+	spn_is_valid_supernatural_target = yes
 }

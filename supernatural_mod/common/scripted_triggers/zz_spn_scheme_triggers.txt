@@ -1,0 +1,68 @@
+﻿# Supernatural — scheme trigger overrides.
+#
+# v2.29: this file REPLACES the mod's old full copy of vanilla's common/scripted_triggers/00_scheme_triggers.txt
+# (940 lines). That copy existed only to carry the two definitions below, but shipping it wholesale had three costs:
+#
+#   1. It contained a typo -- `countermeasure_parametre_applies_againt_char_trigger` instead of
+#      `countermeasure_parameter_applies_against_char_trigger`. Since our copy replaced vanilla's file, the correctly
+#      spelled trigger ceased to exist, and all 34 call sites in vanilla's
+#      common/scripted_modifiers/00_scheme_scripted_modifiers.txt failed -- 215 errors on every single load.
+#   2. Loaded after A Game of Thrones it silently reverted four of AGOT's own edits to that file (two Night's Watch
+#      murder guards, their dragon-bonding AI scheme blocker, and their struggle swap).
+#   3. It had to be re-merged by hand on every CK3 patch.
+#
+# Scripted triggers are keyed by NAME in a global database, not by file, so a differently-named file overrides a
+# vanilla trigger cleanly -- the same pattern this mod already uses in 01_interaction_overwritten_triggers.txt.
+# The `zz_` prefix matters: parse order is by filename across the merged VFS and last parsed wins, so this must
+# sort after vanilla's 00_scheme_triggers.txt.
+
+
+# Vanilla's version, with one added OR branch: the Vampire Nest perk unlocks the Befriend scheme.
+# NOTE: the struggle branch keeps vanilla's `iberian_struggle`. AGOT swaps it to `btw_struggle`, but naming a
+# struggle that does not exist is a load error and Supernatural has to run standalone. The cost is small and
+# one-directional: under AGOT, Beyond-the-Wall struggle members no longer get automatic Befriend access.
+can_use_befriend_scheme_trigger = {
+	OR = {
+		AND = {
+			house ?= { has_house_head_parameter = unlock_befriend_scheme }
+			is_house_head = yes
+		}
+		has_perk = befriend_perk
+		has_perk = vampire_nest_perk		# Supernatural
+		AND = {
+			dynasty ?= {
+				has_dynasty_perk = fp1_adventure_legacy_5
+			}
+			target_is_vassal_or_below = $TARGET$
+		}
+		culture = { has_cultural_parameter = automatic_befriend_access }
+		any_character_struggle = {
+			involvement = involved
+			has_struggle_phase_parameter = struggle_unlocks_befriend_schemes_for_everyone
+		}
+		AND = {
+			government_has_flag = government_is_clan
+			is_in_same_clan_as_trigger = { CHARACTER = $TARGET$ }
+			house = { has_house_unity_stage = harmonious }	
+		}
+		government_has_flag = government_is_nomadic	
+	}
+}
+
+
+# Called by vanilla's and AGOT's scheme_types but defined by neither -- this mod supplies it. Keep it.
+# Used by Supernatural's abduct_scheme, steal_back_artifact_scheme and ultimate_spell_scheme.
+is_valid_agent_standard_trigger = {
+	# The usual standard restrictions.
+	is_adult = yes
+	is_imprisoned = no
+	# Can't be an existing agent in any scheme.
+	save_temporary_scope_as = char_temp
+	scope:owner = {
+		NOT = {
+			any_scheme = {
+				any_scheme_agent_character = { this = scope:char_temp }
+			}
+		}
+	}
+}

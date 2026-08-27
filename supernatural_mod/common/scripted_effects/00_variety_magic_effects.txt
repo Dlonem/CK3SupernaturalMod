@@ -2089,6 +2089,10 @@ create_dark_temple = {
 				is_landed_or_landless_administrative = yes
 				is_ai = yes
 				primary_title = { is_mercenary_company = no }	
+				# A landless or landless-administrative ruler has no capital province, so reaching
+				# through the link without checking it threw three errors per candidate examined --
+				# 30 lines a session from each of these two effects. exists = first, then read.
+				exists = capital_province
 				capital_province = {
 					has_special_building_slot = no
 				}
@@ -2108,6 +2112,10 @@ create_magic_academy = {
 				is_landed_or_landless_administrative = yes
 				is_ai = yes
 				primary_title = { is_mercenary_company = no }	
+				# A landless or landless-administrative ruler has no capital province, so reaching
+				# through the link without checking it threw three errors per candidate examined --
+				# 30 lines a session from each of these two effects. exists = first, then read.
+				exists = capital_province
 				capital_province = {
 					has_special_building_slot = no
 				}
@@ -9658,6 +9666,18 @@ conclude_ultimate_spell_effect = {
 give_witch_secret_or_trait_effect2 = {
 	if = {
 		limit = {
+			# 2.31c -- THE GATE BELONGS HERE, NOT ONLY ON THE INTERACTIONS.
+			# This effect is the single door to becoming a witch and it is called from about a hundred
+			# places. The interaction callers were all gated; the AI ones were not -- the place-of-power
+			# sweep (turn_place_of_power_owner_into_witch_effect), the magic casus belli
+			# (01_magic_cb.txt) and the court-position hook (01_court_positions_magic.txt) all walked
+			# straight past. In a playset with the AGOT compatibility patch that meant the AI could make
+			# a wight a witch. Gating the write instead of the decision closes every caller at once.
+			#
+			# COSTS NOTHING ON ITS OWN: Supernatural ships spn_is_valid_supernatural_target as
+			# `always = yes`. Only the AGOT patch gives it teeth, and only where the patch is loaded.
+			spn_is_valid_supernatural_target = yes
+
 			NOR = {
 				has_trait = witch
 				any_secret = { type = secret_witch }
@@ -11688,6 +11708,9 @@ turn_place_of_power_owner_into_witch_effect = {
 				is_ai = yes
 				has_power_place_trigger = yes
 				is_witch_trigger = no
+				# 2.31c -- the write below is already gated, but without this the sweep can spend its one
+				# pick a year on someone it will then refuse, and nothing happens that year.
+				spn_is_valid_supernatural_target = yes
 			}
 		}
 		random_ruler = {
@@ -11695,6 +11718,7 @@ turn_place_of_power_owner_into_witch_effect = {
 				is_ai = yes
 				has_power_place_trigger = yes
 				is_witch_trigger = no
+				spn_is_valid_supernatural_target = yes
 			}
 			give_witch_secret_or_trait_effect2 = yes
 		}
