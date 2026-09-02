@@ -28,19 +28,10 @@ spn_error_suppression.0001 = {
     immediate = {
         hidden_effect = {
 
-			# --- Legacy character flags (witchcraft-era; set nowhere else) -------
-			add_character_flag = mutagen_potion
-			add_character_flag = grinding
-			add_character_flag = witch_potion
-			add_character_flag = elixir_of_life
-			add_character_flag = love_potion
-			add_character_flag = lupus
-			if = { limit = { has_character_flag = mutagen_potion } }
-			if = { limit = { has_character_flag = grinding } }
-			if = { limit = { has_character_flag = witch_potion } }
-			if = { limit = { has_character_flag = elixir_of_life } }
-			if = { limit = { has_character_flag = love_potion } }
-			if = { limit = { has_character_flag = lupus } }
+			# --- Legacy witchcraft-era flags (mutagen_potion, grinding, witch_potion, elixir_of_life, love_potion, lupus):
+			#     REMOVED 2.34. They had zero references anywhere else in the mod, so the twelve lines that sat here were
+			#     generating the six errors they were meant to suppress -- the same self-referential defect found for
+			#     supernatural_hunter on 27 Aug 2026 (below).
 
 			# --- SPN variables: "set but never used" (scaffolding / pending) -----
 			# 'supernatural_hunter' was never a variable -- 0 sets and 0 reads anywhere in the mod.
@@ -52,7 +43,7 @@ spn_error_suppression.0001 = {
 			if = { limit = { exists = var:spn_conferred_progeny } }
 
 			# --- SPN character flags: "set but never used" (Phase 2 scaffolding) -
-			if = { limit = { has_character_flag = spn_born_werewolf } }
+			# spn_born_werewolf: REMOVED 2.34 -- it IS read (10_spn_gain_power_events.txt, the memory descriptions, spn_memory.0003).
 			if = { limit = { has_character_flag = spn_suspects_my_affliction } }
 			if = { limit = { has_character_flag = spn_hunter_has_a_mark } }
 
@@ -60,7 +51,8 @@ spn_error_suppression.0001 = {
 			#     analyzer. Providing a scanned set/save clears the log; no gameplay
 			#     change (this event never fires).
 			add_character_flag = mikaelson_vampire   # set on the Mikaelson characters; confirmed working in-game
-			save_scope_as = command_progeny_marry    # registers the interaction event-target name
+			# command_progeny_marry: REMOVED 2.34. This line was masking a real bug -- the Marry option's send_option flag was
+			# `compel_mortal_marry`, so scope:command_progeny_marry was never set and the button did nothing. Fixed at source.
 
 			# --- Faith-shunning flag tokens: REMOVED. Fixed at the source instead --
 			#     10_spn_religious_triggers.txt now compares traits directly

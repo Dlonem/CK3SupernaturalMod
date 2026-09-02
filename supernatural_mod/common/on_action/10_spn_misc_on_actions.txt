@@ -132,6 +132,7 @@ spn_check_for_random_embrace = {
 		is_ai = no
 		spn_has_supernatural_trait = no
 		spn_has_hunter_trait = no
+		is_witch_trigger = no # 2.34: the six downstream gates have this commented out, so a witch kept being turned into a werewolf (Workshop report, Jun 2026)
 		OR = { 
 			has_game_rule = spn_yes_embrace_events 
 			has_game_rule = spn_only_embrace_events
@@ -156,7 +157,8 @@ spn_check_for_random_embrace = {
 # Firing it for the AI spends the chain on characters nobody sees and burns the once-each flags
 # (spn_had_confrontation_1/2/3) on rulers who will never read them.
 #
-# Verified 27 Aug 2026: all 11 events in 10_spn_confrontation.txt are player-only as a result.
+# Verified 27 Aug 2026: every event in 10_spn_confrontation.txt is player-only as a result (12 events since 2.34; the
+# earlier count of 11 included two .9000/.9001 tooltip keys).
 # Intended. Do not add ai_chance to them, and do not open the gate.
 spn_confrontations = {
 	trigger = {
@@ -275,13 +277,22 @@ spn_transition_stuck_cleanup = {
 	}
 	effect = {
 		remove_character_flag = spn_in_transition
-		set_knight_status = default
+		# 2.34: guarded like the sibling code in 20_spn_transition_effects.txt -- set_knight_status errors for anyone not in
+		# a court's knight pool, which threw a log line every time this fired on a landless adventurer.
+		if = {
+			limit = { has_character_flag = spn_knight_status_forbidden }
+			set_knight_status = default
+			remove_character_flag = spn_knight_status_forbidden
+		}
 	}
 }
 
 spn_retro_disease_immunity = {
 	trigger = {
-		spn_has_supernatural_trait = yes
+		OR = {
+			spn_has_supernatural_trait = yes
+			is_a_demon_trigger = yes # 2.34: demons are immune too (they never were, despite the trait's promise -- Workshop report, Jul 2026)
+		}
 		NOT = { has_character_flag = immune_to_disease }
 	}
 	effect = {

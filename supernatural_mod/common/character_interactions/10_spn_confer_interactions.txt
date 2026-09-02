@@ -203,6 +203,11 @@
 	}
 
 	on_accept = {
+		# 2.34: the hook send_option was never consumed -- a free hook. Spend it, like every vanilla interaction does.
+		if = {
+			limit = { scope:hook = yes }
+			scope:actor = { use_hook = scope:recipient }
+		}
 		scope:recipient = {
 		
 			show_as_tooltip = {
@@ -455,17 +460,29 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 	}
 
 	on_accept = {
+		# 2.34: the hook send_option was never consumed -- a free hook. Spend it, like every vanilla interaction does.
+		if = {
+			limit = { scope:hook = yes }
+			scope:actor = { use_hook = scope:recipient }
+		}
 		scope:recipient = {
 		
 			show_as_tooltip = {
 				custom_tooltip = spn_msg_tooltip_confer_vampirism_desc
 			}
 			
-			trigger_event = spn_initiate.0001 #Turn Into Vampire
-			trigger_event = spn_message.0001  #Send Messages They Accepted
-			
+			# 2.34: sire and maker relation are set BEFORE the initiate event so spn_initiate.0001 can name the maker in the turning memory.
 			spn_assign_conferred_sire = { CHARACTER = scope:actor }
 			set_relation_mmaker = scope:actor
+			# 2.34: a hook-forced turning is remembered as forced. Read and cleared by spn_initiate.0001 (vanilla reads
+			# scope:hook inside on_accept the same way, 00_alliance.txt).
+			if = {
+				limit = { scope:hook = yes }
+				add_character_flag = { flag = spn_turning_was_forced days = 30 } # timed, so it cannot strand if the init event's trigger fails
+			}
+			
+			trigger_event = spn_initiate.0001 #Turn Into Vampire
+			trigger_event = spn_message.0001  #Send Messages They Accepted
 			
 			trigger_event = {
 				id = spn_initiate.9001 #Initiate Secret knowledge for conferring character
@@ -639,6 +656,11 @@ spn_offer_gift = { #Offer Gift - begin werewolf turning incubation (consensual)
 		opinion_modifier = { who = scope:recipient  opinion_target = scope:actor  multiplier = 0.4 }
 	}
 	on_accept = {
+		# 2.34: the hook send_option was never consumed -- a free hook. Spend it, like every vanilla interaction does.
+		if = {
+			limit = { scope:hook = yes }
+			scope:actor = { use_hook = scope:recipient }
+		}
 		scope:recipient = {
 			show_as_tooltip = { custom_tooltip = spn_msg_tooltip_offer_gift_desc }
 			add_trait = ww_infected_wound
@@ -1367,7 +1389,17 @@ spn_turn_into_hybrid = { #Turn Character Into Hybrid
 	}
 
 	on_accept = {
+		# 2.34: the hook send_option was never consumed -- a free hook. Spend it, like every vanilla interaction does.
+		if = {
+			limit = { scope:hook = yes }
+			scope:actor = { use_hook = scope:recipient }
+		}
 		scope:recipient = {
+			# 2.34: a hook-forced turning is remembered as forced. Read and cleared by spn_initiate.2001.
+			if = {
+				limit = { scope:hook = yes }
+				add_character_flag = { flag = spn_turning_was_forced days = 30 } # timed, so it cannot strand if the init event's trigger fails
+			}
 			if = {
 				limit = {  
 					OR = {
@@ -1384,10 +1416,9 @@ spn_turn_into_hybrid = { #Turn Character Into Hybrid
 						}
 					}
 				} 
+				spn_assign_conferred_sire = { CHARACTER = scope:actor } # 2.34: set before the initiate event so the hybrid memory can name the maker
 				trigger_event = spn_initiate.2001 #Initiate Hybrid
 				trigger_event = spn_message.2001 #Send Messages
-				
-				spn_assign_conferred_sire = { CHARACTER = scope:actor }
 
 				trigger_event = {
 					id = spn_initiate.9001 #Initiate Secret knowledge for conferring character
@@ -1431,10 +1462,9 @@ spn_turn_into_hybrid = { #Turn Character Into Hybrid
 							}
 						}
 
+						spn_assign_conferred_sire = { CHARACTER = scope:actor } # 2.34: set before the initiate event so the hybrid memory can name the maker
 						trigger_event = spn_initiate.2001 #Initiate Hybrid
 						trigger_event = spn_message.2001 #Send Messages
-						
-						spn_assign_conferred_sire = { CHARACTER = scope:actor }
 
 						trigger_event = {
 							id = spn_initiate.9001 #Initiate Secret knowledge for conferring character
@@ -2163,6 +2193,11 @@ spn_turn_into_hunter = { # Train Character as a Hunter
     }
 
     on_accept = {
+        # 2.34: the hook send_option was never consumed -- a free hook. Spend it, like every vanilla interaction does.
+        if = {
+            limit = { scope:hook = yes }
+            scope:actor = { use_hook = scope:recipient }
+        }
         scope:recipient = {
             show_as_tooltip = {
                 custom_tooltip = spn_msg_tooltip_confer_hunter_desc
@@ -2625,6 +2660,11 @@ spn_ask_to_turn_into_vampire = { #Ask Character to Turn You Into Vampire
 	}
 
 	on_accept = {
+		# 2.34: the hook send_option was never consumed -- a free hook. Spend it, like every vanilla interaction does.
+		if = {
+			limit = { scope:hook = yes }
+			scope:actor = { use_hook = scope:recipient }
+		}
 		scope:actor = {
 			show_as_tooltip = {
 				scope:actor = {
@@ -2633,6 +2673,7 @@ spn_ask_to_turn_into_vampire = { #Ask Character to Turn You Into Vampire
 			}
 
 			spn_assign_conferred_sire = { CHARACTER = scope:recipient }
+			hidden_effect = { spn_write_asked_for_the_gift_memory_effect = { ASKED = scope:recipient } } # 2.34, once only
 
 			#Adds a modifier to increase their health temporarily from the healing properties of Vampire Blood
 			add_character_modifier = {
@@ -2971,12 +3012,18 @@ spn_ask_for_gift = { #Ask a werewolf to claw you - begin turning incubation (con
 	}
 
 	on_accept = {
+		# 2.34: the hook send_option was never consumed -- a free hook. Spend it, like every vanilla interaction does.
+		if = {
+			limit = { scope:hook = yes }
+			scope:actor = { use_hook = scope:recipient }
+		}
 		scope:actor = {
 			show_as_tooltip = { custom_tooltip = spn_msg_tooltip_ask_gift_desc }
 			add_trait = ww_infected_wound
 			add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = 5 max = 15 } } }
 			add_character_flag = voluntary_turning
 			spn_assign_conferred_sire = { CHARACTER = scope:recipient }
+			hidden_effect = { spn_write_asked_for_the_gift_memory_effect = { ASKED = scope:recipient } } # 2.34, once only
 			set_variable = { name = spn_wound_incubation_start value = current_date }
 			spn_kickoff_wound_incubation = yes
 		}
@@ -3343,12 +3390,17 @@ spn_ask_to_turn_into_hybrid = { #Ask Character to Make You Into Hybrid
 	}
 
 	on_accept = {
+		# 2.34: the hook send_option was never consumed -- a free hook. Spend it, like every vanilla interaction does.
+		if = {
+			limit = { scope:hook = yes }
+			scope:actor = { use_hook = scope:recipient }
+		}
 		scope:actor = {
+			hidden_effect = { spn_write_asked_for_the_gift_memory_effect = { ASKED = scope:recipient } } # 2.34, once only
 			if = { 
 				limit = { has_game_rule = spn_no_confer_death } 
+				spn_assign_conferred_sire = { CHARACTER = scope:recipient } # 2.34: set before the initiate event so the hybrid memory can name the maker
 				trigger_event = spn_initiate.2001 #Initiate Hybrid
-
-				spn_assign_conferred_sire = { CHARACTER = scope:recipient }
 
 				trigger_event = {
 					id = spn_initiate.9002 #Initiate Secret knowledge when asking for confer
@@ -3382,9 +3434,8 @@ spn_ask_to_turn_into_hybrid = { #Ask Character to Make You Into Hybrid
 								multiply = { value = 10 } 
 							}
 						}
+						spn_assign_conferred_sire = { CHARACTER = scope:recipient } # 2.34: set before the initiate event so the hybrid memory can name the maker
 						trigger_event = spn_initiate.2001 #Initiate Hybrid
-
-						spn_assign_conferred_sire = { CHARACTER = scope:recipient }
 
 						trigger_event = {
 							id = spn_initiate.9002 #Initiate Secret knowledge when asking for confer
@@ -3789,6 +3840,11 @@ spn_ask_to_turn_into_hunter = { #Ask Character to Train You As a Hunter
 	}
 
 	on_accept = {
+		# 2.34: the hook send_option was never consumed -- a free hook. Spend it, like every vanilla interaction does.
+		if = {
+			limit = { scope:hook = yes }
+			scope:actor = { use_hook = scope:recipient }
+		}
 		scope:actor = {
 			show_as_tooltip = {
 				custom_tooltip = spn_msg_tooltip_confer_hunter_desc

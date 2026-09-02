@@ -1,0 +1,268 @@
+﻿# Supernatural 2.34 -- the memory writers. One effect per firing site so the init events stay readable and the
+# guards live in exactly one place. Types are in common/character_memory_types/zz_spn_memories.txt.
+#
+# Every writer is idempotent: it guards on any_memory of every sibling type, never on a character flag, so the
+# four cure-and-re-embrace routes can never produce a second turning memory. Participants are passed through a
+# saved scope (bare `var:` has zero vanilla instances as a participant value).
+
+# Site A -- end of spn_initiate.0001. Scope: the new vampire.
+# Names the maker when var:spn_conferred_sire points at a real character who is not us (set by the confer
+# interactions before the event fires, or by spn_bind_blood_donor_as_maker_effect). Writes the maker's own memory
+# too. The battle path writes spn_rose_in_battle_memory BEFORE this event, so the guard skips it here.
+spn_write_vampire_turning_memory_effect = {
+	if = {
+		limit = {
+			NOR = {
+				any_memory = { has_memory_type = spn_became_vampire_memory }
+				any_memory = { has_memory_type = spn_woke_a_vampire_memory }
+				spn_rose_in_battle_any_trigger = yes
+			}
+		}
+		if = {
+			limit = {
+				has_character_flag = spn_has_conferred_sire # the cures clear this flag but not the variable -- it is what makes the sire current
+				has_variable = spn_conferred_sire
+				exists = var:spn_conferred_sire
+				NOT = { var:spn_conferred_sire = this }
+			}
+			save_scope_as = spn_mem_progeny
+			var:spn_conferred_sire = { save_scope_as = spn_mem_maker }
+			create_character_memory = {
+				type = spn_became_vampire_memory
+				participants = { maker = scope:spn_mem_maker }
+			}
+			spn_mark_memory_forced_if_flagged_effect = yes
+			if = {
+				limit = { scope:spn_mem_maker = { is_alive = yes } }
+				scope:spn_mem_maker = {
+					create_character_memory = {
+						type = spn_made_a_vampire_memory
+						participants = { progeny = scope:spn_mem_progeny }
+					}
+				}
+			}
+		}
+		else = {
+			create_character_memory = { type = spn_woke_a_vampire_memory }
+		}
+	}
+	# The forced flag is a one-shot handshake from on_accept; clear it whether or not a memory was written.
+	if = {
+		limit = { has_character_flag = spn_turning_was_forced }
+		remove_character_flag = spn_turning_was_forced
+	}
+}
+
+# Site B -- spn_transition_completed_effect, after the maker bond and before spn_initiate.0001. Scope: the risen.
+# maker = spn_vampire_blood_donor (only if alive -- the bond effect has the same gate), feller = var:spn_felled_by.
+spn_write_rose_in_battle_memory_effect = {
+	if = {
+		limit = {
+			NOR = {
+				any_memory = { has_memory_type = spn_became_vampire_memory }
+				any_memory = { has_memory_type = spn_woke_a_vampire_memory }
+				spn_rose_in_battle_any_trigger = yes
+			}
+		}
+		save_scope_as = spn_mem_progeny
+		# The branches below test `exists = scope:...`, so start from a clean slate.
+		clear_saved_scope = spn_mem_maker
+		clear_saved_scope = spn_mem_feller
+		if = {
+			limit = {
+				has_variable = spn_vampire_blood_donor
+				exists = var:spn_vampire_blood_donor
+				NOT = { var:spn_vampire_blood_donor = this }
+			}
+			var:spn_vampire_blood_donor = { save_scope_as = spn_mem_maker }
+		}
+		if = {
+			limit = {
+				has_variable = spn_felled_by
+				exists = var:spn_felled_by
+			}
+			var:spn_felled_by = { save_scope_as = spn_mem_feller }
+		}
+		if = {
+			limit = { exists = scope:spn_mem_maker exists = scope:spn_mem_feller }
+			create_character_memory = {
+				type = spn_rose_in_battle_both_memory
+				participants = { maker = scope:spn_mem_maker feller = scope:spn_mem_feller }
+			}
+		}
+		else_if = {
+			limit = { exists = scope:spn_mem_maker }
+			create_character_memory = {
+				type = spn_rose_in_battle_maker_memory
+				participants = { maker = scope:spn_mem_maker }
+			}
+		}
+		else_if = {
+			limit = { exists = scope:spn_mem_feller }
+			create_character_memory = {
+				type = spn_rose_in_battle_feller_memory
+				participants = { feller = scope:spn_mem_feller }
+			}
+		}
+		else = {
+			create_character_memory = { type = spn_rose_in_battle_memory }
+		}
+		# The maker's side, same as a bedside turning.
+		if = {
+			limit = { exists = scope:spn_mem_maker scope:spn_mem_maker = { is_alive = yes } }
+			scope:spn_mem_maker = {
+				create_character_memory = {
+					type = spn_made_a_vampire_memory
+					participants = { progeny = scope:spn_mem_progeny }
+				}
+			}
+		}
+	}
+}
+
+# Site C -- spn_complete_wound_turn, before spn_clear_wound_incubation_state wipes spn_conferred_sire and
+# forced_turning. Scope: the new werewolf. Writes the clawer's memory too.
+spn_write_werewolf_clawed_memory_effect = {
+	if = {
+		limit = {
+			has_character_flag = spn_has_conferred_sire
+			has_variable = spn_conferred_sire
+			exists = var:spn_conferred_sire
+			NOT = { var:spn_conferred_sire = this }
+			NOR = {
+				any_memory = { has_memory_type = spn_became_werewolf_memory }
+				any_memory = { has_memory_type = spn_woke_a_werewolf_memory }
+			}
+		}
+		save_scope_as = spn_mem_turned
+		var:spn_conferred_sire = { save_scope_as = spn_mem_clawer }
+		create_character_memory = {
+			type = spn_became_werewolf_memory
+			participants = { clawer = scope:spn_mem_clawer }
+		}
+		if = {
+			limit = { has_character_flag = forced_turning }
+			scope:new_memory = { set_variable = { name = spn_forced value = flag:forced } }
+		}
+		if = {
+			limit = { scope:spn_mem_clawer = { is_alive = yes } }
+			scope:spn_mem_clawer = {
+				create_character_memory = {
+					type = spn_clawed_someone_memory
+					participants = { turned = scope:spn_mem_turned }
+				}
+			}
+		}
+	}
+}
+
+# Site C' -- spn_initiate.1001. Scope: the new werewolf. Only when no clawed memory was written first
+# (the wound path writes Site C, then fires 1001). Born, ruler designer, direct embrace land here.
+spn_write_werewolf_woke_memory_effect = {
+	if = {
+		limit = {
+			NOR = {
+				any_memory = { has_memory_type = spn_became_werewolf_memory }
+				any_memory = { has_memory_type = spn_woke_a_werewolf_memory }
+			}
+		}
+		create_character_memory = { type = spn_woke_a_werewolf_memory }
+	}
+}
+
+# Site D -- spn_initiate.2001. Scope: the new hybrid.
+spn_write_hybrid_turning_memory_effect = {
+	if = {
+		limit = {
+			NOR = {
+				any_memory = { has_memory_type = spn_became_hybrid_memory }
+				any_memory = { has_memory_type = spn_woke_a_hybrid_memory }
+			}
+		}
+		if = {
+			limit = {
+				has_character_flag = spn_has_conferred_sire # the cures clear this flag but not the variable -- it is what makes the sire current
+				has_variable = spn_conferred_sire
+				exists = var:spn_conferred_sire
+				NOT = { var:spn_conferred_sire = this }
+			}
+			var:spn_conferred_sire = { save_scope_as = spn_mem_maker }
+			create_character_memory = {
+				type = spn_became_hybrid_memory
+				participants = { maker = scope:spn_mem_maker }
+			}
+			spn_mark_memory_forced_if_flagged_effect = yes
+		}
+		else = {
+			create_character_memory = { type = spn_woke_a_hybrid_memory }
+		}
+	}
+	if = {
+		limit = { has_character_flag = spn_turning_was_forced }
+		remove_character_flag = spn_turning_was_forced
+	}
+}
+
+# Site E -- spn_initiate.3001. Scope: the new hunter. Names the trainer from var:spn_hunter_trainer, which the
+# training events now set BEFORE firing this event (2.34 reorder).
+spn_write_hunter_memory_effect = {
+	if = {
+		limit = {
+			NOR = {
+				any_memory = { has_memory_type = spn_became_hunter_memory }
+				any_memory = { has_memory_type = spn_woke_a_hunter_memory }
+			}
+		}
+		if = {
+			limit = {
+				has_character_flag = spn_has_hunter_trainer
+				has_variable = spn_hunter_trainer
+				exists = var:spn_hunter_trainer
+				NOT = { var:spn_hunter_trainer = this }
+			}
+			var:spn_hunter_trainer = { save_scope_as = spn_mem_trainer }
+			create_character_memory = {
+				type = spn_became_hunter_memory
+				participants = { trainer = scope:spn_mem_trainer }
+			}
+		}
+		else = {
+			create_character_memory = { type = spn_woke_a_hunter_memory }
+		}
+	}
+}
+
+# Site F -- on_accept of the three ask-to-turn interactions. Scope: the asker. ASKED = the character asked.
+spn_write_asked_for_the_gift_memory_effect = {
+	if = {
+		limit = { NOT = { any_memory = { has_memory_type = spn_asked_for_the_gift_memory } } }
+		$ASKED$ = { save_scope_as = spn_mem_asked }
+		create_character_memory = {
+			type = spn_asked_for_the_gift_memory
+			participants = { asked = scope:spn_mem_asked }
+		}
+	}
+}
+
+# Site G -- the confrontation outcomes. Scope: the survivor. TYPE = the memory type. First occurrence only,
+# one shared guard across all three outcomes; no participant, the hunter is a generated character.
+spn_write_confrontation_memory_effect = {
+	if = {
+		limit = {
+			NOR = {
+				any_memory = { has_memory_type = spn_killed_the_hunter_memory }
+				any_memory = { has_memory_type = spn_escaped_the_hunter_memory }
+				any_memory = { has_memory_type = spn_compelled_the_hunter_memory }
+			}
+		}
+		create_character_memory = { type = $TYPE$ }
+	}
+}
+
+# Helper: stamps scope:new_memory as forced when the hook handshake flag is on the character.
+spn_mark_memory_forced_if_flagged_effect = {
+	if = {
+		limit = { has_character_flag = spn_turning_was_forced }
+		scope:new_memory = { set_variable = { name = spn_forced value = flag:forced } }
+	}
+}

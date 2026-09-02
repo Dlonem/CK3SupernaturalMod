@@ -1,4 +1,4 @@
-version="2.33"
+version="2.34"
 picture="thumbnail.png"
 tags={
 	"Alternative History"
@@ -8,5 +8,4 @@ tags={
 }
 name="Supernatural"
 supported_version="1.19.0.6"
-path="C:/Users/Thomas/Documents/Paradox Interactive/Crusader Kings III/mod/supernatural_mod"
-remote_file_id="2856525601"
+path="mod/supernatural_mod"

@@ -22,6 +22,12 @@ WHAT IT CHECKS
   trait icons              icon = X.dds                 (checks the file is on disk)
   scripted helpers         *_trigger / *_effect / *_value calls, brace-depth aware
   localization keys        desc / title / custom_tooltip / selection_tooltip
+  memory types             create_character_memory / has_memory_type / memory_type   (2.34)
+  memory participants      participants = { tag = ... } vs the type's declared tags  (2.34)
+  memory icons             icon = "X.dds" in character_memory_types, on disk          (2.34)
+  event id collisions      the same namespace.id defined twice across the mod         (2.34)
+  no-bullet text keys      custom_description(_no_bullet) = { text = X }, which fall
+                           back through effect_localization                          (2.34)
 
 WHY IT IS BRACE-AWARE
   A naive regex cannot tell `foo = {` at the top of a file (a DEFINITION) from `foo = {`
@@ -64,6 +70,8 @@ DEF_DIRS = {
     "effect":           ["common/scripted_effects"],
     "trigger":          ["common/scripted_triggers"],
     "value":            ["common/script_values"],
+    "memory":           ["common/character_memory_types"],
+    "effect_loc":       ["common/effect_localization"],
 }
 
 OWN_HINTS = ("spn_", "supernatural", "vampire_feeding")
@@ -176,6 +184,55 @@ def helper_calls(files, defined):
     return {k: v for k, v in calls.items() if k not in defined and k not in local_defs}
 
 
+def harvest_memory_participants(*roots) -> dict[str, set[str]]:
+    """memory type -> declared participant tags (empty set when the type declares none)."""
+    out = {}
+    for base in roots:
+        for f in glob.glob(os.path.join(base, "common/character_memory_types/*.txt")):
+            t = re.sub(r"#.*", "", open(f, encoding="utf-8-sig", errors="ignore").read())
+            for m in re.finditer(r"(?m)^([A-Za-z0-9_]+)\s*=\s*\{", t):
+                name, i, depth = m.group(1), m.end(), 1
+                while i < len(t) and depth:
+                    depth += (t[i] == "{") - (t[i] == "}"); i += 1
+                body = t[m.end():i]
+                pm = re.search(r"participants\s*=\s*\{([^}]*)\}", body)
+                out[name] = set(pm.group(1).split()) if pm else set()
+    return out
+
+
+def memory_participant_check(files, declared):
+    """Every tag passed in create_character_memory must be declared on the type."""
+    hits = collections.defaultdict(list)
+    for p, t in files.items():
+        for m in re.finditer(r"create_character_memory\s*=\s*\{([^{}]*(?:\{[^{}]*\}[^{}]*)*)\}", t, re.S):
+            body = m.group(1)
+            tm = re.search(r"\btype\s*=\s*([A-Za-z0-9_$]+)", body)
+            if not tm or "$" in tm.group(1) or tm.group(1) not in declared:
+                continue
+            pm = re.search(r"participants\s*=\s*\{([^}]*)\}", body)
+            tags = set(re.findall(r"([A-Za-z0-9_]+)\s*=", pm.group(1))) if pm else set()
+            for tag in tags - declared[tm.group(1)]:
+                hits[f"{tm.group(1)}: undeclared participant `{tag}`"].append(
+                    (os.path.basename(p), t[:m.start()].count("\n") + 1))
+    return hits
+
+
+def event_id_collisions(files):
+    """namespace.id defined at brace depth 0 more than once anywhere in the mod."""
+    seen = collections.defaultdict(list)
+    for p, t in files.items():
+        if os.sep + "events" + os.sep not in p and not p.replace("\\", "/").startswith("./events/"):
+            continue
+        depth = 0
+        for ln, line in enumerate(t.split("\n"), 1):
+            if depth == 0:
+                m = re.match(r"\s*([a-z][a-z0-9_]*\.\d+)\s*=?\s*\{", line)
+                if m:
+                    seen[m.group(1)].append((os.path.basename(p), ln))
+            depth += line.count("{") - line.count("}")
+    return {k: v for k, v in seen.items() if len(v) > 1}
+
+
 def report(title, hits, limit=40) -> int:
     if not hits:
         print(f"  [ok]   {title}")
@@ -279,6 +336,33 @@ def main() -> int:
         # Missing from vanilla's english loc too -- Paradox's, not ours.
         hits.pop("ceremony_house_power", None)
         bad += report("localization keys", hits)
+        # custom_description(_no_bullet) = { text = X }: X may be a plain loc key OR an
+        # effect_localization entry (which then points at loc). Either resolves.
+        cd_hits = collect(
+            files, r"custom_description(?:_no_bullet)?\s*=\s*\{[^{}]*?\btext\s*=\s*\"?([a-z][A-Za-z0-9_.]+)\"?",
+            loc | K["effect_loc"], re.S)
+        # vanilla's own faithful-shadow key (00_dynast_interactions.txt uses it too, and vanilla has no loc for it)
+        cd_hits.pop("same_realm_as", None)
+        bad += report("custom_description text keys", cd_hits)
+    if want("memories"):
+        # 2.34 -- the memory system. A wrong type name or participant tag fails silently in game.
+        bad += report("memory types", collect(
+            files, r"\b(?:has_memory_type|memory_type)\s*=\s*([a-z][a-z0-9_]+)", K["memory"]))
+        bad += report("memory types (create_character_memory)", collect(
+            files, r"create_character_memory\s*=\s*\{[^{}]*?\btype\s*=\s*([a-z][a-z0-9_]+)", K["memory"], re.S))
+        bad += report("memory participants (undeclared on the type)",
+                      memory_participant_check(files, harvest_memory_participants(a.game, a.mod)))
+        mem_icons = set()
+        d = os.path.join(a.game, "gfx/interface/icons/memory_types")
+        if os.path.isdir(d):
+            mem_icons |= set(os.listdir(d))
+        d = os.path.join(a.mod, "gfx/interface/icons/memory_types")
+        if os.path.isdir(d):
+            mem_icons |= set(os.listdir(d))
+        mem_files = {p: t for p, t in files.items() if "character_memory_types" in p.replace("\\", "/")}
+        bad += report("memory icons", collect(mem_files, r"\bicon\s*=\s*\"([A-Za-z0-9_.\-]+\.dds)\"", mem_icons))
+    if want("events"):
+        bad += report("event id collisions", event_id_collisions(files))
 
     print(f"\n  {'CLEAN -- every reference resolves' if bad == 0 else f'{bad} unresolved reference(s)'}\n")
     return 1 if bad else 0

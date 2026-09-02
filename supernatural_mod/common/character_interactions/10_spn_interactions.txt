@@ -84,17 +84,9 @@
 								LIEGE = scope:recipient
 							}
 						}
-
-					  scope:actor = {
-						if = {
-						  limit = { has_trait = supernatural_vampire }
-						  add_trait_xp = { trait = supernatural_vampire track = vampirism value = -10 }
-						}
-						else_if = {
-						  limit = { has_trait = supernatural_hybrid }
-						  add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = -10 }
-						}
-					  }
+						# 2.34: this block is not an option -- it runs on EVERY order when the invoker is the progeny's
+						# diarch -- so the 10 Vampirism it used to charge here was a hidden surcharge on top of the order's
+						# own cost. Removed; the swing stays.
 					}
 					if = {
 					  limit = {
@@ -293,14 +285,14 @@
 									}
 								}
 							}
+							# 2.34: vanilla's procure_estate_interaction_effect branches on the option scopes (piety/gold/hook); with none
+							# set it fell into its `else` and PAID THE PROGENY PRESTIGE for handing over the estate. The bond is a hook.
+							save_scope_value_as = { name = hook value = yes }
 							scope:actor = {
 								save_scope_as = adventurer
 								procure_estate_interaction_effect = yes
 							}
-							scope:actor = {
-							  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -20 } }
-							  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -20 } }
-							}
+							# 2.34: the extra -20 that used to sit here made the real price 60 while the tooltip said 40. Removed.
 						}
 						else_if = {
 							limit = {
@@ -312,10 +304,7 @@
 									}
 								}
 							}
-							scope:actor = {
-							  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -20 } }
-							  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -20 } }
-							}
+							# 2.34: the extra -20 that used to sit here made the real price 60 while the tooltip said 40. Removed.
 							scope:recipient = {
 								hidden_effect = {
 									random_held_county = {
@@ -342,11 +331,19 @@
 										add_trait = adventurer_follower
 									}
 								}
+								# 2.34: every vanilla caller runs the save-liege effect first (it sets scope:new_liege, which the transfer
+								# effect reads unguarded) and passes ENNOBLED_ADVENTURER. Mirrors ep3_interactions_events.0112.
+								ep3_become_landed_save_liege_effect = {
+									TITLE_GIVER = scope:recipient
+									ALWAYS_INDEPENDENT = no
+									TITLE_LIST = offered_titles
+								}
 								ep3_become_landed_transfer_effect = {
 									TITLE_RECEIVER = scope:actor
 									TITLE_LIST = offered_titles
 									TYPE = granted
 									REASON = flag:granted
+									ENNOBLED_ADVENTURER = flag:yes
 								}
 								hidden_effect = {
 									if = {
@@ -478,6 +475,11 @@
 								remove_character_modifier = inq_modifier
 							}
 							remove_trait = witch_hunter
+							# 2.34: a fallen hunter falls all the way -- spn_initiate.3002 is the mod's complete hunter cleanup (the
+							# fallen-hunter DECISION uses it too). Without it supernatural_hunter stayed, and since that trait opposes
+							# `witch`, the witch trait this order promises could never be added.
+							show_as_tooltip = { remove_trait = supernatural_hunter }
+							hidden_effect = { trigger_event = spn_initiate.3002 }
 							#add_trait_force_tooltip = witch_hunter2
 							if = {
 								limit = {
@@ -528,7 +530,7 @@
 						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -10 } }
 						}
 
-						custom_tooltip = command_minion_secrets_ct
+						custom_tooltip = command_progeny_secrets_ct # 2.34: the mod's own key; command_minion_secrets_ct is Witchcraft's
 						hidden_effect = {
 							scope:recipient = {
 								every_secret = {
@@ -600,6 +602,79 @@
 							}
 						}
 					}
+					# 2.34 -- four additions. Prisoners (Witchcraft's own commented-out block, 00_magic_interactions.txt),
+					# release (the same effect spn_compulsion already uses), betrothal (vanilla break_betrothal), culture
+					# (the exact mirror of the faith order above).
+					else_if = {
+						limit = {
+							scope:command_progeny_prisoners = yes
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -20 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -20 } }
+						}
+						custom_tooltip = command_progeny_prisoners_ct
+						hidden_effect = {
+							scope:recipient = {
+								every_prisoner = {
+									limit = {
+										trigger_if = {
+											limit = { exists = house }
+											NOT = { house = scope:recipient.house }
+										}
+									}
+									release_from_prison = yes
+									scope:actor = {
+										imprison = {
+											target = PREV
+											type = dungeon
+										}
+									}
+								}
+							}
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_release = yes
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -10 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -10 } }
+						}
+						custom_tooltip = command_progeny_release_ct
+						hidden_effect = {
+							scope:recipient = {
+								every_prisoner = {
+									release_from_prison = yes
+								}
+							}
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_betrothal = yes
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -15 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -15 } }
+						}
+						scope:recipient = {
+							break_betrothal = betrothed
+						}
+					}
+					else_if = {
+						limit = {
+							scope:command_progeny_culture = yes
+						}
+						scope:recipient = {
+							set_culture = scope:actor.culture
+						}
+						scope:actor = {
+						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -35 } }
+						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -35 } }
+						}
+					}
 				}
 			}
 		}
@@ -613,7 +688,7 @@
 				right_icon = scope:recipient
 				if = {
 					limit = {
-						has_relation_mmaker = scope:recipient
+						has_relation_pprogeny = scope:recipient # 2.34: was has_relation_mmaker -- the bond tested backwards, so the decline branch never ran
 					}
 					custom_tooltip = command_progeny_failed
 				}
@@ -628,9 +703,9 @@
 				scope:recipient = {
 					if = {
 						limit = {
-							has_relation_pprogeny = scope:actor
+							has_relation_mmaker = scope:actor # 2.34: was has_relation_pprogeny on the recipient -- backwards, never true
 						}
-						remove_relation_pprogeny = scope:actor
+						remove_relation_mmaker = scope:actor # mmaker declares corresponding = pprogeny, so both arms go
 						add_opinion = {
 							target = scope:actor
 							modifier = use_bond_on_me_opinion
@@ -776,7 +851,7 @@
 	  }
 	  is_valid = {
 		custom_description = {
-		  text = invoke_bond_requires_vampiric_strength_20
+		  text = invoke_bond_requires_vampiric_strength_15 # 2.34: tooltip said 20, the gate is 15
 		  scope:actor = {
 			OR = {
 			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 15 }
@@ -843,12 +918,12 @@
 		}
 		scope:actor = {
 		  OR = { stress > 100 has_trait = sadistic has_trait = gluttonous }
-		  NOT = { has_trait = shy has_trait = just }
+		  NOR = { has_trait = shy has_trait = just } # 2.34: was NOT = { a b }, which is NOT(AND) and only hid it from characters who were both
 		}
 	  }
 	  is_valid = {
 		custom_description = {
-		  text = invoke_bond_requires_vampiric_strength_15
+		  text = invoke_bond_requires_vampiric_strength_5 # 2.34: tooltip said 15, the gate is 5 (the interaction floor is 10 anyway)
 		  scope:actor = {
 			OR = {
 			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 5 }
@@ -877,7 +952,7 @@
 		}
 	  }
 	  flag = command_progeny_dismiss_regency
-	  localization = liege_dismiss_entrenched_regency_interaction  # add cost note
+	  localization = COMMAND_PROGENY_16 # 2.34: own key so the cost can be shown (was a vanilla key)
 	}
 
 #Become My Patron (cost 10)
@@ -920,7 +995,7 @@
 		}
 	  }
 	  flag = command_progeny_obedient
-	  localization = COMMAND_PROGENY_11   # "(Cost: 25 Vampirism)"
+	  localization = COMMAND_PROGENY_10   # "You Owe Me" (Cost: 25 Vampirism) -- 2.34: labels 10/11 were swapped
 	}
 #Marry Me (cost 30)
 	send_option = {
@@ -944,8 +1019,8 @@
 		scope:actor     = { is_imprisoned = no }
 		scope:recipient = { is_imprisoned = no is_hostage = no }
 	  }
-	  flag = compel_mortal_marry
-	  localization = COMMAND_PROGENY_10   # "(Cost: 30 Vampirism)"
+	  flag = command_progeny_marry
+	  localization = COMMAND_PROGENY_11   # "Marry me" (Cost: 30 Vampirism) -- 2.34: flag was compel_mortal_marry, which on_accept never read
 	}
 #Demand Conversion (cost 35)
 	send_option = {
@@ -965,7 +1040,7 @@
 		}
 	  }
 	  flag = command_progeny_convertion
-	  localization = game_concept_demand_conversion   # add cost note
+	  localization = COMMAND_PROGENY_17 # 2.34: own key so the cost can be shown (was a vanilla game-concept key)
 	}
 #Break the Hunter (cost 20)
 	send_option = {
@@ -1060,6 +1135,81 @@
 	  }
 	  flag = command_progeny_secrets
 	  localization = COMMAND_PROGENY_15   # "(Cost: 10 Vampirism)"
+	}
+# 2.34 -- Give me your Prisoners (cost 20). COMMAND_PROGENY_O8 had been written for this and never wired.
+	send_option = {
+	  is_shown = {
+		scope:recipient = {
+		  OR = {
+			AND = { NOT = { exists = house } has_prisoners = yes }
+			AND = { exists = house any_prisoner = { NOT = { house = scope:recipient.house } } }
+		  }
+		}
+	  }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_20
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 20 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 20 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_prisoners
+	  localization = COMMAND_PROGENY_O8
+	}
+# 2.34 -- Release your Prisoners (cost 10)
+	send_option = {
+	  is_shown = { scope:recipient = { has_prisoners = yes } }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_10
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 10 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 10 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_release
+	  localization = COMMAND_PROGENY_18
+	}
+# 2.34 -- Break their Betrothal (cost 15)
+	send_option = {
+	  is_shown = { scope:recipient = { exists = betrothed } }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_15
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 15 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 15 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_betrothal
+	  localization = COMMAND_PROGENY_19
+	}
+# 2.34 -- Take my Culture (cost 35), the mirror of Demand Conversion
+	send_option = {
+	  is_shown = { scope:recipient = { NOT = { culture = scope:actor.culture } } }
+	  is_valid = {
+		custom_description = {
+		  text = invoke_bond_requires_vampiric_strength_35
+		  scope:actor = {
+			OR = {
+			  has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 35 }
+			  has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 35 }
+			}
+		  }
+		}
+	  }
+	  flag = command_progeny_culture
+	  localization = COMMAND_PROGENY_20
 	}
 
 	ai_accept = {
@@ -1214,7 +1364,17 @@
 	}
 	# If the recipient is human-controlled, auto-accept instantly (no letter UI)
 	auto_accept = {
-		scope:recipient = { is_ai = no }
+		OR = {
+			scope:recipient = { is_ai = no }
+			# 2.34: on_accept has always CONSUMED a usable hook, but nothing ever required one -- so you paid a hook to
+			# avoid a malus that would not have applied. A hook now buys the certainty it is spent on, like the confer interactions.
+			custom_description = {
+				text = "spending_hook"
+				subject = scope:actor
+				object = scope:recipient
+				scope:actor = { has_usable_hook = scope:recipient }
+			}
+		}
 	}
 
 }

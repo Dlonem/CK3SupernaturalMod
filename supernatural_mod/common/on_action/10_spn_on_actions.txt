@@ -50,6 +50,28 @@ yearly_global_pulse = {
 yearly_playable_pulse = {
 	on_actions = {
 		spn_confrontations
+		spn_memory_flavour_pulse # 2.34
+	}
+}
+
+# 2.34 -- the memory-triggered flavour events (zz_spn_memory_events.txt). Player-only: the gate is cheap and
+# it keeps the any_memory walk off every AI ruler. yearly_playable_pulse, not random_yearly_everyone_pulse --
+# the smallest population that still contains every character who can receive one of these.
+spn_memory_flavour_pulse = {
+	trigger = {
+		is_ai = no
+		OR = {
+			spn_has_supernatural_trait = yes
+			spn_has_hunter_trait = yes
+			has_trait = archmage
+		}
+	}
+	events = {
+		spn_memory.0001 # hunter -- the trainer, a year dead
+		spn_memory.0002 # vampire -- a hundred years
+		spn_memory.0003 # werewolf -- the child born into it
+		spn_memory.0004 # hybrid -- two bloods
+		spn_memory.0007 # mage -- thirty years
 	}
 }
 
@@ -57,5 +79,32 @@ yearly_playable_pulse = {
 on_birthday = {
 	on_actions = {
 		spn_on_immortality_birthday
+		spn_on_demon_blood_birthday # 2.34
+	}
+}
+
+# 2.34 -- a demon-blooded child turns fourteen. The child's own event if they are the player; otherwise the
+# parent's view of it, if a parent is the player. AI-to-AI: nothing, by design.
+spn_on_demon_blood_birthday = {
+	trigger = {
+		has_trait = demon0
+		age = 14
+		NOT = { has_character_flag = spn_demon_blood_done }
+		any_memory = { has_memory_type = spn_demon_blood_memory }
+	}
+	effect = {
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_memory.0005
+		}
+		else_if = {
+			limit = { any_parent = { is_ai = no is_alive = yes } }
+			add_character_flag = spn_demon_blood_done
+			save_scope_as = spn_demon_child
+			random_parent = {
+				limit = { is_ai = no is_alive = yes }
+				trigger_event = spn_memory.0006
+			}
+		}
 	}
 }

@@ -46,16 +46,13 @@ spn_confrontation.0001 = {
 			add_character_flag = {
 				flag = supernatural_embrace_hunter
 			}
-			#add_trait_xp = {		#Removed because it was saying that : has happened, and showing the XP randomly
-			#	trait = supernatural_hunter
-			#	track = witch_hunting
-			#	value = { 5 75 }
-			#}
-			#add_trait_xp = {
-			#	trait = supernatural_hunter
-			#	track = monster_hunting
-			#	value = { 5 75 }
-			#}
+			# 2.34: restored inside hidden_effect (the old version leaked ": has happened" into the tooltip). A character
+			# template cannot set trait-track XP, so without this every generated hunter had 0 in both tracks and the
+			# compel gate below (monster_hunting < 40) would always pass.
+			hidden_effect = {
+				add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 75 } }
+				add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 5 75 } }
+			}
 			save_scope_as = spn_new_created_hunter 
 		}
 	}
@@ -197,6 +194,43 @@ spn_confrontation.0001 = {
 			} 
 		}
 	}
+
+	# 2.34 -- the compel. Third and last: the two options above read as escalating panic; this is the calm answer.
+	# A maxed vampire or hybrid (track at 100) spends 20 track XP to send an unskilled hunter (monster_hunting < 40)
+	# home. A trained hunter knows about compulsion and cannot be turned. Spending 20 at exactly 100 drops the
+	# track a tier -- the tooltip says so. Player-only chain; no ai_chance by rule.
+	option = {
+		name = spn_confrontation.0001.c
+		custom_tooltip = spn_confrontation.0001.c.tt
+		trigger = {
+			OR = {
+				AND = {
+					has_trait = supernatural_vampire
+					has_trait_xp = { trait = supernatural_vampire track = vampirism value >= 100 }
+				}
+				AND = {
+					has_trait = supernatural_hybrid
+					has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 100 }
+				}
+			}
+			scope:spn_new_created_hunter = {
+				has_trait = supernatural_hunter
+				NOT = { has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 40 } }
+			}
+		}
+		stress_impact = {
+			arrogant = minor_stress_impact_loss
+		}
+		if = {
+			limit = { has_trait = supernatural_vampire }
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = -20 }
+		}
+		else_if = {
+			limit = { has_trait = supernatural_hybrid }
+			add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = -20 }
+		}
+		trigger_event = spn_confrontation.0004
+	}
 }
 
 #Bravery or Stupidity?
@@ -220,6 +254,7 @@ spn_confrontation.0002 = {
 		# side before now; see spn_confrontation_survivor_xp_effect for why that mattered so much
 		# to the werewolf. Banked before the death, per the standing ordering rule.
 		spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 15 AMOUNT_MAX = 30 }
+		spn_write_confrontation_memory_effect = { TYPE = spn_killed_the_hunter_memory } # 2.34: first time only
 		scope:spn_new_created_hunter = {
 			death = {
 				death_reason = death_battle
@@ -253,11 +288,45 @@ spn_confrontation.0003 = {
 	# than the kill, and it is the only outcome in the chain that used to pay literally nothing.
 	immediate = {
 		spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 5 AMOUNT_MAX = 15 }
+		spn_write_confrontation_memory_effect = { TYPE = spn_escaped_the_hunter_memory } # 2.34: first time only
 	}
 
 	option = {
 		name = spn_confrontation.0003.a
 		custom_tooltip = spn_confrontation.0003.a.tt
+	}
+}
+
+#Sent Home
+spn_confrontation.0004 = {
+	type = character_event
+	title = spn_confrontation.0004.t
+	desc = spn_confrontation.0004.desc
+	theme = intrigue
+
+	override_background = {
+		reference = study
+	}
+
+	right_portrait = {
+		character = root
+		animation = personality_bold
+	}
+
+	left_portrait = {
+		character = scope:spn_new_created_hunter
+		animation = shame
+	}
+
+	# 2.34 -- the hunter walks away and lives. No survivor XP here: the player paid 20 to skip the roll, and paying
+	# it back would make the compel a net-positive grind. The memory is written once, like the other two outcomes.
+	immediate = {
+		spn_write_confrontation_memory_effect = { TYPE = spn_compelled_the_hunter_memory }
+	}
+
+	option = {
+		name = spn_confrontation.0004.a
+		custom_tooltip = spn_confrontation.0004.a.tt
 	}
 }
 
@@ -293,6 +362,10 @@ spn_confrontation.0011 = {
 		scope:spn_created_hunter = { 
 			add_character_flag = {
 				flag = supernatural_embrace_hunter
+			}
+			hidden_effect = { # 2.34: see spn_confrontation.0001
+				add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 75 } }
+				add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 5 75 } }
 			}
 			save_scope_as = spn_new_created_hunter 
 		}
@@ -435,6 +508,43 @@ spn_confrontation.0011 = {
 			} 
 		}
 	}
+
+	# 2.34 -- the compel. Third and last: the two options above read as escalating panic; this is the calm answer.
+	# A maxed vampire or hybrid (track at 100) spends 20 track XP to send an unskilled hunter (monster_hunting < 40)
+	# home. A trained hunter knows about compulsion and cannot be turned. Spending 20 at exactly 100 drops the
+	# track a tier -- the tooltip says so. Player-only chain; no ai_chance by rule.
+	option = {
+		name = spn_confrontation.0011.c
+		custom_tooltip = spn_confrontation.0011.c.tt
+		trigger = {
+			OR = {
+				AND = {
+					has_trait = supernatural_vampire
+					has_trait_xp = { trait = supernatural_vampire track = vampirism value >= 100 }
+				}
+				AND = {
+					has_trait = supernatural_hybrid
+					has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 100 }
+				}
+			}
+			scope:spn_new_created_hunter = {
+				has_trait = supernatural_hunter
+				NOT = { has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 40 } }
+			}
+		}
+		stress_impact = {
+			arrogant = minor_stress_impact_loss
+		}
+		if = {
+			limit = { has_trait = supernatural_vampire }
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = -20 }
+		}
+		else_if = {
+			limit = { has_trait = supernatural_hybrid }
+			add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = -20 }
+		}
+		trigger_event = spn_confrontation.0014
+	}
 }
 
 #A Tiring Ordeal
@@ -458,6 +568,7 @@ spn_confrontation.0012 = {
 		# side before now; see spn_confrontation_survivor_xp_effect for why that mattered so much
 		# to the werewolf. Banked before the death, per the standing ordering rule.
 		spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 15 AMOUNT_MAX = 30 }
+		spn_write_confrontation_memory_effect = { TYPE = spn_killed_the_hunter_memory } # 2.34: first time only
 		scope:spn_new_created_hunter = {
 			death = {
 				death_reason = death_battle
@@ -491,11 +602,45 @@ spn_confrontation.0013 = {
 	# than the kill, and it is the only outcome in the chain that used to pay literally nothing.
 	immediate = {
 		spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 5 AMOUNT_MAX = 15 }
+		spn_write_confrontation_memory_effect = { TYPE = spn_escaped_the_hunter_memory } # 2.34: first time only
 	}
 
 	option = {
 		name = spn_confrontation.0013.a
 		custom_tooltip = spn_confrontation.0013.a.tt
+	}
+}
+
+#Sent Home
+spn_confrontation.0014 = {
+	type = character_event
+	title = spn_confrontation.0014.t
+	desc = spn_confrontation.0014.desc
+	theme = intrigue
+
+	override_background = {
+		reference = garden
+	}
+
+	right_portrait = {
+		character = root
+		animation = personality_bold
+	}
+
+	left_portrait = {
+		character = scope:spn_new_created_hunter
+		animation = shame
+	}
+
+	# 2.34 -- the hunter walks away and lives. No survivor XP here: the player paid 20 to skip the roll, and paying
+	# it back would make the compel a net-positive grind. The memory is written once, like the other two outcomes.
+	immediate = {
+		spn_write_confrontation_memory_effect = { TYPE = spn_compelled_the_hunter_memory }
+	}
+
+	option = {
+		name = spn_confrontation.0014.a
+		custom_tooltip = spn_confrontation.0014.a.tt
 	}
 }
 
@@ -531,6 +676,10 @@ spn_confrontation.0021 = {
 		scope:spn_created_hunter = { 
 			add_character_flag = {
 				flag = supernatural_embrace_hunter
+			}
+			hidden_effect = { # 2.34: see spn_confrontation.0001
+				add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 75 } }
+				add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 5 75 } }
 			}
 			save_scope_as = spn_new_created_hunter 
 		}
@@ -618,7 +767,7 @@ spn_confrontation.0021 = {
 		}
 
 		random_list = {
-			50 = {
+			75 = { # 2.34: was 50/50, the only outlier of the six escape rolls
 				custom_tooltip = spn_confrontation.9001.tt
 				modifier = {
 					has_trait = athletic
@@ -637,7 +786,7 @@ spn_confrontation.0021 = {
 				}
 				trigger_event = spn_confrontation.0023
 			}
-			50 = {
+			25 = {
 				modifier = {
 					add = 10
 				}
@@ -673,6 +822,43 @@ spn_confrontation.0021 = {
 			} 
 		}
 	}
+
+	# 2.34 -- the compel. Third and last: the two options above read as escalating panic; this is the calm answer.
+	# A maxed vampire or hybrid (track at 100) spends 20 track XP to send an unskilled hunter (monster_hunting < 40)
+	# home. A trained hunter knows about compulsion and cannot be turned. Spending 20 at exactly 100 drops the
+	# track a tier -- the tooltip says so. Player-only chain; no ai_chance by rule.
+	option = {
+		name = spn_confrontation.0021.c
+		custom_tooltip = spn_confrontation.0021.c.tt
+		trigger = {
+			OR = {
+				AND = {
+					has_trait = supernatural_vampire
+					has_trait_xp = { trait = supernatural_vampire track = vampirism value >= 100 }
+				}
+				AND = {
+					has_trait = supernatural_hybrid
+					has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 100 }
+				}
+			}
+			scope:spn_new_created_hunter = {
+				has_trait = supernatural_hunter
+				NOT = { has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 40 } }
+			}
+		}
+		stress_impact = {
+			arrogant = minor_stress_impact_loss
+		}
+		if = {
+			limit = { has_trait = supernatural_vampire }
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = -20 }
+		}
+		else_if = {
+			limit = { has_trait = supernatural_hybrid }
+			add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = -20 }
+		}
+		trigger_event = spn_confrontation.0024
+	}
 }
 
 #Not In My House
@@ -696,6 +882,7 @@ spn_confrontation.0022 = {
 		# side before now; see spn_confrontation_survivor_xp_effect for why that mattered so much
 		# to the werewolf. Banked before the death, per the standing ordering rule.
 		spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 15 AMOUNT_MAX = 30 }
+		spn_write_confrontation_memory_effect = { TYPE = spn_killed_the_hunter_memory } # 2.34: first time only
 		scope:spn_new_created_hunter = {
 			death = {
 				death_reason = death_battle
@@ -729,10 +916,44 @@ spn_confrontation.0023 = {
 	# than the kill, and it is the only outcome in the chain that used to pay literally nothing.
 	immediate = {
 		spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 5 AMOUNT_MAX = 15 }
+		spn_write_confrontation_memory_effect = { TYPE = spn_escaped_the_hunter_memory } # 2.34: first time only
 	}
 
 	option = {
 		name = spn_confrontation.0023.a
 		custom_tooltip = spn_confrontation.0023.a.tt
+	}
+}
+
+#Sent Home
+spn_confrontation.0024 = {
+	type = character_event
+	title = spn_confrontation.0024.t
+	desc = spn_confrontation.0024.desc
+	theme = intrigue
+
+	override_background = {
+		reference = bedchamber
+	}
+
+	right_portrait = {
+		character = root
+		animation = personality_bold
+	}
+
+	left_portrait = {
+		character = scope:spn_new_created_hunter
+		animation = shame
+	}
+
+	# 2.34 -- the hunter walks away and lives. No survivor XP here: the player paid 20 to skip the roll, and paying
+	# it back would make the compel a net-positive grind. The memory is written once, like the other two outcomes.
+	immediate = {
+		spn_write_confrontation_memory_effect = { TYPE = spn_compelled_the_hunter_memory }
+	}
+
+	option = {
+		name = spn_confrontation.0024.a
+		custom_tooltip = spn_confrontation.0024.a.tt
 	}
 }

@@ -1,0 +1,472 @@
+﻿namespace = spn_memory
+
+#########################################################################################################
+#
+# Supernatural 2.34 -- the memory-triggered flavour events (WORK-ORDER-2.34-v3-BUILD §3).
+#
+# Six one-off events, each anchored on a memory from common/character_memory_types/zz_spn_memories.txt.
+# Governing rule: memories change nothing that already works. These events give stress, a few points of
+# trait-track or lifestyle XP, and an opinion where the copy earns it -- nothing that touches a mechanic.
+#
+# Mechanism copied from vanilla epidemic_events.1010: the trigger requires a memory (cheap gates FIRST, the
+# memory walk LAST), the immediate re-finds it with random_memory and portraits the participant. Inside
+# random_memory `this` is the MEMORY, so every character effect sits outside the braces.
+# Polled from yearly_playable_pulse (spn_memory_flavour_pulse, 10_spn_on_actions.txt), player-only, one-shot
+# behind a character flag. Polling, not on_death, so every save that already has dead trainers and old
+# makers picks them up on the first pulse after install.
+#
+# Voice: second person, concrete, short sentences; options are first-person intent (RULE-supernatural-event-writing-voice).
+#
+#########################################################################################################
+
+#########################################################################################################
+# ① HUNTER -- The One Who Started It. Trainer dead a year or more.
+#########################################################################################################
+spn_memory.0001 = {
+	type = character_event
+	title = spn_memory.0001.t
+	desc = spn_memory.0001.desc
+	theme = mental_break
+	override_background = { reference = study }
+
+	left_portrait = {
+		character = root
+		animation = grief
+	}
+	right_portrait = {
+		character = scope:spn_dead_trainer
+		animation = dead # the participant IS dead here -- do not copy the "dead sires cannot be portraited" guards
+	}
+
+	trigger = {
+		has_trait = supernatural_hunter
+		NOT = { has_character_flag = spn_mourned_my_trainer }
+		any_memory = {
+			has_memory_type = spn_became_hunter_memory
+			trigger_if = {
+				limit = { exists = memory_participant:trainer }
+				memory_participant:trainer = {
+					is_alive = no
+					time_since_death = { years >= 1 }
+				}
+			}
+			trigger_else = { always = no }
+		}
+	}
+
+	immediate = {
+		random_memory = {
+			limit = {
+				has_memory_type = spn_became_hunter_memory
+				exists = memory_participant:trainer
+				memory_participant:trainer = {
+					is_alive = no
+					time_since_death = { years >= 1 }
+				}
+			}
+			memory_participant:trainer = { save_scope_as = spn_dead_trainer }
+		}
+		add_character_flag = spn_mourned_my_trainer
+	}
+
+	# Say the words over the grave
+	option = {
+		name = spn_memory.0001.a
+		add_stress = medium_stress_impact_loss
+		hidden_effect = {
+			add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = 5 }
+		}
+	}
+	# The work does not stop
+	option = {
+		name = spn_memory.0001.b
+		add_stress = minor_stress_impact_loss
+	}
+}
+
+#########################################################################################################
+# ② VAMPIRE -- A Hundred Years. The turning memory is a century old.
+#########################################################################################################
+spn_memory.0002 = {
+	type = character_event
+	title = spn_memory.0002.t
+	desc = {
+		desc = spn_memory.0002.desc.intro
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_old_maker }
+				desc = spn_memory.0002.desc.maker_alive
+			}
+			desc = spn_memory.0002.desc.alone
+		}
+	}
+	theme = mental_break
+	override_background = { reference = bedchamber }
+
+	left_portrait = {
+		character = root
+		animation = thinking
+	}
+	right_portrait = {
+		character = scope:spn_old_maker # saved only when alive; an unsaved scope in a portrait slot is idiomatic (91 vanilla events)
+		animation = idle
+	}
+
+	trigger = {
+		has_trait = supernatural_vampire
+		NOT = { has_character_flag = spn_hundred_years_done }
+		any_memory = {
+			OR = {
+				has_memory_type = spn_became_vampire_memory
+				has_memory_type = spn_woke_a_vampire_memory
+				has_memory_type = spn_rose_in_battle_memory
+				has_memory_type = spn_rose_in_battle_maker_memory
+				has_memory_type = spn_rose_in_battle_feller_memory
+				has_memory_type = spn_rose_in_battle_both_memory
+			}
+			memory_age_years >= 100
+		}
+	}
+
+	immediate = {
+		random_memory = {
+			limit = {
+				OR = {
+					has_memory_type = spn_became_vampire_memory
+					has_memory_type = spn_woke_a_vampire_memory
+					has_memory_type = spn_rose_in_battle_memory
+				has_memory_type = spn_rose_in_battle_maker_memory
+				has_memory_type = spn_rose_in_battle_feller_memory
+				has_memory_type = spn_rose_in_battle_both_memory
+				}
+				memory_age_years >= 100
+			}
+			if = {
+				limit = {
+					exists = memory_participant:maker
+					memory_participant:maker = { is_alive = yes }
+				}
+				memory_participant:maker = { save_scope_as = spn_old_maker }
+			}
+		}
+		add_character_flag = spn_hundred_years_done
+	}
+
+	# Read the memory again
+	option = {
+		name = spn_memory.0002.a
+		add_stress = medium_stress_impact_loss
+	}
+	# Go and find them
+	option = {
+		name = spn_memory.0002.b
+		trigger = { exists = scope:spn_old_maker }
+		hidden_effect = {
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = 5 }
+		}
+		add_stress = minor_stress_impact_loss
+	}
+	# Feed, and stop counting
+	option = {
+		name = spn_memory.0002.c
+		add_stress = medium_stress_impact_loss
+	}
+}
+
+#########################################################################################################
+# ③ WEREWOLF -- It Went Into Them. You were clawed into it; your child was born into it.
+#########################################################################################################
+spn_memory.0003 = {
+	type = character_event
+	title = spn_memory.0003.t
+	desc = spn_memory.0003.desc
+	theme = family
+	override_background = { reference = garden }
+
+	left_portrait = {
+		character = root
+		animation = worry
+	}
+	right_portrait = {
+		character = scope:spn_born_child
+		animation = idle
+	}
+
+	trigger = {
+		has_trait = supernatural_werewolf
+		NOT = { has_character_flag = spn_told_my_born_child }
+		any_child = {
+			is_alive = yes
+			age >= 10
+			has_trait = supernatural_werewolf
+			has_character_flag = spn_born_werewolf
+		}
+		any_memory = {
+			OR = {
+				has_memory_type = spn_became_werewolf_memory
+				has_memory_type = spn_woke_a_werewolf_memory
+			}
+		}
+	}
+
+	immediate = {
+		random_child = {
+			limit = {
+				is_alive = yes
+				age >= 10
+				has_trait = supernatural_werewolf
+				has_character_flag = spn_born_werewolf
+			}
+			save_scope_as = spn_born_child
+		}
+		add_character_flag = spn_told_my_born_child
+	}
+
+	# Tell them what I am
+	option = {
+		name = spn_memory.0003.a
+		scope:spn_born_child = {
+			add_opinion = { target = root modifier = confided_in_me_opinion }
+		}
+		hidden_effect = {
+			spn_give_knowledge_of_lycan_secret = { CHARACTER = scope:spn_born_child }
+		}
+		add_stress = medium_stress_impact_loss
+	}
+	# Let them find out on their own
+	option = {
+		name = spn_memory.0003.b
+		add_stress = minor_stress_impact_gain
+	}
+}
+
+#########################################################################################################
+# ④ HYBRID -- Two Bloods. One track has run far ahead of the other.
+#########################################################################################################
+spn_memory.0004 = {
+	type = character_event
+	title = spn_memory.0004.t
+	desc = {
+		desc = spn_memory.0004.desc.intro
+		first_valid = {
+			triggered_desc = {
+				trigger = { has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 75 } }
+				desc = spn_memory.0004.desc.blood_ahead
+			}
+			desc = spn_memory.0004.desc.wolf_ahead
+		}
+	}
+	theme = mental_break
+	override_background = { reference = alley_night }
+
+	left_portrait = {
+		character = root
+		animation = stress
+	}
+
+	trigger = {
+		has_trait = supernatural_hybrid
+		NOT = { has_character_flag = spn_two_bloods_done }
+		OR = {
+			AND = {
+				has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 75 }
+				NOT = { has_trait_xp = { trait = supernatural_hybrid track = hybrid_lycanthropy value >= 26 } }
+			}
+			AND = {
+				has_trait_xp = { trait = supernatural_hybrid track = hybrid_lycanthropy value >= 75 }
+				NOT = { has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 26 } }
+			}
+		}
+		any_memory = {
+			OR = {
+				has_memory_type = spn_became_hybrid_memory
+				has_memory_type = spn_woke_a_hybrid_memory
+			}
+		}
+	}
+
+	immediate = {
+		add_character_flag = spn_two_bloods_done
+	}
+
+	# Lean into the half that is winning
+	option = {
+		name = spn_memory.0004.a
+		if = {
+			limit = { has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 75 } }
+			add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = 5 }
+		}
+		else = {
+			add_trait_xp = { trait = supernatural_hybrid track = hybrid_lycanthropy value = 5 }
+		}
+		add_stress = medium_stress_impact_loss
+	}
+	# Feed the half that is starving -- the mechanically valuable one costs the most
+	option = {
+		name = spn_memory.0004.b
+		if = {
+			limit = { has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 75 } }
+			add_trait_xp = { trait = supernatural_hybrid track = hybrid_lycanthropy value = 10 }
+		}
+		else = {
+			add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = 10 }
+		}
+		add_stress = minor_stress_impact_gain
+	}
+}
+
+#########################################################################################################
+# ⑤ DEMON -- Something in the Blood. A demon-blooded (demon0) fourteen-year-old, on their birthday.
+# Fired from on_birthday (spn_on_demon_blood_birthday), not the playable pulse: a courtier's child is not
+# playable, and this is the child's event. When the child is AI and a parent is the player, .0006 fires
+# on the parent instead. Never touches whether they become a demon -- magic_ev3.75 owns that.
+#########################################################################################################
+spn_memory.0005 = {
+	type = character_event
+	title = spn_memory.0005.t
+	desc = {
+		desc = spn_memory.0005.desc.intro
+		first_valid = {
+			triggered_desc = {
+				trigger = { NOT = { any_parent = { is_a_demon_trigger = no } } }
+				desc = spn_memory.0005.desc.both
+			}
+			desc = spn_memory.0005.desc.half
+		}
+	}
+	theme = secret
+	override_background = { reference = bedchamber }
+
+	left_portrait = {
+		character = root
+		animation = nervous
+	}
+	right_portrait = {
+		character = scope:spn_demon_parent
+		animation = idle
+	}
+
+	trigger = {
+		has_trait = demon0
+		NOT = { has_character_flag = spn_demon_blood_done }
+		any_memory = { has_memory_type = spn_demon_blood_memory }
+	}
+
+	immediate = {
+		random_parent = {
+			limit = { is_alive = yes is_a_demon_trigger = yes }
+			save_scope_as = spn_demon_parent
+		}
+		add_character_flag = spn_demon_blood_done
+	}
+
+	# Whatever this is, it is mine
+	option = {
+		name = spn_memory.0005.a
+		add_stress = medium_stress_impact_loss
+	}
+	# Tell no one
+	option = {
+		name = spn_memory.0005.b
+		add_stress = minor_stress_impact_gain
+	}
+	# Ask my mother/father what I am
+	option = {
+		name = spn_memory.0005.c
+		trigger = { exists = scope:spn_demon_parent }
+		add_opinion = { target = scope:spn_demon_parent modifier = confided_in_me_opinion }
+		add_stress = medium_stress_impact_loss
+	}
+}
+
+# ⑤b -- the same birthday, seen by a player parent when the child is AI.
+spn_memory.0006 = {
+	type = character_event
+	title = spn_memory.0006.t
+	desc = {
+		desc = spn_memory.0006.desc.intro
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_demon_child = { NOT = { any_parent = { is_a_demon_trigger = no } } } }
+				desc = spn_memory.0006.desc.both
+			}
+			desc = spn_memory.0006.desc.half
+		}
+	}
+	theme = secret
+	override_background = { reference = bedchamber }
+
+	left_portrait = {
+		character = root
+		animation = worry
+	}
+	right_portrait = {
+		character = scope:spn_demon_child
+		animation = nervous
+	}
+
+	trigger = { exists = scope:spn_demon_child }
+
+	# Tell them what they are
+	option = {
+		name = spn_memory.0006.a
+		scope:spn_demon_child = {
+			add_opinion = { target = root modifier = confided_in_me_opinion }
+		}
+		add_stress = minor_stress_impact_loss
+	}
+	# Let it stay quiet a while longer
+	option = {
+		name = spn_memory.0006.b
+		add_stress = minor_stress_impact_gain
+	}
+}
+
+#########################################################################################################
+# ⑥ MAGE -- What the Word Meant. Thirty years a mage.
+#########################################################################################################
+spn_memory.0007 = {
+	type = character_event
+	title = spn_memory.0007.t
+	desc = {
+		desc = spn_memory.0007.desc.intro
+		first_valid = {
+			triggered_desc = {
+				trigger = { has_trait_xp = { trait = archmage track = secret_knowledge value >= 100 } } # "Legendary Mage" is archmage at 100 secret_knowledge, not a second trait
+				desc = spn_memory.0007.desc.legendary
+			}
+			desc = spn_memory.0007.desc.mage
+		}
+	}
+	theme = learning
+	override_background = { reference = magic_academy_lib }
+
+	left_portrait = {
+		character = root
+		animation = pondering
+	}
+
+	trigger = {
+		has_trait = archmage
+		NOT = { has_character_flag = spn_what_the_word_meant_done }
+		any_memory = {
+			has_memory_type = spn_became_a_mage_memory
+			memory_age_years >= 30
+		}
+	}
+
+	immediate = {
+		add_character_flag = spn_what_the_word_meant_done
+	}
+
+	# There is more to read
+	option = {
+		name = spn_memory.0007.a
+		add_magic_lifestyle_xp = minor_lifestyle_xp
+	}
+	# Close the book
+	option = {
+		name = spn_memory.0007.b
+		add_stress = medium_stress_impact_loss
+	}
+}

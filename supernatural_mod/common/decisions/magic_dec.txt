@@ -523,7 +523,7 @@ create_potion_decision = {
 				}
 				has_trait = lifestyle_herbalist
 			}
-			has_perk = combat_spells_p3_perk
+			OR = { has_perk = combat_spells_p3_perk has_perk = combat_spells_perk } # 2.34 (Supernatural): the hunter's Combat Spells perk reaches the Witcher's elixirs
 		}
 	}
 	is_valid_showing_failures_only = {
@@ -1981,8 +1981,14 @@ witch_hunting_decision = {
 		is_imprisoned = no
 		is_adult = yes
 		#trait_is_criminal_in_faith_trigger = { TRAIT = trait:witch FAITH = root.faith GENDER_CHARACTER = root }
-		has_trait = witch_hunter
-		
+		# 2.34 (Supernatural): witch_hunter is the CAPSTONE of the witch-hunter tree ("True Witch Hunter"); you should not
+		# need it to begin hunting. The hunt opens on the first witch_hunting track threshold, or on the tree's root perk,
+		# whose tooltip has always promised exactly this. The trait stays as a branch for the paths that grant it directly.
+		OR = {
+			has_trait = witch_hunter
+			has_perk = antimage_perk
+			has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 25 }
+		}
 	}
 
 	#is_valid_showing_failures_only = {
@@ -2626,7 +2632,10 @@ become_fallen_hunter_decision = {
 	decision_group_type = major
 	cooldown = { years = 5 }
 	effect = {
-		remove_trait = supernatural_hunter
+		# 2.34: was a bare remove_trait, which left spn_known_hunter and the hunter secret behind (Workshop report, Aug 2026).
+		# spn_initiate.3002 is the mod's one complete hunter cleanup; use it so the two never drift apart again.
+		show_as_tooltip = { remove_trait = supernatural_hunter }
+		hidden_effect = { trigger_event = spn_initiate.3002 }
 		#add_trait_force_tooltip = witch_hunter2
 		give_witch_secret_or_trait_effect2 = yes
 		hidden_effect = {

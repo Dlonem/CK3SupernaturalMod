@@ -35,6 +35,13 @@ antimage_perk = {
 		}
 	}
 	
+	# 2.34: the root perk carried no payload at all (the monster-hunter root gives +2/+2/+2). The ability its tooltip
+	# advertises is now real: antimage_perk is an OR branch on witch_hunting_decision.
+	character_modifier = {
+		learning = 2
+		intrigue = 2
+		prowess = 2
+	}
 	effect = {
 		custom_description_no_bullet = {
 			text = antimage_perk_custom_effect
@@ -104,13 +111,15 @@ combat_spells_perk = {
 
 	parent = antimage_perk
 	
+	# 2.34: the power_saturated1 -> 2 upgrade was dead -- every grant of power_saturated1 is spellcaster/demon content,
+	# all of which supernatural_hunter opposes. The perk now has a real payload, and the tooltip it always showed
+	# (Create Potion, the Witcher's elixirs) is true: create_potion_decision accepts this perk since 2.34.
+	character_modifier = {
+		prowess = 2
+		learning = 1
+	}
 	effect = {
 		custom_tooltip = combat_spells_p3_perk_effect
-		if = { limit = { has_character_modifier = power_saturated1 }
-			remove_character_modifier = power_saturated1
-			add_character_modifier = power_saturated2
-		}
-		
 	}
 }
 
@@ -140,10 +149,12 @@ protection_runes_perk = {
 	parent = mageslayer_perk
 	
 	effect = {
-
 		custom_tooltip = protective_runes_perk_effect
 		custom_tooltip = protective_runes_perk_effect2
-		
+		# 2.34: the witch-tree perk is `protective_runes_perk` (all 31 protection gates test that id); this hunter perk is
+		# `protection_runes_perk`, one letter off, and conferred nothing. Deliberate design -- a hunter cannot be a witch,
+		# so granting the witch-tree perk is the clean way to give them its protection.
+		hidden_effect = { add_perk = protective_runes_perk }
 	}
 }
 
@@ -266,8 +277,11 @@ witch_hunter_perk = {
 	
 	parent = hunter_academy_perk
 	parent = hunter_training_perk
+
+	trait = witch_hunter # 2.34: the UI advertisement vanilla pairs with add_trait_force_tooltip in 18/18 capstones
 	
 	effect = {
 		add_trait_force_tooltip = witch_hunter
+		hidden_effect = { set_focus = no } # 2.34: every other capstone in the mod clears the focus
 	}
 }
