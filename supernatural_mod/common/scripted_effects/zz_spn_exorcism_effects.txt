@@ -1,0 +1,328 @@
+﻿# Supernatural 2.35 PART TWO -- "The Bridge". EXORCISM: the mod's first non-lethal answer to a demon, and the
+# only thing in it that can end a Prince of Hell. WORK-ORDER-2.35-PART-TWO-THE-BRIDGE §5.
+#
+# WHY THIS IS NOT FLAVOUR. Before this file the mod's only demon-removal verb was `death`. Upstream's
+# banish_demon does not banish -- it runs `death = natural` and calls it banishment in the tooltip
+# (00_magic_spells_effects.txt:906) -- every Greater Demon is immune to it (00_magic_interactions.txt:1114),
+# demons are immortal, demon+human births are demon-blooded at 50-90%, and demonic_courtier_decision lets
+# every Greater Demon spawn another demon forever on a four-year cooldown. The demon population compounded
+# and had no sink. This is the sink.
+#
+# THOMAS'S DESIGN, verbatim (9 Sep 2026): "perhaps the exorcising thing performs better the higher your monster
+# hunting is, but then exorcising it provides witch hunting XP, just a small amount. That way there's an
+# opportunity to gain it." So the roll is mostly monster hunting and the reward is always witch hunting, win or
+# lose. It is the only place in the mod where work on one track pays into the other -- which is what eventually
+# makes a career monster hunter able to do this at all.
+#
+# It costs no magic power (E6). That is the whole point of it: exorcism is the hunter's answer where
+# banish_demon is the mage's.
+#
+# TWO ENDINGS, and which one you get is not up to you (§5.4, §5.5):
+#   MADE      -- there was a person under it. Exorcism gives them back. spn_hunt_demon_was_mortal_trigger.
+#   SUMMONED  -- there was never a person. The smoke goes home and the body it wore cannot stand up.
+#
+# Named demons are refused outright (E5): Lilith does not go home because a man with a crucifix asked her to.
+#
+# SCOPES at every call site: scope:spn_hunter (the hunter), scope:spn_defender (the demon),
+# scope:spn_hunt_activity, scope:spn_hunt_county.
+
+# ==========================================================================================================
+# THE ROLL. Root = the hunter. The value is spn_hunt_exorcism_value (20_spn_utility_values.txt), which carries
+# the whole arithmetic and a worked table in its own header.
+# ==========================================================================================================
+spn_hunt_exorcise_effect = {
+	# Thomas's bridge, paid either way: a man learns the words by saying them at something that did not
+	# listen just as surely as at something that did.
+	add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 5 12 } }
+	random = {
+		chance = { value = spn_hunt_exorcism_value }
+		add_character_flag = { flag = spn_exorcism_held days = 1 }
+	}
+	if = {
+		limit = { has_character_flag = spn_exorcism_held }
+		remove_character_flag = spn_exorcism_held
+		spn_hunt_set_outcome_effect = { OUTCOME = exorcised }
+		# BANK FIRST. The conclusion pays the county restore and the hunter's prestige out of these two, and
+		# both are read off a demon that is about to stop existing one way or the other.
+		scope:spn_defender = {
+			save_scope_value_as = { name = spn_hunt_exorcised_track value = spn_hunt_creature_track_value }
+		}
+		scope:spn_hunt_activity = {
+			set_variable = { name = spn_hunt_slain_kind value = flag:demon }
+			set_variable = { name = spn_hunt_slain_track value = scope:spn_hunt_exorcised_track }
+		}
+		scope:spn_defender = {
+			# The household, from a live demon (§10). Without this, a demon ended by exorcism left no orphan
+			# at all -- the banking used to live inside the fight, and neither of this release's two new
+			# endings goes through it.
+			spn_hunt_bank_the_household_effect = yes
+			if = {
+				limit = { spn_hunt_demon_was_mortal_trigger = yes }
+				spn_exorcism_restore_the_person_effect = yes
+			}
+			else = {
+				spn_exorcism_collapse_the_host_effect = yes
+			}
+		}
+	}
+	else = {
+		# §5.3 -- "beat the snot out of him and send him running." Failure does NOT kill the hunter. It drops
+		# him into the part-one fight at -20, with Break It Off available on the way out.
+		scope:spn_hunt_activity = {
+			if = {
+				limit = { NOT = { exists = var:spn_hunt_fight_bonus } }
+				set_variable = { name = spn_hunt_fight_bonus value = 0 }
+			}
+			change_variable = { name = spn_hunt_fight_bonus subtract = 20 }
+		}
+		trigger_event = spn_hunt.0166
+	}
+}
+
+# ==========================================================================================================
+# §5.5 THE SUMMONED ONE. Scope: the demon.
+#
+# A generic_demon_character or a named template was never a person -- it is smoke wearing one. The smoke goes
+# home and the body fails. Thomas's lore call, 9 Sep 2026: "if demons are from hell and they're black smoke...
+# perhaps the body collapses after the exorcism and they die."
+#
+# AND THIS IS THE CLEANUP NOBODY ELSE DOES. Every mortal whose soul this demon held is freed. Upstream leaves
+# those mortals permanently soulless on every break path there is -- the demon dies, the cyrograph does not,
+# and no_soul_modifier sits on a man forever with nothing on the other end of it. That is the single most
+# natural improvement in this release and it costs one iterator, once, on an event that fires perhaps twice a
+# campaign.
+#
+# ORDER: the souls are freed from a LIVE demon (my_soul_owner points at a character, and reading it after the
+# death is asking a question of a scope that has stopped existing). The death is the last line in the file.
+# ==========================================================================================================
+spn_exorcism_collapse_the_host_effect = {
+	save_scope_as = spn_exorcised_demon
+	spn_exorcism_free_the_souls_effect = yes
+	if = {
+		limit = { exists = scope:spn_hunter }
+		scope:spn_hunter = {
+			add_prestige = { value = minor_prestige_value multiply = 3 }
+			spn_write_sent_it_home_memory_effect = { DEMON = scope:spn_exorcised_demon }
+		}
+	}
+	# LAST.
+	death = { death_reason = spn_death_exorcised }
+}
+
+# Scope: the demon (alive). Frees every mortal holding a cyrograph with this demon on the other end of it.
+#
+# every_living_character with a variable test is the only way to ask this question -- my_soul_owner is written
+# on the MORTAL and points at the demon, and there is no reverse index anywhere in the layer. It is a full-world
+# iterator and it is deliberately accepted: this runs once, at the end of a hunt, on an event a campaign sees
+# once or twice. The no_soul_modifier test is what keeps it from touching anyone it should not.
+spn_exorcism_free_the_souls_effect = {
+	save_scope_as = spn_exorcism_soul_owner
+	every_living_character = {
+		limit = {
+			has_character_modifier = no_soul_modifier
+			var:my_soul_owner ?= scope:spn_exorcism_soul_owner
+		}
+		remove_variable = my_soul_owner
+		remove_character_modifier = no_soul_modifier
+		if = {
+			limit = { has_character_flag = cyro_is_still_not_over_flag }
+			remove_character_flag = cyro_is_still_not_over_flag
+		}
+		send_interface_toast = {
+			type = event_toast_effect_good
+			title = spn_exorcism_soul_returned_toast
+			left_icon = this
+			right_icon = scope:spn_exorcism_soul_owner
+			custom_tooltip = spn_exorcism_soul_returned_tt
+		}
+	}
+}
+
+# ==========================================================================================================
+# §5.4 THE MADE ONE. Scope: the demon. There is a person under this and exorcism gives them back.
+#
+# WHICH PATH IS BUILT, AND WHY (Thomas, 9 Sep 2026, deciding this before going to bed):
+#
+# `set_age` and `change_age` are real script effects and are verified in vanilla -- set_age = 50
+# (00_priest_character_template.txt:1084), set_age = 100 (legend_spread_events_8.txt:4006), set_age = { 35 60 }
+# (ep3_camp_party_events.txt:1778), change_age = scope:heir.age (intrigue_scheming_events.txt:3694). Thomas was
+# right about this and the v1 order was wrong.
+#
+# BUT every vanilla use is on a freshly CREATED character inside a saved scope. Applying it to a long-lived
+# existing character -- a demon that has been in the world for two hundred years -- is very likely fine and is
+# not proven by precedent, and it cannot be boot-tested overnight. His instruction: take the fallback, build
+# the freed human as a NEW character with set_age inside create_character (which vanilla does prove), and write
+# the unproven path in beside it, commented and labelled, so it can be flipped after one console test.
+#
+# So: BUILT = create a new person and let the demon's body go. COMMENTED = restore the existing character in
+# place. Boot line §13.13 is the test that decides which one ships.
+#
+# Either way the story is the same and it is the better one: they come back whole, not decrepit; they come back
+# young, because whatever was wearing them was not aging them; they come out of Hell's house, because
+# house_hell's English display name is literally "Hellion" (ev1_l_english.yml:339) and nothing in the mod moves
+# anybody in or out of it at runtime; and they owe the hunter the rest of their life.
+# ==========================================================================================================
+spn_exorcism_restore_the_person_effect = {
+	# ---- BANK EVERYTHING FIRST. The standing ordering rule, and here it is load-bearing rather than tidy:
+	# every field below is read off a character this effect is about to kill.
+	save_scope_as = spn_exorcised_demon
+	spn_exorcism_free_the_souls_effect = yes
+
+	# ---- THE BUILT PATH (fallback, per Thomas's overnight instruction): a new person, at the demon's own
+	# location, in the demon's culture and faith, aged 25-40 by set_age inside create_character.
+	create_character = {
+		location = scope:spn_exorcised_demon.location
+		culture = scope:spn_exorcised_demon.culture
+		faith = scope:spn_exorcised_demon.faith
+		gender = scope:spn_exorcised_demon
+		save_scope_as = spn_freed_person
+		after_creation = {
+			# The exact vanilla precedent (00_priest_character_template.txt:1084): set_age inside a created
+			# character's own block. Range form, ep3_camp_party_events.txt:1778.
+			set_age = { 25 40 }
+			# They come back whole. Whatever was wearing them was not aging them, and what it did to them
+			# while it was there is not something they keep.
+			spn_remove_negative_age_traits = yes
+			spn_remove_wounds = yes
+			# Ten years of being visibly, physically wrong -- and alive, which is the point.
+			add_character_modifier = { modifier = spn_brought_back_modifier years = 10 }
+			add_character_flag = spn_was_exorcised
+		}
+	}
+
+	# The debt. There is no larger one in this mod.
+	if = {
+		limit = { exists = scope:spn_hunter }
+		scope:spn_freed_person = {
+			add_opinion = { target = scope:spn_hunter modifier = spn_gave_me_back_opinion }
+			# set_relation_benefactor does not exist in this engine version (checked against game/common/
+			# scripted_relations). The written fallback is the relation that actually models this: the man
+			# who pulled you out is your friend for the rest of your life, and the +100 opinion above is
+			# what makes it more than that.
+			set_relation_friend = scope:spn_hunter
+		}
+		scope:spn_hunter = {
+			add_prestige = { value = minor_prestige_value multiply = 4 }
+			add_piety = { value = minor_piety_value multiply = 4 }
+			spn_write_brought_one_back_memory_effect = { PERSON = scope:spn_freed_person }
+			# "The One You Brought Back" -- they ask to enter your court. Take them and you have a courtier
+			# with a life debt; refuse and they go into the world owing you one.
+			trigger_event = { id = spn_hunt.0165 days = { 5 15 } }
+		}
+	}
+
+	# ---- LAST. The body the thing was wearing goes with the thing.
+	#
+	# TODO(boot) §13.13 -- THE OTHER PATH, unproven and therefore commented. If the console test in the
+	# session doc shows set_age is safe on a long-lived existing character, delete the create_character block
+	# above and the death below, and use this instead: the SAME character walks out, which is a better story
+	# and keeps their family, titles and history intact.
+	#
+	#	remove_trait = demon1                        # or demon2 -- branch on has_trait
+	#	spn_remove_negative_age_traits = yes
+	#	if = { limit = { has_perk = inhuman_perk } remove_perk = inhuman_perk }        # ... and the rest of
+	#	if = { limit = { has_perk = archdemon_perk } remove_perk = archdemon_perk }    # 00_magic_3_demon_tree_perks
+	#	set_age = { 25 40 }
+	#	if = { limit = { dynasty ?= dynasty:hell_dynasty } set_to_lowborn = yes }      # 00_bastard_effects.txt:33
+	#	add_character_modifier = { modifier = spn_brought_back_modifier years = 10 }
+	#
+	death = { death_reason = spn_death_exorcised }
+}
+
+# ==========================================================================================================
+# §5.3 BREAK IT OFF. Root = the hunter. scope:spn_defender = the demon.
+#
+# Thomas: "beat the snot out of him and send him running." Not a win, not a death -- a grudge. The demon is
+# driven out of the county and the hunter goes home to a year of not being able to lift his arm.
+#
+# This is also the mid-confrontation off-ramp §8.5 asks for on every branch, and it is the reason failing an
+# exorcism is a bad night rather than the end of a character.
+# ==========================================================================================================
+spn_hunt_break_it_off_effect = {
+	spn_hunt_set_outcome_effect = { OUTCOME = withdrew }
+	add_character_modifier = { modifier = spn_hunter_recovering_modifier years = 1 }
+	# Thomas's rival, earned rather than assigned.
+	set_relation_rival = scope:spn_defender
+	scope:spn_defender = {
+		add_opinion = { target = scope:spn_hunter modifier = spn_drove_me_off_opinion }
+		spn_write_remembers_the_exorcist_memory_effect = { HUNTER = scope:spn_hunter }
+		# Out of the county. A landless demon simply moves; a landed one cannot, so it takes five years of
+		# being conspicuously unwelcome instead and the county's memory of it goes quiet.
+		if = {
+			limit = {
+				is_landed = no
+				exists = domicile
+				exists = scope:spn_hunt_county
+				scope:spn_hunt_county = { exists = title_province }
+			}
+			spn_exorcism_move_demon_away_effect = yes
+		}
+		else = {
+			add_character_modifier = { modifier = spn_driven_off_modifier years = 5 }
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_hunt_county }
+		scope:spn_hunt_county = {
+			remove_county_modifier = spn_menace_modifier
+			remove_variable = spn_menace_culprit
+			remove_variable = spn_menace_kind
+			remove_variable = spn_menace_count
+			remove_variable = spn_menace_notified
+		}
+	}
+}
+
+# Scope: the demon. Move it to a county that is not this one. `move_domicile` is verified vanilla
+# (09_mpo_wars.txt:143, `move_domicile = scope:attacker.capital_province`) and takes a PROVINCE.
+spn_exorcism_move_demon_away_effect = {
+	scope:spn_hunt_county.title_province = {
+		random_neighboring_province = {
+			limit = {
+				is_sea_province = no
+				NOT = { county ?= scope:spn_hunt_county }
+			}
+			save_scope_as = spn_exorcism_elsewhere
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_exorcism_elsewhere }
+		move_domicile = scope:spn_exorcism_elsewhere
+	}
+	else = {
+		add_character_modifier = { modifier = spn_driven_off_modifier years = 5 }
+	}
+}
+
+# ==========================================================================================================
+# §4.5 THE DEMON'S BARGAIN. Root = the hunter. scope:spn_defender = the demon.
+#
+# NOTHING IS REBUILT. The cyrograph is upstream's, it works, and the confrontation simply fires the mortal's
+# side of the existing chain with the hunter as the mortal: cyro_common_offer_effect gives him what any mortal
+# gets (healed, de-aged, +2 to +5 on every skill, the source trait, possibly immortal1 on a good negotiation),
+# and start_magic_cyro_effect takes his soul on a ten-, twenty- or thirty-year timer.
+#
+# Both effects read scope:actor (the demon) and scope:recipient (the mortal), so the whole job here is to set
+# those two scopes and get out of the way.
+#
+# THREE THINGS FALL OUT FOR FREE, and none of them were written for this:
+#   - magic_ev8.18 will come for him in ten to thirty years. The mod has never had a long-tail consequence.
+#   - upstream ALREADY anticipated this exact hunter: magic_ev8.20's renege weight carries +50 if
+#     can_use_banish_spell = yes -- a mortal who has since learned to put demons down will refuse to pay.
+#   - a soulless hunter is a marked man: the demon_conquest CB (01_magic_cb.txt:252) executes soulless
+#     defenders outright.
+# ==========================================================================================================
+spn_hunt_demon_bargain_effect = {
+	spn_hunt_set_outcome_effect = { OUTCOME = bargained }
+	save_scope_as = recipient
+	scope:spn_defender = { save_scope_as = actor }
+	cyro_common_offer_effect = yes
+	start_magic_cyro_effect = yes
+	add_character_modifier = { modifier = spn_took_the_bargain_modifier years = 10 }
+	spn_write_took_the_bargain_memory_effect = { DEMON = scope:spn_defender }
+	# He gave up the hunt as well as the soul. The trail stays exactly where it was -- somebody else's problem
+	# now, and the county never finds out why the man who came stopped asking.
+	scope:spn_defender = {
+		add_opinion = { target = scope:spn_hunter modifier = spn_slew_the_menace_opinion }
+	}
+}

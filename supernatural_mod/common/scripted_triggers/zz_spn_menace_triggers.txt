@@ -1,0 +1,50 @@
+﻿# Supernatural 2.35d -- menace triggers.
+#
+# THIS FILE EXISTS BECAUSE OF A PARSE FAILURE. spn_menace_death_is_public_trigger was defined inside
+# common/on_action/zz_spn_menace_on_actions.txt, where CK3 will not accept a scripted trigger. The
+# parser stopped dead at it and every definition after it in that file -- spn_menace_on_death, the whole
+# on_death hook -- never registered. Nothing had written a county trail since.
+#
+# The trigger below is UNCHANGED from the day it was written; only its address is different.
+
+# 2.35 -- WHAT THE COUNTY CANNOT EXPLAIN. Thomas, 8 Sep 2026: "if you kill somebody like in a tournament,
+# you're not going to get a trail. You're not going to have a trail leading to you."
+#
+# A menace mark means people found something they could not account for. A death a crowd watched, or one the
+# law wrote down, accounts for itself. Until now this hook made no such distinction: a vampire king who
+# executed a traitor, a werewolf knight who won a melee and a hybrid who broke a siege each left the county
+# exactly the same mark as a body found in an alley, and hunters came for all three.
+#
+# death_reason is still deliberately NOT read, for the reason in the header above: root is about to die, and
+# vanilla only ever evaluates that trigger on characters who are ALREADY dead (accolade_on_actions.txt:176
+# tests is_alive = no first, every time). Every test below is on the living root or on the killer.
+#
+# Root = the character about to die. scope:killer is set.
+spn_menace_death_is_public_trigger = {
+	OR = {
+		# The law did it, in front of witnesses, and wrote it down.
+		is_imprisoned = yes
+		# A battlefield. Bodies there are expected and nobody counts the teeth.
+		is_in_army = yes
+		scope:killer = { is_in_army = yes }
+		is_at_war_with = scope:killer
+		# A melee is a place where men die in front of a crowd and everybody knows who won.
+		involved_activity ?= { has_activity_type = activity_tournament }
+	}
+}
+
+# 2.35h -- who a county's suspicion falls on when the one it was watching dies. CHARACTER scope.
+# Deliberately the same definition of "something is wrong with him" the rest of the layer uses -- a
+# creature, or a witch by trait or by secret -- and never a hunter, who is the one person a frightened
+# county would not be frightened of.
+spn_menace_heir_candidate_trigger = {
+	is_alive = yes
+	is_adult = yes
+	NOT = { this = root }
+	NOT = { has_trait = supernatural_hunter }
+	OR = {
+		spn_hunt_is_creature_trigger = yes
+		has_trait = witch
+		any_secret = { secret_type = secret_witch }
+	}
+}

@@ -1,0 +1,269 @@
+﻿namespace = spn_hunt
+
+# Supernatural 2.35 -- THE WITCH HUNT, given something to do.
+#
+# The Witch kind of the Supernatural Hunt shipped thin (work order D10): on_phase_active fired one of the two
+# Witchcraft chain events and then three weeks passed with nothing in them, and the conclusion paid the XP.
+# Thomas, 8 Sep 2026: "Perhaps if you wanted to flesh out some of the witch hunting one so that we could
+# perhaps retire the begin witch hunt decision, that would be really cool."
+#
+# These two events are the hunter's own week, and they are built on the same principle as the Monster Hunt:
+# the person at the end of it is somebody who really lives there. A List of Names is the colour and the work;
+# The Woman They Talk About is the payoff, and it only exists when the county actually holds a witch --
+# whereupon it hands her to the mod's existing resolution (Decide on the Fate of the Witch, spn_hunters.0003)
+# rather than growing a second one beside it.
+#
+# Namespace is shared with 10_spn_hunt_events.txt, the same way 10_spn_trailsman_events.txt shares it. Numbers
+# 0120+ so the witch pool never collides with the monster pool (0100-0111) or the Trailsman's (0400+).
+#
+# Root = the host (activity events). scope:activity is implicit; the shared scopes are bound in immediate.
+
+# A List of Names
+spn_hunt.0120 = {
+	type = activity_event
+	title = spn_hunt.0120.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_hunt_chaplain }
+				desc = spn_hunt.0120.desc
+			}
+			desc = spn_hunt.0120.desc_nochaplain
+		}
+	}
+	theme = faith
+	override_background = { reference = temple_church }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_hunt_chaplain animation = disapproval }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0120 }
+			has_activity_option = { category = special_type option = spn_hunt_kind_witch }
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0120 value = yes } }
+		# Your own chaplain first; failing that, the one who serves the county you are standing in. Both are
+		# real people in real courts -- nothing here is created.
+		random_courtier_or_guest = {
+			limit = { has_council_position = councillor_court_chaplain  is_alive = yes }
+			save_scope_as = spn_hunt_chaplain
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_hunt_chaplain }
+				exists = scope:spn_hunt_county
+			}
+			scope:spn_hunt_county.holder ?= {
+				random_courtier_or_guest = {
+					limit = { has_council_position = councillor_court_chaplain  is_alive = yes }
+					save_scope_as = spn_hunt_chaplain
+				}
+			}
+		}
+	}
+
+	# Read it properly -- learning against the malice in it.
+	option = {
+		name = spn_hunt.0120.a
+		custom_tooltip = spn_hunt.0120.a.tt
+		duel = {
+			skill = learning
+			value = 12
+			localization = spn_hunt_list_duel
+			50 = {
+				desc = spn_hunt.0120.a.success_tt
+				compare_modifier = { value = scope:duel_value multiplier = 2 min = -40 }
+				modifier = { add = 15 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 50 } }
+				min = 5
+				add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 8 15 } }
+				# Two names on that list are the same woman under two spellings, and she is real. If there is
+				# nobody real in this county the lead simply goes nowhere, which is its own answer.
+				trigger_event = { id = spn_hunt.0121 days = { 3 8 } }
+			}
+			50 = {
+				desc = spn_hunt.0120.a.failure_tt
+				compare_modifier = { value = scope:duel_value multiplier = -2 min = -40 }
+				min = 5
+				add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 2 5 } }
+				add_stress = minor_stress_impact_gain
+			}
+		}
+		ai_chance = {
+			base = 50
+			modifier = { add = 20 has_trait = diligent }
+			modifier = { add = 15 learning >= 12 }
+			modifier = { add = -20 has_trait = lazy }
+		}
+	}
+	# Ask who put each name on it.
+	option = {
+		name = spn_hunt.0120.b
+		custom_tooltip = spn_hunt.0120.b.tt
+		add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 5 10 } }
+		if = {
+			limit = {
+				exists = scope:spn_hunt_county
+				scope:spn_hunt_county.holder ?= { NOT = { this = root } }
+			}
+			scope:spn_hunt_county.holder = {
+				add_opinion = { target = root modifier = spn_careful_witch_hunter_opinion }
+			}
+		}
+		ai_chance = {
+			base = 40
+			modifier = { add = 25 has_trait = just }
+			modifier = { add = 20 has_trait = paranoid }
+			modifier = { add = 15 has_trait = cynical }
+			modifier = { add = -20 has_trait = zealous }
+		}
+	}
+	# Burn the list.
+	option = {
+		name = spn_hunt.0120.c
+		custom_tooltip = spn_hunt.0120.c.tt
+		stress_impact = {
+			compassionate = minor_stress_impact_loss
+			just = minor_stress_impact_loss
+			zealous = medium_stress_impact_gain
+		}
+		ai_chance = {
+			base = 15
+			modifier = { add = 30 has_trait = compassionate }
+			modifier = { add = 20 has_trait = cynical }
+			modifier = { add = -40 has_trait = zealous }
+		}
+	}
+}
+
+# The Woman They Talk About -- a real witch, really living in this county.
+spn_hunt.0121 = {
+	type = activity_event
+	title = spn_hunt.0121.t
+	desc = spn_hunt.0121.desc
+	theme = dread
+	override_background = { reference = alley_night }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_hunt_witch animation = fear }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0121 }
+			has_activity_option = { category = special_type option = spn_hunt_kind_witch }
+		}
+		# Only fires when there is somebody real to fire it about. No county witch, no event -- and no
+		# stranger conjured to stand in for one.
+		scope:activity.activity_location.county ?= {
+			holder ?= {
+				OR = {
+					spn_real_witch_candidate_trigger = yes
+					any_courtier_or_guest = { spn_real_witch_candidate_trigger = yes }
+				}
+			}
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0121 value = yes } }
+		scope:spn_hunt_county.holder ?= {
+			if = {
+				limit = { spn_real_witch_candidate_trigger = yes }
+				save_scope_as = spn_hunt_witch
+			}
+			else = {
+				random_courtier_or_guest = {
+					limit = { spn_real_witch_candidate_trigger = yes }
+					save_scope_as = spn_hunt_witch
+				}
+			}
+		}
+	}
+
+	# Take her. Hands off to the mod's own resolution rather than growing a second one.
+	option = {
+		name = spn_hunt.0121.a
+		trigger = { exists = scope:spn_hunt_witch }
+		custom_tooltip = spn_hunt.0121.a.tt
+		add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 10 18 } }
+		hidden_effect = {
+			scope:spn_hunt_witch = { save_scope_as = witch }
+			trigger_event = { id = spn_hunters.0003 days = 2 }
+		}
+		ai_chance = {
+			base = 45
+			modifier = { add = 30 has_trait = zealous }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = 20 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 50 } }
+			modifier = { add = -30 has_trait = compassionate }
+			modifier = { add = -20 has_trait = cynical }
+		}
+	}
+	# Watch her. You leave knowing what she is, and she does not know that you know.
+	option = {
+		name = spn_hunt.0121.b
+		trigger = { exists = scope:spn_hunt_witch }
+		custom_tooltip = spn_hunt.0121.b.tt
+		add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 8 14 } }
+		hidden_effect = {
+			scope:spn_hunt_witch = {
+				random_secret = {
+					limit = {
+						secret_type = secret_witch
+						NOT = { is_known_by = root }
+					}
+					reveal_to = root
+					save_scope_as = spn_witch_secret
+				}
+			}
+			# 2.35g -- A BLACKMAIL HOOK NEEDS THE SECRET IT IS BUILT ON. This threw
+			# "The hook type 'weak_blackmail_hook' requires a secret but none was set" (error.log 9 Sep)
+			# because the add_hook sat OUTSIDE the random_secret above: when that found nothing -- the witch
+			# had no secret, or root already knew it -- the hook was still attempted, with nothing behind it.
+			#
+			# Vanilla's own shape, 00_secret_effects.txt:60-69: guard with can_add_hook, then pass the secret.
+			# The scope is saved inside the random_secret, so it only exists when one was actually revealed.
+			if = {
+				limit = {
+					exists = scope:spn_witch_secret
+					can_add_hook = {
+						target = scope:spn_hunt_witch
+						type = weak_blackmail_hook
+					}
+				}
+				add_hook = {
+					target = scope:spn_hunt_witch
+					type = weak_blackmail_hook
+					secret = scope:spn_witch_secret
+				}
+			}
+		}
+		ai_chance = {
+			base = 35
+			modifier = { add = 30 has_trait = deceitful }
+			modifier = { add = 25 has_trait = patient }
+			modifier = { add = 20 has_trait = calm }
+			modifier = { add = 15 intrigue >= 12 }
+			modifier = { add = -25 has_trait = zealous }
+		}
+	}
+	# Leave her be.
+	option = {
+		name = spn_hunt.0121.c
+		custom_tooltip = spn_hunt.0121.c.tt
+		add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 3 6 } }
+		stress_impact = {
+			compassionate = minor_stress_impact_loss
+			zealous = medium_stress_impact_gain
+		}
+		ai_chance = {
+			base = 15
+			modifier = { add = 35 has_trait = compassionate }
+			modifier = { add = 20 has_trait = craven }
+			modifier = { add = -40 has_trait = zealous }
+		}
+	}
+}

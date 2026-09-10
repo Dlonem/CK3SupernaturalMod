@@ -31,6 +31,24 @@ spn_gain_power.4010 = {
 	option = {
 		name = spn_gain_power.4010.a
 		custom_tooltip = spn_gain_power.4010.a.tt
+		# 2.35 -- the AI takes these decisions now, and this option had no ai_chance at all, so it
+		# defaulted to 100 against the other two and the world fed almost exclusively on its own courtiers.
+		# This is the branch that leaves a body in your own hall -- and the trail with it.
+		ai_chance = {
+			base = 45
+			modifier = { add = 25 has_trait = gluttonous }
+			modifier = { add = 20 has_trait = sadistic }
+			modifier = { add = 15 has_trait = arrogant }
+			modifier = { add = 15 has_trait = callous }
+			modifier = { add = 10 has_trait = brave }
+			modifier = { add = -25 has_trait = paranoid }
+			modifier = { add = -25 has_trait = compassionate }
+			modifier = { add = -20 has_trait = craven }
+			modifier = { add = -15 has_trait = temperate }
+			modifier = { add = -15 has_trait = just }
+			# Already exposed. There is less left to protect.
+			modifier = { add = 20 has_trait = spn_known_vampire }
+		}
 
 		random_list = {
 			70 = { #Chance of No Complications
@@ -375,6 +393,24 @@ spn_gain_power.4020 = {
 	option = {
 		name = spn_gain_power.4020.a
 		custom_tooltip = spn_gain_power.4020.a.tt
+		# 2.35 -- the AI takes these decisions now, and this option had no ai_chance at all, so it
+		# defaulted to 100 against the other two and the world fed almost exclusively on its own courtiers.
+		# This is the branch that mauls one of your own -- and the trail comes with it.
+		ai_chance = {
+			base = 45
+			modifier = { add = 25 has_trait = gluttonous }
+			modifier = { add = 20 has_trait = sadistic }
+			modifier = { add = 15 has_trait = arrogant }
+			modifier = { add = 15 has_trait = callous }
+			modifier = { add = 10 has_trait = brave }
+			modifier = { add = -25 has_trait = paranoid }
+			modifier = { add = -25 has_trait = compassionate }
+			modifier = { add = -20 has_trait = craven }
+			modifier = { add = -15 has_trait = temperate }
+			modifier = { add = -15 has_trait = just }
+			# Already exposed. There is less left to protect.
+			modifier = { add = 20 has_trait = spn_known_werewolf }
+		}
 		
 		add_internal_flag = dangerous
 		
@@ -480,7 +516,7 @@ spn_gain_power.4020 = {
 			modifier = { add = -15 has_trait = content }
 		}
 		trigger_event = spn_gain_power.4027
-	}
+	}
 }
 
 ######################################
@@ -655,7 +691,9 @@ spn_gain_power.4024 = {
 	}
 	
 	immediate = { 
-		spn_create_skilled_hunter_effect = { WHO = root }
+		# 2.35 -- a real hunter if one is in reach, and only a spawned one if not. Leaves the same
+		# scope:spn_created_hunter, so everything below is unchanged.
+		spn_find_or_make_hunter_effect = yes
 		scope:spn_created_hunter = { save_scope_as = spn_new_created_hunter }
 	}
 	
@@ -685,6 +723,15 @@ spn_gain_power.4024 = {
 			if = {
 				limit = { exists = scope:spn_new_created_hunter }
 				spn_give_knowledge_of_hybrid_secret = { CHARACTER = scope:spn_new_created_hunter }
+			}
+		}
+		else_if = {
+			# 2.35 -- name the killer. The hunter exists as a saved scope; the death was the only creature-death in the
+			# mod that forgot to say who did it.
+			limit = { exists = scope:spn_new_created_hunter }
+			death = {
+				death_reason = spn_death_silver_arrow_by_hunter_as_werewolf
+				killer = scope:spn_new_created_hunter
 			}
 		}
 		else = {
@@ -762,7 +809,7 @@ spn_gain_power.4015 = {
 		}
 		# He wakes on the verge with a headache and a story nobody believes. Same modifier the
 		# feeding activity leaves on its survivors, so the suspicion chain can read it later.
-		scope:vf_traveller = { add_character_modifier = { modifier = vf_recently_fed_on_modifier years = 3 } }
+		vf_mark_fed_on_effect = { VICTIM = scope:vf_traveller } # 2.35 W2: modifier + a prowl mark on the county
 		stress_impact = { base = minor_stress_impact_loss }
 	}
 }
@@ -852,7 +899,15 @@ spn_gain_power.4026 = {
 		# The cost: somebody across the line is short a few animals and knows which direction the
 		# tracks led. No death roll.
 		scope:vf_herdsman = { add_opinion = { target = root modifier = suspicion_opinion opinion = -20 } }
-		hidden_effect = { vf_local_hunter_notices_effect = yes }
+		hidden_effect = {
+			vf_local_hunter_notices_effect = yes
+			# 2.35 W4 -- the herdsman's county remembers the raid as a werewolf prowl (-1 control, D4). 4027 is a chance
+			# meeting between wolves and leaves no mark.
+			if = {
+				limit = { scope:vf_herdsman = { exists = location  location = { exists = county } } }
+				spn_mark_menace_effect = { COUNTY = scope:vf_herdsman.location.county CULPRIT = root KIND = werewolf SEVERITY = prowl }
+			}
+		}
 	}
 }
 

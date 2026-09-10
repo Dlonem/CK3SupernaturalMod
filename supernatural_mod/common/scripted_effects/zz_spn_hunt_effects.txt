@@ -1,0 +1,1072 @@
+﻿# Supernatural 2.35 -- "The Hunt". The Supernatural Hunt's working parts: the bar, the early warning, the tracking
+# roll, the fight, and the conclusion. WORK-ORDER-2.35-THE-HUNT §5, §6.7-6.9. Events are in
+# events/supernatural_events/10_spn_hunt_events.txt (namespace spn_hunt); the activity is
+# common/activities/activity_types/supernatural_hunt.txt.
+#
+# SCOPES, one convention everywhere (set by spn_hunt_bind_scopes_effect and carried into every event by trigger_event):
+#   scope:spn_hunter        the host
+#   scope:spn_hunt_activity the activity
+#   scope:spn_hunt_county   the county the hunt runs in
+#   scope:spn_culprit       the creature the trail points at (Monster kind)
+#   scope:spn_defender      whoever actually fights the hunter (culprit, proxy or informer)
+#
+# ACTIVITY VARIABLES: spn_hunt_culprit (character), spn_hunt_culprit_track (banked number), spn_hunt_kind (flag),
+#   spn_hunt_success_chance (the bar), spn_hunt_chance_event (the delta the events write), spn_hunt_fight_bonus,
+#   spn_hunt_outcome (flag: slain | proxy_slain | fled | compelled | bought | hunter_beaten | cold | witch),
+#   spn_hunt_host_knows (yes while the host already knows what the culprit is -- banked, see
+#   spn_hunt_refresh_known_effect), spn_hunt_slain_track / spn_hunt_slain_kind (banked at the kill, read by
+#   the conclusion), spn_hunt_lead /
+#   spn_hunt_lead_true (§5.3), spn_hunt_final_stand (Overmatched, press on).
+#
+# THE FIGHT, WORKED (checklist §3; §6.8): the trait tracks weigh more than prowess. Prowess is capped at +-25, the
+# creature's track counts x0.6 (up to +60), the hunter's monster_hunting x0.6 (up to +60).
+#   hunter track 100 / prowess 25 vs vampire track 0 / prowess 40:   defender 50 - 15 + 0 = 35,  hunter 50 + 15 + 60 = 125  -> hunter ~78%
+#   same hunter vs an elder, track 100 / prowess 20:                  defender 50 - 5 + 60 = 105, hunter 50 + 5 + 60 = 115  -> ~52%
+#   a track-0 hunter with 25 prowess vs that elder:                   defender 105,               hunter 55             -> ~34%
+# Kit (Stakes / Silver), daylight, the county's men and hunter guests move var:spn_hunt_fight_bonus, which is
+# taken OFF the defender's side. Guests are hurt, never killed by RNG. Nobody dies until everything is banked.
+
+# ----------------------------------------------------------------------------------------------------------
+# Scopes. Root = the host; scope:activity must exist (activity events and phase hooks provide it).
+# ----------------------------------------------------------------------------------------------------------
+spn_hunt_bind_scopes_effect = {
+	save_scope_as = spn_hunter
+	scope:activity = {
+		save_scope_as = spn_hunt_activity
+		activity_location.county ?= { save_scope_as = spn_hunt_county }
+		if = {
+			limit = { exists = var:spn_hunt_culprit }
+			var:spn_hunt_culprit = { save_scope_as = spn_culprit }
+		}
+	}
+}
+
+# The bar (§6.7). Deltas accumulate in var:spn_hunt_chance_event and the display variable is re-derived from the
+# script value -- the vf_feeding_chance_change_effect shape, so the bar and its own tooltip always agree.
+spn_hunt_chance_change_effect = {
+	custom_tooltip = spn_hunt_chance_change_tt
+	if = {
+		limit = { exists = scope:activity }
+		scope:activity = { spn_hunt_chance_apply_delta_effect = { VALUE = $VALUE$ } }
+	}
+	else_if = {
+		# From the other side's events (The Hunter at Your Door), where only the bound scope exists.
+		limit = { exists = scope:spn_hunt_activity }
+		scope:spn_hunt_activity = { spn_hunt_chance_apply_delta_effect = { VALUE = $VALUE$ } }
+	}
+}
+# ACTIVITY scope. 2.35 -- banks "the host already knows what the culprit is" as var:spn_hunt_host_knows,
+# because spn_hunt_success_chance_value cannot ask the question itself. The knowledge trigger pastes its
+# argument at two different scope depths (once on the host, once inside any_known_secret), so no relative
+# path is correct for both, and `root` is the character whenever an event re-derives the bar. A temporary
+# scope is depth-independent, which is what makes the macro safe here.
+spn_hunt_refresh_known_effect = {
+	remove_variable = spn_hunt_host_knows
+	if = {
+		limit = {
+			exists = activity_host
+			exists = var:spn_hunt_culprit
+		}
+		save_temporary_scope_as = spn_hunt_known_activity
+		var:spn_hunt_culprit = { save_temporary_scope_as = spn_hunt_known_culprit }
+		activity_host = {
+			if = {
+				limit = { spn_hunt_knows_culprit_trigger = { CULPRIT = scope:spn_hunt_known_culprit } }
+				scope:spn_hunt_known_activity = { set_variable = { name = spn_hunt_host_knows value = yes } }
+			}
+		}
+	}
+}
+
+# ACTIVITY scope.
+spn_hunt_chance_apply_delta_effect = {
+	if = {
+		limit = { NOT = { exists = var:spn_hunt_chance_event } }
+		set_variable = { name = spn_hunt_chance_event value = 0 }
+	}
+	change_variable = { name = spn_hunt_chance_event add = $VALUE$ }
+	# Re-asked every time the bar moves, so learning who it is counts the moment the lead lands.
+	spn_hunt_refresh_known_effect = yes
+	set_variable = { name = spn_hunt_success_chance value = spn_hunt_success_chance_value }
+}
+
+spn_hunt_set_outcome_effect = {
+	scope:spn_hunt_activity ?= {
+		set_variable = { name = spn_hunt_outcome value = flag:$OUTCOME$ }
+	}
+}
+
+# ----------------------------------------------------------------------------------------------------------
+# §5.2 Early warning. Root = the host, scopes bound. Every creature standing in the county -- the holder, his
+# court and guests, the culprit if home, and any player located there -- rolls to hear that a stranger is asking
+# about the dead. Ride In Openly makes it certain.
+# ----------------------------------------------------------------------------------------------------------
+spn_hunt_early_warning_effect = {
+	if = {
+		limit = { exists = scope:spn_hunt_county }
+		scope:spn_hunt_county = {
+			holder ?= {
+				if = {
+					limit = { spn_hunt_is_creature_trigger = yes  NOT = { this = scope:spn_hunter } }
+					add_to_list = spn_hunt_locals
+				}
+				every_courtier_or_guest = {
+					limit = { spn_hunt_is_creature_trigger = yes  is_alive = yes  NOT = { this = scope:spn_hunter } }
+					add_to_list = spn_hunt_locals
+				}
+			}
+		}
+		if = {
+			limit = {
+				exists = scope:spn_culprit
+				scope:spn_culprit = { is_alive = yes  location ?= { county ?= { this = scope:spn_hunt_county } } }
+			}
+			scope:spn_culprit = { add_to_list = spn_hunt_locals }
+		}
+		every_player = {
+			limit = {
+				spn_hunt_is_creature_trigger = yes
+				NOT = { this = scope:spn_hunter }
+				location ?= { county ?= { this = scope:spn_hunt_county } }
+			}
+			add_to_list = spn_hunt_locals
+		}
+		every_in_list = {
+			list = spn_hunt_locals
+			limit = { NOT = { has_character_flag = spn_hunt_warned } }
+			add_character_flag = { flag = spn_hunt_warned days = 60 }
+			if = {
+				limit = { scope:spn_hunt_activity = { has_activity_option = { category = spn_hunt_approach option = spn_hunt_approach_open } } }
+				trigger_event = { id = spn_hunt.0020 days = { 2 6 } }
+			}
+			else = {
+				random = {
+					chance = {
+						value = 20
+						add = intrigue
+						add = { value = spn_hunt_creature_track_value multiply = 0.2 }
+						# 2.35 -- THE PRICE OF A NAME. A hunter nobody has heard of can walk into a county
+						# and ask questions for three weeks. One the county already tells stories about
+						# cannot: word runs ahead of him and every creature standing here hears it. Up to
+						# +40, which is the largest single term in this roll and is entirely self-inflicted.
+						scope:spn_hunter = { add = { value = spn_hunter_reputation_value multiply = 8 } }
+						max = 90
+					}
+					trigger_event = { id = spn_hunt.0020 days = { 2 6 } }
+				}
+			}
+		}
+	}
+}
+
+# ----------------------------------------------------------------------------------------------------------
+# §6.8 The end of the tracking phase. Root = the host (phase on_end, guarded to the host), scope:activity set.
+# A false lead (§5.3, D13) is settled first: a veteran, or a learning duel against 15, sees through it (A Name That
+# Led Nowhere); a poor hunter goes to The Wrong Door and the real culprit walks. Then the bar is rolled: found ->
+# the culprit is re-validated -> Cornered; otherwise The Trail Goes Cold.
+# ----------------------------------------------------------------------------------------------------------
+spn_hunt_resolve_tracking_effect = {
+	spn_hunt_bind_scopes_effect = yes
+	# 2.35 PART TWO (§8.5b) -- he already turned round. "This is not my fight" set the outcome three weeks ago
+	# and nothing here should overwrite it with a cold trail he never got near.
+	if = {
+		limit = { scope:spn_hunt_activity = { has_variable = spn_hunt_walked_away } }
+		# Nothing to roll. Re-setting the variable it already holds is the no-op that keeps this a legal
+		# non-empty branch.
+		scope:spn_hunt_activity = { set_variable = { name = spn_hunt_walked_away value = yes } }
+	}
+	# 2.35 PART TWO (§6.2) -- THE WITCH KIND, WHEN IT HAS A TRAIL. The thin kind (D10) still runs upstream's
+	# chain and concludes on outcome `witch`, exactly as it did. But a Witch Hunt ridden to a county carrying
+	# a WITCH menace mark is a real hunt with a real culprit, and it goes down the monster spine instead --
+	# same bar, same roll, same Cornered -- because that spine is already built and a second witch-finding
+	# system is the thing §6 exists to avoid.
+	else_if = {
+		limit = {
+			scope:spn_hunt_activity = {
+				has_activity_option = { category = special_type option = spn_hunt_kind_witch }
+				NOT = { has_variable = spn_hunt_witch_trail }
+			}
+		}
+		# The Witch Hunt kind: the existing Witchcraft chain ran from on_phase_active; the conclusion pays the XP.
+		spn_hunt_set_outcome_effect = { OUTCOME = witch }
+	}
+	else = {
+		# The false lead.
+		if = {
+			limit = {
+				scope:spn_hunt_activity = {
+					exists = var:spn_hunt_lead
+					var:spn_hunt_lead_true ?= flag:no
+					var:spn_hunt_lead = { is_alive = yes }
+				}
+			}
+			scope:spn_hunt_activity.var:spn_hunt_lead = { save_scope_as = spn_hunt_lead }
+			if = {
+				limit = { spn_hunt_reads_the_kind_trigger = yes }
+				add_character_flag = { flag = spn_hunt_saw_through_it days = 30 }
+			}
+			else = {
+				duel = {
+					skill = learning
+					value = 15
+					localization = spn_hunt_lead_duel
+					50 = {
+						desc = spn_hunt_lead_duel_success_tt
+						compare_modifier = { value = scope:duel_value multiplier = 2 min = -40 }
+						add_character_flag = { flag = spn_hunt_saw_through_it days = 30 }
+					}
+					50 = {
+						desc = spn_hunt_lead_duel_failure_tt
+						compare_modifier = { value = scope:duel_value multiplier = -2 min = -40 }
+						add_character_flag = { flag = spn_hunt_wrong_door days = 30 }
+					}
+				}
+			}
+		}
+		if = {
+			limit = { has_character_flag = spn_hunt_wrong_door }
+			remove_character_flag = spn_hunt_wrong_door
+			spn_hunt_set_outcome_effect = { OUTCOME = cold }
+			trigger_event = spn_hunt.0108
+		}
+		else = {
+			if = {
+				limit = { has_character_flag = spn_hunt_saw_through_it }
+				remove_character_flag = spn_hunt_saw_through_it
+				trigger_event = spn_hunt.0107
+			}
+			# The roll. The bar is the one banked on the activity; nothing re-evaluates it live here.
+			random = {
+				chance = { value = scope:spn_hunt_activity.var:spn_hunt_success_chance }
+				add_character_flag = { flag = spn_hunt_found days = 30 }
+			}
+			if = {
+				limit = {
+					has_character_flag = spn_hunt_found
+					exists = scope:spn_culprit
+					scope:spn_culprit = {
+						is_alive = yes
+						is_imprisoned = no
+						spn_is_valid_supernatural_target = yes
+						spn_hunt_is_creature_trigger = yes
+						NOT = { has_character_modifier = spn_gone_to_ground_modifier }
+					}
+					scope:spn_hunt_activity.activity_location = { spn_hunt_culprit_in_reach_trigger = yes }
+				}
+				remove_character_flag = spn_hunt_found
+				trigger_event = spn_hunt.0110
+			}
+			else = {
+				if = {
+					limit = { has_character_flag = spn_hunt_found }
+					remove_character_flag = spn_hunt_found
+				}
+				spn_hunt_set_outcome_effect = { OUTCOME = cold }
+				trigger_event = spn_hunt.0111
+			}
+		}
+	}
+}
+
+# ----------------------------------------------------------------------------------------------------------
+# The fight bonus (§6.4, §6.8). Root = the host, scopes bound, scope:spn_defender set. Kit is judged against the
+# DEFENDER, so a proxy or an informer is measured by what they are, not by what the trail said. Hybrids count as
+# both: either kit +15, neither hurts. Hunter guests +5 each. Cornered's options add daylight and the county's men
+# on top. Stored on the activity as var:spn_hunt_fight_bonus and taken off the defender's side of the duel.
+# ----------------------------------------------------------------------------------------------------------
+spn_hunt_compute_fight_bonus_effect = {
+	scope:spn_hunt_activity = {
+		set_variable = { name = spn_hunt_fight_bonus value = 0 }
+		if = {
+			limit = { has_activity_option = { category = spn_hunt_preparations option = spn_hunt_prep_stakes } }
+			if = {
+				limit = { scope:spn_defender = { OR = { has_trait = supernatural_vampire has_trait = supernatural_hybrid } } }
+				change_variable = { name = spn_hunt_fight_bonus add = 15 }
+			}
+			else_if = {
+				limit = { scope:spn_defender = { has_trait = supernatural_werewolf } }
+				change_variable = { name = spn_hunt_fight_bonus add = -10 }
+			}
+		}
+		else_if = {
+			limit = { has_activity_option = { category = spn_hunt_preparations option = spn_hunt_prep_silver } }
+			if = {
+				limit = { scope:spn_defender = { OR = { has_trait = supernatural_werewolf has_trait = supernatural_hybrid } } }
+				change_variable = { name = spn_hunt_fight_bonus add = 15 }
+			}
+			else_if = {
+				limit = { scope:spn_defender = { has_trait = supernatural_vampire } }
+				change_variable = { name = spn_hunt_fight_bonus add = -10 }
+			}
+		}
+		every_attending_character = {
+			limit = { has_trait = supernatural_hunter  NOT = { this = scope:spn_hunter } }
+			scope:spn_hunt_activity = { change_variable = { name = spn_hunt_fight_bonus add = 5 } }
+		}
+		# Read the Signs (learning): +5 in the fight, on top of its +5 on the bar.
+		if = {
+			limit = { has_activity_option = { category = spn_hunt_approach option = spn_hunt_approach_signs } }
+			change_variable = { name = spn_hunt_fight_bonus add = 5 }
+		}
+		# 2.35b -- you read a hybrid's wounds as two animals and prepared for both (Two Different Animals).
+		# The kit you brought is half right whichever it turns out to be, and this is where that lands.
+		if = {
+			limit = { has_variable = spn_hunt_split_prep }
+			change_variable = { name = spn_hunt_fight_bonus subtract = 8 }
+		}
+		# 2.35 -- HE WAS ALREADY WORKING THIS COUNTY. Another Man's Trail: a real local hunter who agreed to
+		# ride with you. Worth more than an invited guest's +5, because he has been here longer than you have
+		# and he knows which doors have already been knocked on.
+		if = {
+			limit = { scope:spn_hunter = { has_character_flag = spn_hunt_rode_together } }
+			change_variable = { name = spn_hunt_fight_bonus add = 12 }
+		}
+		# 2.35 -- CAUGHT IN THE ACT. Thomas, 8 Sep 2026: "if a werewolf is getting hunted and a hunter comes
+		# to get him during their own activity." A creature standing in a room it went to specifically to
+		# feed in, with the blood still wet, has no story to tell, nowhere in that room to be, and both hands
+		# full. Worth more than daylight, and it is the one term the creature chose to hand him.
+		if = {
+			limit = { scope:spn_defender = { involved_activity ?= { has_activity_type = vampire_feeding } } }
+			change_variable = { name = spn_hunt_fight_bonus add = 20 }
+		}
+	}
+	spn_hunt_count_the_pack_effect = yes
+}
+
+# ----------------------------------------------------------------------------------------------------------
+# 2.35 -- THE PACK. Everything above is what the HUNTER brought. This is what the county brought.
+#
+# A creature does not necessarily stand alone at its own door. Every other creature standing in the hunted
+# county -- the holder, his court and guests, and any player located there, read exactly the way
+# spn_hunt_early_warning_effect reads them -- is offered the chance to side with the one the hunter came for.
+# Blood and claw (a maker, a progeny, a wolf you clawed or who clawed you) weigh double; a creature that
+# cannot stand the defender stays indoors and is glad to. Nothing here spawns anybody.
+#
+# Calibrated against the terms above, which are the whole scale: kit +-15, daylight +15, the county's men +10,
+# each hunter guest +5. A stranger who stands with the creature is -6 and kin are -12, capped at -36 -- so a
+# well-prepared hunter with friends can still take a small nest, and a hall of them will kill him. The count
+# is banked on the activity so A County That Is Not Empty can warn him BEFORE he picks his door.
+#
+# Root = the host. scope:spn_defender and scope:spn_hunt_activity must be set (both are, at every call site:
+# Cornered, Someone Is Asking Questions' proxy branch, Sent in Your Place, and The Hunter at Your Door).
+# ----------------------------------------------------------------------------------------------------------
+spn_hunt_count_the_pack_effect = {
+	scope:spn_hunt_activity = { set_variable = { name = spn_hunt_pack_count value = 0 } }
+	if = {
+		limit = {
+			exists = scope:spn_hunt_county
+			exists = scope:spn_defender
+		}
+		scope:spn_hunt_county = {
+			holder ?= {
+				if = {
+					limit = { spn_hunt_pack_stands_with_trigger = yes }
+					add_to_list = spn_hunt_pack
+				}
+				every_courtier_or_guest = {
+					limit = { spn_hunt_pack_stands_with_trigger = yes }
+					add_to_list = spn_hunt_pack
+				}
+			}
+		}
+		every_player = {
+			limit = {
+				spn_hunt_pack_stands_with_trigger = yes
+				location ?= { county ?= { this = scope:spn_hunt_county } }
+			}
+			add_to_list = spn_hunt_pack
+		}
+		# The flag is the dedupe: a county holder who is also a player is on the list twice and must count once.
+		# One day is long enough for the option that called this and short enough never to be seen again.
+		every_in_list = {
+			list = spn_hunt_pack
+			limit = { NOT = { has_character_flag = spn_hunt_pack_counted } }
+			add_character_flag = { flag = spn_hunt_pack_counted days = 1 }
+			scope:spn_hunt_activity = { change_variable = { name = spn_hunt_pack_count add = 1 } }
+			# THE CAP, applied as they arrive rather than clawed back afterwards: only the first three get
+			# through the door in time to matter. Everyone after that is counted -- the hunter is told how bad
+			# the county is -- but costs him nothing more, so the kit and the daylight he paid for still hold.
+			# Worst case is three kin at -12: -36, against a prepared hunter's +15 kit +15 daylight +10 men.
+			if = {
+				limit = { scope:spn_hunt_activity = { var:spn_hunt_pack_count <= 3 } }
+				if = {
+					limit = { spn_hunt_pack_is_kin_trigger = yes }
+					scope:spn_hunt_activity = { change_variable = { name = spn_hunt_fight_bonus subtract = 12 } }
+				}
+				else = {
+					scope:spn_hunt_activity = { change_variable = { name = spn_hunt_fight_bonus subtract = 6 } }
+				}
+			}
+			# 2.35 -- and a fourth gets through the door for somebody the county tells stories about. The
+			# other half of what a reputation does: it brings hunters, and it brings company.
+			else_if = {
+				limit = {
+					scope:spn_hunt_activity = { var:spn_hunt_pack_count = 4 }
+					scope:spn_defender = { spn_creature_legend_value >= 3 }
+				}
+				scope:spn_hunt_activity = { change_variable = { name = spn_hunt_fight_bonus subtract = 8 } }
+			}
+		}
+	}
+}
+
+# ----------------------------------------------------------------------------------------------------------
+# §6.8 The fight. DEFENDER = whoever stands against the hunter. Scopes bound; var:spn_hunt_fight_bonus set.
+# One effect for the culprit, a proxy, an informer who attacks, and the press-on of Overmatched.
+# ----------------------------------------------------------------------------------------------------------
+spn_hunt_fight_effect = {
+	$DEFENDER$ = { save_scope_as = spn_defender }
+	scope:spn_defender = {
+		duel = {
+			skill = prowess
+			target = scope:spn_hunter
+			localization = spn_hunt_fight_duel
+			50 = {
+				desc = spn_hunt_fight_defender_wins_tt
+				# prowess: at most +-25
+				modifier = { add = { value = scope:duel_value min = -25 max = 25 } always = yes }
+				# the creature's track: up to +60
+				modifier = { add = { value = spn_hunt_creature_track_value multiply = 0.6 } always = yes }
+				modifier = { add = 15 is_shapeshifted_trigger = yes }
+				modifier = { add = 10 has_trait = supernatural_hybrid }
+				modifier = { add = 10 has_character_flag = spn_forewarned }
+				# kit, daylight, the county's men, guests -- everything the hunter brought, off the creature's side
+				modifier = {
+					add = { value = scope:spn_hunt_activity.var:spn_hunt_fight_bonus multiply = -1 }
+					scope:spn_hunt_activity = { exists = var:spn_hunt_fight_bonus }
+				}
+				min = 10
+				spn_hunt_defender_won_effect = yes
+			}
+			50 = {
+				desc = spn_hunt_fight_hunter_wins_tt
+				modifier = { add = { value = scope:duel_value multiply = -1 min = -25 max = 25 } always = yes }
+				# the hunter's monster_hunting: up to +60
+				modifier = { add = { value = "scope:spn_hunter.has_trait_xp(supernatural_hunter|monster_hunting)" multiply = 0.6 } always = yes }
+				modifier = { add = 10 scope:spn_hunter = { has_trait = spn_true_monster_hunter } }
+				min = 10
+				spn_hunt_hunter_won_effect = yes
+			}
+		}
+	}
+}
+
+# The creature won. Scope: the defender. Either the hunter is beaten and gets Overmatched, or -- if this was the
+# press-on of Overmatched (var:spn_hunt_final_stand) -- the hunter dies, LAST, after the creature has banked its
+# memory and XP. The creature's kind picks the death reason and the on_death hook (W1) marks the county with it.
+spn_hunt_defender_won_effect = {
+	spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 15 AMOUNT_MAX = 30 }
+	if = {
+		limit = { scope:spn_hunt_activity = { has_variable = spn_hunt_final_stand } }
+		spn_write_confrontation_memory_effect = { TYPE = spn_killed_the_hunter_memory }
+		spn_creature_earns_its_name_effect = yes
+		# 2.35 PART TWO (§8.5c) -- a hunter who does not ride home counts against the county exactly as one
+		# who does. Three of either and No One Will Come. Banked here, before the death, because the
+		# conclusion never runs: the host dying invalidates the activity.
+		scope:spn_hunt_county ?= { spn_hunt_refusal_effect = yes }
+		# No outcome flag: the host's death invalidates the activity, so nothing would ever read it.
+		if = {
+			limit = { has_trait = supernatural_werewolf }
+			scope:spn_hunter = { death = { death_reason = spn_death_clawed killer = scope:spn_defender } }
+		}
+		else_if = {
+			limit = { has_trait = supernatural_hybrid }
+			scope:spn_hunter = { death = { death_reason = spn_death_throat_ripped_out killer = scope:spn_defender } }
+		}
+		else = {
+			scope:spn_hunter = { death = { death_reason = spn_death_drained killer = scope:spn_defender } }
+		}
+	}
+	else = {
+		spn_hunt_set_outcome_effect = { OUTCOME = hunter_beaten }
+		spn_write_bested_the_hunter_memory_effect = { HUNTER = scope:spn_hunter }
+		spn_creature_earns_its_name_effect = yes
+		# Guests get hurt, never killed by RNG ("these are people's lives").
+		scope:spn_hunt_activity = {
+			random_attending_character = {
+				limit = { has_trait = supernatural_hunter  NOT = { this = scope:spn_hunter } }
+				increase_wounds_no_death_effect = { REASON = fight }
+			}
+		}
+		scope:spn_hunter = { trigger_event = spn_hunt.0210 }
+	}
+}
+
+# The hunter won. Scope: the defender (still alive). BANK: kind, track, whether this was the culprit or a stand-in;
+# memories for the hunter and the maker; the guest wound roll; then the death, LAST. The county's rewards are paid
+# by What the Hunt Was Worth from the banked variables.
+spn_hunt_hunter_won_effect = {
+	save_scope_value_as = { name = spn_hunt_defender_track value = spn_hunt_creature_track_value }
+	scope:spn_hunt_activity = {
+		set_variable = { name = spn_hunt_slain_track value = scope:spn_hunt_defender_track }
+		# 2.35 PART TWO -- demon and witch branches ADDED, and they are not cosmetic: the conclusion pays the
+		# county restore off this flag, so without them a slain witch would have handed her county a
+		# vampire's +5 control and a slain demon the same. Demons first, because a demon can also be a witch
+		# and the demon is what the county saw.
+		if = {
+			limit = { scope:spn_defender = { is_a_demon_trigger = yes } }
+			set_variable = { name = spn_hunt_slain_kind value = flag:demon }
+		}
+		else_if = {
+			limit = { scope:spn_defender = { has_trait = supernatural_hybrid } }
+			set_variable = { name = spn_hunt_slain_kind value = flag:hybrid }
+		}
+		else_if = {
+			limit = { scope:spn_defender = { has_trait = supernatural_werewolf } }
+			set_variable = { name = spn_hunt_slain_kind value = flag:werewolf }
+		}
+		else_if = {
+			limit = { scope:spn_defender = { has_trait = supernatural_vampire } }
+			set_variable = { name = spn_hunt_slain_kind value = flag:vampire }
+		}
+		else = {
+			set_variable = { name = spn_hunt_slain_kind value = flag:witch }
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_culprit  scope:spn_defender = scope:spn_culprit }
+		spn_hunt_set_outcome_effect = { OUTCOME = slain }
+	}
+	else = {
+		spn_hunt_set_outcome_effect = { OUTCOME = proxy_slain }
+	}
+	scope:spn_hunter = { spn_write_slew_the_beast_memory_effect = { CREATURE = scope:spn_defender } }
+	# The maker's loss: the sire of a vampire or hybrid, the wolf who clawed a werewolf.
+	random_relation = {
+		type = mmaker
+		limit = { is_alive = yes }
+		spn_write_progeny_slain_memory_effect = { PROGENY = scope:spn_defender HUNTER = scope:spn_hunter }
+	}
+	random_relation = {
+		type = ww_clawed_by
+		limit = { is_alive = yes }
+		spn_write_progeny_slain_memory_effect = { PROGENY = scope:spn_defender HUNTER = scope:spn_hunter }
+	}
+	# 2.35 PART TWO (§10) -- the household, banked from a live culprit. See the effect for why.
+	spn_hunt_bank_the_household_effect = yes
+
+	# An elder does not go down quietly: one hunter guest is hurt. Never killed.
+	if = {
+		limit = { scope:spn_hunt_defender_track >= 75 }
+		scope:spn_hunt_activity = {
+			random_attending_character = {
+				limit = { has_trait = supernatural_hunter  NOT = { this = scope:spn_hunter } }
+				increase_wounds_no_death_effect = { REASON = fight }
+			}
+		}
+	}
+	# 2.35 PART TWO (§6.3) -- THE SWEEP CONTINUES. If a coven sweep is running, the next door is picked and
+	# scheduled HERE, before the death, so the selection never reads a corpse's household and this corpse can
+	# never be picked again (its own spn_hunt_coven_fought flag went on when it was chosen).
+	if = {
+		limit = { scope:spn_hunt_activity ?= { has_variable = spn_hunt_coven_running } }
+		scope:spn_hunter = { spn_hunt_coven_next_effect = yes }
+	}
+
+	# ==========================================================================================================
+	# 2.35a -- THE KILL NOW HAS A SCREEN, AND THIS IS THE BIGGEST DEFECT THE FIRST BOOT FOUND.
+	#
+	# Thomas, after his first complete hunt: "towards the end, it mentioned striking them, but there was no
+	# other character that ever showed up on the screen... I never saw any kind of reference of killing
+	# anybody... All I know is I don't know if anybody died, but I know that the county's area lost that one
+	# modifier."
+	#
+	# He was right and the trail of evidence is exact. The county DID lose spn_menace_modifier, which only the
+	# `slain` branch of the conclusion removes -- so the culprit died, correctly, on schedule. The player was
+	# simply never shown it. The hunter's side of a won fight had NO EVENT AT ALL:
+	#
+	#   he loses the fight   -> spn_hunt_defender_won_effect fires Overmatched on him          (a screen)
+	#   the creature flees   -> Gone fires on him                                              (a screen)
+	#   the creature compels -> Turned Back fires on him                                       (a screen)
+	#   HE WINS              -> the creature dies silently inside an event running on the AI   (nothing)
+	#
+	# Someone Is Asking Questions runs on the CULPRIT, so every branch of it that ends in the hunter winning
+	# resolved entirely off-screen. The climax of the whole activity was the one moment with no window.
+	#
+	# So the death moves OUT of this effect and into an event on the hunter (It Is Done), whose `after`
+	# performs it. That is also better by the standing ordering rule, not worse: the kill is now the very
+	# last thing that happens, after the player has been shown what he is about to do it to.
+	#
+	# THE SAFETY NET: the pending kill is banked on the activity, and spn_hunt_conclude_effect kills anyone
+	# still pending. If the event is ever suppressed -- an activity ending early, a save loaded across the
+	# gap -- the creature still dies and the outcome still matches the county's books.
+	# ==========================================================================================================
+	scope:spn_hunt_activity = { set_variable = { name = spn_hunt_kill_pending value = scope:spn_defender } }
+	scope:spn_hunter = { trigger_event = spn_hunt.0205 }
+}
+
+# Scope: the creature. The four death reasons, pulled out of spn_hunt_hunter_won_effect (2.35a) so that the
+# kill event and the conclusion's safety net run exactly the same line and can never drift apart.
+# Hunter-kill reasons are public and are not menace marks.
+spn_hunt_perform_the_kill_effect = {
+	if = {
+		limit = { has_trait = supernatural_hybrid }
+		death = { death_reason = spn_death_beheaded_as_hybrid killer = scope:spn_hunter }
+	}
+	else_if = {
+		limit = { has_trait = supernatural_werewolf }
+		death = { death_reason = spn_death_silver_arrow_by_hunter_as_werewolf killer = scope:spn_hunter }
+	}
+	# 2.35 PART TWO -- a demon or a witch is not staked. A demon that loses the fight rather than the
+	# exorcism dies the way anything else in a room with a hunter dies, and so does a witch.
+	else_if = {
+		limit = { has_trait = supernatural_vampire }
+		death = { death_reason = spn_death_staked_by_hunter_as_vampire killer = scope:spn_hunter }
+	}
+	else = {
+		death = { death_reason = spn_death_killed_by_hunter killer = scope:spn_hunter }
+	}
+}
+
+# ----------------------------------------------------------------------------------------------------------
+# §6.9 The conclusion (What the Hunt Was Worth). Root = the host, scope:activity set. Rewards by outcome from
+# the banked variables (D4). Every new modifier expires.
+#   slain        vampire +5 control; werewolf +2 control +1 development. Trail cleared. Hunter: prestige
+#                minor x (2 + track/50), monster_hunting {15 35}, the lord's thanks (+20, 10y). Guests {5 15}.
+#                Apprentices complete. Contract paid.
+#   proxy_slain  half the restore (2 / 1), count -1, culprit stays. Hunter x0.75. Contract stays open.
+#   fled         modifiers stay. Hunter {5 10} XP, 25 prestige. Apprentices complete.
+#   compelled / bought / hunter_beaten   stay. Nothing / gold already taken / stress.
+#   cold         stay. {5 10} XP.
+#   witch        witch_hunting {10 20} (D10, thin).
+# ----------------------------------------------------------------------------------------------------------
+spn_hunt_conclude_effect = {
+	spn_hunt_bind_scopes_effect = yes
+	# 2.35a -- THE SAFETY NET for the kill that moved into It Is Done. If that event never ran, the creature
+	# is still standing here with the county's books already written against it. It dies now, before anything
+	# below reads the outcome, so "slain" can never mean "alive".
+	if = {
+		limit = {
+			scope:spn_hunt_activity ?= {
+				exists = var:spn_hunt_kill_pending
+				var:spn_hunt_kill_pending = { is_alive = yes }
+			}
+		}
+		scope:spn_hunt_activity.var:spn_hunt_kill_pending = { spn_hunt_perform_the_kill_effect = yes }
+	}
+	scope:spn_hunt_activity ?= { remove_variable = spn_hunt_kill_pending }
+	# 2.35 -- FOUR YEARS' PEACE. A trail lives five years and a hunter's own cooldown is three, so without
+	# this one careless night could bring three different hunters to the same county off a single mark.
+	# Read by is_location_valid. A hunt that ended the trail removes it anyway and never needs this.
+	scope:spn_hunt_county ?= {
+		set_variable = { name = spn_hunt_recently_hunted value = yes years = 4 }
+	}
+	if = {
+		limit = { scope:spn_hunt_activity = { NOT = { exists = var:spn_hunt_outcome } } }
+		spn_hunt_set_outcome_effect = { OUTCOME = cold }
+	}
+	# 2.35 PART TWO -- `exorcised` pays exactly what `slain` pays. The county does not care which verb ended
+	# it; a thing that was taking people is not taking people any more, and the man who did that is owed the
+	# same. It is the one line that makes exorcism a real answer rather than a consolation prize.
+	if = {
+		limit = {
+			OR = {
+				scope:spn_hunt_activity.var:spn_hunt_outcome = flag:slain
+				scope:spn_hunt_activity.var:spn_hunt_outcome = flag:exorcised
+			}
+		}
+		scope:spn_hunt_county ?= {
+			if = {
+				limit = { scope:spn_hunt_activity.var:spn_hunt_slain_kind = flag:werewolf }
+				change_county_control = 2
+				spn_county_prosperity_change_effect = { VALUE = 1 }
+			}
+			# 2.35 PART TWO -- the restore mirrors the drain (§3.1). A demon ruined both meters on the way in
+			# and giving both back is what makes ending one worth the ride; a witch's county was never losing
+			# people, so it gets the smaller half of its faith in its lord back and nothing else it did not lose.
+			else_if = {
+				limit = { scope:spn_hunt_activity.var:spn_hunt_slain_kind = flag:demon }
+				change_county_control = 4
+				spn_county_prosperity_change_effect = { VALUE = 1 }
+			}
+			else_if = {
+				limit = { scope:spn_hunt_activity.var:spn_hunt_slain_kind = flag:witch }
+				change_county_control = 2
+				spn_county_prosperity_change_effect = { VALUE = 1 }
+			}
+			else = {
+				change_county_control = 5
+			}
+			# 2.35 PART TWO (§7) -- AND THE LORD WHO TOOK THE MONEY. A creature paid him to write nothing
+			# down (Pay It Away) and a hunter has just proved what was living here anyway. He is not angry
+			# that there was a monster; he is angry that he is now a man who was bought and everybody in the
+			# hall can see it. Only lands if the payer is still alive to be angry at -- which, on a proxy
+			# kill, he usually is.
+			if = {
+				limit = {
+					has_variable = spn_bought_silence
+					exists = var:spn_bought_silence_payer
+					var:spn_bought_silence_payer = { is_alive = yes }
+					exists = holder
+				}
+				save_scope_as = spn_bought_county
+				holder = {
+					add_opinion = { target = scope:spn_bought_county.var:spn_bought_silence_payer modifier = spn_bought_my_silence_opinion }
+				}
+				remove_variable = spn_bought_silence
+				remove_variable = spn_bought_silence_payer
+			}
+			remove_county_modifier = spn_menace_modifier
+			remove_variable = spn_menace_culprit
+			remove_variable = spn_menace_kind
+			remove_variable = spn_menace_count
+			remove_variable = spn_menace_notified
+			holder ?= {
+				if = {
+					limit = { NOT = { this = scope:spn_hunter } }
+					add_opinion = { target = scope:spn_hunter modifier = spn_slew_the_menace_opinion }
+				}
+			}
+		}
+		# ==================================================================================================
+		# 2.35a -- THE REWARDS GO THROUGH THE ACTIVITY LOG NOW, AND THAT IS WHY THEY WERE INVISIBLE.
+		#
+		# Thomas: "I like seeing that I earned Monster Hunter trait track XP through the activity itself. Now
+		# it looks like I might have earned some, but it seems like it was done in the background... at the
+		# end of the activity, there was no summary or there was nothing in the summary of events that had
+		# occurred. Not even the mention of me getting XP."
+		#
+		# He was right, and the reason is a mechanism this activity never used. Vanilla's hunt does not apply
+		# its rewards as bare effects -- it wraps every one of them in `add_activity_log_entry` with
+		# `show_in_conclusion = yes` and puts the EFFECT INSIDE THE LOG ENTRY (hunt.txt:5316-5336,
+		# `scope:host = { disburse_hunt_activity_rewards = yes }`). That is what draws the conclusion screen:
+		# the window is a list of log entries, and an effect that never became one is an effect nobody sees.
+		#
+		# Ours paid prestige and XP straight onto root in an event's immediate, so the whole payout happened
+		# in silence and the conclusion had nothing to list.
+		# ==================================================================================================
+		scope:spn_hunt_activity = {
+			add_activity_log_entry = {
+				key = spn_hunt_log_slain
+				tags = { complete good }
+				score = 100
+				show_in_conclusion = yes
+				character = scope:spn_hunter
+				# EFFECT -- shown on the line
+				scope:spn_hunter = {
+					add_prestige = {
+						value = minor_prestige_value
+						multiply = { value = 2 add = { value = scope:spn_hunt_activity.var:spn_hunt_slain_track divide = 50 } }
+					}
+					add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 15 35 } }
+				}
+			}
+			# 2.35a -- AND HE GETS PAID. Thomas: "There was no opportunity to get some extra money out of it.
+			# I spent forty five gold to take out this alleged vampire."
+			#
+			# Quite right, and it was an omission rather than a decision: part one built the contract as the
+			# way an ADVENTURER gets paid (D9) and never gave the ordinary case anything at all, so a landed
+			# hunter was strictly out of pocket for doing the county a favour. The bounty is the lord's, it
+			# scales with what the county can afford and with what the thing turned out to be, and it is paid
+			# in its own log line so it is visible.
+			add_activity_log_entry = {
+				key = spn_hunt_log_bounty
+				tags = { good }
+				score = 90
+				show_in_conclusion = yes
+				character = scope:spn_hunter
+				# EFFECT
+				scope:spn_hunter = { add_gold = spn_hunt_bounty_value }
+			}
+		}
+		# 2.35 -- and the world starts using a name for him. The memory that earns it was written at the kill,
+		# so by the time the conclusion runs it is already in the count.
+		spn_hunter_earns_his_name_effect = yes
+		scope:spn_hunt_activity = {
+			every_attending_character = {
+				limit = { has_trait = supernatural_hunter  NOT = { this = scope:spn_hunter } }
+				add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 15 } }
+			}
+		}
+		spn_hunt_apprentices_complete_effect = yes
+		spn_hunt_complete_contract_effect = yes
+		# 2.35g -- and the OTHER way a hunter gets paid for this county: the lord who wrote to him by name
+		# (zz_spn_summons_effects.txt). Same guard, same county test, same clear-up as the contract above;
+		# a hunter can hold both and be paid twice, which is correct -- two people wanted this thing dead.
+		spn_hunt_summons_payoff_effect = yes
+		# 2.35 PART TWO (§10) -- the two orphans. Both were banked at the kill, from a live culprit, and are
+		# fired here rather than there because the standing ordering rule puts the death last and nothing
+		# should be reading a dead man's household after it.
+		spn_hunt_orphan_check_effect = yes
+	}
+	else_if = {
+		limit = { scope:spn_hunt_activity.var:spn_hunt_outcome = flag:proxy_slain }
+		scope:spn_hunt_county ?= {
+			if = {
+				limit = { scope:spn_hunt_activity.var:spn_hunt_slain_kind = flag:werewolf }
+				change_county_control = 1
+			}
+			else = {
+				change_county_control = 2
+			}
+			# 2.35 PART TWO -- duplication audit: this was the second of three hand-written copies of
+			# "take one incident off this county's books". They are one effect now.
+			spn_menace_clear_one_effect = yes
+		}
+		add_prestige = {
+			value = minor_prestige_value
+			multiply = { value = 2 add = { value = scope:spn_hunt_activity.var:spn_hunt_slain_track divide = 50 } }
+			multiply = 0.75
+		}
+		add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 10 25 } }
+		scope:spn_hunt_activity = {
+			every_attending_character = {
+				limit = { has_trait = supernatural_hunter  NOT = { this = scope:spn_hunter } }
+				add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 10 } }
+			}
+		}
+		spn_hunt_apprentices_complete_effect = yes
+	}
+	else_if = {
+		limit = { scope:spn_hunt_activity.var:spn_hunt_outcome = flag:fled }
+		# 2.35a -- every outcome now writes a conclusion line, not just the good one. A hunt that ended with
+		# the thing going to ground is still three weeks of a man's life and he should be able to read what
+		# it bought him.
+		scope:spn_hunt_activity = {
+			add_activity_log_entry = {
+				key = spn_hunt_log_fled
+				tags = { complete }
+				score = 60
+				show_in_conclusion = yes
+				character = scope:spn_hunter
+				# EFFECT
+				scope:spn_hunter = {
+					add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 10 } }
+					add_prestige = 25
+				}
+			}
+		}
+		spn_hunt_apprentices_complete_effect = yes
+	}
+	else_if = {
+		limit = { scope:spn_hunt_activity.var:spn_hunt_outcome = flag:hunter_beaten }
+		add_stress = medium_stress_impact_gain
+	}
+	# ==========================================================================================================
+	# 2.35 PART TWO (§8.5) -- HE WENT HOME.
+	#
+	# Thomas: "I don't want to be sending casual hunters to their death. I want there to be a lot of
+	# opportunities for the hunter to quit, to abandon -- I'm not going to die over this, I'll fight something
+	# else. And then that could leave a modifier that hunters won't touch it once that happens enough."
+	#
+	# The prestige was already paid inside whichever off-ramp he took (nothing at the tracking phase, -25 at
+	# the door, -25 at the demon's). What happens here is the county's side of it: a refusal is counted, and
+	# at three the county takes No One Will Come for a decade. Apprentices do NOT graduate off a withdrawal --
+	# there was no lesson in it.
+	#
+	# The one thing he does keep is the XP for having looked. A career made only of kills is why the world's
+	# hunters were all novices.
+	# ==========================================================================================================
+	else_if = {
+		limit = { scope:spn_hunt_activity.var:spn_hunt_outcome = flag:withdrew }
+		add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 3 8 } }
+		add_stress = minor_stress_impact_gain
+		# A man who turned round in the tracking phase never knocked on anything. Only a withdrawal from the
+		# DOOR counts against the county.
+		if = {
+			limit = { scope:spn_hunt_activity = { NOT = { has_variable = spn_hunt_walked_away } } }
+			scope:spn_hunt_county ?= { spn_hunt_refusal_effect = yes }
+		}
+	}
+	# 2.35 PART TWO (§4.5) -- he signed. The gold, the years and the skills were all paid inside The Bargain
+	# in the Field by upstream's own cyro_common_offer_effect, and in ten to thirty years magic_ev8.18 comes
+	# for the rest. Nothing more is owed him here, and the trail stays exactly where it was.
+	else_if = {
+		limit = { scope:spn_hunt_activity.var:spn_hunt_outcome = flag:bargained }
+		add_stress = medium_stress_impact_gain
+	}
+	else_if = {
+		limit = { scope:spn_hunt_activity.var:spn_hunt_outcome = flag:cold }
+		scope:spn_hunt_activity = {
+			add_activity_log_entry = {
+				key = spn_hunt_log_cold
+				tags = { complete }
+				score = 40
+				show_in_conclusion = yes
+				character = scope:spn_hunter
+				# EFFECT
+				scope:spn_hunter = { add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 10 } } }
+			}
+		}
+	}
+	else_if = {
+		limit = { scope:spn_hunt_activity.var:spn_hunt_outcome = flag:witch }
+		scope:spn_hunt_activity = {
+			add_activity_log_entry = {
+				key = spn_hunt_log_witch
+				tags = { complete good }
+				score = 70
+				show_in_conclusion = yes
+				character = scope:spn_hunter
+				# EFFECT
+				scope:spn_hunter = { add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 10 20 } } }
+			}
+		}
+	}
+	# 2.35 -- compelled and bought used to pay the hunter nothing at all, on the reasoning that the price was
+	# paid inside the event. That is true of the gold and the memory; it is not true of the craft. Thomas,
+	# 8 Sep 2026: "every time it works, it would be good to increase some of your monster hunting XP." A hunter
+	# learns from every door he walks away from, including the two he cannot explain -- and a career made only
+	# of kills is why the world's hunters were all novices.
+	else_if = {
+		limit = { scope:spn_hunt_activity.var:spn_hunt_outcome = flag:compelled }
+		# He rode home and cannot say from what. Something in him kept the shape of it anyway.
+		add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 3 8 } }
+	}
+	else_if = {
+		limit = { scope:spn_hunt_activity.var:spn_hunt_outcome = flag:bought }
+		# He knows exactly what he saw and exactly what he took for it. That is still knowing.
+		add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 10 } }
+	}
+}
+
+# Apprentices who rode with their trainer complete the lesson (D2). The bite-chain deferral resolves through its own
+# events -- only the training flag is cleared here. spn_initiate.3001 grants trait, secret and memory.
+spn_hunt_apprentices_complete_effect = {
+	scope:spn_hunt_activity ?= {
+		every_attending_character = {
+			limit = { spn_is_apprentice_of_trigger = { TRAINER = scope:spn_hunter } }
+			if = {
+				limit = { has_character_flag = spn_hunter_apprentice }
+				remove_character_flag = spn_hunter_apprentice
+			}
+			# The XP is paid inside spn_initiate.3001 (flag handshake): the trait does not exist until that event runs.
+			add_character_flag = { flag = spn_hunt_graduate days = 30 }
+			trigger_event = spn_initiate.3001
+		}
+	}
+}
+
+# D9 -- the contract is paid when the menace of ITS county is slain. every_character_active_contract is the
+# taker-side iterator (07_dlc_ep3_scripted_effects.txt:11404); the county was stored on the taker at accept.
+spn_hunt_complete_contract_effect = {
+	if = {
+		limit = {
+			has_character_flag = spn_has_hunter_contract
+			exists = var:spn_hunter_contract_county
+			exists = scope:spn_hunt_county
+			var:spn_hunter_contract_county = scope:spn_hunt_county
+		}
+		every_character_active_contract = {
+			limit = { has_task_contract_type = laamp_hunter_1001 }
+			complete_task_contract = success_standard
+		}
+		remove_character_flag = spn_has_hunter_contract
+		remove_variable = spn_hunter_contract_county
+	}
+}
+
+# ----------------------------------------------------------------------------------------------------------
+# 2.35 -- NAMES. The one thing in this system that is permanent, visible in the character list, and inherited
+# by nobody. Three kills and the world stops calling him by his father's name; three hunters walked away from
+# and the creature has a name it did not choose either.
+#
+# Guarded on the nickname itself rather than a flag, so it cannot double-fire and cannot be re-granted after
+# a save. give_nickname replaces whatever was there, which is correct: this is what he is known for now.
+# ----------------------------------------------------------------------------------------------------------
+spn_hunter_earns_his_name_effect = {
+	if = {
+		limit = {
+			spn_hunter_reputation_value >= 3
+			NOT = { has_nickname = nick_the_beastbane }
+		}
+		give_nickname = nick_the_beastbane
+	}
+}
+
+# Scope: the creature.
+spn_creature_earns_its_name_effect = {
+	if = {
+		limit = {
+			spn_creature_legend_value >= 3
+			NOT = { has_nickname = nick_the_unhunted }
+		}
+		give_nickname = nick_the_unhunted
+	}
+}
+
+
+# ==========================================================================================================
+# 2.35 PART TWO (§10) -- BANK THE HOUSEHOLD, BEFORE ANYTHING IRREVERSIBLE. Scope: the culprit, alive.
+#
+# Both orphan events read the culprit's own children, and reading a dead man's household is exactly the class
+# of thing the standing ordering rule exists to stop. So the roll happens here, from a living character, and
+# the EVENT fires from the conclusion (spn_hunt_orphan_check_effect) once everything is quiet.
+#
+# DUPLICATION AUDIT, 9 Sep: this was written inline inside spn_hunt_hunter_won_effect, which meant a demon
+# ENDED BY EXORCISM OR BY BANISHING left no orphan at all -- neither of those paths goes through the fight,
+# and The Thing in the Cradle is a demon event. Pulled out into one effect with three callers rather than
+# copied into the other two.
+#
+#   8% werewolf orphan (E13: "yes, rare enough"), only off a culprit whose track was 50 or better -- a
+#     fledgling's child has nothing to inherit and no story to be the end of.
+#   6% demon child, and it wants demon0 rather than a demon: demon0 is LATENT, is_a_demon_trigger does not
+#     match it, and magic_ev3.75 turns it into a real demon at twenty or twenty-one. That twenty-year fuse
+#     is the whole event.
+# ==========================================================================================================
+spn_hunt_bank_the_household_effect = {
+	if = {
+		limit = {
+			spn_hunt_creature_track_value >= 50
+			any_child = { is_alive = yes  age < 8 }
+		}
+		random = {
+			chance = 8
+			random_child = {
+				limit = { is_alive = yes  age < 8 }
+				save_scope_as = spn_hunt_orphan_child
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_hunt_orphan_child }
+			scope:spn_hunt_activity ?= { set_variable = { name = spn_hunt_orphan value = scope:spn_hunt_orphan_child } }
+		}
+	}
+	if = {
+		limit = {
+			is_a_demon_trigger = yes
+			any_child = { is_alive = yes  age < 8  has_trait = demon0 }
+		}
+		random = {
+			chance = 6
+			random_child = {
+				limit = { is_alive = yes  age < 8  has_trait = demon0 }
+				save_scope_as = spn_hunt_cradle_child
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_hunt_cradle_child }
+			scope:spn_hunt_activity ?= { set_variable = { name = spn_hunt_demon_child value = scope:spn_hunt_cradle_child } }
+		}
+	}
+}
+
+# ==========================================================================================================
+# 2.35 PART TWO (§10) -- THE TWO ORPHANS. Root = the host, scopes bound, called from the conclusion.
+#
+# Both were rolled and banked at the kill (spn_hunt_hunter_won_effect) off a live culprit. This only fires
+# what was banked, and it prefers the demon child when a hunt somehow produced both -- there is one window
+# and the cradle is the stranger of the two.
+# ==========================================================================================================
+spn_hunt_orphan_check_effect = {
+	if = {
+		limit = {
+			scope:spn_hunt_activity = {
+				exists = var:spn_hunt_demon_child
+				var:spn_hunt_demon_child = { is_alive = yes }
+			}
+		}
+		scope:spn_hunt_activity.var:spn_hunt_demon_child = { save_scope_as = spn_hunt_cradle_child }
+		trigger_event = { id = spn_hunt.0610 days = { 3 9 } }
+	}
+	else_if = {
+		limit = {
+			scope:spn_hunt_activity = {
+				exists = var:spn_hunt_orphan
+				var:spn_hunt_orphan = { is_alive = yes }
+			}
+		}
+		scope:spn_hunt_activity.var:spn_hunt_orphan = { save_scope_as = spn_hunt_orphan_child }
+		trigger_event = { id = spn_hunt.0600 days = { 3 9 } }
+	}
+}

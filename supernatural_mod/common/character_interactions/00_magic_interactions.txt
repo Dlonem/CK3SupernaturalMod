@@ -1325,6 +1325,23 @@ consume_child = {
 	
 	on_accept = {
 		scope:actor = {
+			# SUPERNATURAL 2.35 PART TWO -- ADDED, one block, nothing below changed. (W-W2, order §3.3, §12.)
+			# A child is gone. That is a body, not a rumour, so the county remembers it as a `kill` -- and the
+			# dedupe flag this leaves is what stops spawn_witch_hunter_full_chance_effect writing a second,
+			# quieter mark for the same night.
+			if = {
+				limit = {
+					NOT = { has_character_flag = spn_menace_marked_recently }
+					exists = location
+					location = { exists = county }
+				}
+				spn_mark_menace_effect = {
+					COUNTY = location.county
+					CULPRIT = this
+					KIND = witch
+					SEVERITY = kill
+				}
+			}
 			hidden_effect = {
 				random_list = {
 					40 = {
@@ -6151,7 +6168,23 @@ plague_spell = {
 		scope:actor = {
 			set_spell_id = { ID = 13 }
 			save_scope_as = magic_user
-			
+			# SUPERNATURAL 2.35 PART TWO -- ADDED, one block, nothing below changed. (W-W2, order §3.3, §12.)
+			# A plague leaves bodies, so this county's mark is a `kill`, and the dedupe flag it leaves keeps
+			# the spawn effect's quieter `prowl` mark from doubling it.
+			if = {
+				limit = {
+					NOT = { has_character_flag = spn_menace_marked_recently }
+					exists = location
+					location = { exists = county }
+				}
+				spn_mark_menace_effect = {
+					COUNTY = location.county
+					CULPRIT = this
+					KIND = witch
+					SEVERITY = kill
+				}
+			}
+
 			hidden_effect = {
 				if = {
 					limit = {

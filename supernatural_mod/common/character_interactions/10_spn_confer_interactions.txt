@@ -1703,6 +1703,9 @@ spn_turn_into_hunter = { # Train Character as a Hunter
                 has_trait = supernatural_vampire
                 has_trait = supernatural_hybrid
             }
+            # 2.35 -- an apprentice already has a trainer; the lesson is finished on a hunt, not restarted here.
+            # The flag expires after ten years, which is the fail-open for a trainer who never hosts one.
+            NOT = { has_character_flag = spn_hunter_apprentice }
         }
         scope:actor = {
             has_trait = supernatural_hunter
@@ -1713,6 +1716,47 @@ spn_turn_into_hunter = { # Train Character as a Hunter
             custom_description = {
                 text = spn_cannot_be_turned_custom
                 spn_is_valid_supernatural_target = yes
+            }
+        }
+        # 2.35a -- AND THEY HAVE TO BE OLD ENOUGH TO HOLD THE BLADE. Thomas, after the first boot: "I was able
+        # to train a four-year-old to become a hunter. I don't know if that's a good idea. I feel like they
+        # should at least be 13 minimum."
+        #
+        # There was no age gate here at all. The AI never did it -- ai_target_quick_trigger carries
+        # `adult = yes` -- so this only ever went wrong for a player, which is exactly the class of thing
+        # that survives to a boot test.
+        #
+        # 13 rather than is_adult on purpose. Adulthood is 16 in vanilla and in AGOT, and an apprentice who
+        # has to be a grown man first makes the whole trainer/apprentice system pointless -- squires start
+        # younger than that and so should this. 13 is the floor: old enough to be given a weapon, young
+        # enough that being taken on as an apprentice is still the start of a life rather than a career change.
+        scope:recipient = {
+            custom_description = {
+                text = spn_hunter_too_young_custom
+                age >= 13
+            }
+        }
+        # 2.35a -- AND THEY CANNOT ALREADY BE IN THE MIDDLE OF IT. This interaction had exactly one re-use
+        # guard: the spn_hunter_apprentice flag. That flag is set by ONE branch of spn_train_hunter.0002 --
+        # the 20% "not yet" roll -- which lands 75 to 115 days after the offer is accepted. For that entire
+        # window the trainee carried no state whatsoever, so the button stayed lit and every press queued
+        # another copy of the whole chain onto the same person. Thomas, testing: "I've clicked her a couple
+        # times and she has yet to become an actual hunter." Every one of those presses was a fresh
+        # 0001 -> 0002 pair aimed at his wife, and each 0002 can wound her.
+        scope:recipient = {
+            custom_description = {
+                text = spn_already_in_hunter_training_custom
+                NOT = { has_character_flag = spn_hunter_in_training }
+            }
+        }
+        # And somebody who has already said no stays said-no. The refusal branch of 0002 ("I am not cut out
+        # for saving people, hunting things") used to leave no trace at all: the trainee was wounded, the
+        # trainer was told nothing, and the button lit again the same day -- so the player's read on it was
+        # "the interaction did nothing except hurt my wife", which is exactly what it looked like.
+        scope:recipient = {
+            custom_description = {
+                text = spn_refused_hunter_training_custom
+                NOT = { has_character_flag = spn_refused_hunter_training }
             }
         }
     }
@@ -2198,7 +2242,16 @@ spn_turn_into_hunter = { # Train Character as a Hunter
             limit = { scope:hook = yes }
             scope:actor = { use_hook = scope:recipient }
         }
+        # 2.35a -- WHO IS THE STUDENT, not who is the sender. The trainee is the recipient here and the
+        # ACTOR in spn_ask_to_turn_into_hunter. spn_train_hunter.0005 -- the trainer's side of the offer --
+        # read scope:recipient for its left portrait, which is the trainer in the asking version, so that
+        # event drew the same man on both sides of the screen. Saving the role fixes it from either
+        # direction and costs nothing.
+        scope:actor = { save_scope_as = spn_trainer }
+        scope:recipient = { save_scope_as = spn_trainee }
         scope:recipient = {
+            # 2.35a -- and the state that makes the training visible and stops it being restarted.
+            spn_begin_hunter_training_effect = yes
             show_as_tooltip = {
                 custom_tooltip = spn_msg_tooltip_confer_hunter_desc
                 custom_tooltip = spn_msg_tooltip_hunter_desc
@@ -3536,6 +3589,8 @@ spn_ask_to_turn_into_hunter = { #Ask Character to Train You As a Hunter
 					has_trait = supernatural_vampire
 					has_trait = supernatural_hybrid
 					}
+			# 2.35 -- same apprentice gate as spn_turn_into_hunter, from the asking side.
+			NOT = { has_character_flag = spn_hunter_apprentice }
 			spn_knows_about_character_being_hunter_trigger = { CHARACTER = scope:recipient }
 		}
 	}
@@ -3544,6 +3599,27 @@ spn_ask_to_turn_into_hunter = { #Ask Character to Train You As a Hunter
 			custom_description = {
 				text = spn_cannot_be_turned_custom
 				spn_is_valid_supernatural_target = yes
+			}
+		}
+		# 2.35a -- the same floor from the asking side. A child playing at being a monster hunter is a
+		# different story from a child who is one.
+		scope:actor = {
+			custom_description = {
+				text = spn_hunter_too_young_custom
+				age >= 13
+			}
+		}
+		# 2.35a -- the same two guards from the asking side. Here the ASKER is the trainee.
+		scope:actor = {
+			custom_description = {
+				text = spn_already_in_hunter_training_custom
+				NOT = { has_character_flag = spn_hunter_in_training }
+			}
+		}
+		scope:actor = {
+			custom_description = {
+				text = spn_refused_hunter_training_custom
+				NOT = { has_character_flag = spn_refused_hunter_training }
 			}
 		}
 	}
@@ -3845,7 +3921,11 @@ spn_ask_to_turn_into_hunter = { #Ask Character to Train You As a Hunter
 			limit = { scope:hook = yes }
 			scope:actor = { use_hook = scope:recipient }
 		}
+		# 2.35a -- roles, not seats. Mirror of spn_turn_into_hunter: here the asker is the student.
+		scope:recipient = { save_scope_as = spn_trainer }
+		scope:actor = { save_scope_as = spn_trainee }
 		scope:actor = {
+			spn_begin_hunter_training_effect = yes
 			show_as_tooltip = {
 				custom_tooltip = spn_msg_tooltip_confer_hunter_desc
 				custom_tooltip = spn_msg_tooltip_hunter_desc

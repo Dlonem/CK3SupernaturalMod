@@ -1307,13 +1307,13 @@ supernatural_ev1.14 = { #The Trap
 			}
 
 			# Add the character flag to all attending characters, including the player
-			# 2.32 -- the chance change is GONE from this loop and that is the N-squared fix.
-			# searching_phase.on_end fires once per attending character, and this loop then ran
-			# every_attending_character again, so N guests applied the bonus N x N times -- two
-			# guests picking Scout was +40, three pinned the 95 ceiling.
-			# It was also double-counted: vf_feeding_success_chance ALREADY reads this very flag
-			# on the host (+10 scout / +20 trap), so the bonus lands from the flag alone. The flag
-			# still goes on every attendee, which is what the later events check.
+			# 2.32 -- the chance change is GONE from this loop and that is the N-squared fix.
+			# searching_phase.on_end fires once per attending character, and this loop then ran
+			# every_attending_character again, so N guests applied the bonus N x N times -- two
+			# guests picking Scout was +40, three pinned the 95 ceiling.
+			# It was also double-counted: vf_feeding_success_chance ALREADY reads this very flag
+			# on the host (+10 scout / +20 trap), so the bonus lands from the flag alone. The flag
+			# still goes on every attendee, which is what the later events check.
 			every_attending_character = {
 				add_character_flag = vf_laid_trap
 			}
@@ -1556,7 +1556,7 @@ supernatural_ev1.17 = { #A Moment of Solace
     trigger = {
         is_alive = yes
         # 2.32 -- was raw has_activity_intent, which only ever returns true for a PLAYER host.
-        # These three events carry 150 of the weekly pool's 400 weight, so 37.5%% of the pool
+        # These three events carry 150 of the weekly pool's 400 weight, so 37.5% of the pool
         # was dead for every AI-hosted feeding. The AI-safe wrapper exists for exactly this and
         # was already used correctly at ev1.07 and inside vf_feeding_success_chance.
         has_st_satiate_thirst_intent_trigger = yes
@@ -1620,7 +1620,7 @@ supernatural_ev1.18 = { #A Test of Restraint
     trigger = {
         is_alive = yes
         # 2.32 -- was raw has_activity_intent, which only ever returns true for a PLAYER host.
-        # These three events carry 150 of the weekly pool's 400 weight, so 37.5%% of the pool
+        # These three events carry 150 of the weekly pool's 400 weight, so 37.5% of the pool
         # was dead for every AI-hosted feeding. The AI-safe wrapper exists for exactly this and
         # was already used correctly at ev1.07 and inside vf_feeding_success_chance.
         has_st_strengthen_the_blood_intent_trigger = yes
@@ -2084,8 +2084,10 @@ supernatural_ev1.23 = { # The Crimson Decision
 			add_character_flag = { flag = vf_feeding_clean days = 14 }
 		}
 		if = { limit = { NOT = { has_character_flag = vf_feeding_clean } } add_character_flag = { flag = vf_feeding_botched days = 14 } }
-		# A successful feed leaves the city more downtrodden (lore: vampires keep development low; hunters push it back up).
-		if = { limit = { has_character_flag = vf_feeding_clean } add_prestige = 25 scope:activity ?= { activity_location.county ?= { spn_county_prosperity_change_effect = { VALUE = -3 } change_county_control = -3 } } }
+		# 2.35 -- the county cost moved out of immediate and into the options: what the feed costs the county depends on
+		# how it ends (a kill is a menace mark of severity kill, a survivor a prowl -- spn_mark_menace_effect, D4).
+		# The old flat -3 dev / -3 control write lived here; nothing read it back.
+		if = { limit = { has_character_flag = vf_feeding_clean } add_prestige = 25 }
 	}
 
 	# ===== CLEAN FEED =====
@@ -2107,6 +2109,12 @@ supernatural_ev1.23 = { # The Crimson Decision
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 15 22 } } }
 			add_stress = major_stress_impact_gain
 		}
+		# 2.35 -- the county remembers this as ONE incident: mark first (severity kill, -5 control), then the death.
+		# The on_death hook (W1) sees the 3-day dedupe flag the mark leaves on root and does not mark it a second time.
+		if = {
+			limit = { exists = scope:activity  scope:activity.activity_location ?= { exists = county } }
+			spn_mark_menace_effect = { COUNTY = scope:activity.activity_location.county CULPRIT = root KIND = vampire SEVERITY = kill }
+		}
 		scope:vf_human = { death = { death_reason = spn_death_drained killer = root } }
 	}
 
@@ -2125,7 +2133,7 @@ supernatural_ev1.23 = { # The Crimson Decision
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = 10 } }
 			stress_impact = { base = minor_stress_impact_loss }
 		}
-		scope:vf_human = { add_character_modifier = { modifier = vf_recently_fed_on_modifier years = 3 } }
+		vf_mark_fed_on_effect = { VICTIM = scope:vf_human } # 2.35 W2: modifier + a prowl mark on the county
 	}
 
 	option = { # Take a small taste and step back.
@@ -2146,7 +2154,7 @@ supernatural_ev1.23 = { # The Crimson Decision
 			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 2 6 } } }
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 2 6 } } }
 		}
-		scope:vf_human = { add_character_modifier = { modifier = vf_recently_fed_on_modifier years = 3 } }
+		vf_mark_fed_on_effect = { VICTIM = scope:vf_human } # 2.35 W2: modifier + a prowl mark on the county
 	}
 
 	option = { # Use the hidden escape route.
@@ -2181,7 +2189,7 @@ supernatural_ev1.23 = { # The Crimson Decision
 			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 4 8 } } }
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 4 8 } } }
 		}
-		scope:vf_human = { add_character_modifier = { modifier = vf_recently_fed_on_modifier years = 3 } }
+		vf_mark_fed_on_effect = { VICTIM = scope:vf_human } # 2.35 W2: modifier + a prowl mark on the county
 	}
 
 	option = { # A wealthy target yields more than just blood.
@@ -2201,7 +2209,7 @@ supernatural_ev1.23 = { # The Crimson Decision
 			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 4 8 } } }
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 4 8 } } }
 		}
-		scope:vf_human = { add_character_modifier = { modifier = vf_recently_fed_on_modifier years = 3 } }
+		vf_mark_fed_on_effect = { VICTIM = scope:vf_human } # 2.35 W2: modifier + a prowl mark on the county
 	}
 
 	# ===== BOTCHED FEED (P2-C: Silence / Flee / Compel) =====
@@ -2210,7 +2218,18 @@ supernatural_ev1.23 = { # The Crimson Decision
 		trigger = { has_character_flag = vf_feeding_botched }
 		custom_tooltip = supernatural_ev1.23.botched_silence_tt
 		stress_impact = { base = medium_stress_impact_gain sadistic = minor_stress_impact_loss callous = minor_stress_impact_gain compassionate = major_stress_impact_gain just = medium_stress_impact_gain }
-		scope:vf_human = { death = { death_reason = death_murder killer = root } }
+		# 2.35 PART TWO (§7.4) -- was an unconditionally clean kill, which made this the strictly correct play
+		# every time. It is a roll now, on the same dressing value the rest of the cover-up family uses:
+		# succeed and it is one quiet body with no mark, fail and there are two bodies and two marks, because
+		# somebody came round the corner while you were making the first one quiet.
+		if = {
+			limit = { exists = scope:activity  scope:activity.activity_location ?= { exists = county } }
+			spn_body_witness_backfire_effect = { WITNESS = scope:vf_human COUNTY = scope:activity.activity_location.county }
+		}
+		else = {
+			add_character_flag = { flag = spn_menace_marked_recently days = 3 }
+			scope:vf_human = { death = { death_reason = death_murder killer = root } }
+		}
 		root = { add_dread = { 5 12 } vf_local_hunter_notices_effect = yes }
 		ai_chance = { base = 35 modifier = { add = 30 has_trait = callous } modifier = { add = 30 has_trait = sadistic } modifier = { add = -25 has_trait = compassionate } }
 	}
@@ -2262,7 +2281,7 @@ supernatural_ev1.24 = { # Reveling in the Night - Embrace the Night Intent
 	trigger = {
 		is_alive = yes
 		# 2.32 -- was raw has_activity_intent, which only ever returns true for a PLAYER host.
-		# These three events carry 150 of the weekly pool's 400 weight, so 37.5%% of the pool
+		# These three events carry 150 of the weekly pool's 400 weight, so 37.5% of the pool
 		# was dead for every AI-hosted feeding. The AI-safe wrapper exists for exactly this and
 		# was already used correctly at ev1.07 and inside vf_feeding_success_chance.
 		has_st_embrace_the_night_intent_trigger = yes
@@ -2370,7 +2389,7 @@ supernatural_ev1.26 = { # The Drunk's Ramblings
 			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 3 6 } } }
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 3 6 } } }
 		}
-		scope:vf_drunkard = { add_character_modifier = { modifier = vf_recently_fed_on_modifier years = 3 } }
+		vf_mark_fed_on_effect = { VICTIM = scope:vf_drunkard } # 2.35 W2: modifier + a prowl mark on the county
 		ai_chance = { base = 50 }
 	}
 }

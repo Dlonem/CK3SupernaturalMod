@@ -1,0 +1,146 @@
+﻿# Supernatural 2.35 -- find a real hunter before inventing one.
+#
+# Every "a hunter comes for you" beat in the mod used to call spn_create_skilled_hunter_effect, which spawns a
+# stranger at your location, uses him for one event, and leaves him in the world as set dressing. The world now
+# contains real hunters -- seeded, trained through the apprentice chain, and spawned by earlier confrontations --
+# so the beat should use one of them when one is close enough to plausibly have followed the trail.
+#
+# Root = the creature. Leaves scope:spn_created_hunter exactly as spn_create_skilled_hunter_effect does, so
+# every existing call site keeps working unchanged. Falls back to creating one when nobody real is in reach,
+# which is the 2.3x behaviour and is what happens in a world with no hunters in it yet.
+#
+# Order is nearest-first, and the first branch is the best version of this: the man who has been watching you
+# eats at your own table.
+
+spn_find_or_make_hunter_effect = {
+	# 1. Your own court.
+	if = {
+		limit = { any_courtier = { spn_real_hunter_candidate_trigger = yes } }
+		random_courtier = {
+			limit = { spn_real_hunter_candidate_trigger = yes }
+			save_scope_as = spn_created_hunter
+		}
+	}
+	# 2. Your liege sent someone.
+	else_if = {
+		limit = {
+			exists = liege
+			liege = { any_courtier = { spn_real_hunter_candidate_trigger = yes } }
+		}
+		liege = {
+			random_courtier = {
+				limit = { spn_real_hunter_candidate_trigger = yes }
+				save_scope_as = spn_created_hunter
+			}
+		}
+	}
+	# 3. The lord of the ground you are standing on. Covers the landless adventurer, who has no court and no
+	#    liege but is always somewhere.
+	else_if = {
+		limit = {
+			location ?= { county ?= { exists = holder } }
+			location.county.holder = { any_courtier = { spn_real_hunter_candidate_trigger = yes } }
+		}
+		location.county.holder = {
+			random_courtier = {
+				limit = { spn_real_hunter_candidate_trigger = yes }
+				save_scope_as = spn_created_hunter
+			}
+		}
+	}
+	# 4. That lord himself, if he is the hunter.
+	else_if = {
+		limit = {
+			location ?= { county ?= { exists = holder } }
+			location.county.holder = { spn_real_hunter_candidate_trigger = yes }
+		}
+		location.county.holder = { save_scope_as = spn_created_hunter }
+	}
+	# 5. Nobody real is in reach. Make one, as the mod always did.
+	else = {
+		spn_create_skilled_hunter_effect = { WHO = root }
+	}
+}
+
+# 2.35 -- the same principle, applied to the man in the tavern. Root = the hunter. Leaves
+# scope:random_person exactly as the create_character in Monster Sighting did, and the whole
+# 0010 -> 0011 / 0012 chain only ever uses that scope for a portrait, so nothing downstream changes.
+spn_find_or_make_tavern_talker_effect = {
+	# 1. Somebody who actually drinks in this county -- a courtier or guest of the lord whose ground you are
+	#    standing on. This is the version worth having: the man with the story lives here.
+	if = {
+		limit = {
+			location ?= { county ?= { exists = holder } }
+			location.county.holder = { any_courtier_or_guest = { spn_tavern_talker_candidate_trigger = yes } }
+		}
+		location.county.holder = {
+			random_courtier_or_guest = {
+				limit = { spn_tavern_talker_candidate_trigger = yes }
+				save_scope_as = random_person
+			}
+		}
+	}
+	# 2. Your own household, if you are drinking at home.
+	else_if = {
+		limit = { any_courtier_or_guest = { spn_tavern_talker_candidate_trigger = yes } }
+		random_courtier_or_guest = {
+			limit = { spn_tavern_talker_candidate_trigger = yes }
+			save_scope_as = random_person
+		}
+	}
+	# 3. Nobody real. Make one, as the mod always did -- but placed at root.location rather than
+	#    root.capital_province, which a landless adventurer hunter does not have at all.
+	else = {
+		create_character = {
+			gender_female_chance = 50
+			dynasty = none
+			age = { 16 25 }
+			# 2.35h -- NEITHER A PROVINCE'S culture NOR ITS faith RESOLVES for create_character under this
+			# playset. Both produce "Invalid <x> in Handle<X>" / "No <x> for character" and then
+			# "create_character effect [ Errors in character config ]", which aborts the whole create and
+			# leaves the caller with no saved scope. Faith was caught first (error.log 16:39:39); fixing it
+			# only exposed culture behind it (17:49:26). root is a living character and both of ROOT's always
+			# resolve, which is the only property that matters here.
+			culture = root.culture
+			faith = root.faith
+			location = root.location
+			trait = drunkard
+			save_scope_as = random_person
+		}
+	}
+}
+
+
+# ----------------------------------------------------------------------------------------------------------
+# 2.35a -- HUNTER TRAINING, THE STATE THAT WAS NEVER THERE.
+#
+# Both training interactions accepted, fired spn_train_hunter.0001 (or .0003) at the trainee, and then left
+# them carrying nothing at all for the 75-115 days until spn_train_hunter.0002 (or .0004) resolved. The only
+# re-use guard on either interaction was the spn_hunter_apprentice flag, which is set by exactly one branch --
+# the 20% "not yet" roll -- and therefore was not set at all for most of the window and never at all on the
+# 80% success or the refusal. So the button stayed lit, and every press queued another whole copy of the
+# chain onto the same person.
+#
+# These two are the missing bookends. Begin on accept, end on every branch that resolves the chain. 200 days
+# is deliberately longer than the longest wait (115) so the state cannot expire mid-chain, and deliberately
+# finite so a chain that dies -- trainee turned into something, trainer dead, event eaten by a trigger, an old
+# save with a queued 0002 that will never fire -- fails open instead of locking the character out for good.
+# ----------------------------------------------------------------------------------------------------------
+
+# Scope: the trainee.
+spn_begin_hunter_training_effect = {
+	add_character_flag = { flag = spn_hunter_in_training days = 200 }
+	add_character_modifier = { modifier = spn_hunter_in_training_modifier days = 200 }
+}
+
+# Scope: the trainee. Idempotent -- safe to call from a branch that may not have set it (old saves).
+spn_end_hunter_training_effect = {
+	if = {
+		limit = { has_character_flag = spn_hunter_in_training }
+		remove_character_flag = spn_hunter_in_training
+	}
+	if = {
+		limit = { has_character_modifier = spn_hunter_in_training_modifier }
+		remove_character_modifier = spn_hunter_in_training_modifier
+	}
+}

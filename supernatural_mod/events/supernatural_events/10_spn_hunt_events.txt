@@ -1,0 +1,2474 @@
+﻿namespace = spn_hunt
+
+# Supernatural 2.35 -- "The Hunt". WORK-ORDER-2.35-THE-HUNT §4, §5, §6.9.
+#
+# The chain: a creature leaves a trail on a county (zz_spn_menace_effects.txt) -> the county's lord notices
+# (Something Stalks ...) -> he investigates (The Ledger of the Dead / The Spymaster's Report) or posts a bounty ->
+# a hunter runs a Supernatural Hunt there (supernatural_hunt.txt) -> the creature gets a real, two-sided chance
+# to answer (Whispers of a Hunter, Someone Is Asking Questions, The Hunter at Your Door) -> the county recovers
+# (What the Hunt Was Worth). Nothing here spawns a monster; every target is a character who did something.
+#
+# TWO-SIDED, always (§5.1, vanilla's murder_outcome_reworked.0001 -> after -> .0002): decide once, save scopes,
+# fire the other side's event from `after` or from the option. Order of choices: hunter (planning + Cornered) ->
+# creature (Someone Is Asking Questions) -> if the creature wins, hunter (Overmatched: retreat or press) -> the kill
+# last, after banking. Nobody dies without having chosen the option that risked it.
+#
+# Scopes: see zz_spn_hunt_effects.txt. Events refer to each other by title in comments.
+
+# ==========================================================================================================
+# §4 THE LORD FINDS OUT. Root = the county holder, scope:spn_menace_county = the county (set by the third mark).
+# ==========================================================================================================
+
+# Something Stalks [county]
+spn_hunt.0001 = {
+	type = character_event
+	title = spn_hunt.0001.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					has_trait = supernatural_hunter
+					spn_hunt_reads_the_kind_trigger = yes
+					scope:spn_menace_county = { var:spn_menace_kind ?= flag:vampire }
+				}
+				desc = spn_hunt.0001.desc_vampire
+			}
+			triggered_desc = {
+				trigger = {
+					has_trait = supernatural_hunter
+					spn_hunt_reads_the_kind_trigger = yes
+					scope:spn_menace_county = { var:spn_menace_kind ?= flag:werewolf }
+				}
+				desc = spn_hunt.0001.desc_werewolf
+			}
+			desc = spn_hunt.0001.desc
+		}
+	}
+	theme = dread
+	override_background = { reference = throne_room }
+	left_portrait = { character = root animation = worry }
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:spn_menace_county
+		scope:spn_menace_county = {
+			has_county_modifier = spn_menace_modifier
+			exists = var:spn_menace_culprit
+			var:spn_menace_culprit = { is_alive = yes }
+		}
+	}
+
+	immediate = {
+		save_scope_as = spn_hunt_lord
+	}
+
+	# I will look into this myself.
+	option = {
+		name = spn_hunt.0001.a
+		trigger_event = { id = spn_hunt.0002 days = { 5 15 } }
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = paranoid }
+			modifier = { add = 20 has_trait = diligent }
+			modifier = { add = 10 has_trait = zealous }
+			modifier = { add = -20 has_trait = lazy }
+			modifier = { add = -10 has_trait = trusting }
+		}
+	}
+	# Put my Spymaster on it.
+	option = {
+		name = spn_hunt.0001.b
+		trigger = { exists = cp:councillor_spymaster }
+		trigger_event = { id = spn_hunt.0003 days = { 10 30 } }
+		ai_chance = {
+			base = 40
+			modifier = { add = 10 has_trait = craven }
+			modifier = { add = 10 has_trait = calm }
+		}
+	}
+	# Post a bounty (D9): a contract in the county's capital for an adventurer hunter. It stores the COUNTY, never
+	# the culprit -- the hunt still has to find them.
+	option = {
+		name = spn_hunt.0001.c
+		trigger = { has_dlc_feature = landless_playable }
+		custom_tooltip = spn_hunt.0001.c.tt
+		hidden_effect = {
+			# The one-day flag is the contract's only door (spn_hunter_contracts.txt valid_to_create).
+			add_character_flag = { flag = spn_posting_hunter_bounty days = 1 }
+			create_task_contract = {
+				task_contract_type = laamp_hunter_1001
+				location = scope:spn_menace_county.title_province
+				task_contract_employer = root
+				task_contract_tier = root.task_contract_tier_value
+				save_scope_as = spn_new_contract
+			}
+			trigger_event = spn_hunt.0004
+		}
+		ai_chance = {
+			base = 20
+			modifier = { add = 30 gold >= 100 }
+			modifier = { add = 20 martial < 10 }
+			modifier = { add = 20 has_trait = craven }
+		}
+	}
+	# 2.35g -- SEND FOR A HUNTER, BY NAME (spn_hunt.0006). The fifth answer, and the one that gives a man
+	# the road into your county. Needs no DLC, unlike Post a Bounty above; the two do not overlap because
+	# the county is stamped spn_summons_answered by whichever runs first.
+	option = {
+		name = spn_hunt.0001.e
+		trigger = { spn_summons_worth_sending_trigger = yes }
+		custom_tooltip = spn_hunt.0001.e.tt
+		trigger_event = { id = spn_hunt.0006 days = { 7 20 } }
+		ai_chance = {
+			base = 35
+			modifier = { add = 25 gold >= 150 }
+			modifier = { add = 20 has_trait = diligent }
+			modifier = { add = 20 martial < 10 }
+			modifier = { add = 15 has_trait = craven }
+			modifier = { add = -25 has_trait = arrogant }
+			modifier = { add = -30 gold < 60 }
+		}
+	}
+	# Superstition and bad luck. The control keeps bleeding -- the cost is visible on the county.
+	option = {
+		name = spn_hunt.0001.d
+		custom_tooltip = spn_hunt.0001.d.tt
+		ai_chance = {
+			base = 20
+			modifier = { add = 30 has_trait = content }
+			modifier = { add = 20 has_trait = cynical }
+			modifier = { add = 20 has_trait = trusting }
+		}
+	}
+}
+
+# The Ledger of the Dead. The value form of `duel` -- the target form would print the culprit's name in the tooltip.
+spn_hunt.0002 = {
+	type = character_event
+	title = spn_hunt.0002.t
+	desc = spn_hunt.0002.desc
+	theme = intrigue
+	override_background = { reference = study }
+	left_portrait = { character = root animation = thinking }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_menace_county
+		scope:spn_menace_county = {
+			exists = var:spn_menace_culprit
+			var:spn_menace_culprit = { is_alive = yes }
+		}
+	}
+
+	immediate = {
+		save_scope_as = spn_hunt_lord
+		scope:spn_menace_county.var:spn_menace_culprit = { save_scope_as = spn_menace_culprit }
+	}
+
+	option = {
+		name = spn_hunt.0002.a
+		duel = {
+			skill = intrigue
+			value = spn_menace_hide_value
+			localization = spn_hunt_ledger_duel
+			50 = {
+				desc = spn_hunt.0002.success_tt
+				compare_modifier = { value = scope:duel_value multiplier = 2 min = -45 }
+				min = 5
+				if = {
+					limit = { scope:spn_menace_culprit = { spn_hunt_is_known_creature_trigger = yes } }
+					custom_tooltip = spn_hunt.0002.known_tt
+				}
+				else = {
+					spn_hunt_learn_culprit_effect = yes
+				}
+			}
+			50 = {
+				desc = spn_hunt.0002.failure_tt
+				compare_modifier = { value = scope:duel_value multiplier = -2 min = -45 }
+				min = 5
+				custom_tooltip = spn_hunt.0002.cold_tt
+			}
+		}
+	}
+}
+
+# The Spymaster's Report. The same duel, run by the Spymaster.
+spn_hunt.0003 = {
+	type = character_event
+	title = spn_hunt.0003.t
+	desc = spn_hunt.0003.desc
+	theme = intrigue
+	override_background = { reference = council_chamber }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_spymaster animation = spymaster }
+
+	trigger = {
+		is_alive = yes
+		exists = cp:councillor_spymaster
+		exists = scope:spn_menace_county
+		scope:spn_menace_county = {
+			exists = var:spn_menace_culprit
+			var:spn_menace_culprit = { is_alive = yes }
+		}
+	}
+
+	immediate = {
+		save_scope_as = spn_hunt_lord
+		cp:councillor_spymaster = { save_scope_as = spn_spymaster }
+		scope:spn_menace_county.var:spn_menace_culprit = { save_scope_as = spn_menace_culprit }
+	}
+
+	option = {
+		name = spn_hunt.0003.a
+		scope:spn_spymaster = {
+			duel = {
+				skill = intrigue
+				value = spn_menace_hide_value
+				localization = spn_hunt_ledger_duel
+				50 = {
+					desc = spn_hunt.0003.success_tt
+					compare_modifier = { value = scope:duel_value multiplier = 2 min = -45 }
+					modifier = { add = 10 has_trait = schemer }
+					min = 5
+					if = {
+						limit = { scope:spn_menace_culprit = { spn_hunt_is_known_creature_trigger = yes } }
+						custom_tooltip = spn_hunt.0002.known_tt
+					}
+					else = {
+						spn_hunt_learn_culprit_effect = yes
+					}
+				}
+				50 = {
+					desc = spn_hunt.0003.failure_tt
+					compare_modifier = { value = scope:duel_value multiplier = -2 min = -45 }
+					min = 5
+					custom_tooltip = spn_hunt.0002.cold_tt
+				}
+			}
+		}
+	}
+}
+
+# Nobody Here Remembers -- 2.35. The county has taken three compulsions inside five years and the holes
+# have started to line up (spn_compel_leaves_a_trace_effect / spn_compel_left_a_hole_effect). There is no
+# body and nothing to dig up: what the lord has is a town that is unusually certain nothing happened.
+#
+# Thomas, 8 Sep 2026: "if an entire town doesn't know anything about what a hunter clearly saw was true,
+# then there would definitely be some funny business there." This is the funny business, and the loop it
+# closes is the point of it: a creature that covers its tracks BADLY eventually creates the exact trail it
+# was hiding, because Have It Looked Into writes a menace mark with the culprit's own name on it.
+#
+# Root = the county's holder. scope:spn_compel_hole_county = the county.
+spn_hunt.0130 = {
+	type = character_event
+	title = spn_hunt.0130.t
+	desc = spn_hunt.0130.desc
+	theme = dread
+	override_background = { reference = market }
+	left_portrait = { character = root animation = worry }
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:spn_compel_hole_county
+		scope:spn_compel_hole_county = {
+			has_county_modifier = spn_compelled_modifier
+			exists = var:spn_compel_culprit
+			var:spn_compel_culprit = { is_alive = yes }
+		}
+	}
+
+	immediate = {
+		save_scope_as = spn_hunt_lord
+	}
+
+	# Have it looked into. Your learning against how well it was done.
+	option = {
+		name = spn_hunt.0130.a
+		custom_tooltip = spn_hunt.0130.a.tt
+		duel = {
+			skill = learning
+			value = spn_compel_hide_value
+			localization = spn_compel_investigate_duel
+			50 = {
+				desc = spn_hunt.0130.a.success_tt
+				compare_modifier = { value = scope:duel_value multiplier = 2 min = -40 }
+				min = 5
+				spn_compel_investigation_lands_effect = yes
+			}
+			50 = {
+				desc = spn_hunt.0130.a.failure_tt
+				compare_modifier = { value = scope:duel_value multiplier = -2 min = -40 }
+				min = 5
+				add_stress = minor_stress_impact_gain
+			}
+		}
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = paranoid }
+			modifier = { add = 20 has_trait = diligent }
+			modifier = { add = 20 learning >= 12 }
+			modifier = { add = -25 has_trait = lazy }
+		}
+	}
+	# Put the Trailsman on it. He reads ground for a living, and a county that has forgotten a week is
+	# ground. Rewards the court position rather than duplicating it.
+	option = {
+		name = spn_hunt.0130.b
+		trigger = {
+			OR = {
+				any_court_position_holder = { type = spn_trailsman_court_position }
+				any_court_position_holder = { type = spn_trailsman_camp_officer }
+			}
+		}
+		custom_tooltip = spn_hunt.0130.b.tt
+		duel = {
+			skill = learning
+			value = spn_compel_hide_value
+			localization = spn_compel_investigate_duel
+			65 = {
+				desc = spn_hunt.0130.a.success_tt
+				compare_modifier = { value = scope:duel_value multiplier = 2 min = -40 }
+				modifier = { add = 20 always = yes }
+				min = 10
+				spn_compel_investigation_lands_effect = yes
+			}
+			35 = {
+				desc = spn_hunt.0130.a.failure_tt
+				compare_modifier = { value = scope:duel_value multiplier = -2 min = -40 }
+				min = 5
+			}
+		}
+		ai_chance = {
+			base = 70
+			modifier = { add = 20 has_trait = paranoid }
+		}
+	}
+	# Bad air, bad harvest, bad year.
+	option = {
+		name = spn_hunt.0130.c
+		custom_tooltip = spn_hunt.0130.c.tt
+		stress_impact = {
+			paranoid = minor_stress_impact_gain
+			lazy = minor_stress_impact_loss
+		}
+		ai_chance = {
+			base = 20
+			modifier = { add = 30 has_trait = lazy }
+			modifier = { add = 20 has_trait = content }
+			modifier = { add = -30 has_trait = paranoid }
+		}
+	}
+}
+
+# A Bounty Posted (hidden): the lord's message that the contract is out.
+spn_hunt.0004 = {
+	type = character_event
+	hidden = yes
+	immediate = {
+		send_interface_message = {
+			type = event_generic_neutral
+			title = spn_hunt.0004.t
+			desc = spn_hunt.0004.desc
+			left_icon = scope:spn_menace_county
+		}
+	}
+}
+
+# A Lord's Coin -- the adventurer hunter who accepted the bounty (root = the taker, scope:task_contract).
+spn_hunt.0010 = {
+	type = character_event
+	title = spn_hunt.0010.t
+	desc = spn_hunt.0010.desc
+	theme = laamp
+	override_background = { reference = ep3_camp }
+	left_portrait = { character = root animation = marshal }
+	right_portrait = { character = scope:spn_contract_employer animation = worry }
+
+	immediate = {
+		scope:task_contract.task_contract_employer = { save_scope_as = spn_contract_employer }
+		scope:task_contract.var:spn_contract_county ?= { save_scope_as = spn_contract_county }
+	}
+
+	option = {
+		name = spn_hunt.0010.a
+		custom_tooltip = spn_hunt.0010.a.tt
+	}
+}
+
+# ==========================================================================================================
+# §5.2 EARLY WARNING. Root = a creature standing in the hunt's county. scope:spn_hunter, scope:spn_hunt_activity.
+# ==========================================================================================================
+
+# Whispers of a Hunter
+spn_hunt.0020 = {
+	type = character_event
+	title = spn_hunt.0020.t
+	desc = spn_hunt.0020.desc
+	theme = intrigue
+	override_background = { reference = tavern }
+	left_portrait = { character = root animation = paranoia }
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:spn_hunter
+		scope:spn_hunter = { is_alive = yes }
+		exists = scope:spn_hunt_activity
+		NOT = { has_character_modifier = spn_gone_to_ground_modifier }
+	}
+
+	# I'll keep an eye out.
+	option = {
+		name = spn_hunt.0020.a
+		custom_tooltip = spn_hunt.0020.a.tt
+		add_character_flag = { flag = spn_forewarned days = 180 }
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = paranoid }
+			modifier = { add = 15 has_trait = brave }
+			modifier = { add = 10 has_trait = diligent }
+		}
+	}
+	# Time I was elsewhere. Leave the county now; a hunt that comes looking finds nobody -- and there is no feeding
+	# for the year.
+	option = {
+		name = spn_hunt.0020.b
+		custom_tooltip = spn_hunt.0020.b.tt
+		add_character_modifier = { modifier = spn_gone_to_ground_modifier years = 1 }
+		# 2.35g -- word goes down the bloodline (spn_hunt.0030).
+		spn_kin_warning_check_effect = yes
+		# 2.35 PART TWO (§3.4.3) -- LEAVING IS NOW WORTH SOMETHING. Thomas asked for more ways off a county's
+		# books than compulsion, and this is the cheapest: you are not here any more, and the county's memory
+		# of you gets one mark shorter for it.
+		spn_menace_gone_to_ground_effect = yes
+		ai_chance = {
+			base = 25
+			modifier = { add = 35 has_trait = craven }
+			modifier = { add = 15 has_trait = calm }
+			modifier = { add = -20 has_trait = arrogant }
+		}
+	}
+	# Let him ask.
+	option = {
+		name = spn_hunt.0020.c
+		ai_chance = {
+			base = 35
+			modifier = { add = 30 has_trait = arrogant }
+			modifier = { add = 15 has_trait = brave }
+			modifier = { add = -20 has_trait = paranoid }
+		}
+	}
+}
+
+# ==========================================================================================================
+# §6.9 THE HUNT. Root = the host, activity events. scope:activity is implicit; the shared scopes are bound.
+# ==========================================================================================================
+
+# The Trail -- the opener. The kind shows only to a hunter who can read it.
+# 2.35 PART TWO (§8.5b) -- The Trail gained a way to turn round. The tracking-phase exit is deliberately the
+# CHEAPEST of the four: no XP, a little prestige, no county refusal counted against him. A young hunter who
+# rides out, looks at what is actually happening in this county and goes home has done nothing wrong, and the
+# system should not punish him for the one decision that keeps him alive to make better ones.
+spn_hunt.0100 = {
+	type = activity_event
+	title = spn_hunt.0100.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					spn_hunt_reads_the_kind_trigger = yes
+					scope:activity = { var:spn_hunt_kind ?= flag:vampire }
+				}
+				desc = spn_hunt.0100.desc_vampire
+			}
+			triggered_desc = {
+				trigger = {
+					spn_hunt_reads_the_kind_trigger = yes
+					scope:activity = { var:spn_hunt_kind ?= flag:werewolf }
+				}
+				desc = spn_hunt.0100.desc_werewolf
+			}
+			# 2.35 PART TWO -- the two new kinds, each behind its own read. A demon costs 65 (§4.2) because
+			# nothing about a demon's kill looks like an animal's; a witch is read off the OTHER track
+			# entirely, which is the whole point of the trait having two.
+			triggered_desc = {
+				trigger = {
+					spn_hunt_reads_demon_trigger = yes
+					scope:activity = { var:spn_hunt_kind ?= flag:demon }
+				}
+				desc = spn_hunt.0100.desc_demon
+			}
+			triggered_desc = {
+				trigger = {
+					spn_hunt_reads_witch_trigger = yes
+					scope:activity = { var:spn_hunt_kind ?= flag:witch }
+				}
+				desc = spn_hunt.0100.desc_witch
+			}
+			desc = spn_hunt.0100.desc
+		}
+	}
+	theme = hunting
+	override_background = { reference = bp1_crossroads_inn } # 2.35a art pass -- was tavern. The Trail: you have just ridden into the county. Not the same tavern as every other scene.
+	left_portrait = { character = root animation = marshal }
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+	}
+
+	option = {
+		name = spn_hunt.0100.a
+		custom_tooltip = spn_hunt.0100.a.tt
+	}
+
+	# 2.35 PART TWO (§8.5b) -- "This is not my fight." The first and cheapest of the four off-ramps.
+	#
+	# It does not end the ACTIVITY -- script cannot walk a host out of his own activity -- it ends the HUNT:
+	# the tracking roll is skipped, the confrontation never happens, and the conclusion pays a withdrawal.
+	# No XP, a little prestige for having ridden out at all, and no refusal counted against the county,
+	# because a man who looked and left before he ever knocked on a door has not been turned back by anything.
+	option = {
+		name = spn_hunt.0100.b
+		custom_tooltip = spn_hunt.0100.b.tt
+		scope:activity = { set_variable = { name = spn_hunt_walked_away value = yes } }
+		spn_hunt_set_outcome_effect = { OUTCOME = withdrew }
+		add_prestige = 10
+		ai_chance = {
+			base = 5
+			modifier = { add = 40 has_trait = craven }
+			modifier = { add = 25 has_trait = content }
+			modifier = { add = 20 has_trait = lazy }
+			# The projected odds, run for real. A hunter who can do the arithmetic does it here.
+			modifier = { add = 45 spn_hunt_projected_odds_value < 30 }
+			modifier = { add = 25 spn_hunt_projected_odds_value < 45 }
+			modifier = { add = -40 has_trait = brave }
+			modifier = { add = -35 has_trait = zealous }
+			modifier = { add = -30 has_trait = vengeful }
+			modifier = { add = -30 spn_hunter_has_nothing_else_trigger = yes }
+		}
+	}
+}
+
+# The Survivor -- a courtier who was fed on and lived. The first reader of vf_recently_fed_on_modifier.
+spn_hunt.0101 = {
+	type = activity_event
+	title = spn_hunt.0101.t
+	desc = spn_hunt.0101.desc
+	theme = intrigue
+	override_background = { reference = sitting_room }
+	left_portrait = { character = root animation = interested }
+	right_portrait = { character = scope:spn_survivor animation = fear }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0101 }
+			activity_location.county ?= {
+				holder ?= {
+					any_courtier_or_guest = { has_character_modifier = vf_recently_fed_on_modifier is_alive = yes }
+				}
+			}
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0101 value = yes } }
+		scope:spn_hunt_county.holder = {
+			random_courtier_or_guest = {
+				limit = { has_character_modifier = vf_recently_fed_on_modifier is_alive = yes }
+				save_scope_as = spn_survivor
+			}
+		}
+	}
+
+	# Listen.
+	option = {
+		name = spn_hunt.0101.a
+		spn_hunt_chance_change_effect = { VALUE = 10 }
+		ai_chance = { base = 60 }
+	}
+	# Press them.
+	option = {
+		name = spn_hunt.0101.b
+		duel = {
+			skill = intrigue
+			value = 12
+			localization = spn_hunt_press_duel
+			50 = {
+				desc = spn_hunt.0101.b.success_tt
+				compare_modifier = { value = scope:duel_value multiplier = 2 min = -45 }
+				min = 5
+				spn_hunt_chance_change_effect = { VALUE = 20 }
+			}
+			50 = {
+				desc = spn_hunt.0101.b.failure_tt
+				compare_modifier = { value = scope:duel_value multiplier = -2 min = -45 }
+				min = 5
+				spn_hunt_chance_change_effect = { VALUE = -5 }
+				scope:spn_survivor = { add_opinion = { target = root modifier = suspicion_opinion opinion = -10 } }
+			}
+		}
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = callous }
+			modifier = { add = 20 has_trait = impatient }
+			modifier = { add = -20 has_trait = compassionate }
+		}
+	}
+}
+
+# What the Graves Say -- desc by how many marks; a veteran reads the kind off the wounds.
+spn_hunt.0102 = {
+	type = activity_event
+	title = spn_hunt.0102.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					spn_hunt_reads_the_kind_trigger = yes
+					scope:activity = { var:spn_hunt_kind ?= flag:vampire }
+				}
+				desc = spn_hunt.0102.desc_vampire
+			}
+			triggered_desc = {
+				trigger = {
+					spn_hunt_reads_the_kind_trigger = yes
+					scope:activity = { var:spn_hunt_kind ?= flag:werewolf }
+				}
+				desc = spn_hunt.0102.desc_werewolf
+			}
+			triggered_desc = {
+				trigger = { scope:activity.activity_location.county ?= { exists = var:spn_menace_count var:spn_menace_count >= 3 } }
+				desc = spn_hunt.0102.desc_many
+			}
+			desc = spn_hunt.0102.desc_few
+		}
+	}
+	theme = death
+	override_background = { reference = ce1_catacombs }
+	left_portrait = { character = root animation = thinking }
+
+	trigger = {
+		scope:activity = { NOT = { has_variable = spn_hunt_ev_0102 } }
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0102 value = yes } }
+	}
+
+	option = {
+		name = spn_hunt.0102.a
+		spn_hunt_chance_change_effect = { VALUE = 5 }
+	}
+}
+
+# The Wrong Man -- a real local the mob has already decided on.
+spn_hunt.0103 = {
+	type = activity_event
+	title = spn_hunt.0103.t
+	desc = spn_hunt.0103.desc
+	theme = dread
+	override_background = { reference = gallows }
+	left_portrait = { character = root animation = disapproval }
+	right_portrait = { character = scope:spn_accused animation = beg }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0103 }
+			activity_location.county ?= {
+				holder ?= {
+					any_courtier_or_guest = {
+						is_alive = yes
+						is_adult = yes
+						is_imprisoned = no
+						NOT = { has_trait = supernatural_hunter }
+						spn_hunt_is_creature_trigger = no
+					}
+				}
+			}
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0103 value = yes } }
+		scope:spn_hunt_county.holder = {
+			random_courtier_or_guest = {
+				limit = {
+					is_alive = yes
+					is_adult = yes
+					is_imprisoned = no
+					NOT = { has_trait = supernatural_hunter }
+					spn_hunt_is_creature_trigger = no
+				}
+				save_scope_as = spn_accused
+			}
+		}
+	}
+
+	# Let him go.
+	option = {
+		name = spn_hunt.0103.a
+		custom_tooltip = spn_hunt.0103.a.tt
+		ai_chance = {
+			base = 70
+			modifier = { add = 30 has_trait = just }
+			modifier = { add = 20 has_trait = compassionate }
+		}
+	}
+	# Let the mob have him. He lives, hurt; the county remembers who let it happen.
+	option = {
+		name = spn_hunt.0103.b
+		add_prestige = -25
+		scope:spn_accused = { increase_wounds_no_death_effect = { REASON = beaten } }
+		scope:spn_hunt_county = { add_county_modifier = { modifier = spn_hunt_mob_justice_modifier years = 2 } }
+		ai_chance = {
+			base = 10
+			modifier = { add = 30 has_trait = callous }
+			modifier = { add = 30 has_trait = sadistic }
+			modifier = { add = 15 has_trait = lazy }
+			modifier = { add = -50 has_trait = just }
+		}
+	}
+}
+
+# Lessons in the Dark -- the apprentice is watching.
+spn_hunt.0104 = {
+	type = activity_event
+	title = spn_hunt.0104.t
+	desc = spn_hunt.0104.desc
+	theme = hunting
+	override_background = { reference = ep3_campfire } # 2.35a art pass -- was ep2_hunt_foggy_forest. Lessons in the Dark: teaching an apprentice at night, at camp.
+	left_portrait = { character = root animation = marshal }
+	right_portrait = { character = scope:spn_apprentice animation = interested }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0104 }
+			any_attending_character = { spn_is_apprentice_of_trigger = { TRAINER = scope:host } }
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = {
+			set_variable = { name = spn_hunt_ev_0104 value = yes }
+			random_attending_character = {
+				limit = { spn_is_apprentice_of_trigger = { TRAINER = scope:host } }
+				save_scope_as = spn_apprentice
+			}
+		}
+	}
+
+	option = {
+		name = spn_hunt.0104.a
+		add_prestige = 10
+		scope:spn_apprentice = {
+			if = {
+				limit = { has_variable = spn_apprentice_progress }
+				change_variable = { name = spn_apprentice_progress add = 1 }
+			}
+			else = {
+				set_variable = { name = spn_apprentice_progress value = 1 }
+			}
+		}
+	}
+}
+
+# A Fellow Hunter's Tale
+spn_hunt.0105 = {
+	type = activity_event
+	title = spn_hunt.0105.t
+	desc = spn_hunt.0105.desc
+	theme = hunting
+	override_background = { reference = tavern }
+	left_portrait = { character = root animation = happiness }
+	right_portrait = { character = scope:spn_fellow animation = drink }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0105 }
+			any_attending_character = { has_trait = supernatural_hunter NOT = { this = scope:host } }
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = {
+			set_variable = { name = spn_hunt_ev_0105 value = yes }
+			random_attending_character = {
+				limit = { has_trait = supernatural_hunter NOT = { this = scope:host } }
+				save_scope_as = spn_fellow
+			}
+		}
+	}
+
+	option = {
+		name = spn_hunt.0105.a
+		spn_hunt_chance_change_effect = { VALUE = 5 }
+		add_opinion = { target = scope:spn_fellow modifier = respect_opinion opinion = 10 }
+		scope:spn_fellow = { add_opinion = { target = root modifier = respect_opinion opinion = 10 } }
+	}
+}
+
+# A Word with [name] -- a known creature lives in the county. The hunter may go and ask (§5.3).
+spn_hunt.0106 = {
+	type = activity_event
+	title = spn_hunt.0106.t
+	desc = spn_hunt.0106.desc
+	theme = intrigue
+	override_background = { reference = sitting_room } # 2.35a art pass -- was corridor_night. A Word with X: deliberately the same room as The Hunter at Your Door, which is the other side of this exact conversation.
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_informer animation = scheme }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0106 }
+			activity_location.county ?= {
+				holder ?= {
+					OR = {
+						AND = {
+							spn_hunt_is_known_creature_trigger = yes
+							NOT = { this = scope:host }
+						}
+						any_courtier_or_guest = {
+							is_alive = yes
+							is_imprisoned = no
+							spn_hunt_is_known_creature_trigger = yes
+							NOT = { this = scope:host }
+						}
+					}
+				}
+			}
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0106 value = yes } }
+		scope:spn_hunt_county.holder = {
+			if = {
+				limit = { spn_hunt_is_known_creature_trigger = yes NOT = { this = scope:host } }
+				save_scope_as = spn_informer
+			}
+			else = {
+				random_courtier_or_guest = {
+					limit = {
+						is_alive = yes
+						is_imprisoned = no
+						spn_hunt_is_known_creature_trigger = yes
+						NOT = { this = scope:host }
+					}
+					save_scope_as = spn_informer
+				}
+			}
+		}
+	}
+
+	# Go and ask.
+	option = {
+		name = spn_hunt.0106.a
+		trigger = { exists = scope:spn_informer }
+		custom_tooltip = spn_hunt.0106.a.tt
+		scope:spn_informer = { trigger_event = spn_hunt.0230 }
+		ai_chance = {
+			base = 60
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = -30 has_trait = craven }
+			# A known false witness is not worth the ride.
+			modifier = { add = -40 scope:spn_informer = { has_character_flag = spn_false_witness } }
+		}
+	}
+	# Leave it be.
+	option = {
+		name = spn_hunt.0106.b
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = craven }
+			modifier = { add = 10 has_trait = paranoid }
+		}
+	}
+}
+
+# A Name That Led Nowhere -- the hunter saw through a false lead.
+spn_hunt.0107 = {
+	type = activity_event
+	title = spn_hunt.0107.t
+	desc = spn_hunt.0107.desc
+	theme = intrigue
+	override_background = { reference = ep2_travel_farms } # 2.35a art pass -- was tavern. A Name That Led Nowhere: you rode out on it and there was nothing there.
+	left_portrait = { character = root animation = disapproval }
+	right_portrait = { character = scope:spn_hunt_informer animation = scheme }
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:spn_hunt_activity.var:spn_hunt_lead_from ?= { save_scope_as = spn_hunt_informer }
+	}
+
+	option = {
+		name = spn_hunt.0107.a
+		add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = 5 }
+		if = {
+			limit = { exists = scope:spn_hunt_informer }
+			add_opinion = { target = scope:spn_hunt_informer modifier = spn_false_witness_opinion }
+			scope:spn_hunt_informer = { add_character_flag = { flag = spn_false_witness years = 5 } }
+		}
+	}
+}
+
+# The Wrong Door -- the hunter confronts an innocent, and the real culprit walks.
+spn_hunt.0108 = {
+	type = activity_event
+	title = spn_hunt.0108.t
+	desc = spn_hunt.0108.desc
+	theme = dread
+	override_background = { reference = village } # 2.35a art pass -- was corridor_night. The Wrong Door: an ordinary family's house, which is the whole point.
+	left_portrait = { character = root animation = shame }
+	right_portrait = { character = scope:spn_hunt_lead animation = fear }
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+	}
+
+	option = {
+		name = spn_hunt.0108.a
+		add_prestige = -50
+		scope:spn_hunt_county.holder ?= {
+			if = {
+				limit = { NOT = { this = root } }
+				add_opinion = { target = root modifier = spn_hunter_wrong_door_opinion }
+			}
+		}
+		scope:spn_hunt_lead ?= { trigger_event = spn_hunt.0250 }
+	}
+}
+
+# You Are Being Counted -- 2.35. The county holds more than one of them, and the hunter works it out
+# during the tracking phase rather than at the door. Thomas: "we want it to be more dangerous for hunters
+# if there's like a whole like group of werewolves, especially a pack."
+spn_hunt.0112 = {
+	type = activity_event
+	title = spn_hunt.0112.t
+	desc = spn_hunt.0112.desc
+	theme = dread
+	override_background = { reference = alley_day } # 2.35a art pass -- was alley_night. You Are Being Counted: being watched in daylight is worse than being watched at night.
+	left_portrait = { character = root animation = paranoia }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0112 }
+			# 2.35 PART TWO -- was the monster-kind option. A Witch Hunt on a witch trail runs the same
+			# spine and this beat belongs to it too.
+			spn_hunt_runs_the_trail_trigger = yes
+		}
+		scope:activity.activity_location.county ?= { spn_hunt_county_crowded_now_trigger = yes }
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0112 value = yes } }
+	}
+
+	# Find out how many.
+	option = {
+		name = spn_hunt.0112.a
+		custom_tooltip = spn_hunt.0112.a.tt
+		duel = {
+			skill = learning
+			value = 14
+			localization = spn_hunt_counting_duel
+			50 = {
+				desc = spn_hunt.0112.a.success_tt
+				compare_modifier = { value = scope:duel_value multiplier = 2 min = -40 }
+				modifier = { add = 15 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 50 } }
+				min = 5
+				spn_hunt_chance_change_effect = { VALUE = 10 }
+				add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 3 6 } }
+			}
+			50 = {
+				desc = spn_hunt.0112.a.failure_tt
+				compare_modifier = { value = scope:duel_value multiplier = -2 min = -40 }
+				min = 5
+				spn_hunt_chance_change_effect = { VALUE = -10 }
+				# You were counting them. They noticed.
+				spn_hunt_early_warning_effect = yes
+			}
+		}
+		ai_chance = {
+			base = 45
+			modifier = { add = 25 has_trait = paranoid }
+			modifier = { add = 20 has_trait = diligent }
+			modifier = { add = 15 learning >= 12 }
+			modifier = { add = -20 has_trait = impatient }
+		}
+	}
+	# Tell the lord what his county is. He lends men -- read by Cornered's third option.
+	option = {
+		name = spn_hunt.0112.b
+		trigger = {
+			exists = scope:spn_hunt_county
+			scope:spn_hunt_county.holder ?= {
+				is_alive = yes
+				NOT = { this = root }
+				NOT = { spn_hunt_is_creature_trigger = yes }
+			}
+		}
+		custom_tooltip = spn_hunt.0112.b.tt
+		add_character_flag = { flag = spn_hunt_county_men_pledged days = 120 }
+		# He now knows a stranger is counting creatures in his county, and so does everyone who serves him.
+		spn_hunt_early_warning_effect = yes
+		ai_chance = {
+			base = 35
+			modifier = { add = 30 has_trait = craven }
+			modifier = { add = 20 has_trait = just }
+			modifier = { add = 20 has_trait = gregarious }
+			modifier = { add = -25 has_trait = shy }
+			modifier = { add = -20 has_trait = arrogant }
+		}
+	}
+	# You came for one.
+	option = {
+		name = spn_hunt.0112.c
+		custom_tooltip = spn_hunt.0112.c.tt
+		ai_chance = {
+			base = 25
+			modifier = { add = 30 has_trait = brave }
+			modifier = { add = 25 has_trait = arrogant }
+			modifier = { add = 20 has_trait = zealous }
+			modifier = { add = -25 has_trait = paranoid }
+		}
+	}
+}
+
+# Another Man's Trail -- 2.35. Somebody else has been working this county, and he is real: a hunter in the
+# local lord's court, or the lord himself. Thomas's brief for the whole supernatural world -- "hunters vs
+# werewolves vs vampires; sometimes there's some cooperation, other times there's not" -- had a creature side
+# (the pack, and the informer in The Hunter at Your Door) and no hunter side at all. This is it.
+#
+# Root = the host. scope:spn_hunt_rival = the other hunter.
+spn_hunt.0113 = {
+	type = activity_event
+	title = spn_hunt.0113.t
+	desc = spn_hunt.0113.desc
+	theme = hunting
+	override_background = { reference = ep2_hunt_poachers_camp } # 2.35a art pass -- was tavern. Another Man's Trail: another hunter camped on the same county.
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_hunt_rival animation = personality_bold }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0113 }
+			# 2.35 PART TWO -- was the monster-kind option. A Witch Hunt on a witch trail runs the same
+			# spine and this beat belongs to it too.
+			spn_hunt_runs_the_trail_trigger = yes
+		}
+		scope:activity.activity_location.county ?= {
+			holder ?= {
+				OR = {
+					spn_real_hunter_candidate_trigger = yes
+					any_courtier_or_guest = { spn_real_hunter_candidate_trigger = yes }
+				}
+			}
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0113 value = yes } }
+		scope:spn_hunt_county.holder ?= {
+			if = {
+				limit = { spn_real_hunter_candidate_trigger = yes }
+				save_scope_as = spn_hunt_rival
+			}
+			else = {
+				random_courtier_or_guest = {
+					limit = { spn_real_hunter_candidate_trigger = yes }
+					save_scope_as = spn_hunt_rival
+				}
+			}
+		}
+	}
+
+	# Ride together. Only if he would have you.
+	option = {
+		name = spn_hunt.0113.a
+		trigger = {
+			exists = scope:spn_hunt_rival
+			scope:spn_hunt_rival = {
+				NOR = {
+					has_relation_rival = root
+					has_relation_nemesis = root
+				}
+				OR = {
+					has_relation_friend = root
+					opinion = { target = root value >= -10 }
+				}
+			}
+		}
+		custom_tooltip = spn_hunt.0113.a.tt
+		# Read by spn_hunt_compute_fight_bonus_effect and by the tracking bar. Longer than the activity so it
+		# cannot expire between the handshake and the door.
+		add_character_flag = { flag = spn_hunt_rode_together days = 200 }
+		spn_hunt_chance_change_effect = { VALUE = 10 }
+		scope:spn_hunt_rival = {
+			add_opinion = { target = root modifier = spn_rode_together_opinion }
+			add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 12 } }
+		}
+		add_opinion = { target = scope:spn_hunt_rival modifier = spn_rode_together_opinion }
+		ai_chance = {
+			base = 55
+			modifier = { add = 25 has_trait = gregarious }
+			modifier = { add = 20 has_trait = humble }
+			modifier = { add = 20 has_trait = craven }
+			modifier = { add = 20 scope:spn_culprit ?= { spn_creature_legend_value >= 2 } }
+			modifier = { add = -30 has_trait = arrogant }
+			modifier = { add = -20 has_trait = ambitious }
+		}
+	}
+	# Ask him what he knows and leave it there.
+	option = {
+		name = spn_hunt.0113.b
+		trigger = { exists = scope:spn_hunt_rival }
+		custom_tooltip = spn_hunt.0113.b.tt
+		spn_hunt_chance_change_effect = { VALUE = 5 }
+		add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 2 6 } }
+		ai_chance = {
+			base = 35
+			modifier = { add = 25 has_trait = shrewd }
+			modifier = { add = 20 has_trait = patient }
+		}
+	}
+	# This is my trail.
+	option = {
+		name = spn_hunt.0113.c
+		trigger = { exists = scope:spn_hunt_rival }
+		custom_tooltip = spn_hunt.0113.c.tt
+		scope:spn_hunt_rival = {
+			add_opinion = { target = root modifier = spn_warned_off_opinion }
+		}
+		add_prestige = minor_prestige_value
+		ai_chance = {
+			base = 20
+			modifier = { add = 35 has_trait = arrogant }
+			modifier = { add = 25 has_trait = ambitious }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = 20 spn_hunter_reputation_value >= 3 }
+			modifier = { add = -30 has_trait = humble }
+			modifier = { add = -25 has_trait = compassionate }
+		}
+	}
+}
+
+# What They Will Find -- 2.35. The morning after a compelled death. Root = the creature.
+# scope:spn_body_county = where it happened; scope:spn_body_frame = another creature living there, if
+# there is one. Fired from spn_body_dress_the_body_effect.
+#
+# Thomas, 9 Sep 2026, asking for exactly this: "you could be trying to make a statement... so who cares if
+# somebody knows that I, a vampire, killed this person. I want the hunters to come. I dare them to."
+#
+# Intent is the choice; execution is a roll inside two of the three options. Deciding to hide a body and
+# being able to hide it are different things. The third option has no roll because it is not hiding.
+spn_hunt.0140 = {
+	type = character_event
+	title = spn_hunt.0140.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_body_frame }
+				desc = spn_hunt.0140.desc_someone
+			}
+			desc = spn_hunt.0140.desc
+		}
+	}
+	theme = dread
+	override_background = { reference = alley_night }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_body_frame animation = paranoia }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_body_county
+	}
+
+	# Make it look like nothing.
+	option = {
+		name = spn_hunt.0140.a
+		custom_tooltip = spn_hunt.0140.a.tt
+		spn_body_hide_the_body_effect = yes
+		ai_chance = {
+			base = 60
+			modifier = { add = 25 has_trait = paranoid }
+			modifier = { add = 20 has_trait = deceitful }
+			modifier = { add = 20 has_trait = shy }
+			modifier = { add = 20 has_trait = craven }
+			modifier = { add = -25 has_trait = arrogant }
+			modifier = { add = -20 has_trait = wrathful }
+		}
+	}
+	# 2.35 PART TWO (§7) -- PAY IT AWAY. The second of the five, and the only one that is not a lie: the man
+	# who would have had to write this down is handed enough money not to. Shown only when there is a lord
+	# other than you to pay, and only when you can afford him.
+	option = {
+		name = spn_hunt.0140.pay
+		trigger = {
+			exists = scope:spn_body_hush_money
+			scope:spn_body_county ?= { exists = holder }
+			NOT = { scope:spn_body_county.holder ?= root }
+			gold >= scope:spn_body_hush_money
+		}
+		custom_tooltip = spn_hunt.0140.pay.tt
+		spn_body_pay_it_away_effect = yes
+		ai_chance = {
+			base = 30
+			modifier = { add = 25 has_trait = greedy }
+			modifier = { add = 20 has_trait = shrewd }
+			modifier = { add = 25 has_trait = craven }
+			modifier = { add = 20 gold >= 400 }
+			# A creature who is bad at lying buys what it cannot fake.
+			modifier = { add = 25 has_trait = arrogant }
+			modifier = { add = 25 has_trait = reckless }
+			modifier = { add = 30 is_a_demon_trigger = yes }
+			modifier = { add = -30 has_trait = generous }
+			modifier = { add = -25 gold < 200 }
+			# The whole point of the statement is that you wanted them to know.
+			modifier = { add = -40 spn_creature_legend_value >= 3 }
+		}
+	}
+	# Let them look at somebody else.
+	option = {
+		name = spn_hunt.0140.b
+		trigger = { exists = scope:spn_body_frame }
+		custom_tooltip = spn_hunt.0140.b.tt
+		spn_body_blame_effect = yes
+		stress_impact = {
+			just = minor_stress_impact_gain
+			honest = minor_stress_impact_gain
+			deceitful = minor_stress_impact_loss
+		}
+		ai_chance = {
+			base = 25
+			modifier = { add = 35 has_trait = deceitful }
+			modifier = { add = 25 has_trait = callous }
+			modifier = { add = 20 has_trait = arbitrary }
+			# Somebody you already wanted gone.
+			modifier = { add = 40 scope:spn_body_frame = { has_relation_rival = root } }
+			modifier = { add = 40 scope:spn_body_frame = { has_relation_nemesis = root } }
+			modifier = { add = -35 has_trait = just }
+			modifier = { add = -30 has_trait = honest }
+			modifier = { add = -25 has_trait = compassionate }
+		}
+	}
+	# Let them know it was me.
+	option = {
+		name = spn_hunt.0140.c
+		custom_tooltip = spn_hunt.0140.c.tt
+		spn_body_signature_effect = yes
+		add_stress = minor_stress_impact_loss
+		ai_chance = {
+			base = 0
+			modifier = { add = 25 has_trait = arrogant }
+			modifier = { add = 25 has_trait = wrathful }
+			modifier = { add = 30 has_trait = lunatic_1 }
+			modifier = { add = 20 has_trait = sadistic }
+			# Nothing left to hide, and a name that already frightens people.
+			modifier = { add = 30 spn_hunt_is_known_creature_trigger = yes }
+			modifier = { add = 25 spn_creature_legend_value >= 2 }
+			# And the strength to mean it.
+			modifier = { add = 20 spn_vampiric_reserve_value >= 80 }
+			modifier = { add = -60 has_trait = craven }
+			modifier = { add = -40 has_trait = paranoid }
+			modifier = { add = -30 has_trait = shy }
+		}
+	}
+}
+
+# Cornered -- the trail ends at a door. The hunter chooses how to go in; the creature answers next.
+spn_hunt.0110 = {
+	type = activity_event
+	title = spn_hunt.0110.t
+	# 2.35 -- the crowded line goes FIRST. spn_hunt_compute_fight_bonus_effect runs in immediate, before the
+	# window is drawn, so var:spn_hunt_pack_count is the exact number of creatures who will stand with the one
+	# behind that door. The hunter is told before he picks how to go in, which is the only moment it can change
+	# what he does.
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_hunt_activity = { spn_hunt_county_is_crowded_trigger = yes } }
+				desc = spn_hunt.0110.desc_crowded
+			}
+			triggered_desc = {
+				trigger = { scope:spn_culprit = { spn_hunt_is_known_creature_trigger = yes } }
+				desc = spn_hunt.0110.desc_known
+			}
+			triggered_desc = {
+				trigger = { spn_hunt_knows_culprit_trigger = { CULPRIT = scope:spn_culprit } }
+				desc = spn_hunt.0110.desc_known
+			}
+			desc = spn_hunt.0110.desc
+		}
+	}
+	theme = hunting
+	override_background = { reference = alley_night }
+	left_portrait = { character = root animation = aggressive_sword }
+	# 2.35a -- THE CULPRIT WAS NEVER ON SCREEN. Thomas, after his first hunt: "towards the end, it mentioned
+	# striking them, but there was no other character that ever showed up on the screen. Like, I only ever saw
+	# my portrait in the activity window."
+	#
+	# Exactly right, and this event is where it hurt most: Cornered is the moment the trail ends at a door and
+	# the whole point of it is WHO is behind the door. Three weeks of tracking, a name, a kind, a fight bonus
+	# computed against them -- and the window showed the hunter alone in an alley.
+	right_portrait = { character = scope:spn_culprit animation = paranoia }
+
+	trigger = {
+		exists = scope:spn_culprit
+		scope:spn_culprit = { is_alive = yes }
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:spn_culprit = { save_scope_as = spn_defender }
+		spn_hunt_compute_fight_bonus_effect = yes
+	}
+
+	# Strike now.
+	option = {
+		name = spn_hunt.0110.a
+		custom_tooltip = spn_hunt.0110.a.tt
+		ai_chance = {
+			base = 50
+			modifier = { add = 20 has_trait = impatient }
+			modifier = { add = 15 has_trait = brave }
+			# 2.35 -- nobody walks straight in on something the last three hunters did not come back from.
+			modifier = { add = -20 scope:spn_culprit = { spn_creature_legend_value >= 2 } }
+			modifier = { add = -25 scope:spn_culprit = { spn_creature_legend_value >= 4 } }
+		}
+	}
+	# Wait for daylight. Worth +15 against a vampire; nothing against a wolf.
+	option = {
+		name = spn_hunt.0110.b
+		custom_tooltip = spn_hunt.0110.b.tt
+		if = {
+			limit = { scope:spn_culprit = { OR = { has_trait = supernatural_vampire has_trait = supernatural_hybrid } } }
+			scope:spn_hunt_activity = { change_variable = { name = spn_hunt_fight_bonus add = 15 } }
+		}
+		ai_chance = {
+			base = 30
+			modifier = { add = 20 has_trait = patient }
+			modifier = { add = 25 spn_hunt_reads_the_kind_trigger = yes scope:spn_culprit = { OR = { has_trait = supernatural_vampire has_trait = supernatural_hybrid } } }
+			modifier = { add = 20 scope:spn_culprit = { spn_creature_legend_value >= 2 } }
+		}
+	}
+	# Bring the county's men: the lord is a friend or well-disposed, or you have Hunter Trainees of your own. +10.
+	option = {
+		name = spn_hunt.0110.c
+		trigger = {
+			OR = {
+				scope:spn_hunt_county.holder ?= {
+					OR = {
+						this = root
+						has_relation_friend = root
+						opinion = { target = root value >= 20 }
+					}
+				}
+				any_maa_regiment = { is_maa_type = witchhunters }
+				# 2.35 -- or he already promised them, in You Are Being Counted.
+				has_character_flag = spn_hunt_county_men_pledged
+				# 2.35 -- or the lord has simply heard of you. A county lends men to a name.
+				spn_hunter_reputation_value >= 2
+			}
+		}
+		custom_tooltip = spn_hunt.0110.c.tt
+		scope:spn_hunt_activity = { change_variable = { name = spn_hunt_fight_bonus add = 10 } }
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = craven }
+			modifier = { add = 10 has_trait = paranoid }
+		}
+	}
+
+	# 2.35 -- the way out. A hunter who walks up to a hall with four of them in it and goes in anyway is not
+	# brave, he is a body; and an AI hunter with no way to read the room would do exactly that every time.
+	#
+	# 2.35 PART TWO (§8.5b) -- ALWAYS SHOWN, and it is now the release's named off-ramp rather than a
+	# crowded-county special case. Thomas: "I want there to be a lot of opportunities for the hunter to quit,
+	# to abandon -- I'm not going to die over this, I'll fight something else."
+	#
+	# The cost went up to match: it is a withdrawal, not a cold trail. Prestige -25 and the county counts it
+	# (spn_hunt_refusals), which is what eventually makes a county nobody will ride to. The trail itself
+	# stays, so he or somebody better can come back for it.
+	option = {
+		name = spn_hunt.0110.d
+		custom_tooltip = spn_hunt.0110.d.tt
+		scope:spn_hunt_activity = { set_variable = { name = spn_hunt_rode_out value = yes } }
+		spn_hunt_set_outcome_effect = { OUTCOME = withdrew }
+		add_prestige = -25
+		add_stress = minor_stress_impact_gain
+		ai_chance = {
+			base = 20
+			modifier = { add = 40 has_trait = craven }
+			modifier = { add = 25 has_trait = patient }
+			modifier = { add = 20 has_trait = paranoid }
+			modifier = { add = 20 has_trait = calm }
+			# The worse the odds, the easier the decision.
+			modifier = { add = 30 scope:spn_hunt_activity = { var:spn_hunt_pack_count >= 4 } }
+			# A veteran knows what he can take.
+			modifier = { add = -25 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 60 } }
+			modifier = { add = -35 has_trait = brave }
+			modifier = { add = -30 has_trait = zealous }
+			modifier = { add = -25 has_trait = arrogant }
+		}
+	}
+
+	after = {
+		if = {
+			limit = { scope:spn_hunt_activity = { NOT = { has_variable = spn_hunt_rode_out } } }
+			# 2.35 PART TWO -- THE DOOR ROUTES BY KIND NOW. Cornered stays the one entrance for every hunt
+			# (it is where the hunter decides HOW to go in, and daylight and the county's men mean the same
+			# thing whatever is behind the door), and the second beat is what changes.
+			#
+			# A demon does not get Someone Is Asking Questions, because a demon does not flee, cannot send
+			# its progeny, and cannot be looked in the eye -- it gets a conversation and four ways to end it.
+			# A witch caught on her own trail gets hers. Everything else is the part-one path, untouched.
+			if = {
+				limit = { scope:spn_culprit ?= { is_a_demon_trigger = yes } }
+				trigger_event = spn_hunt.0163
+			}
+			else_if = {
+				limit = { scope:spn_hunt_activity = { has_variable = spn_hunt_witch_trail } }
+				trigger_event = spn_hunt.0171
+			}
+			else = {
+				scope:spn_culprit = { trigger_event = spn_hunt.0200 }
+			}
+		}
+	}
+}
+
+# ==========================================================================================================
+# 2.35h -- THIS IS NOT THE MAN. Root = the HUNTER. scope:spn_proxy = who turned up, scope:spn_culprit =
+# who he came for. Fired from both proxy paths -- the AI creature's option d and a player proxy accepting
+# at spn_hunt.0220 -- so the beat exists whichever side of it is a person.
+#
+# spn_hunt_fight_effect works off $DEFENDER$ and scope:spn_defender rather than root, so calling it from
+# the hunter's scope here resolves identically to calling it from the creature's.
+# ==========================================================================================================
+spn_hunt.0221 = {
+	type = character_event
+	title = spn_hunt.0221.t
+	desc = spn_hunt.0221.desc
+	theme = dread
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = disbelief }
+	right_portrait = { character = scope:spn_proxy animation = fear }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_proxy
+		scope:spn_proxy = { is_alive = yes }
+		exists = scope:spn_hunt_activity
+	}
+
+	# Then he dies first.
+	option = {
+		name = spn_hunt.0221.a
+		custom_tooltip = spn_hunt.0221.a.tt
+		spn_hunt_fight_effect = { DEFENDER = scope:spn_proxy }
+	}
+	# Stand aside. I came for the one who made you.
+	#
+	# Uses the same two lines the proxy's own refusal uses (spn_hunt.0220 option b): the activity is
+	# stamped so a second proxy cannot be produced, and the culprit is put back at his own door. No loop
+	# is possible -- spn_hunt.0200's immediate only looks for a proxy when that stamp is absent.
+	option = {
+		name = spn_hunt.0221.b
+		custom_tooltip = spn_hunt.0221.b.tt
+		scope:spn_hunt_activity = { set_variable = { name = spn_hunt_proxy_refused value = yes } }
+		if = {
+			limit = { exists = scope:spn_culprit  scope:spn_culprit = { is_alive = yes } }
+			scope:spn_culprit = { trigger_event = spn_hunt.0200 }
+		}
+	}
+}
+
+# The Trail Goes Cold
+spn_hunt.0111 = {
+	type = activity_event
+	title = spn_hunt.0111.t
+	# 2.35 -- the creature that left this trail fed here and went home somewhere else. The hunt was never
+	# going to corner anything, and the player deserves to be told that at the END of it rather than read it
+	# off the tracking bar on day one. The county keeps its trail either way: spn_menace_modifier stands for
+	# five years after the last incident, so the same hunt can be ridden again when the thing comes back.
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					exists = scope:spn_culprit
+					scope:spn_culprit = { is_alive = yes }
+					NOT = { scope:spn_hunt_activity.activity_location = { spn_hunt_culprit_in_reach_trigger = yes } }
+				}
+				desc = spn_hunt.0111.desc_gone
+			}
+			desc = spn_hunt.0111.desc
+		}
+	}
+	theme = hunting
+	override_background = { reference = ep2_hunt_foggy_forest }
+	left_portrait = { character = root animation = boredom }
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+	}
+
+	option = {
+		name = spn_hunt.0111.a
+	}
+}
+
+# ==========================================================================================================
+# §5 THE CREATURE ANSWERS. Root = the culprit (character events; the scopes ride in from Cornered's `after`).
+# ==========================================================================================================
+
+# Someone Is Asking Questions
+spn_hunt.0200 = {
+	type = character_event
+	title = spn_hunt.0200.t
+	# 2.35 -- caught in the act goes first: it overrides being forewarned, because knowing a hunter was in
+	# the county for three weeks does not help you if he opens the door while you are still holding someone.
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { involved_activity ?= { has_activity_type = vampire_feeding } }
+				desc = spn_hunt.0200.desc_caught
+			}
+			triggered_desc = {
+				trigger = { has_character_flag = spn_forewarned }
+				desc = spn_hunt.0200.desc_forewarned
+			}
+			desc = spn_hunt.0200.desc
+		}
+	}
+	theme = dread
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = paranoia }
+	right_portrait = { character = scope:spn_hunter animation = aggressive_sword }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_hunter
+		scope:spn_hunter = { is_alive = yes }
+		exists = scope:spn_hunt_activity
+	}
+
+	immediate = {
+		# 2.35g -- banked for the redirect (option f) and for the event it sends. Comparing "not me" from
+		# inside a neighbouring county's culprit variable is four scopes deep; a saved scope is not.
+		save_scope_as = spn_cornered
+		# A proxy, if there is one to send (D6): progeny for a vampire or hybrid, clawed kin for a wolf.
+		if = {
+			limit = { scope:spn_hunt_activity = { NOT = { has_variable = spn_hunt_proxy_refused } } }
+			random_relation = {
+				type = pprogeny
+				limit = { is_alive = yes is_adult = yes is_imprisoned = no spn_hunt_is_creature_trigger = yes NOT = { this = scope:spn_hunter } }
+				save_scope_as = spn_proxy
+			}
+			if = {
+				limit = { NOT = { exists = scope:spn_proxy } }
+				random_relation = {
+					type = ww_clawed
+					limit = { is_alive = yes is_adult = yes is_imprisoned = no spn_hunt_is_creature_trigger = yes NOT = { this = scope:spn_hunter } }
+					save_scope_as = spn_proxy
+				}
+			}
+		}
+	}
+
+	# Let them come.
+	option = {
+		name = spn_hunt.0200.a
+		custom_tooltip = spn_hunt.0200.a.tt
+		spn_hunt_fight_effect = { DEFENDER = root }
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = 15 has_trait = arrogant }
+			modifier = { add = 20 prowess >= 15 }
+			modifier = { add = -30 has_trait = craven }
+			# 2.35 -- you have heard what he did in the last county.
+			modifier = { add = -20 scope:spn_hunter = { spn_hunter_reputation_value >= 2 } }
+			modifier = { add = -20 scope:spn_hunter = { spn_hunter_reputation_value >= 4 } }
+		}
+	}
+	# Go to ground: intrigue against the hunter's. Hidden -> the hunt ends with nothing, and no feeding for two
+	# years; found -> the fight, and the hunter has you at a disadvantage.
+	option = {
+		name = spn_hunt.0200.b
+		# 2.35 -- not while you are standing in the room you came to feed in. There is nowhere in it to go.
+		trigger = { NOT = { involved_activity ?= { has_activity_type = vampire_feeding } } }
+		custom_tooltip = spn_hunt.0200.b.tt
+		duel = {
+			skill = intrigue
+			target = scope:spn_hunter
+			localization = spn_hunt_hide_duel
+			50 = {
+				desc = spn_hunt.0200.b.hidden_tt
+				compare_modifier = { value = scope:duel_value multiplier = 2 min = -45 }
+				modifier = { add = 10 has_character_flag = spn_forewarned }
+				min = 5
+				spn_hunt_set_outcome_effect = { OUTCOME = fled }
+				# 2.35 -- outwitting a hunter is how a creature learns to keep doing it. Smaller than the
+				# 15-30 spn_hunt_defender_won_effect pays for standing and winning, because nothing was risked.
+				spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 5 AMOUNT_MAX = 12 }
+				add_character_modifier = { modifier = spn_gone_to_ground_modifier years = 2 }
+				spn_menace_gone_to_ground_effect = yes
+				# 2.35g -- and the news travels. You got away; the people you made, or the one who made you,
+				# have not heard yet (spn_hunt.0030).
+				spn_kin_warning_check_effect = yes
+				scope:spn_hunter = { trigger_event = spn_hunt.0211 }
+			}
+			50 = {
+				desc = spn_hunt.0200.b.found_tt
+				compare_modifier = { value = scope:duel_value multiplier = -2 min = -45 }
+				min = 5
+				scope:spn_hunt_activity = { change_variable = { name = spn_hunt_fight_bonus add = 15 } }
+				spn_hunt_fight_effect = { DEFENDER = root }
+			}
+		}
+		ai_chance = {
+			base = 30
+			modifier = { add = 30 has_trait = craven }
+			modifier = { add = 15 has_trait = paranoid }
+			modifier = { add = 10 has_trait = deceitful }
+			modifier = { add = -20 has_trait = brave }
+			# The better known he is, the more sense a locked cellar makes.
+			modifier = { add = 25 scope:spn_hunter = { spn_hunter_reputation_value >= 2 } }
+		}
+	}
+	# 2.35g -- THERE IS WORSE THAN ME IN THIS LAND. Thomas: "I try to negotiate with the hunter and say,
+	# hey, you have bigger fish to fry... Do you have it written so that they could possibly change their
+	# target?" Now yes -- and it is an argument, not a bribe, so it is diplomacy against his own wits.
+	#
+	# What you are pointing at has to be REAL: a neighbouring county already on its third mark with a live
+	# culprit who is not you (spn_redirect_has_bigger_fish_trigger). You cannot talk your way out of a room
+	# by inventing a monster; you can only talk your way out of it by knowing about a worse one.
+	#
+	# Win and his hunt ends as `fled` -- the existing, fully handled outcome, because from where he is
+	# standing nothing here is worth killing any more -- and he carries the other county with him for five
+	# years. Lose and you have just told a hunter you know where the bodies are: he is 10 harder to fight.
+	option = {
+		name = spn_hunt.0200.g
+		trigger = { spn_redirect_has_bigger_fish_trigger = yes }
+		custom_tooltip = spn_hunt.0200.g.tt
+		duel = {
+			skill = diplomacy
+			target = scope:spn_hunter
+			localization = spn_hunt_redirect_duel
+			50 = {
+				desc = spn_hunt.0200.g.taken_tt
+				compare_modifier = { value = scope:duel_value multiplier = 2 min = -45 }
+				modifier = { add = 10 has_trait = deceitful }
+				min = 5
+				spn_hunt_set_outcome_effect = { OUTCOME = fled }
+				spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 5 AMOUNT_MAX = 12 }
+				spn_redirect_effect = yes
+				scope:spn_hunter = { trigger_event = spn_hunt.0211 }
+			}
+			50 = {
+				desc = spn_hunt.0200.g.refused_tt
+				compare_modifier = { value = scope:duel_value multiplier = -2 min = -45 }
+				min = 5
+				scope:spn_hunt_activity = { change_variable = { name = spn_hunt_fight_bonus add = 10 } }
+				spn_hunt_fight_effect = { DEFENDER = root }
+			}
+		}
+		ai_chance = {
+			base = 25
+			modifier = { add = 35 has_trait = deceitful }
+			modifier = { add = 25 has_trait = craven }
+			modifier = { add = 20 diplomacy >= 14 }
+			modifier = { add = -30 has_trait = honest }
+			modifier = { add = -20 has_trait = brave }
+		}
+	}
+	# Look them in the eye (the compel). The confrontation's gate, verbatim: a vampire or hybrid at track 100 against
+	# a hunter below monster_hunting 40 -- WAIVED entirely if the hunter came with Silver (the wrong kit), REMOVED if
+	# he came with Stakes. Costs 20 track XP.
+	option = {
+		name = spn_hunt.0200.c
+		custom_tooltip = spn_hunt.0200.c.tt
+		trigger = {
+			OR = {
+				has_trait = supernatural_vampire
+				has_trait = supernatural_hybrid
+			}
+			scope:spn_hunt_activity = {
+				NOT = { has_activity_option = { category = spn_hunt_preparations option = spn_hunt_prep_stakes } }
+			}
+			OR = {
+				scope:spn_hunt_activity = {
+					has_activity_option = { category = spn_hunt_preparations option = spn_hunt_prep_silver }
+				}
+				AND = {
+					OR = {
+						has_trait_xp = { trait = supernatural_vampire track = vampirism value >= 100 }
+						has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 100 }
+					}
+					scope:spn_hunter = {
+						NOT = { has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 40 } }
+					}
+				}
+			}
+		}
+		if = {
+			limit = { has_trait = supernatural_vampire }
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = -20 }
+		}
+		else_if = {
+			limit = { has_trait = supernatural_hybrid }
+			add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = -20 }
+		}
+		# 2.35 -- the 20 above is what the power COSTS; this is what using it well teaches. Net is still a real
+		# loss (-20 spent, 8-15 returned), so looking a hunter in the eye stays a decision and not a free win.
+		spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 8 AMOUNT_MAX = 15 }
+		spn_write_confrontation_memory_effect = { TYPE = spn_compelled_the_hunter_memory }
+		spn_hunt_set_outcome_effect = { OUTCOME = compelled }
+		scope:spn_hunter = { trigger_event = spn_hunt.0212 }
+		ai_chance = {
+			base = 50
+			modifier = { add = 30 has_trait = arrogant }
+			modifier = { add = 20 has_trait = calm }
+			modifier = { add = -30 has_trait = wrathful }
+		}
+	}
+	# 2.35 -- "Let it out." The wolf's answer, sitting where it belongs: next to the vampire's compel, because
+	# these are the two moves that spend what you ARE instead of what you have. A werewolf or a hybrid takes the
+	# lupus form on the doorstep -- +6 prowess and +4 martial from POD_werewolf_form_lupus_modifier, on top of
+	# the +15 spn_hunt_fight_effect already pays anyone shapeshifted, and the prowess rides into the duel value
+	# itself. It is the strongest answer in this event and it has the highest price: every hunter standing at
+	# that door learns exactly what you are, and unlike the form, that does not wear off.
+	#
+	# The form is timed rather than permanent because this is a door, not a decision -- the shapeshift
+	# interaction (10_spn_character_interactions_shapeshift.txt) is where a wolf CHOOSES to live as one, and
+	# nothing here should quietly take that choice over. Both halves of it, modifier and POD_bald_look_flag,
+	# expire together so the portrait never gets stuck without its hair.
+	option = {
+		name = spn_hunt.0200.f
+		trigger = {
+			OR = {
+				has_trait = supernatural_werewolf
+				has_trait = supernatural_hybrid
+			}
+			is_shapeshifted_trigger = no
+		}
+		custom_tooltip = spn_hunt.0200.f.tt
+		add_character_modifier = { modifier = POD_werewolf_form_lupus_modifier days = 30 }
+		add_character_flag = { flag = POD_bald_look_flag days = 30 }
+		# Seen. The hunter, and everyone who rode with him. A creature already known as what it is has no
+		# secret left to lose here, and random_secret simply matches nothing.
+		hidden_effect = {
+			save_temporary_scope_as = spn_hunt_the_wolf
+			scope:spn_hunter = { add_to_list = spn_hunt_saw_the_wolf }
+			scope:spn_hunt_activity ?= {
+				every_attending_character = {
+					limit = { has_trait = supernatural_hunter  NOT = { this = scope:spn_hunter } }
+					add_to_list = spn_hunt_saw_the_wolf
+				}
+			}
+			every_in_list = {
+				list = spn_hunt_saw_the_wolf
+				save_temporary_scope_as = spn_hunt_witness
+				scope:spn_hunt_the_wolf = {
+					if = {
+						limit = { has_trait = supernatural_hybrid }
+						spn_give_knowledge_of_hybrid_secret = { CHARACTER = scope:spn_hunt_witness }
+					}
+					else = {
+						spn_give_knowledge_of_lycan_secret = { CHARACTER = scope:spn_hunt_witness }
+					}
+				}
+			}
+		}
+		spn_hunt_fight_effect = { DEFENDER = root }
+		ai_chance = {
+			base = 45
+			modifier = { add = 30 has_trait = wrathful }
+			modifier = { add = 25 has_trait = brave }
+			modifier = { add = 20 has_trait = arrogant }
+			modifier = { add = 20 prowess >= 15 }
+			# Nothing left to hide.
+			modifier = { add = 15 spn_hunt_is_known_creature_trigger = yes }
+			# He came with the one metal it is written for. Turning into the thing silver was made to kill is
+			# how wolves end up on a wall.
+			modifier = {
+				add = -40
+				scope:spn_hunt_activity = {
+					has_activity_option = { category = spn_hunt_preparations option = spn_hunt_prep_silver }
+				}
+			}
+			modifier = { add = -35 has_trait = craven }
+			modifier = { add = -25 has_trait = calm }
+			modifier = { add = -25 has_trait = shy }
+			modifier = { add = -20 has_trait = patient }
+		}
+	}
+	# Send [proxy] in your place (D6).
+	option = {
+		name = spn_hunt.0200.d
+		trigger = { exists = scope:spn_proxy }
+		custom_tooltip = spn_hunt.0200.d.tt
+		# 2.35h -- AND THE HUNTER IS TOLD, which he was not. Thomas, watching this happen to him: "I
+		# cornered one guy, and then I said I'm gonna strike now, and then when I click it, it changes the
+		# scene, and it's somebody else... there might be a missing part of that little conversation."
+		# There was. The substitution happened correctly and silently: the fight resolved against a face
+		# the hunter had never been shown, in the same click. spn_hunt.0221 is that missing beat, and it
+		# gives him the decision the moment deserves -- kill the one who was sent, or refuse the trade.
+		if = {
+			limit = { scope:spn_proxy = { is_ai = yes } }
+			scope:spn_proxy = { save_scope_as = spn_defender }
+			scope:spn_hunter = {
+				spn_hunt_compute_fight_bonus_effect = yes
+				trigger_event = spn_hunt.0221
+			}
+		}
+		else = {
+			scope:spn_proxy = { trigger_event = spn_hunt.0220 }
+		}
+		ai_chance = {
+			base = 20
+			modifier = { add = 30 has_trait = callous }
+			modifier = { add = 20 has_trait = craven }
+			modifier = { add = 15 has_trait = arbitrary }
+			modifier = { add = -30 has_trait = compassionate }
+			modifier = { add = -20 has_trait = brave }
+		}
+	}
+	# Make them an offer: fifty gold now and silence bought (The Price of Silence). Elders only.
+	option = {
+		name = spn_hunt.0200.e
+		trigger = {
+			spn_hunt_creature_track_value >= 75
+			gold >= 100
+		}
+		custom_tooltip = spn_hunt.0200.e.tt
+		scope:spn_hunter = { trigger_event = spn_hunt.0240 }
+		ai_chance = {
+			base = 20
+			modifier = { add = 25 has_trait = greedy }
+			modifier = { add = 20 has_trait = deceitful }
+			modifier = { add = 15 has_trait = calm }
+			modifier = { add = -20 has_trait = wrathful }
+			modifier = { add = -15 has_trait = generous }
+		}
+	}
+}
+
+# Overmatched -- the hunter is losing. Fall back, or press on and risk everything.
+spn_hunt.0210 = {
+	type = character_event
+	title = spn_hunt.0210.t
+	desc = spn_hunt.0210.desc
+	theme = battle
+	override_background = { reference = alley_night }
+	left_portrait = { character = root animation = pain }
+	right_portrait = { character = scope:spn_defender animation = menacing }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_defender
+		scope:spn_defender = { is_alive = yes }
+	}
+
+	# Fall back.
+	option = {
+		name = spn_hunt.0210.a
+		custom_tooltip = spn_hunt.0210.a.tt
+		increase_wounds_no_death_effect = { REASON = fight }
+		add_character_modifier = { modifier = spn_hunter_recovering_modifier years = 1 }
+		add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 10 } }
+		ai_chance = {
+			base = 60
+			modifier = { add = 30 has_trait = craven }
+			modifier = { add = 15 has_trait = patient }
+			modifier = { add = -20 has_trait = brave }
+		}
+	}
+	# Press on. A second duel with the creature at +20; lose it and you die by its kind.
+	option = {
+		name = spn_hunt.0210.b
+		custom_tooltip = spn_hunt.0210.b.tt
+		scope:spn_hunt_activity = {
+			set_variable = { name = spn_hunt_final_stand value = yes }
+			change_variable = { name = spn_hunt_fight_bonus subtract = 20 }
+		}
+		spn_hunt_fight_effect = { DEFENDER = scope:spn_defender }
+		ai_chance = {
+			base = 20
+			modifier = { add = 30 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = 15 has_trait = zealous }
+			modifier = { add = 10 has_trait = stubborn }
+			modifier = { add = -30 has_trait = craven }
+		}
+	}
+}
+
+# Gone -- the creature went to ground and the hunter found an empty house.
+spn_hunt.0211 = {
+	type = character_event
+	title = spn_hunt.0211.t
+	desc = spn_hunt.0211.desc
+	theme = hunting
+	override_background = { reference = ep2_hunt_foggy_forest } # 2.35a art pass -- was corridor_night. Gone: it is out there somewhere and you are not going to find it.
+	left_portrait = { character = root animation = disbelief }
+
+	option = {
+		name = spn_hunt.0211.a
+	}
+}
+
+# Turned Back -- the hunter was compelled. He does not remember the door.
+spn_hunt.0212 = {
+	type = character_event
+	title = spn_hunt.0212.t
+	desc = spn_hunt.0212.desc
+	theme = intrigue
+	override_background = { reference = ep2_travel_bridge } # 2.35a art pass -- was corridor_night. Turned Back: riding home not knowing why.
+	left_portrait = { character = root animation = stress }
+
+	immediate = {
+		spn_write_lost_the_thread_memory_effect = yes
+	}
+
+	option = {
+		name = spn_hunt.0212.a
+	}
+}
+
+# Sent in Your Place -- a player progeny or clawed kin, asked to stand for their maker.
+spn_hunt.0220 = {
+	type = character_event
+	title = spn_hunt.0220.t
+	desc = spn_hunt.0220.desc
+	theme = dread
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = worry }
+	right_portrait = { character = scope:spn_culprit animation = dismissal }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_hunter
+		scope:spn_hunter = { is_alive = yes }
+		exists = scope:spn_culprit
+	}
+
+	# Fight.
+	option = {
+		name = spn_hunt.0220.a
+		custom_tooltip = spn_hunt.0220.a.tt
+		save_scope_as = spn_defender
+		# 2.35h -- routed through the hunter's own beat, exactly as the AI path is, so the pacing does not
+		# depend on which side of this is a player.
+		scope:spn_hunter = {
+			spn_hunt_compute_fight_bonus_effect = yes
+			trigger_event = spn_hunt.0221
+		}
+	}
+	# Refuse. Your maker is not pleased, and must answer the hunter himself.
+	option = {
+		name = spn_hunt.0220.b
+		custom_tooltip = spn_hunt.0220.b.tt
+		scope:spn_culprit = { add_opinion = { target = root modifier = disappointed_opinion opinion = -30 } }
+		scope:spn_hunt_activity = { set_variable = { name = spn_hunt_proxy_refused value = yes } }
+		scope:spn_culprit = { trigger_event = spn_hunt.0200 }
+	}
+}
+
+# The Hunter at Your Door -- a known creature is asked what it knows (§5.3). Root = the informer.
+spn_hunt.0230 = {
+	type = character_event
+	title = spn_hunt.0230.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_culprit this = scope:spn_culprit }
+				desc = spn_hunt.0230.desc_culprit
+			}
+			desc = spn_hunt.0230.desc
+		}
+	}
+	theme = intrigue
+	override_background = { reference = sitting_room }
+	left_portrait = { character = root animation = scheme }
+	right_portrait = { character = scope:spn_hunter animation = interested }
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:spn_hunter
+		scope:spn_hunter = { is_alive = yes }
+		exists = scope:spn_hunt_activity
+	}
+
+	immediate = {
+		# Another creature whose secret you hold (never yourself, never the hunter).
+		random_known_secret = {
+			limit = {
+				OR = {
+					secret_type = spn_secret_vampire
+					secret_type = spn_secret_werewolf
+					secret_type = spn_secret_hybrid
+				}
+				NOT = { secret_owner = root }
+				NOT = { secret_owner = scope:spn_hunter }
+				secret_owner = { is_alive = yes }
+			}
+			secret_owner = { save_scope_as = spn_hunt_other }
+		}
+		# Someone in the county you would happily see dragged from his house -- and who is no creature at all (D13).
+		random_relation = {
+			type = rival
+			limit = {
+				is_alive = yes
+				is_adult = yes
+				spn_hunt_is_creature_trigger = no
+				NOT = { has_trait = supernatural_hunter }
+				NOT = { this = scope:spn_hunter }
+				location ?= { county ?= { this = scope:spn_hunt_county } }
+			}
+			save_scope_as = spn_hunt_false_lead
+		}
+		if = {
+			limit = { NOT = { exists = scope:spn_hunt_false_lead } exists = scope:spn_hunt_county.holder }
+			scope:spn_hunt_county.holder = {
+				random_courtier_or_guest = {
+					limit = {
+						is_alive = yes
+						is_adult = yes
+						spn_hunt_is_creature_trigger = no
+						NOT = { has_trait = supernatural_hunter }
+						NOT = { this = scope:spn_hunter }
+						NOT = { this = root }
+						opinion = { target = root value <= -30 }
+					}
+					save_scope_as = spn_hunt_false_lead
+				}
+			}
+		}
+	}
+
+	# "It was [other]." Another creature you know of. True only if they carry a mark on this county or one beside it.
+	option = {
+		name = spn_hunt.0230.a
+		trigger = { exists = scope:spn_hunt_other }
+		custom_tooltip = spn_hunt.0230.a.tt
+		scope:spn_hunt_activity = {
+			set_variable = { name = spn_hunt_lead value = scope:spn_hunt_other }
+			set_variable = { name = spn_hunt_lead_from value = root }
+			if = {
+				limit = {
+					scope:spn_hunt_county = {
+						OR = {
+							var:spn_menace_culprit ?= scope:spn_hunt_other
+							any_neighboring_county = { var:spn_menace_culprit ?= scope:spn_hunt_other }
+						}
+					}
+				}
+				set_variable = { name = spn_hunt_lead_true value = flag:yes }
+				set_variable = { name = spn_hunt_culprit value = scope:spn_hunt_other }
+				scope:spn_hunt_other = { save_scope_value_as = { name = spn_hunt_other_track value = spn_hunt_creature_track_value } }
+				set_variable = { name = spn_hunt_culprit_track value = scope:spn_hunt_other_track }
+				scope:spn_hunter = { spn_hunt_chance_change_effect = { VALUE = 30 } }
+			}
+			else = {
+				set_variable = { name = spn_hunt_lead_true value = flag:no }
+				scope:spn_hunter = { spn_hunt_chance_change_effect = { VALUE = 15 } }
+			}
+		}
+		scope:spn_hunter = {
+			send_interface_toast = {
+				title = spn_hunt.0230.a.toast
+				left_icon = root
+				right_icon = scope:spn_hunt_other
+				custom_tooltip = spn_hunt.0230.a.toast_tt
+			}
+		}
+		ai_chance = {
+			base = 10
+			modifier = { add = 40 exists = scope:spn_culprit this = scope:spn_culprit }
+			modifier = { add = 20 has_trait = deceitful }
+			modifier = { add = 20 has_trait = callous }
+			modifier = { add = 15 has_relation_rival = scope:spn_hunt_other }
+		}
+	}
+	# "It was [rival]." A false accusation (D13): the lead points at an innocent, and the hunt will have to disprove it.
+	option = {
+		name = spn_hunt.0230.f
+		trigger = { exists = scope:spn_hunt_false_lead }
+		custom_tooltip = spn_hunt.0230.f.tt
+		scope:spn_hunt_activity = {
+			set_variable = { name = spn_hunt_lead value = scope:spn_hunt_false_lead }
+			set_variable = { name = spn_hunt_lead_from value = root }
+			set_variable = { name = spn_hunt_lead_true value = flag:no }
+		}
+		scope:spn_hunter = {
+			spn_hunt_chance_change_effect = { VALUE = 15 }
+			send_interface_toast = {
+				title = spn_hunt.0230.a.toast
+				left_icon = root
+				right_icon = scope:spn_hunt_false_lead
+				custom_tooltip = spn_hunt.0230.f.toast_tt
+			}
+		}
+		ai_chance = {
+			base = 0
+			modifier = { add = 25 has_trait = deceitful }
+			modifier = { add = 25 has_trait = vengeful }
+			modifier = { add = 20 exists = scope:spn_culprit this = scope:spn_culprit }
+		}
+	}
+	# "Yes. It was [culprit]."
+	option = {
+		name = spn_hunt.0230.b
+		trigger = {
+			exists = scope:spn_culprit
+			NOT = { this = scope:spn_culprit }
+			scope:spn_culprit = { is_alive = yes }
+			OR = {
+				spn_hunt_knows_culprit_trigger = { CULPRIT = scope:spn_culprit }
+				scope:spn_culprit = { spn_hunt_is_known_creature_trigger = yes }
+			}
+		}
+		custom_tooltip = spn_hunt.0230.b.tt
+		scope:spn_hunter = {
+			spn_hunt_chance_change_effect = { VALUE = 30 }
+			send_interface_toast = {
+				title = spn_hunt.0230.b.toast
+				left_icon = root
+				custom_tooltip = spn_hunt.0230.b.toast_tt
+			}
+		}
+		scope:spn_culprit = { add_opinion = { target = root modifier = spn_named_to_the_hunter_opinion } }
+		ai_chance = {
+			base = 15
+			modifier = { add = 25 has_trait = just }
+			modifier = { add = 25 has_trait = honest }
+			modifier = { add = 20 has_relation_rival = scope:spn_culprit }
+			modifier = { add = -50 has_relation_pprogeny = scope:spn_culprit }
+			modifier = { add = -50 has_relation_mmaker = scope:spn_culprit }
+		}
+	}
+	# "I know nothing."
+	option = {
+		name = spn_hunt.0230.c
+		trigger = { NOT = { exists = scope:spn_culprit this = scope:spn_culprit } }
+		scope:spn_hunter = {
+			send_interface_toast = {
+				title = spn_hunt.0230.c.toast
+				left_icon = root
+				custom_tooltip = spn_hunt.0230.c.toast_tt
+			}
+		}
+		ai_chance = {
+			base = 50
+		}
+	}
+	# "Get out of my hall."
+	option = {
+		name = spn_hunt.0230.d
+		custom_tooltip = spn_hunt.0230.d.tt
+		scope:spn_hunter = {
+			spn_hunt_chance_change_effect = { VALUE = -10 }
+			send_interface_toast = {
+				title = spn_hunt.0230.d.toast
+				left_icon = root
+				custom_tooltip = spn_hunt.0230.d.toast_tt
+			}
+		}
+		add_opinion = { target = scope:spn_hunter modifier = suspicion_opinion opinion = -20 }
+		if = {
+			limit = { exists = scope:spn_culprit this = scope:spn_culprit }
+			add_character_flag = { flag = spn_forewarned days = 180 }
+		}
+		ai_chance = {
+			base = 20
+			modifier = { add = 20 has_trait = arrogant }
+			modifier = { add = 15 has_trait = paranoid }
+			modifier = { add = 20 exists = scope:spn_culprit this = scope:spn_culprit }
+		}
+	}
+	# "Let me show you what I am." The fight, with the informer standing in for the culprit.
+	option = {
+		name = spn_hunt.0230.e
+		trigger = { spn_hunt_is_creature_trigger = yes }
+		custom_tooltip = spn_hunt.0230.e.tt
+		save_scope_as = spn_defender
+		scope:spn_hunter = { spn_hunt_compute_fight_bonus_effect = yes }
+		spn_hunt_fight_effect = { DEFENDER = root }
+		ai_chance = {
+			base = 0
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = 20 has_trait = sadistic }
+			modifier = { add = -100 has_trait = craven }
+		}
+	}
+}
+
+# The Price of Silence -- the elder makes an offer. Root = the hunter.
+spn_hunt.0240 = {
+	type = character_event
+	title = spn_hunt.0240.t
+	desc = spn_hunt.0240.desc
+	theme = intrigue
+	override_background = { reference = sitting_room }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_culprit animation = scheme }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_culprit
+		scope:spn_culprit = { is_alive = yes }
+		exists = scope:spn_hunt_activity
+	}
+
+	# Take the gold. Fifty now, a stipend for five years -- and the creature holds a strong hook on you.
+	option = {
+		name = spn_hunt.0240.a
+		custom_tooltip = spn_hunt.0240.a.tt
+		add_gold = 50
+		scope:spn_culprit = {
+			remove_short_term_gold = 50
+			add_hook = { type = strong_favor_hook target = root years = 5 }
+		}
+		add_character_modifier = { modifier = spn_on_the_payroll_modifier years = 5 }
+		spn_write_took_the_coin_memory_effect = { CREATURE = scope:spn_culprit }
+		spn_hunt_set_outcome_effect = { OUTCOME = bought }
+		ai_chance = {
+			base = 20
+			modifier = { add = 30 has_trait = greedy }
+			modifier = { add = 20 has_trait = ambitious }
+			modifier = { add = 25 gold < 50 }
+			modifier = { add = -40 has_trait = just }
+			modifier = { add = -40 has_trait = zealous }
+		}
+	}
+	# Refuse. The insult is worth +5 in the fight that follows.
+	option = {
+		name = spn_hunt.0240.b
+		custom_tooltip = spn_hunt.0240.b.tt
+		add_prestige = 25
+		scope:spn_hunt_activity = { change_variable = { name = spn_hunt_fight_bonus add = 5 } }
+		spn_hunt_fight_effect = { DEFENDER = scope:spn_culprit }
+		ai_chance = {
+			base = 40
+			modifier = { add = 40 has_trait = just }
+			modifier = { add = 40 has_trait = zealous }
+			modifier = { add = 20 has_trait = brave }
+		}
+	}
+}
+
+# Accused -- an innocent dragged from his house by a hunter who followed a false name. Hurt, never killed.
+spn_hunt.0250 = {
+	type = character_event
+	title = spn_hunt.0250.t
+	desc = spn_hunt.0250.desc
+	theme = dread
+	override_background = { reference = market } # 2.35a art pass -- was corridor_night. Accused: a public accusation is worse than a private one.
+	left_portrait = { character = root animation = fear }
+	right_portrait = { character = scope:spn_hunter animation = anger }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_hunter
+	}
+
+	option = {
+		name = spn_hunt.0250.a
+		increase_wounds_no_death_effect = { REASON = beaten }
+		add_opinion = { target = scope:spn_hunter modifier = suspicion_opinion opinion = -40 }
+	}
+}
+
+# ==========================================================================================================
+# THE CONCLUSION. Root = the host (activity event, fired at the end of the confrontation phase for both kinds).
+# ==========================================================================================================
+
+# What the Hunt Was Worth
+spn_hunt.0300 = {
+	type = activity_event
+	title = spn_hunt.0300.t
+	desc = {
+		first_valid = {
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:slain } } desc = spn_hunt.0300.desc_slain }
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:proxy_slain } } desc = spn_hunt.0300.desc_proxy_slain }
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:fled } } desc = spn_hunt.0300.desc_fled }
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:compelled } } desc = spn_hunt.0300.desc_compelled }
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:bought } } desc = spn_hunt.0300.desc_bought }
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:hunter_beaten } } desc = spn_hunt.0300.desc_hunter_beaten }
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:witch } } desc = spn_hunt.0300.desc_witch }
+			# 2.35a -- THE THREE PART-TWO OUTCOMES HAD NO LINE HERE. exorcised, withdrew and bargained all
+			# fell through to desc_cold, so a hunter who had just sent a Prince of Hell home read "the trail
+			# went cold" at the end of it. Added with the outcomes, missed in the overnight build.
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:exorcised } } desc = spn_hunt.0300.desc_exorcised }
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:withdrew } } desc = spn_hunt.0300.desc_withdrew }
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:bargained } } desc = spn_hunt.0300.desc_bargained }
+			desc = spn_hunt.0300.desc_cold
+		}
+	}
+	theme = hunting
+	override_background = { reference = tavern }
+	left_portrait = { character = root animation = marshal }
+	# 2.35a -- the second face, missing here as it was in Cornered.
+	right_portrait = { character = scope:spn_culprit animation = personality_content }
+
+	immediate = {
+		spn_hunt_conclude_effect = yes
+	}
+
+	option = {
+		name = spn_hunt.0300.a
+	}
+
+	after = {
+		if = {
+			limit = {
+				exists = scope:spn_culprit
+				scope:spn_culprit = { is_alive = yes }
+				scope:spn_hunt_activity = {
+					OR = {
+						var:spn_hunt_outcome = flag:fled
+						var:spn_hunt_outcome = flag:bought
+						var:spn_hunt_outcome = flag:hunter_beaten
+					}
+				}
+			}
+			scope:spn_culprit = { trigger_event = spn_hunt.0301 }
+		}
+	}
+}
+
+# ==========================================================================================================
+# 2.35a -- IT IS DONE. The hunter's side of a won fight, which did not exist until the first boot found it.
+#
+# Every other way a confrontation could end already had a window on the hunter's side -- Overmatched when he
+# lost, Gone when it fled, Turned Back when he was compelled. Winning had nothing, because the kill happened
+# inside spn_hunt_hunter_won_effect, which runs in the DEFENDER's scope from an event on the AI culprit. The
+# player rode out, picked how to go in, and then read a summary three weeks later.
+#
+# The death is performed HERE, in `after`, so the moment is on screen before it happens rather than after --
+# and the standing ordering rule is better served, not worse: nothing in the mod reads the creature later
+# than this line does.
+# ==========================================================================================================
+spn_hunt.0205 = {
+	type = activity_event
+	title = spn_hunt.0205.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_defender = { is_a_demon_trigger = yes } }
+				desc = spn_hunt.0205.desc_demon
+			}
+			triggered_desc = {
+				trigger = { scope:spn_defender = { has_trait = supernatural_werewolf } }
+				desc = spn_hunt.0205.desc_werewolf
+			}
+			triggered_desc = {
+				trigger = { scope:spn_defender = { has_trait = supernatural_hybrid } }
+				desc = spn_hunt.0205.desc_hybrid
+			}
+			triggered_desc = {
+				trigger = { scope:spn_defender = { has_trait = supernatural_vampire } }
+				desc = spn_hunt.0205.desc_vampire
+			}
+			desc = spn_hunt.0205.desc
+		}
+	}
+	theme = hunting
+	override_background = { reference = alley_night }
+	left_portrait = { character = root animation = marshal }
+	right_portrait = { character = scope:spn_defender animation = fear }
+
+	trigger = {
+		exists = scope:spn_defender
+		scope:spn_defender = { is_alive = yes }
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+	}
+
+	# Finish it.
+	option = {
+		name = spn_hunt.0205.a
+		custom_tooltip = spn_hunt.0205.a.tt
+	}
+
+	# 2.35a -- and the one it was not, if there is anything left of one. A creature that has already lost
+	# does not have to die for the county's books to balance: a hunter can take it in instead, which is the
+	# only mercy in this system that costs him something real.
+	option = {
+		name = spn_hunt.0205.b
+		trigger = {
+			is_landed_or_landless_administrative = yes
+			scope:spn_defender = { is_imprisoned = no }
+			NOT = { scope:spn_hunt_activity ?= { has_variable = spn_hunt_coven_running } }
+		}
+		custom_tooltip = spn_hunt.0205.b.tt
+		imprison_character_effect = {
+			TARGET = scope:spn_defender
+			IMPRISONER = root
+		}
+		scope:spn_hunt_activity ?= { remove_variable = spn_hunt_kill_pending }
+		add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 12 } }
+		ai_chance = {
+			base = 10
+			modifier = { add = 30 has_trait = just }
+			modifier = { add = 25 has_trait = compassionate }
+			modifier = { add = 20 has_trait = calm }
+			modifier = { add = -40 has_trait = zealous }
+			modifier = { add = -30 has_trait = wrathful }
+			modifier = { add = -25 has_trait = sadistic }
+		}
+	}
+
+	after = {
+		# LAST, and it is the last thing in the whole chain.
+		if = {
+			limit = {
+				exists = scope:spn_defender
+				scope:spn_defender = { is_alive = yes  is_imprisoned = no }
+			}
+			scope:spn_hunt_activity ?= { remove_variable = spn_hunt_kill_pending }
+			scope:spn_defender = { spn_hunt_perform_the_kill_effect = yes }
+		}
+	}
+}
+
+# The Hunter's Verdict -- the culprit's one-line closer.
+spn_hunt.0301 = {
+	type = character_event
+	title = spn_hunt.0301.t
+	desc = {
+		first_valid = {
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:fled } } desc = spn_hunt.0301.desc_fled }
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:bought } } desc = spn_hunt.0301.desc_bought }
+			desc = spn_hunt.0301.desc_hunter_beaten
+		}
+	}
+	theme = intrigue
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = scheme }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_hunt_activity
+	}
+
+	option = {
+		name = spn_hunt.0301.a
+	}
+}

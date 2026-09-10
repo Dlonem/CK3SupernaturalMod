@@ -1,0 +1,155 @@
+﻿namespace = spn_hunt
+
+# Supernatural 2.35 -- the Trailsman's two reports. Namespace continues 2.35's spn_hunt (0400 block; 0001-0301
+# are 2.35's). Written to RULE-supernatural-event-writing-voice: second person, concrete, short sentences,
+# options are first-person intent, and everyone the options touch is on screen.
+#
+# Neither event creates or clears a trail. The county was already marked by one of the four writers; all the
+# Trailsman does is walk out and come back with a place, or with a name.
+
+##################################################
+# Word from the Trailsman -- WHERE (Read the Countryside)
+# scope:spn_trailsman = the employee. scope:spn_menace_county = the county. Root = the employer.
+##################################################
+spn_hunt.0400 = {
+	type = character_event
+	title = spn_hunt.0400.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					has_trait = supernatural_hunter
+					spn_hunt_reads_the_kind_trigger = yes
+					scope:spn_menace_county = { var:spn_menace_kind ?= flag:vampire }
+				}
+				desc = spn_hunt.0400.desc_vampire
+			}
+			triggered_desc = {
+				trigger = {
+					has_trait = supernatural_hunter
+					spn_hunt_reads_the_kind_trigger = yes
+					scope:spn_menace_county = { var:spn_menace_kind ?= flag:werewolf }
+				}
+				desc = spn_hunt.0400.desc_werewolf
+			}
+			desc = spn_hunt.0400.desc
+		}
+	}
+	theme = dread
+
+	left_portrait = {
+		character = root
+		animation = worry
+	}
+	right_portrait = {
+		character = scope:spn_trailsman
+		animation = hunting_knife_start
+	}
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:spn_trailsman
+		scope:spn_trailsman = { is_alive = yes }
+		exists = scope:spn_menace_county
+		scope:spn_menace_county = {
+			has_county_modifier = spn_menace_modifier
+			exists = var:spn_menace_culprit
+			var:spn_menace_culprit = { is_alive = yes }
+		}
+	}
+
+	# So that is where it is.
+	option = {
+		name = spn_hunt.0400.a
+		custom_tooltip = spn_hunt.0400.a.tt
+		ai_chance = { base = 50 }
+	}
+
+	# Then I will go and see it myself.
+	option = {
+		name = spn_hunt.0400.b
+		trigger = { has_trait = supernatural_hunter }
+		custom_tooltip = spn_hunt.0400.b.tt
+		stress_impact = { base = minor_stress_impact_loss }
+		ai_chance = {
+			base = 60
+			modifier = { add = 30 has_trait = brave }
+			modifier = { add = -30 has_trait = craven }
+		}
+	}
+
+	# He is paid to walk, so let him walk.
+	option = {
+		name = spn_hunt.0400.c
+		trigger = { NOT = { has_trait = supernatural_hunter } }
+		custom_tooltip = spn_hunt.0400.c.tt
+		ai_chance = { base = 30 }
+	}
+}
+
+##################################################
+# A Name for the Trail -- WHO (Follow the Trail)
+# spn_hunt_learn_culprit_effect has already run, so the lord holds the secret and scope:spn_menace_culprit is set.
+##################################################
+spn_hunt.0401 = {
+	type = character_event
+	title = spn_hunt.0401.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_menace_county = { var:spn_menace_kind ?= flag:vampire } }
+				desc = spn_hunt.0401.desc_vampire
+			}
+			triggered_desc = {
+				trigger = { scope:spn_menace_county = { var:spn_menace_kind ?= flag:werewolf } }
+				desc = spn_hunt.0401.desc_werewolf
+			}
+			desc = spn_hunt.0401.desc
+		}
+	}
+	theme = dread
+
+	left_portrait = {
+		character = root
+		animation = shock
+	}
+	right_portrait = {
+		character = scope:spn_trailsman
+		animation = hunting_knife_start
+	}
+	lower_center_portrait = {
+		character = scope:spn_menace_culprit
+		animation = scheme
+	}
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:spn_trailsman
+		scope:spn_trailsman = { is_alive = yes }
+		exists = scope:spn_menace_county
+		exists = scope:spn_menace_culprit
+		scope:spn_menace_culprit = { is_alive = yes }
+	}
+
+	# Now I know his face.
+	option = {
+		name = spn_hunt.0401.a
+		custom_tooltip = spn_hunt.0401.a.tt
+		ai_chance = { base = 50 }
+	}
+
+	# Say nothing. Let him think he is still unseen.
+	option = {
+		name = spn_hunt.0401.b
+		add_dread = minor_dread_gain
+		custom_tooltip = spn_hunt.0401.b.tt
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = deceitful }
+			modifier = { add = 20 has_trait = patient }
+			modifier = { add = -30 has_trait = wrathful }
+		}
+	}
+}

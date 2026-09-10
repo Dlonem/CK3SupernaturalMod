@@ -1,0 +1,86 @@
+﻿# Supernatural 2.35 -- THE PACK. Who stands with the creature when the hunter comes through the door.
+#
+# Thomas, 8 Sep 2026: "we want it to be more dangerous for hunters if there's like a whole like group of
+# werewolves, especially a pack" and "the enemy of my enemy is my friend. Maybe werewolves and vampires, if
+# they all inhabit a county."
+#
+# So the rule is not kind-based and it is not automatic: ANY creature standing in the hunted county may side
+# with the one at the door, blood and claw count for more, and a creature that cannot stand the defender is
+# glad to watch him burn. Nothing here spawns anyone -- these are the county's real residents, read the same
+# way spn_hunt_early_warning_effect reads them (holder, his court and guests, the culprit, players present).
+#
+# Scopes required: scope:spn_defender (whoever is at the door) and scope:spn_hunter.
+
+# CHARACTER scope. Would this character stand with the defender?
+spn_hunt_pack_stands_with_trigger = {
+	is_alive = yes
+	is_adult = yes
+	is_imprisoned = no
+	NOT = { is_incapable = yes }
+	# 2.35 PART TWO -- was spn_hunt_is_creature_trigger. The creature trigger took demons in this release and
+	# demons do not join packs (§4.1), so the pack reads the narrower one.
+	spn_hunt_joins_a_pack_trigger = yes
+	NOT = { this = scope:spn_defender }
+	NOT = { this = scope:spn_hunter }
+	# A creature already gone to ground is hiding, not fighting.
+	NOT = { has_character_modifier = spn_gone_to_ground_modifier }
+	# Enemies of the defender stay indoors. Kin come regardless of temper -- that is what kin is for.
+	#
+	# 2.35 -- and so does everybody, for somebody they tell stories about. Thomas, 9 Sep 2026, looking for the
+	# other side of "a known creature is harder to corner": "perhaps is there some inverse that a creature
+	# could take advantage of? Because they're known, maybe they're gonna be hanging out with other known
+	# creatures like them." Fame costs a creature the element of surprise -- every creature in the county
+	# hears the hunter coming, spn_hunt_early_warning_effect -- and this is what it buys back. Even the ones
+	# who cannot stand you turn out for a name.
+	OR = {
+		spn_hunt_pack_is_kin_trigger = yes
+		scope:spn_defender = { spn_creature_legend_value >= 3 }
+		NOT = { opinion = { target = scope:spn_defender value < -25 } }
+	}
+	# And nobody helps the thing that killed their own maker or their own get.
+	NOT = { has_relation_mmaker = scope:spn_hunter }
+	NOT = { has_relation_pprogeny = scope:spn_hunter }
+}
+
+# CHARACTER scope. Blood or claw: a maker, a progeny, the wolf who clawed you, or one you clawed. Kin weigh
+# double in spn_hunt_compute_fight_bonus_effect.
+spn_hunt_pack_is_kin_trigger = {
+	OR = {
+		has_relation_mmaker = scope:spn_defender
+		has_relation_pprogeny = scope:spn_defender
+		has_relation_ww_clawed = scope:spn_defender
+		has_relation_ww_clawed_by = scope:spn_defender
+	}
+}
+
+# ACTIVITY scope. Is the county thick enough with creatures to be worth telling the hunter about? Read by
+# A County That Is Not Empty (spn_hunt.0112), which needs the count banked before it can fire.
+spn_hunt_county_is_crowded_trigger = {
+	exists = var:spn_hunt_pack_count
+	var:spn_hunt_pack_count >= 2
+}
+
+# COUNTY scope. Two or more creatures live here right now, counting the holder himself. Read during the
+# TRACKING phase, where var:spn_hunt_pack_count does not exist yet -- that is banked at Cornered, and the
+# whole point of You Are Being Counted is that the hunter finds out before he gets to the door.
+#
+# Deliberately cheaper and looser than spn_hunt_count_the_pack_effect: it does not ask who would side with
+# whom, only how many of them there are. The hunter cannot know the first thing yet either.
+#
+# 2.35 PART TWO -- counts pack-joiners, not creatures. A county thick with demons is not a crowded county:
+# nothing in it will come through the door for anything else in it, so telling the hunter it will would be a
+# lie the arithmetic never intended to tell.
+spn_hunt_county_crowded_now_trigger = {
+	exists = holder
+	OR = {
+		AND = {
+			holder = { is_alive = yes  spn_hunt_joins_a_pack_trigger = yes }
+			holder = {
+				any_courtier_or_guest = { count >= 1  is_alive = yes  spn_hunt_joins_a_pack_trigger = yes }
+			}
+		}
+		holder = {
+			any_courtier_or_guest = { count >= 2  is_alive = yes  spn_hunt_joins_a_pack_trigger = yes }
+		}
+	}
+}

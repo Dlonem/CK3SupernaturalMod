@@ -1,0 +1,292 @@
+﻿namespace = spn_hunt
+
+# Supernatural 2.35g -- SEND FOR A HUNTER. The fifth answer to Something Stalks [county].
+#
+# Thomas, 9 Sep 2026, on the third mark: "I'm wondering if we should create a decision for that... And then
+# in that event, you get to choose between three different hunters. Oh, that would be sick. And try to pick
+# and choose, oh, I want that hunter to check out this shit going on in my area. AI will automatically handle
+# it, but for example, if I'm ignoring the needs of my county... then they'll never receive that basically
+# golden ticket into the county."
+#
+# WHY AN OPTION AND NOT A DECISION. A decision would sit in the list forever and would have to re-derive
+# which county it meant every time it was hovered. The lord already gets an event the moment the third
+# incident lands, that event already knows the county, and it is already where he chooses what to do about
+# it. This is the fifth thing he can choose. It goes stale with the trail, which a decision would not.
+#
+# WHAT IT IS NOT. Post a Bounty (spn_hunt.0001 option c) already existed and is untouched: a real task
+# contract in vanilla's hunting group, which any adventurer hunter may take, gated on the landless DLC.
+# That is a notice on a wall. This is three letters with names on them, needs no DLC, and the man who
+# answers owes the letter rather than the noticeboard.
+#
+# THE KING QUESTION. Thomas asked whether a king can send as well, and whether that means two hunters.
+# The answer built here: the event fires to the county's HOLDER, so a king who holds the county directly
+# gets it and a king whose vassal holds it does not -- and the county is stamped spn_summons_answered for
+# ten years by whoever sends first, so two lords can never both have a man on the same trail. There is no
+# double-hiring. A liege whose vassal ignores the problem is the escalation described at the bottom of
+# zz_spn_menace_effects.txt, and it is deliberately not built as a second summons.
+
+# ==========================================================================================================
+# Three Men Who Do This Work. root = the lord. scope:spn_menace_county set.
+# ==========================================================================================================
+spn_hunt.0006 = {
+	type = character_event
+	title = spn_hunt.0006.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { NOT = { exists = scope:spn_summons_a } }
+				desc = spn_hunt.0006.desc_nobody
+			}
+			desc = spn_hunt.0006.desc
+		}
+	}
+	theme = intrigue
+	override_background = { reference = study }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_summons_a animation = marshal }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_menace_county
+	}
+
+	immediate = {
+		save_scope_as = spn_hunt_lord
+		spn_summons_build_roster_effect = yes
+	}
+
+	# Him.
+	option = {
+		name = spn_hunt.0006.a
+		trigger = { exists = scope:spn_summons_a }
+		spn_summons_send_effect = { HUNTER = scope:spn_summons_a }
+		ai_chance = {
+			base = 50
+			modifier = { add = 25 scope:spn_summons_a = { has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 40 } } }
+			modifier = { add = 15 scope:spn_summons_a = { opinion = { target = root value >= 20 } } }
+		}
+	}
+	option = {
+		name = spn_hunt.0006.b
+		trigger = { exists = scope:spn_summons_b }
+		spn_summons_send_effect = { HUNTER = scope:spn_summons_b }
+		ai_chance = {
+			base = 30
+			modifier = { add = 25 scope:spn_summons_b = { has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 40 } } }
+		}
+	}
+	option = {
+		name = spn_hunt.0006.c
+		trigger = { exists = scope:spn_summons_c }
+		spn_summons_send_effect = { HUNTER = scope:spn_summons_c }
+		ai_chance = {
+			base = 20
+			modifier = { add = 25 scope:spn_summons_c = { has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 40 } } }
+		}
+	}
+	# None of them. Also the only option when the letters came back empty -- an event must always have one.
+	option = {
+		name = spn_hunt.0006.d
+		custom_tooltip = spn_hunt.0006.d.tt
+		ai_chance = {
+			base = 10
+			modifier = { add = 40 NOT = { exists = scope:spn_summons_a } }
+			modifier = { add = 20 has_trait = arrogant }
+			modifier = { add = 20 gold < 60 }
+		}
+	}
+}
+
+# ==========================================================================================================
+# A Lord Has Written to You. root = the hunter. His own variables carry the county, the lord and the fee.
+# ==========================================================================================================
+spn_hunt.0007 = {
+	type = character_event
+	title = spn_hunt.0007.t
+	desc = spn_hunt.0007.desc
+	theme = laamp
+	override_background = { reference = ep3_camp }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_summons_lord animation = worry }
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		has_variable = spn_summons_county
+		has_variable = spn_summons_lord
+		var:spn_summons_lord = { is_alive = yes }
+		NOT = { has_character_flag = spn_summons_accepted }
+	}
+
+	immediate = {
+		# Re-banked here rather than relied on from the lord's event: scopes do propagate down a
+		# trigger_event chain, but this event is the one that fires 0008 back at him and it should not
+		# depend on two hops of inheritance to know who it is about.
+		save_scope_as = spn_summons_target
+		var:spn_summons_lord = { save_scope_as = spn_summons_lord }
+		var:spn_summons_county = { save_scope_as = spn_summons_county }
+		save_scope_value_as = { name = spn_summons_purse  value = var:spn_summons_fee }
+	}
+
+	# I'll ride.
+	option = {
+		name = spn_hunt.0007.a
+		custom_tooltip = spn_hunt.0007.a.tt
+		spn_summons_accept_effect = yes
+		ai_chance = {
+			base = 45
+			modifier = { add = 25 has_trait = brave }
+			modifier = { add = 20 has_trait = zealous }
+			modifier = { add = 20 scope:spn_summons_lord = { opinion = { target = root value >= 20 } } }
+			modifier = { add = 20 is_landless_adventurer = yes }
+			modifier = { add = -25 has_trait = craven }
+			modifier = { add = -15 has_trait = lazy }
+		}
+	}
+	# It will cost you more than that.
+	#
+	# Thomas: "do you have an additional modifier in there such as greedy? Do you think a hunter that's
+	# greedy is more likely to take on work, possibly request more out of the lord that sends for them?"
+	# Yes to both, and this is the second half -- the greedy man does not refuse the work, he re-prices it.
+	# Gated so it is not universally the best answer: you need a reason to think you are worth it.
+	option = {
+		name = spn_hunt.0007.b
+		trigger = {
+			OR = {
+				has_trait = greedy
+				has_trait = ambitious
+				has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 50 }
+			}
+		}
+		custom_tooltip = spn_hunt.0007.b.tt
+		scope:spn_summons_lord = { trigger_event = { id = spn_hunt.0008 days = { 4 12 } } }
+		ai_chance = {
+			base = 20
+			modifier = { add = 45 has_trait = greedy }
+			modifier = { add = 20 has_trait = ambitious }
+			modifier = { add = 20 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 70 } }
+			modifier = { add = -20 has_trait = generous }
+		}
+	}
+	# Find somebody else.
+	option = {
+		name = spn_hunt.0007.c
+		custom_tooltip = spn_hunt.0007.c.tt
+		spn_summons_refuse_effect = yes
+		ai_chance = {
+			base = 15
+			modifier = { add = 40 has_trait = craven }
+			modifier = { add = 25 has_trait = lazy }
+			modifier = { add = 25 has_trait = content }
+			modifier = { add = 30 scope:spn_summons_lord = { opinion = { target = root value <= -20 } } }
+		}
+	}
+}
+
+# ==========================================================================================================
+# The Hunter Names His Price. root = the lord. scope:spn_summons_target = the man.
+# ==========================================================================================================
+spn_hunt.0008 = {
+	type = character_event
+	title = spn_hunt.0008.t
+	desc = spn_hunt.0008.desc
+	theme = intrigue
+	override_background = { reference = study }
+	left_portrait = { character = root animation = worry }
+	right_portrait = { character = scope:spn_summons_target animation = marshal }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_summons_target
+		scope:spn_summons_target = {
+			is_alive = yes
+			has_variable = spn_summons_fee
+			NOT = { has_character_flag = spn_summons_accepted }
+		}
+	}
+
+	immediate = {
+		save_scope_value_as = { name = spn_summons_purse  value = scope:spn_summons_target.var:spn_summons_fee }
+	}
+
+	# Pay him.
+	option = {
+		name = spn_hunt.0008.a
+		custom_tooltip = spn_hunt.0008.a.tt
+		scope:spn_summons_target = {
+			change_variable = { name = spn_summons_fee multiply = 2 }
+			spn_summons_accept_effect = yes
+		}
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 gold >= 250 }
+			modifier = { add = 20 has_trait = generous }
+			modifier = { add = 20 has_trait = craven }
+			modifier = { add = -30 has_trait = greedy }
+			modifier = { add = -40 gold < 100 }
+		}
+	}
+	# He can starve.
+	option = {
+		name = spn_hunt.0008.b
+		custom_tooltip = spn_hunt.0008.b.tt
+		scope:spn_summons_target = { spn_summons_refuse_effect = yes }
+		ai_chance = {
+			base = 30
+			modifier = { add = 40 has_trait = greedy }
+			modifier = { add = 25 has_trait = arrogant }
+			modifier = { add = 40 gold < 100 }
+		}
+	}
+}
+
+# He is coming. root = the lord.
+spn_hunt.0009 = {
+	type = character_event
+	title = spn_hunt.0009.t
+	desc = spn_hunt.0009.desc
+	theme = laamp
+	override_background = { reference = throne_room }
+	left_portrait = { character = root animation = personality_honorable }
+
+	trigger = { is_alive = yes }
+
+	option = {
+		name = spn_hunt.0009.a
+		custom_tooltip = spn_hunt.0009.a.tt
+	}
+}
+
+# He is not coming. root = the lord.
+spn_hunt.0011 = {
+	type = character_event
+	title = spn_hunt.0011.t
+	desc = spn_hunt.0011.desc
+	theme = dread
+	override_background = { reference = throne_room }
+	left_portrait = { character = root animation = disappointed }
+
+	trigger = { is_alive = yes }
+
+	option = {
+		name = spn_hunt.0011.a
+		custom_tooltip = spn_hunt.0011.a.tt
+	}
+}
+
+# The Purse. root = the hunter, after the thing is dead and the county is clear.
+spn_hunt.0012 = {
+	type = character_event
+	title = spn_hunt.0012.t
+	desc = spn_hunt.0012.desc
+	theme = laamp
+	override_background = { reference = ep3_camp }
+	left_portrait = { character = root animation = happiness }
+	right_portrait = { character = scope:spn_summons_payer animation = personality_honorable }
+
+	trigger = { is_alive = yes }
+
+	option = {
+		name = spn_hunt.0012.a
+	}
+}

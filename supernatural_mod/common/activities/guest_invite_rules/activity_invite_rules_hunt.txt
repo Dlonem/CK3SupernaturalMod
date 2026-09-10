@@ -1,0 +1,59 @@
+﻿# Supernatural Hunt invite rules (2.35). root = the host. Anchored to the host and bounded, like
+# activity_invite_rules_supernatural.txt -- never a world walk. can_be_activity_guest filters every list again.
+
+# Hunters the host actually knows: friends, family, court, and the ones whose secret he keeps.
+activity_invite_rule_spn_hunters = {
+	effect = {
+		every_relation = {
+			type = friend
+			limit = { is_adult = yes is_imprisoned = no has_trait = supernatural_hunter }
+			add_to_list = characters
+		}
+		every_close_family_member = {
+			limit = { is_adult = yes is_imprisoned = no has_trait = supernatural_hunter }
+			add_to_list = characters
+		}
+		every_courtier_or_guest = {
+			limit = { is_adult = yes is_imprisoned = no has_trait = supernatural_hunter }
+			add_to_list = characters
+		}
+		every_known_secret = {
+			limit = { secret_type = spn_secret_hunter }
+			secret_owner = {
+				if = {
+					limit = { is_alive = yes is_adult = yes is_imprisoned = no has_trait = supernatural_hunter NOT = { this = root } }
+					add_to_list = characters
+				}
+			}
+		}
+	}
+}
+
+# Other players who are hunters.
+activity_invite_rule_spn_hunter_players = {
+	effect = {
+		every_player = {
+			limit = { is_imprisoned = no has_trait = supernatural_hunter NOT = { this = root } }
+			add_to_list = characters
+		}
+	}
+}
+
+# The host's apprentices (D2): the training "not yet" state and the bite-chain deferral.
+activity_invite_rule_spn_apprentices = {
+	effect = {
+		every_courtier_or_guest = {
+			limit = { spn_is_apprentice_of_trigger = { TRAINER = root } }
+			add_to_list = characters
+		}
+		every_relation = {
+			type = friend
+			limit = { spn_is_apprentice_of_trigger = { TRAINER = root } }
+			add_to_list = characters
+		}
+		every_close_family_member = {
+			limit = { spn_is_apprentice_of_trigger = { TRAINER = root } }
+			add_to_list = characters
+		}
+	}
+}

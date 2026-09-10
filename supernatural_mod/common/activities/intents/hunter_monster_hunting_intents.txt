@@ -1,1 +1,63 @@
-﻿
+﻿###########################
+# Supernatural Hunt intents -- the Monster Hunt (2.35, WORK-ORDER-2.35-THE-HUNT §6.10)
+# Shape: vampire_feeding_intents.txt. Root = the character picking the intent; scope:special_option = the kind.
+###########################
+
+# Host. The default -- valid for BOTH kinds (a default intent must always be valid; the Witch kind blocks the
+# apprentice intent through blocked_intents instead).
+spn_cleanse_the_land_intent = {
+	icon = acquire_pelts_intent
+
+	ai_will_do = {
+		value = 50
+		if = { limit = { has_trait = zealous }   add = 15 }
+		if = { limit = { has_trait = just }      add = 10 }
+		if = { limit = { has_trait = vengeful }  add = 10 }
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = { animation = marshal }
+}
+
+# Host. Bring the apprentice and finish the lesson (D2). Monster Hunt only.
+spn_train_the_apprentice_intent = {
+	icon = intent_knowledge
+
+	is_shown = {
+		scope:special_option ?= flag:spn_hunt_kind_monster
+	}
+	is_valid = {
+		OR = {
+			any_courtier_or_guest = { spn_is_apprentice_of_trigger = { TRAINER = root } }
+			any_relation = { type = friend  spn_is_apprentice_of_trigger = { TRAINER = root } }
+			any_close_family_member = { spn_is_apprentice_of_trigger = { TRAINER = root } }
+		}
+	}
+	ai_will_do = {
+		value = 0
+		if = {
+			limit = { any_courtier_or_guest = { spn_is_apprentice_of_trigger = { TRAINER = root } } }
+			add = 60
+		}
+		if = { limit = { has_trait = patient }   add = 10 }
+		if = { limit = { has_trait = diligent }  add = 10 }
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = { animation = personality_rational }
+}
+
+# Guest. A younger hunter riding with a veteran to earn his spurs.
+spn_earn_my_spurs_intent = {
+	icon = win_contest_intent
+
+	ai_will_do = {
+		value = 50
+		if = { limit = { has_trait = ambitious }  add = 15 }
+		if = { limit = { has_trait = brave }      add = 10 }
+		if = { limit = { has_trait = content }    add = -15 }
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = { animation = personality_bold }
+}

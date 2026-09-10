@@ -1,0 +1,61 @@
+﻿# Supernatural 2.35 PART TWO -- "The Bridge". HUNTERS GO WHERE THE TRAILS ARE.
+# WORK-ORDER-2.35-PART-TWO-THE-BRIDGE §8.1-8.4.
+#
+# THE PROBLEM THIS FIXES, and it is a part-one limitation rather than a bug: the hunt's ai_province_filter is
+# top_realm, so an AI hunter could only ever ride to a trail that happened to land inside his own liege's
+# realm. Most of the world's trails were therefore unhuntable by anybody but the player -- and a landless
+# adventurer hunter, who has no realm at all, could reach almost nothing.
+#
+# The fix is not to widen the planner (the engine's own warning in _activity_type.info:79 is explicit about
+# the rescan cost of province_filter = all on the AI side). It is to move the HUNTER. He camps near the
+# trouble rather than in it, which is also how it reads: a man with a horse and no land goes where the work is.
+#
+# THROTTLE: once per five years per hunter, AI only, landless only, never while travelling or in an activity.
+#
+# THE SCAN, AND A DELIBERATE NARROWING. The order says "the highest-pull county within travel range". Travel
+# range is squared_distance_large, and scanning every county in the world against that on a yearly pulse is a
+# cost nobody should pay for a flavour migration. So the scan is TWO RINGS of neighbouring provinces from
+# where he stands -- which is cheap, runs on a handful of characters, and over a decade of pulses produces
+# exactly the migration the order describes. It is also the more honest version: a hunter hears about the
+# county two valleys over, not one across the map. Recorded in the session doc as a narrowing, not an
+# omission.
+
+yearly_playable_pulse = {
+	on_actions = {
+		spn_hunter_movement_pulse
+	}
+}
+
+spn_hunter_movement_pulse = {
+	trigger = {
+		is_alive = yes
+		is_adult = yes
+		is_ai = yes
+		has_trait = supernatural_hunter
+		is_landed = no
+		is_travelling = no
+		is_imprisoned = no
+		NOT = { is_incapable = yes }
+		# 2.35g -- `is_in_an_activity` IS NOT A TRIGGER. It is a trigger_localization key
+		# (00_character_triggers.txt:192) and a custom_description text key; vanilla's own callers
+		# (00_war.txt:62, ep3_decisions.txt:1947) wrap the REAL test, `exists = involved_activity`,
+		# in a custom_description that carries that name. Written as a trigger it is unknown, and an
+		# unknown trigger stops the file at that line: error.log 9 Sep 13:50:15 reported it as
+		# "Unknown trigger: is_in_an_activity, near line: 39", which means spn_hunter_movement_pulse
+		# never registered and the AI hunters have never moved once. Third file in this update killed
+		# by one bad line inside common/on_action/ -- see the two notes at the bottom of this file.
+		NOT = { exists = involved_activity }
+		NOT = { has_character_flag = spn_hunter_moved_recently }
+		exists = domicile
+		exists = location
+	}
+	effect = {
+		spn_hunter_seek_the_trail_effect = yes
+	}
+}
+
+# 2.35d -- the effect that used to live here has MOVED to
+# common/scripted_effects/zz_spn_hunter_movement_effects.txt, for the same reason and with the same
+# consequence as the menace trigger: a scripted effect defined inside common/on_action/ does not parse
+# ("Unexpected token: location, near line: 52" and three more, error.log 9 Sep 13:26), so
+# spn_hunter_seek_the_trail_effect never existed and the AI hunters' movement pulse called nothing.

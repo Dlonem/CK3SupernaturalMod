@@ -1,0 +1,155 @@
+﻿namespace = spn_long_count
+
+# Supernatural 2.35 -- THE LONG COUNT. What a century actually buys.
+#
+# Thomas, 9 Sep 2026: "Did you ever add those events that were, like, every one hundred years as a vampire?
+# That triggers on your hundredth birthday, two hundredth -- that give a perk point or two?"
+#
+# Half of it existed. spn_memory.0002 ("A Hundred Years", 2.34) fires when the TURNING MEMORY is a century
+# old and pays stress and a few points of track. It is a flavour event and its own file's governing rule is
+# explicit -- "memories change nothing that already works... nothing that touches a mechanic" -- so a perk
+# point does not belong in it and this is a separate chain rather than an edit to that one.
+#
+# WHAT THIS IS INSTEAD: three milestones read off spn_years_as_immortal, which is the mod's own count of how
+# long you have been what you are (age minus var:spn_age_aquired_immortality, 20_spn_utility_values.txt:128).
+# It works for a creature turned at nineteen and for one turned at sixty, it survives having no memories at
+# all, and it does not care which of the six turning memories you happen to carry.
+#
+#   100 years -> one perk point in your own tree
+#   200 years -> one more, and the tree is most of the way open
+#   300 years -> two, because by then there is nobody alive who remembers you arriving
+#
+# The perk point is granted inside a hidden_effect under a custom_tooltip: add_<lifestyle>_lifestyle_perk_points
+# is generated per lifestyle by the engine, but vanilla only writes effect_localization for its OWN six
+# (00_character_effects.txt:1824-1869), so an unwrapped grant would print a raw line for a modded lifestyle.
+#
+# Player-only, one-shot per milestone behind a flag, polled from spn_memory_flavour_pulse.
+# Voice: RULE-supernatural-event-writing-voice -- second person, concrete, short.
+
+# ----------------------------------------------------------------------------------------------------------
+# ONE HUNDRED YEARS
+# ----------------------------------------------------------------------------------------------------------
+spn_long_count.0001 = {
+	type = character_event
+	title = spn_long_count.0001.t
+	desc = {
+		first_valid = {
+			triggered_desc = { trigger = { has_trait = supernatural_werewolf } desc = spn_long_count.0001.desc_wolf }
+			triggered_desc = { trigger = { has_trait = supernatural_hybrid } desc = spn_long_count.0001.desc_both }
+			desc = spn_long_count.0001.desc
+		}
+	}
+	theme = mental_break
+	override_background = { reference = bedchamber }
+	left_portrait = { character = root animation = thinking }
+
+	trigger = {
+		is_alive = yes
+		spn_has_supernatural_trait = yes
+		NOT = { has_character_flag = spn_long_count_100 }
+		spn_years_as_immortal >= 100
+	}
+
+	immediate = {
+		add_character_flag = spn_long_count_100
+	}
+
+	# Take stock of it.
+	option = {
+		name = spn_long_count.0001.a
+		custom_tooltip = spn_long_count_perk_point_tt
+		hidden_effect = { spn_long_count_grant_perk_effect = { AMOUNT = 1 } }
+		add_stress = medium_stress_impact_loss
+	}
+	# Count what it cost.
+	option = {
+		name = spn_long_count.0001.b
+		custom_tooltip = spn_long_count_perk_point_tt
+		hidden_effect = { spn_long_count_grant_perk_effect = { AMOUNT = 1 } }
+		spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 8 AMOUNT_MAX = 15 }
+		add_stress = minor_stress_impact_gain
+	}
+}
+
+# ----------------------------------------------------------------------------------------------------------
+# TWO HUNDRED YEARS
+# ----------------------------------------------------------------------------------------------------------
+spn_long_count.0002 = {
+	type = character_event
+	title = spn_long_count.0002.t
+	desc = {
+		first_valid = {
+			triggered_desc = { trigger = { has_trait = supernatural_werewolf } desc = spn_long_count.0002.desc_wolf }
+			desc = spn_long_count.0002.desc
+		}
+	}
+	theme = mental_break
+	override_background = { reference = bedchamber }
+	left_portrait = { character = root animation = boredom }
+
+	trigger = {
+		is_alive = yes
+		spn_has_supernatural_trait = yes
+		NOT = { has_character_flag = spn_long_count_200 }
+		spn_years_as_immortal >= 200
+	}
+
+	immediate = {
+		add_character_flag = spn_long_count_200
+		# Somebody who was there. A century and a half is long enough that this is usually nobody.
+		random_relation = {
+			type = mmaker
+			limit = { is_alive = yes }
+			save_scope_as = spn_long_count_maker
+		}
+	}
+
+	# There is still one of you who remembers the beginning.
+	option = {
+		name = spn_long_count.0002.a
+		trigger = { exists = scope:spn_long_count_maker }
+		custom_tooltip = spn_long_count_perk_point_tt
+		hidden_effect = { spn_long_count_grant_perk_effect = { AMOUNT = 1 } }
+		add_stress = medium_stress_impact_loss
+		add_opinion = { target = scope:spn_long_count_maker modifier = spn_long_count_kept_opinion }
+	}
+	# You have outlasted everyone who could contradict you.
+	option = {
+		name = spn_long_count.0002.b
+		custom_tooltip = spn_long_count_perk_point_tt
+		hidden_effect = { spn_long_count_grant_perk_effect = { AMOUNT = 1 } }
+		spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 10 AMOUNT_MAX = 18 }
+	}
+}
+
+# ----------------------------------------------------------------------------------------------------------
+# THREE HUNDRED YEARS
+# ----------------------------------------------------------------------------------------------------------
+spn_long_count.0003 = {
+	type = character_event
+	title = spn_long_count.0003.t
+	desc = spn_long_count.0003.desc
+	theme = dread
+	override_background = { reference = bedchamber }
+	left_portrait = { character = root animation = paranoia }
+
+	trigger = {
+		is_alive = yes
+		spn_has_supernatural_trait = yes
+		NOT = { has_character_flag = spn_long_count_300 }
+		spn_years_as_immortal >= 300
+	}
+
+	immediate = {
+		add_character_flag = spn_long_count_300
+	}
+
+	# Nobody is left who saw you arrive.
+	option = {
+		name = spn_long_count.0003.a
+		custom_tooltip = spn_long_count_perk_points_tt
+		hidden_effect = { spn_long_count_grant_perk_effect = { AMOUNT = 2 } }
+		spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 12 AMOUNT_MAX = 20 }
+		add_stress = medium_stress_impact_loss
+	}
+}

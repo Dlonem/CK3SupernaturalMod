@@ -1,0 +1,524 @@
+﻿namespace = spn_hunt
+
+# Supernatural 2.35b -- THE FIELD EVENTS. Seven more weeks of a Monster Hunt, written against gaps a read of
+# the existing pool actually found rather than against a number.
+#
+# WHAT THE AUDIT SAID (9 Sep 2026). Of the nine tracking-phase events, only TWO branch on what the creature is
+# (The Trail and What the Graves Say), and NOT ONE of the nine mentions a hybrid. A hybrid culprit read as a
+# vampire or a wolf depending on which flag the trail happened to carry, and never as the thing it is. Three
+# of these seven exist to close that.
+#
+# The other four each hook into something the mod already built and was not using from inside the hunt:
+#   0153  the compelled county (spn_compelled_modifier, W5) -- the hunt finally reads it as a clue
+#   0154  the Trailsman court position, from inside the activity rather than from his yearly task
+#   0155  the CREATURE's side, mid-hunt, before Cornered -- agency earlier than the door
+#   0156  the county's own people, and what asking questions costs them
+#
+# Numbers 0150+ so the field pool never collides with the tracking pool (0100-0113), the witch pool (0120s),
+# the lord's chain (0001-0010, 0130) or What They Will Find (0140).
+#
+# Root = the host (activity events) except 0155, which is the creature's. Voice: RULE-supernatural-event-writing-voice.
+
+# ==========================================================================================================
+# THE THREE THAT KNOW WHAT THEY ARE LOOKING AT
+# ==========================================================================================================
+
+# Two Different Animals -- HYBRID. The wounds do not agree with each other.
+spn_hunt.0150 = {
+	type = activity_event
+	title = spn_hunt.0150.t
+	desc = spn_hunt.0150.desc
+	theme = dread
+	override_background = { reference = physicians_study } # 2.35a art pass -- was gallows. Two Different Animals: you are laying bodies out and comparing wounds.
+	left_portrait = { character = root animation = disbelief }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0150 }
+			has_activity_option = { category = special_type option = spn_hunt_kind_monster }
+			var:spn_hunt_culprit ?= { has_trait = supernatural_hybrid }
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0150 value = yes } }
+	}
+
+	# Two of them, then. Prepare for both.
+	option = {
+		name = spn_hunt.0150.a
+		custom_tooltip = spn_hunt.0150.a.tt
+		spn_hunt_chance_change_effect = { VALUE = -5 }
+		# Splitting your preparation between two things that are one thing. The kit you brought is now
+		# half-right whichever it turns out to be, and the fight is where that lands.
+		scope:spn_hunt_activity = { set_variable = { name = spn_hunt_split_prep value = yes } }
+		ai_chance = {
+			base = 55
+			modifier = { add = 20 has_trait = paranoid }
+			modifier = { add = -40 spn_hunt_reads_the_kind_trigger = yes }
+		}
+	}
+	# One of them. It is both.
+	option = {
+		name = spn_hunt.0150.b
+		trigger = { spn_hunt_reads_the_kind_trigger = yes }
+		custom_tooltip = spn_hunt.0150.b.tt
+		spn_hunt_chance_change_effect = { VALUE = 15 }
+		add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 4 9 } }
+		ai_chance = { base = 90 }
+	}
+	# Open one of them up and find out.
+	option = {
+		name = spn_hunt.0150.c
+		custom_tooltip = spn_hunt.0150.c.tt
+		duel = {
+			skill = learning
+			value = 14
+			localization = spn_hunt_wounds_duel
+			50 = {
+				desc = spn_hunt.0150.c.success_tt
+				compare_modifier = { value = scope:duel_value multiplier = 2 min = -40 }
+				min = 5
+				spn_hunt_chance_change_effect = { VALUE = 12 }
+				add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 12 } }
+			}
+			50 = {
+				desc = spn_hunt.0150.c.failure_tt
+				compare_modifier = { value = scope:duel_value multiplier = -2 min = -40 }
+				min = 5
+				spn_hunt_chance_change_effect = { VALUE = -5 }
+				add_stress = minor_stress_impact_gain
+			}
+		}
+		ai_chance = {
+			base = 45
+			modifier = { add = 25 learning >= 12 }
+			modifier = { add = 20 has_trait = diligent }
+			modifier = { add = -25 has_trait = compassionate }
+		}
+	}
+}
+
+# By the Moon -- WEREWOLF. The killings keep time.
+spn_hunt.0151 = {
+	type = activity_event
+	title = spn_hunt.0151.t
+	desc = spn_hunt.0151.desc
+	theme = hunting
+	override_background = { reference = ep2_hunt_snowy_forest } # 2.35a art pass -- was ep2_hunt_foggy_forest. By the Moon: a calendar of kills across cold nights.
+	left_portrait = { character = root animation = thinking }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0151 }
+			has_activity_option = { category = special_type option = spn_hunt_kind_monster }
+			var:spn_hunt_kind ?= flag:werewolf
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0151 value = yes } }
+	}
+
+	# Be where it will be.
+	option = {
+		name = spn_hunt.0151.a
+		custom_tooltip = spn_hunt.0151.a.tt
+		spn_hunt_chance_change_effect = { VALUE = 20 }
+		# You spend the weeks waiting instead of asking, so nobody hears you asking.
+		add_stress = minor_stress_impact_gain
+		ai_chance = {
+			base = 50
+			modifier = { add = 30 has_trait = patient }
+			modifier = { add = 20 has_trait = calm }
+			modifier = { add = -30 has_trait = impatient }
+		}
+	}
+	# Tell the county which night to bolt its doors.
+	option = {
+		name = spn_hunt.0151.b
+		custom_tooltip = spn_hunt.0151.b.tt
+		spn_hunt_chance_change_effect = { VALUE = -10 }
+		if = {
+			limit = {
+				exists = scope:spn_hunt_county
+				scope:spn_hunt_county.holder ?= { NOT = { this = root } }
+			}
+			scope:spn_hunt_county.holder = { add_opinion = { target = root modifier = spn_careful_witch_hunter_opinion } }
+		}
+		# Warned, and it will not walk into a street it knows is watching.
+		spn_hunt_early_warning_effect = yes
+		stress_impact = {
+			compassionate = medium_stress_impact_loss
+			just = minor_stress_impact_loss
+		}
+		ai_chance = {
+			base = 30
+			modifier = { add = 40 has_trait = compassionate }
+			modifier = { add = 25 has_trait = just }
+			modifier = { add = -30 has_trait = callous }
+			modifier = { add = -25 has_trait = ambitious }
+		}
+	}
+}
+
+# Not a Drop -- VAMPIRE. Nobody bled.
+spn_hunt.0152 = {
+	type = activity_event
+	title = spn_hunt.0152.t
+	desc = spn_hunt.0152.desc
+	theme = death
+	override_background = { reference = ce1_catacombs }
+	left_portrait = { character = root animation = disapproval }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0152 }
+			has_activity_option = { category = special_type option = spn_hunt_kind_monster }
+			var:spn_hunt_kind ?= flag:vampire
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0152 value = yes } }
+	}
+
+	# Then look for the ones who lived.
+	option = {
+		name = spn_hunt.0152.a
+		custom_tooltip = spn_hunt.0152.a.tt
+		spn_hunt_chance_change_effect = { VALUE = 12 }
+		add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 3 7 } }
+		ai_chance = {
+			base = 60
+			modifier = { add = 25 has_trait = shrewd }
+			modifier = { add = 20 spn_hunt_reads_the_kind_trigger = yes }
+		}
+	}
+	# Watch the ground it has to cross to reach them.
+	option = {
+		name = spn_hunt.0152.b
+		custom_tooltip = spn_hunt.0152.b.tt
+		spn_hunt_chance_change_effect = { VALUE = 8 }
+		scope:spn_hunt_activity = { change_variable = { name = spn_hunt_fight_bonus add = 5 } }
+		ai_chance = {
+			base = 40
+			modifier = { add = 25 has_trait = patient }
+			modifier = { add = 20 martial >= 12 }
+		}
+	}
+}
+
+# ==========================================================================================================
+# THE FOUR THAT REACH OUTSIDE THE ACTIVITY
+# ==========================================================================================================
+
+# They Are All Very Sure -- the county that has forgotten a week, read from inside the hunt.
+spn_hunt.0153 = {
+	type = activity_event
+	title = spn_hunt.0153.t
+	desc = spn_hunt.0153.desc
+	theme = dread
+	override_background = { reference = market }
+	left_portrait = { character = root animation = paranoia }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0153 }
+			# 2.35 PART TWO -- was the monster-kind option. A Witch Hunt on a witch trail runs the same
+			# spine and this beat belongs to it too.
+			spn_hunt_runs_the_trail_trigger = yes
+		}
+		scope:activity.activity_location.county ?= { has_county_modifier = spn_compelled_modifier }
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0153 value = yes } }
+	}
+
+	# Stop asking what happened. Ask what they cannot tell you.
+	option = {
+		name = spn_hunt.0153.a
+		custom_tooltip = spn_hunt.0153.a.tt
+		spn_hunt_chance_change_effect = { VALUE = 15 }
+		add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 10 } }
+		ai_chance = {
+			base = 55
+			modifier = { add = 30 has_trait = shrewd }
+			modifier = { add = 20 learning >= 12 }
+			modifier = { add = 20 has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 50 } }
+		}
+	}
+	# Whatever is doing this can reach into a man's head. Bring more men.
+	option = {
+		name = spn_hunt.0153.b
+		custom_tooltip = spn_hunt.0153.b.tt
+		add_character_flag = { flag = spn_hunt_county_men_pledged days = 120 }
+		spn_hunt_chance_change_effect = { VALUE = -5 }
+		ai_chance = {
+			base = 40
+			modifier = { add = 35 has_trait = craven }
+			modifier = { add = 25 has_trait = paranoid }
+		}
+	}
+}
+
+# What the Dogs Will Not Pass -- the Trailsman's kind of work, from inside the hunt.
+spn_hunt.0154 = {
+	type = activity_event
+	title = spn_hunt.0154.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_hunt_reader }
+				desc = spn_hunt.0154.desc_reader
+			}
+			desc = spn_hunt.0154.desc
+		}
+	}
+	theme = hunting
+	override_background = { reference = ep2_forest_managed } # 2.35a art pass -- was alley_night. What the Dogs Will Not Pass: there is a place the dogs stop at.
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_hunt_reader animation = personality_rational }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0154 }
+			# 2.35 PART TWO -- was the monster-kind option. A Witch Hunt on a witch trail runs the same
+			# spine and this beat belongs to it too.
+			spn_hunt_runs_the_trail_trigger = yes
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0154 value = yes } }
+		# The man whose whole job this is, if you employ one. Court position first, camp officer second.
+		random_court_position_holder = {
+			type = spn_trailsman_court_position
+			save_scope_as = spn_hunt_reader
+		}
+		if = {
+			limit = { NOT = { exists = scope:spn_hunt_reader } }
+			random_court_position_holder = {
+				type = spn_trailsman_camp_officer
+				save_scope_as = spn_hunt_reader
+			}
+		}
+	}
+
+	# Walk it at night.
+	option = {
+		name = spn_hunt.0154.a
+		custom_tooltip = spn_hunt.0154.a.tt
+		duel = {
+			skill = prowess
+			value = 16
+			localization = spn_hunt_dogs_duel
+			50 = {
+				desc = spn_hunt.0154.a.success_tt
+				compare_modifier = { value = scope:duel_value multiplier = 2 min = -40 }
+				modifier = { add = 25 exists = scope:spn_hunt_reader }
+				min = 5
+				spn_hunt_chance_change_effect = { VALUE = 15 }
+			}
+			50 = {
+				desc = spn_hunt.0154.a.failure_tt
+				compare_modifier = { value = scope:duel_value multiplier = -2 min = -40 }
+				min = 5
+				increase_wounds_no_death_effect = { REASON = fight }
+				spn_hunt_chance_change_effect = { VALUE = -5 }
+			}
+		}
+		ai_chance = {
+			base = 45
+			modifier = { add = 30 has_trait = brave }
+			modifier = { add = 25 exists = scope:spn_hunt_reader }
+			modifier = { add = -35 has_trait = craven }
+		}
+	}
+	# Walk it in daylight and read it properly.
+	option = {
+		name = spn_hunt.0154.b
+		custom_tooltip = spn_hunt.0154.b.tt
+		spn_hunt_chance_change_effect = { VALUE = 6 }
+		if = {
+			limit = { exists = scope:spn_hunt_reader }
+			spn_hunt_chance_change_effect = { VALUE = 6 }
+			scope:spn_hunt_reader = { add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 2 5 } } }
+		}
+		ai_chance = {
+			base = 50
+			modifier = { add = 25 has_trait = patient }
+			modifier = { add = 20 has_trait = craven }
+		}
+	}
+}
+
+# He Asked About You By Name -- the CREATURE's side, mid-hunt. Root = a creature in the county.
+spn_hunt.0155 = {
+	type = character_event
+	title = spn_hunt.0155.t
+	desc = spn_hunt.0155.desc
+	theme = dread
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = paranoia }
+	right_portrait = { character = scope:spn_hunter animation = aggressive_sword }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_hunter
+		scope:spn_hunter = { is_alive = yes }
+		exists = scope:spn_hunt_activity
+		NOT = { has_character_modifier = spn_gone_to_ground_modifier }
+	}
+
+	# Go now, and lose two years of feeding for it.
+	option = {
+		name = spn_hunt.0155.a
+		custom_tooltip = spn_hunt.0155.a.tt
+		add_character_modifier = { modifier = spn_gone_to_ground_modifier years = 2 }
+		# 2.35 PART TWO (§3.4.3) -- and leaving takes a mark with it.
+		spn_menace_gone_to_ground_effect = yes
+		spn_hunt_set_outcome_effect = { OUTCOME = fled }
+		spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 4 AMOUNT_MAX = 10 }
+		scope:spn_hunter = { trigger_event = { id = spn_hunt.0211 days = { 3 8 } } }
+		ai_chance = {
+			base = 40
+			modifier = { add = 35 has_trait = craven }
+			modifier = { add = 25 has_trait = paranoid }
+			modifier = { add = 25 scope:spn_hunter = { spn_hunter_reputation_value >= 3 } }
+			modifier = { add = -35 has_trait = brave }
+			modifier = { add = -30 has_trait = arrogant }
+		}
+	}
+	# Give him somewhere else to look.
+	option = {
+		name = spn_hunt.0155.b
+		custom_tooltip = spn_hunt.0155.b.tt
+		duel = {
+			skill = intrigue
+			target = scope:spn_hunter
+			localization = spn_hunt_misdirect_duel
+			50 = {
+				desc = spn_hunt.0155.b.success_tt
+				compare_modifier = { value = scope:duel_value multiplier = 2 min = -40 }
+				min = 5
+				spn_hunt_chance_change_effect = { VALUE = -20 }
+			}
+			50 = {
+				desc = spn_hunt.0155.b.failure_tt
+				compare_modifier = { value = scope:duel_value multiplier = -2 min = -40 }
+				min = 5
+				spn_hunt_chance_change_effect = { VALUE = 10 }
+			}
+		}
+		ai_chance = {
+			base = 45
+			modifier = { add = 35 has_trait = deceitful }
+			modifier = { add = 25 intrigue >= 12 }
+			modifier = { add = -20 has_trait = honest }
+		}
+	}
+	# Let him come.
+	option = {
+		name = spn_hunt.0155.c
+		custom_tooltip = spn_hunt.0155.c.tt
+		add_character_flag = { flag = spn_forewarned days = 120 }
+		ai_chance = {
+			base = 30
+			modifier = { add = 35 has_trait = brave }
+			modifier = { add = 30 has_trait = arrogant }
+			modifier = { add = 25 spn_creature_legend_value >= 2 }
+			modifier = { add = -35 has_trait = craven }
+		}
+	}
+}
+
+# The Ones Who Helped -- what asking questions costs the people who answer.
+spn_hunt.0156 = {
+	type = activity_event
+	title = spn_hunt.0156.t
+	desc = spn_hunt.0156.desc
+	theme = dread
+	override_background = { reference = village } # 2.35a art pass -- was tavern. The Ones Who Helped: the county's own people, where they live.
+	left_portrait = { character = root animation = grief }
+	right_portrait = { character = scope:spn_hunt_helper animation = fear }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0156 }
+			# 2.35 PART TWO -- was the monster-kind option. A Witch Hunt on a witch trail runs the same
+			# spine and this beat belongs to it too.
+			spn_hunt_runs_the_trail_trigger = yes
+			# Only once you have actually been asking. A hunt nobody noticed costs nobody anything.
+			exists = var:spn_hunt_chance_event
+			var:spn_hunt_chance_event >= 10
+		}
+		scope:activity.activity_location.county ?= {
+			holder ?= { any_courtier_or_guest = { is_alive = yes is_adult = yes is_ruler = no } }
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0156 value = yes } }
+		scope:spn_hunt_county.holder ?= {
+			random_courtier_or_guest = {
+				limit = {
+					is_alive = yes
+					is_adult = yes
+					is_ruler = no
+					NOT = { spn_hunt_is_creature_trigger = yes }
+				}
+				save_scope_as = spn_hunt_helper
+			}
+		}
+	}
+
+	# Put him somewhere it cannot reach.
+	option = {
+		name = spn_hunt.0156.a
+		trigger = { exists = scope:spn_hunt_helper }
+		custom_tooltip = spn_hunt.0156.a.tt
+		spn_hunt_chance_change_effect = { VALUE = -8 }
+		scope:spn_hunt_helper = { add_opinion = { target = root modifier = spn_rode_together_opinion } }
+		stress_impact = {
+			compassionate = medium_stress_impact_loss
+			just = minor_stress_impact_loss
+		}
+		ai_chance = {
+			base = 45
+			modifier = { add = 35 has_trait = compassionate }
+			modifier = { add = 25 has_trait = just }
+			modifier = { add = -30 has_trait = callous }
+		}
+	}
+	# Use him. He is already frightened, and frightened men remember more.
+	option = {
+		name = spn_hunt.0156.b
+		trigger = { exists = scope:spn_hunt_helper }
+		custom_tooltip = spn_hunt.0156.b.tt
+		spn_hunt_chance_change_effect = { VALUE = 12 }
+		scope:spn_hunt_helper = {
+			add_opinion = { target = root modifier = spn_warned_off_opinion }
+			increase_wounds_no_death_effect = { REASON = fight }
+		}
+		stress_impact = {
+			compassionate = medium_stress_impact_gain
+			just = minor_stress_impact_gain
+			callous = minor_stress_impact_loss
+		}
+		ai_chance = {
+			base = 30
+			modifier = { add = 40 has_trait = callous }
+			modifier = { add = 30 has_trait = ambitious }
+			modifier = { add = 25 has_trait = zealous }
+			modifier = { add = -45 has_trait = compassionate }
+		}
+	}
+}

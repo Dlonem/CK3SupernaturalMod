@@ -1,0 +1,289 @@
+﻿# Supernatural 2.35 -- the Trailsman's three tasks. Both position types share all three, so a landless
+# adventurer's camp officer does the same work as a lord's courtier; the effects split on
+# is_landless_adventurer, not the task list.
+#
+# on_yearly runs in the EMPLOYEE's scope with scope:liege set (vanilla's master_of_hunt tasks and the mod's own
+# dark_champion_training are both written this way). The employee saves himself as scope:spn_trailsman so the
+# report events can show his face, then hands off to the employer.
+#
+# WHERE vs WHO. Read the Countryside finds a county. Follow the Trail names the creature standing in one. They
+# do not overlap: the first only ever picks counties it has not reported, the second only ever picks counties
+# whose culprit the lord cannot already name. Beat the Bounds does neither -- it is what the position is worth
+# in a year when nothing is walking your lands.
+
+spn_trailsman_task_read_the_countryside = {
+	court_position_types = { spn_trailsman_court_position spn_trailsman_camp_officer }
+
+	cost = {
+		round = no
+		gold = {
+			add = {
+				value = monthly_court_position_task_cost
+				desc = COURT_POSITION_TASK_COST_BREAKDOWN_BASE
+				format = "BASE_VALUE_FORMAT_DECIMALS_PLUS_NEGATIVE"
+			}
+		}
+	}
+
+	employee_modifier = {
+		monthly_prestige = 0.15
+	}
+
+	is_shown = { }
+	is_valid_showing_failures_only = { }
+
+	on_start = {
+		custom_tooltip = spn_trailsman_task_read_the_countryside_tt
+	}
+	on_end = { }
+
+	on_yearly = {
+		save_scope_as = spn_trailsman
+		if = {
+			limit = {
+				scope:liege = {
+					is_alive = yes
+					spn_trailsman_has_ground_to_read_trigger = yes
+					# 2.35b -- AND NOT WHILE HE CANNOT RIDE. Thomas, 9 Sep 2026: "I don't want to be notified of a
+					# trail unless my supernatural hunt activity is off of cooldown, meaning unless I'm actually
+					# able to go on a hunt."
+					#
+					# The gate sits on the ROLL, not on the report, and that distinction is the whole point: the
+					# county-stamps (spn_trailsman_reported / _named) are only written when a report actually goes
+					# out, so a year spent on cooldown burns nothing. Stamping a county and swallowing its report
+					# would have hidden that trail for the full five years the stamp lives.
+					#
+					# spn_hunt_on_cooldown is stamped for 2 years by the hunt's own on_start and matches the
+					# engine's `cooldown = { years = 2 }`, which script cannot read directly.
+					NOT = { has_character_flag = spn_hunt_on_cooldown }
+				}
+			}
+			random = {
+				chance = {
+					value = 40
+					if = {
+						limit = {
+							has_court_position = spn_trailsman_court_position
+							aptitude = { court_position = spn_trailsman_court_position value >= 3 }
+						}
+						add = 15
+					}
+					if = {
+						limit = {
+							has_court_position = spn_trailsman_court_position
+							aptitude = { court_position = spn_trailsman_court_position value >= 5 }
+						}
+						add = 15
+					}
+					if = {
+						limit = {
+							has_court_position = spn_trailsman_camp_officer
+							aptitude = { court_position = spn_trailsman_camp_officer value >= 3 }
+						}
+						add = 15
+					}
+					if = {
+						limit = {
+							has_court_position = spn_trailsman_camp_officer
+							aptitude = { court_position = spn_trailsman_camp_officer value >= 5 }
+						}
+						add = 15
+					}
+				}
+				scope:liege = {
+					spn_trailsman_find_trail_effect = yes
+				}
+			}
+		}
+	}
+
+	ai_will_do = {
+		value = 60
+		if = {
+			limit = {
+				scope:liege = {
+					is_landless_adventurer = no
+					any_realm_county = { has_county_modifier = spn_menace_modifier }
+				}
+			}
+			add = 80
+		}
+		if = {
+			limit = { scope:liege = { has_trait = paranoid } }
+			add = 20
+		}
+	}
+}
+
+spn_trailsman_task_follow_the_trail = {
+	court_position_types = { spn_trailsman_court_position spn_trailsman_camp_officer }
+
+	cost = {
+		round = no
+		gold = {
+			add = {
+				value = monthly_court_position_task_cost_double
+				desc = COURT_POSITION_TASK_COST_BREAKDOWN_BASE
+				format = "BASE_VALUE_FORMAT_DECIMALS_PLUS_NEGATIVE"
+			}
+		}
+	}
+
+	employee_modifier = {
+		monthly_prestige = 0.25
+		monthly_martial_lifestyle_xp_gain_mult = 0.1
+	}
+
+	is_shown = { }
+	is_valid_showing_failures_only = { }
+
+	on_start = {
+		custom_tooltip = spn_trailsman_task_follow_the_trail_tt
+	}
+	on_end = { }
+
+	on_yearly = {
+		save_scope_as = spn_trailsman
+		if = {
+			limit = {
+				scope:liege = {
+					is_alive = yes
+					spn_trailsman_has_ground_to_read_trigger = yes
+					# 2.35b -- AND NOT WHILE HE CANNOT RIDE. Thomas, 9 Sep 2026: "I don't want to be notified of a
+					# trail unless my supernatural hunt activity is off of cooldown, meaning unless I'm actually
+					# able to go on a hunt."
+					#
+					# The gate sits on the ROLL, not on the report, and that distinction is the whole point: the
+					# county-stamps (spn_trailsman_reported / _named) are only written when a report actually goes
+					# out, so a year spent on cooldown burns nothing. Stamping a county and swallowing its report
+					# would have hidden that trail for the full five years the stamp lives.
+					#
+					# spn_hunt_on_cooldown is stamped for 2 years by the hunt's own on_start and matches the
+					# engine's `cooldown = { years = 2 }`, which script cannot read directly.
+					NOT = { has_character_flag = spn_hunt_on_cooldown }
+				}
+			}
+			random = {
+				chance = {
+					value = 20
+					if = {
+						limit = {
+							has_court_position = spn_trailsman_court_position
+							aptitude = { court_position = spn_trailsman_court_position value >= 3 }
+						}
+						add = 15
+					}
+					if = {
+						limit = {
+							has_court_position = spn_trailsman_court_position
+							aptitude = { court_position = spn_trailsman_court_position value >= 5 }
+						}
+						add = 20
+					}
+					if = {
+						limit = {
+							has_court_position = spn_trailsman_camp_officer
+							aptitude = { court_position = spn_trailsman_camp_officer value >= 3 }
+						}
+						add = 15
+					}
+					if = {
+						limit = {
+							has_court_position = spn_trailsman_camp_officer
+							aptitude = { court_position = spn_trailsman_camp_officer value >= 5 }
+						}
+						add = 20
+					}
+					# A man who has hunted one knows what he is smelling.
+					if = {
+						limit = { has_trait = supernatural_hunter }
+						add = 10
+					}
+				}
+				scope:liege = {
+					spn_trailsman_follow_trail_effect = yes
+				}
+			}
+		}
+	}
+
+	ai_will_do = {
+		value = 30
+		if = {
+			limit = { scope:liege = { has_trait = supernatural_hunter } }
+			add = 60
+		}
+		if = {
+			limit = { scope:liege = { has_trait = vengeful } }
+			add = 20
+		}
+	}
+}
+
+spn_trailsman_task_beat_the_bounds = {
+	court_position_types = { spn_trailsman_court_position spn_trailsman_camp_officer }
+
+	cost = {
+		round = no
+		gold = {
+			add = {
+				value = monthly_court_position_task_cost
+				desc = COURT_POSITION_TASK_COST_BREAKDOWN_BASE
+				format = "BASE_VALUE_FORMAT_DECIMALS_PLUS_NEGATIVE"
+			}
+		}
+	}
+
+	employee_modifier = {
+		monthly_prestige = 0.1
+	}
+
+	# The countryside is walked, the roads are watched, and the villages settle. This is the standing answer to
+	# the control a trail drains (-5 a kill, -1 a prowl) rather than another way to find one.
+	scaling_employer_modifiers = {
+		terrible = {
+			county_opinion_add = 1
+		}
+		poor = {
+			county_opinion_add = 2
+			monthly_county_control_growth_add = 0.1
+		}
+		average = {
+			county_opinion_add = 3
+			monthly_county_control_growth_add = 0.2
+		}
+		good = {
+			county_opinion_add = 4
+			monthly_county_control_growth_add = 0.3
+		}
+		excellent = {
+			county_opinion_add = 5
+			monthly_county_control_growth_add = 0.4
+		}
+	}
+
+	is_shown = { }
+	is_valid_showing_failures_only = { }
+
+	on_start = {
+		custom_tooltip = spn_trailsman_task_beat_the_bounds_tt
+	}
+	on_end = { }
+
+	ai_will_do = {
+		value = 50
+		if = {
+			limit = { scope:liege = { has_trait = just } }
+			add = 20
+		}
+		if = {
+			limit = {
+				scope:liege = {
+					is_landless_adventurer = no
+					any_realm_county = { has_county_modifier = spn_menace_modifier }
+				}
+			}
+			add = -40
+		}
+	}
+}

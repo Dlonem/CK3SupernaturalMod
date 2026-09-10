@@ -1,0 +1,524 @@
+﻿# Supernatural 2.35 -- WHAT THE AI WOULD ASK FOR.
+#
+# Thomas, 8 Sep 2026: "you might want to not just code based on traits, but also to code based on how much
+# trait track XP they have... they're less likely to burn up that specific trait track on somebody they want
+# to. You have to make every interaction for each compel mortal and invoke bond be meaningfully done... it's
+# the sort of thing that that specific personality type would do mixed with they're able to do, willing to
+# do, but also not step on any toes that they're not trying to."
+#
+# ---------------------------------------------------------------------------------------------------------
+# WHY A NUMBER AND NOT A PILE OF TRIGGERS
+#
+# Both interactions are `send_options_exclusive = yes`, and an AI actor never opens a window, so something
+# has to decide WHICH command it sends. Vanilla solves this two ways and only two:
+#
+#   1. Partition by is_shown, so only one option is ever shown to a given pair -- execute_prisoner_interaction
+#      (00_prison_interactions.txt): beheading for one faith, burning for another, sacrifice for a third.
+#   2. Partition by starts_enabled, so several are shown but exactly one starts on --
+#      mpo_offer_submission_or_ruin (09_mpo_interactions.txt): normal obligations under duke tier, an army
+#      at duke tier with cultural men-at-arms, siege weapons at duke tier without.
+#
+# Neither interaction here can use (1): a vampire legitimately qualifies for six commands at once and
+# narrowing is_shown would take choices away from the player. So (2), with the whole decision written once
+# as a cascade instead of eight or twenty hand-written "and not any of the ones above" triggers that would
+# drift apart the first time an option changed. Each send_option then reads one line:
+#
+#     starts_enabled = { spn_compel_ai_choice_value = 3 }
+#
+# The player is unaffected except that the window now opens with a sensible command pre-selected instead of
+# nothing, which is what starts_enabled is for.
+#
+# IF THE CASCADE PICKS BADLY the cost is a skipped interaction, never a broken one: the engine still runs the
+# full Can Send test (is_shown, is_valid, can_send, and acceptance) before anything is sent
+# (_character_interactions.info, "How and when are the character interaction triggers checked"). That is what
+# lets these branches state the REASON rather than re-implementing every precondition.
+#
+# THE RESERVE (spn_vampiric_reserve_value) is the spine of both cascades. Every command is paid for out of
+# the vampirism track and a feeding activity is what puts it back, so the ladder is written in headroom: a
+# command is only chosen by a creature that can pay for it and still have something left. Nothing is chosen
+# below 15, which is Thomas's own number.
+#
+# Scopes: scope:actor and scope:recipient, both saved, both depth-independent. No root, no prev.
+# ---------------------------------------------------------------------------------------------------------
+
+# COMPEL MORTAL. Returns 1-8, or 0 for "this vampire has no reason to spend anything on this person".
+# Order is what the creature WANTS, not what is cheapest; the reserve gate on each branch is cost + headroom.
+#   1 End Your Life (85)   2 Be Obedient (35)   3 Join My Court (15)   4 Reveal Secrets (20)
+#   5 Become My Lover (15) 6 Release (5)        7 Demand Gold (15)     8 Become My Patron (10)
+spn_compel_ai_choice_value = {
+	# 1 -- END YOUR LIFE. The most expensive thing in the interaction and the only irreversible one, so it
+	# needs everything at once: near-full reserve, a personal reason, the temperament, and a target whose
+	# death does not start a war. Not a ruler (succession), not kin (kinslaying), not a hunter (that is a
+	# different kind of mistake and it has its own branch weight in ai_will_do).
+	if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 95
+				OR = {
+					has_trait = sadistic
+					has_trait = wrathful
+					has_trait = lunatic_1
+				}
+				OR = {
+					has_relation_rival = scope:recipient
+					has_relation_nemesis = scope:recipient
+				}
+				NOT = { is_close_or_extended_family_of = scope:recipient }
+			}
+			scope:recipient = {
+				is_ruler = no
+				NOT = { has_trait = supernatural_hunter }
+			}
+		}
+		value = 1
+	}
+	# 2 -- BE OBEDIENT. A loyalty hook on somebody who matters. The most useful thing a vampire can buy with
+	# thirty-five, and only worth it on a person with something to withhold.
+	else_if = {
+		limit = {
+			scope:actor = {
+				# 50, not 60. Thomas, 9 Sep 2026: "I may lower that to 50, cuz then that's like a free hook, as
+				# the way that that's supposed to work." 35 spent against 50 held still leaves the creature
+				# something, and a loyalty hook is the best thing on this list.
+				spn_vampiric_reserve_value >= 50
+				NOT = { has_hook = scope:recipient }
+				OR = {
+					has_trait = ambitious
+					has_trait = deceitful
+					has_trait = arbitrary
+					has_trait = paranoid
+				}
+			}
+			scope:recipient = {
+				OR = {
+					is_ruler = yes
+					is_councillor = yes
+					is_knight = yes
+				}
+			}
+		}
+		value = 2
+	}
+	# 3 -- JOIN MY COURT. Mirrors the option's own is_shown, plus a reason: somebody actually worth taking.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 45
+				is_ruler = yes
+			}
+			scope:recipient = {
+				is_ruler = no
+				is_adult = yes
+				NOT = { is_courtier_of = scope:actor }
+				OR = {
+					martial >= 12
+					intrigue >= 12
+					learning >= 12
+					stewardship >= 12
+					diplomacy >= 12
+					prowess >= 14
+				}
+			}
+		}
+		value = 3
+	}
+	# 4 -- REVEAL SECRETS. Only where there is something to reveal, and only to the sort of creature that
+	# collects them.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 45
+				OR = {
+					has_trait = paranoid
+					has_trait = deceitful
+					has_trait = ambitious
+					has_trait = shrewd
+				}
+			}
+			scope:recipient = {
+				any_secret = { NOT = { is_known_by = scope:actor } }
+			}
+		}
+		value = 4
+	}
+	# 5 -- BECOME MY LOVER. Unmarried only: an AI should not start an adultery scandal it did not choose to
+	# start, and the player keeps the option either way.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 40
+				has_trait = lustful
+				NOT = { has_trait = chaste }
+				NOT = { is_close_or_extended_family_of = scope:recipient }
+				NOT = { has_relation_lover = scope:recipient }
+			}
+			scope:recipient = {
+				is_adult = yes
+				is_married = no
+				NOT = { has_relation_lover = scope:actor }
+				NOT = { has_relation_soulmate = scope:actor }
+			}
+		}
+		value = 5
+	}
+	# 6 -- RELEASE. Five is nothing, and a creature will spend nothing to get somebody it cares about out of
+	# a cell. This is the one branch on the list that is not predatory.
+	else_if = {
+		limit = {
+			scope:actor = { spn_vampiric_reserve_value >= 20 }
+			scope:recipient = {
+				is_imprisoned = yes
+				OR = {
+					is_courtier_of = scope:actor
+					is_vassal_or_below_of = scope:actor
+					has_relation_lover = scope:actor
+					has_relation_friend = scope:actor
+					is_close_family_of = scope:actor
+					has_relation_pprogeny = scope:actor
+				}
+			}
+		}
+		value = 6
+	}
+	# 7 -- DEMAND GOLD. A hundred gold, and it wants either the coin or the habit.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 35
+				OR = {
+					has_trait = greedy
+					gold < 100
+				}
+			}
+			scope:recipient = { gold >= 100 }
+		}
+		value = 7
+	}
+	# 8 -- BECOME MY PATRON. The landless creature's version of all of the above: a name on a contact list
+	# is how an adventurer gets anywhere. Mirrors the option's own is_shown exactly.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 30
+				is_landless_adventurer = yes
+			}
+			scope:recipient = {
+				is_landed_or_landless_administrative = yes
+				NOT = { is_contact_of = scope:actor }
+			}
+		}
+		value = 8
+	}
+	# Nothing worth spending on. ai_will_do reads this and stands the interaction down.
+	else = { value = 0 }
+}
+
+# INVOKE THE BOND. Returns 1-20, or 0. The maker/progeny gate is the interaction's own is_shown, so every
+# branch here can assume a real blood bond and an eight-year cooldown against this particular progeny --
+# which is why the ladder leads with the things you only ask for once in a lifetime.
+spn_bond_ai_choice_value = {
+	# 1 -- END YOUR LIFE. Killing your own get. Needs the strong hook the option already demands, a rivalry,
+	# the temperament, and almost the whole reserve. It should be close to unheard of, and it is.
+	if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 90
+				has_strong_hook = scope:recipient
+				OR = {
+					has_trait = sadistic
+					has_trait = wrathful
+					has_trait = lunatic_1
+				}
+				OR = {
+					has_relation_rival = scope:recipient
+					has_relation_nemesis = scope:recipient
+				}
+			}
+		}
+		value = 4
+	}
+	# 2 -- GIVE ME THE TITLES. The single most valuable thing a maker can take, and the option already
+	# requires a claim, so this only fires where there is land the maker can actually hold.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 60
+				is_landed_or_landless_administrative = yes
+				is_at_war = no
+				OR = {
+					has_trait = ambitious
+					has_trait = greedy
+					has_trait = arrogant
+				}
+			}
+			scope:recipient = {
+				is_at_war = no
+				any_held_title = { any_claimant = { this = scope:actor } }
+			}
+		}
+		value = 6
+	}
+	# 3 -- CHANGE YOUR FAITH. A maker who cares what his blood believes.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 55
+				has_trait = zealous
+			}
+			NOT = { scope:actor.faith = scope:recipient.faith }
+			scope:recipient = { is_ruler = yes }
+		}
+		value = 12
+	}
+	# 4 -- CHANGE YOUR CULTURE.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 55
+				OR = {
+					has_trait = zealous
+					has_trait = ambitious
+				}
+			}
+			scope:recipient = {
+				is_ruler = yes
+				NOT = { culture = scope:actor.culture }
+			}
+		}
+		value = 20
+	}
+	# 5 -- MARRY WHO I SAY. A dynastic move, and the option's own is_shown already checks it is legal.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 50
+				is_ruler = yes
+				OR = {
+					has_trait = ambitious
+					has_trait = arbitrary
+				}
+			}
+			scope:recipient = {
+				is_adult = yes
+				is_married = no
+			}
+		}
+		value = 11
+	}
+	# 6 -- SURRENDER YOUR WAR. Ending a war your own blood is losing is what a maker is for.
+	else_if = {
+		limit = {
+			scope:actor = { spn_vampiric_reserve_value >= 45 }
+			scope:recipient = {
+				any_character_war = {
+					OR = {
+						primary_attacker = scope:recipient
+						primary_defender = scope:recipient
+					}
+				}
+			}
+		}
+		value = 3
+	}
+	# 7 -- JOIN MY WAR. And the other direction.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 35
+				any_character_war = {
+					OR = {
+						primary_attacker = scope:actor
+						primary_defender = scope:actor
+					}
+				}
+			}
+			scope:recipient = { is_ruler = yes }
+		}
+		value = 2
+	}
+	# 8 -- SUPPORT MY INFLUENCE. Administrative realms only; the option checks the government itself.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 40
+				is_ruler = yes
+				OR = {
+					government_has_flag = government_is_administrative
+					government_has_flag = government_is_japan_administrative
+				}
+			}
+		}
+		value = 14
+	}
+	# 9 -- GIVE ME YOUR PRISONERS.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 40
+				OR = {
+					has_trait = sadistic
+					has_trait = vengeful
+					has_trait = arbitrary
+				}
+			}
+			scope:recipient = { has_prisoners = yes }
+		}
+		value = 17
+	}
+	# 10 -- BE OBEDIENT. The option requires the succubus or incubus modifier, which is rare on its own.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 45
+				NOT = { has_hook = scope:recipient }
+				OR = {
+					has_character_modifier = succubus_modifier
+					has_character_modifier = incubus_modifier
+				}
+			}
+		}
+		value = 10
+	}
+	# 11 -- TURN FALLEN HUNTER. Only where the progeny actually carries the witch hunter trait the option
+	# names -- a maker unmaking what its own blood became.
+	else_if = {
+		limit = {
+			scope:actor = { spn_vampiric_reserve_value >= 40 }
+			scope:recipient = { has_trait = witch_hunter }
+		}
+		value = 13
+	}
+	# 12 -- BREAK YOUR BETROTHAL.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 35
+				OR = {
+					has_trait = ambitious
+					has_trait = arbitrary
+				}
+			}
+			scope:recipient = { exists = betrothed }
+		}
+		value = 19
+	}
+	# 13 -- DISMISS THE REGENCY.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 25
+				exists = diarch
+				diarch = scope:recipient
+			}
+		}
+		value = 8
+	}
+	# 14 -- JOIN MY COURT.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 35
+				is_ruler = yes
+			}
+			scope:recipient = {
+				is_ruler = no
+				NOT = { is_courtier_of = scope:actor }
+			}
+		}
+		value = 15
+	}
+	# 15 -- BECOME MY LOVER.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 30
+				has_trait = lustful
+				NOT = { has_trait = chaste }
+				NOT = { is_close_or_extended_family_of = scope:recipient }
+				NOR = {
+					has_relation_lover = scope:recipient
+					has_relation_soulmate = scope:recipient
+				}
+			}
+			scope:recipient = {
+				is_adult = yes
+				is_married = no
+			}
+		}
+		value = 5
+	}
+	# 16 -- YOUR SECRETS.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 25
+				OR = {
+					has_trait = paranoid
+					has_trait = deceitful
+					has_trait = shrewd
+				}
+			}
+			scope:recipient = { any_secret = { NOT = { is_known_by = scope:actor } } }
+		}
+		value = 16
+	}
+	# 17 -- YOUR GOLD.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 25
+				OR = {
+					has_trait = greedy
+					gold < 100
+				}
+			}
+			scope:recipient = { gold >= 100 }
+		}
+		value = 1
+	}
+	# 18 -- RELEASE YOUR PRISONERS. Cheap, and a merciful maker exists.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 25
+				OR = {
+					has_trait = compassionate
+					has_trait = forgiving
+				}
+			}
+			scope:recipient = { has_prisoners = yes }
+		}
+		value = 18
+	}
+	# 19 -- BECOME MY PATRON. The landless maker leaning on a landed child.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 25
+				is_landless_adventurer = yes
+			}
+			scope:recipient = {
+				is_landed_or_landless_administrative = yes
+				NOT = { is_contact_of = scope:actor }
+			}
+		}
+		value = 9
+	}
+	# 20 -- ENTERTAIN ME. Five, and the option itself requires the maker to be stressed, sadistic or a
+	# lunatic. The bottom of the ladder on purpose: it is what a bored monster does with its own blood.
+	else_if = {
+		limit = {
+			scope:actor = {
+				spn_vampiric_reserve_value >= 15
+				OR = {
+					stress > 100
+					has_trait = sadistic
+					has_trait = lunatic_1
+				}
+			}
+			scope:recipient = { is_at_war = no }
+		}
+		value = 7
+	}
+	else = { value = 0 }
+}

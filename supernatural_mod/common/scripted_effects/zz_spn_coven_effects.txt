@@ -1,0 +1,120 @@
+﻿# Supernatural 2.35 PART TWO -- "The Bridge". THE COVEN SWEEP.
+# WORK-ORDER-2.35-PART-TWO-THE-BRIDGE §6.3.
+#
+# A coven is a HOUSE modifier (witch_coven) plus a grandmaster_coven head plus a culture tradition, and until
+# this release there was no scheme, decision, interaction or event anywhere that let an outsider learn that a
+# house was one. The only reads in the whole layer are reward multipliers applied AFTER you have burned
+# somebody. That is what made it the cleanest hook point in the Witchcraft layer and this is the hook.
+#
+# WHAT THE SWEEP IS. Each adult house member standing in reach is a separate ROUND, each with its own fight,
+# each able to end in flight, capture or death, and wounds accumulate across them. Five kills is possible and
+# should very nearly kill you. It is gated at witch_hunting 60 or a hunter the world already tells stories
+# about -- a late-career set piece, not a Tuesday.
+#
+# HOW IT REUSES THE WHEEL. Every round runs the part-one fight (spn_hunt_fight_effect), unchanged, with its
+# own arithmetic, its own kit terms and its own two outcomes. Winning a round re-enters the sweep from inside
+# spn_hunt_hunter_won_effect; LOSING one drops into Overmatched exactly as any other fight does, which ends
+# the sweep the only honest way it can end -- the hunter is on the floor and there are four of them left.
+#
+# "Anything that ends in death is last" holds per round: the next round is scheduled BEFORE the death, so the
+# selection never reads a corpse's household and the corpse never gets picked again.
+#
+# ACTIVITY VARIABLES: spn_hunt_coven_running (the sweep is on), spn_hunt_coven_round (1-5),
+# spn_hunt_coven_next (whoever is behind the next door), spn_hunt_coven_known (the hunt learned the house is
+# a coven at all -- They Are Not Working Alone).
+
+# Root = the hunter. scope:spn_hunt_activity and scope:spn_culprit set.
+spn_hunt_coven_begin_effect = {
+	scope:spn_hunt_activity = {
+		set_variable = { name = spn_hunt_coven_running value = yes }
+		set_variable = { name = spn_hunt_coven_round value = 0 }
+	}
+	spn_hunt_coven_next_effect = yes
+}
+
+# Root = the hunter. Picks whoever is behind the next door and fires the round, or ends the sweep when the
+# house runs out or the fifth round is done.
+#
+# THE CULPRIT IS ROUND ONE. She is a member of her own house and is not pre-flagged, so the sweep starts with
+# the woman the trail actually pointed at -- which is also what keeps spn_hunt_fight_effect's own
+# slain-vs-proxy_slain test honest.
+spn_hunt_coven_next_effect = {
+	scope:spn_hunt_activity = { change_variable = { name = spn_hunt_coven_round add = 1 } }
+	if = {
+		limit = { scope:spn_hunt_activity = { var:spn_hunt_coven_round > 5 } }
+		spn_hunt_coven_end_effect = yes
+	}
+	else = {
+		if = {
+			limit = {
+				exists = scope:spn_culprit
+				scope:spn_culprit = { exists = house }
+			}
+			scope:spn_culprit.house = {
+				random_house_member = {
+					limit = {
+						is_alive = yes
+						is_adult = yes
+						is_imprisoned = no
+						NOT = { is_incapable = yes }
+						NOT = { has_character_flag = spn_hunt_coven_fought }
+						NOT = { this = scope:spn_hunter }
+						# In reach. The sweep is one night in one house, not a campaign against a dynasty
+						# scattered across three kingdoms.
+						location ?= { county ?= { this = scope:spn_hunt_county } }
+					}
+					save_scope_as = spn_hunt_coven_pick
+				}
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_hunt_coven_pick }
+			scope:spn_hunt_coven_pick = { add_character_flag = { flag = spn_hunt_coven_fought days = 30 } }
+			scope:spn_hunt_activity = { set_variable = { name = spn_hunt_coven_next value = scope:spn_hunt_coven_pick } }
+			# WOUNDS ACCUMULATE. From the second door on, winning still costs you -- and by the fourth the
+			# arithmetic of the fight itself is being done by a man who cannot lift his arm.
+			if = {
+				limit = { scope:spn_hunt_activity = { var:spn_hunt_coven_round >= 2 } }
+				increase_wounds_no_death_effect = { REASON = fight }
+			}
+			# One day, not two: the confrontation phase is fourteen days and five rounds have to fit inside
+			# it with their fights. A round that arrives after the phase has ended is a round that never
+			# happens, and the sweep would simply stop with people still upstairs.
+			trigger_event = { id = spn_hunt.0172 days = 1 }
+		}
+		else = {
+			spn_hunt_coven_end_effect = yes
+		}
+	}
+}
+
+# Root = the hunter. The sweep is over, whichever way. The outcome is settled on the one question that
+# matters to the county: is the thing that was doing this still doing it?
+spn_hunt_coven_end_effect = {
+	scope:spn_hunt_activity = {
+		remove_variable = spn_hunt_coven_running
+		remove_variable = spn_hunt_coven_next
+	}
+	if = {
+		limit = {
+			OR = {
+				NOT = { exists = scope:spn_culprit }
+				scope:spn_culprit = { is_alive = no }
+				scope:spn_culprit = { is_imprisoned = yes }
+			}
+		}
+		spn_hunt_set_outcome_effect = { OUTCOME = slain }
+		scope:spn_hunt_activity = {
+			set_variable = { name = spn_hunt_slain_kind value = flag:witch }
+			if = {
+				limit = { NOT = { exists = var:spn_hunt_slain_track } }
+				set_variable = { name = spn_hunt_slain_track value = 40 }
+			}
+		}
+	}
+	else = {
+		# He stopped, and she is still in there. That is a withdrawal and the county counts it.
+		spn_hunt_set_outcome_effect = { OUTCOME = withdrew }
+		add_prestige = -25
+	}
+}

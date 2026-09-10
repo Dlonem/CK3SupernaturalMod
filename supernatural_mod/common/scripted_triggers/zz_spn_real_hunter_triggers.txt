@@ -1,0 +1,151 @@
+﻿# Supernatural 2.35 -- "a hunter came for you" should mean a PERSON, not a spawn.
+#
+# Design direction (DESIGN-the-hunt-replaces-the-confrontation): every interaction should be with a character
+# who exists in the world and who you can go back at afterwards -- imprison, remember, hunt in turn -- rather
+# than with a stranger the event conjured and the game forgets. This trigger is the filter for "is this
+# somebody who could plausibly be the one standing in the doorway".
+#
+# Character scope: the candidate. root = the creature the hunter has come for.
+
+spn_real_hunter_candidate_trigger = {
+	is_alive = yes
+	is_adult = yes
+	is_imprisoned = no
+	is_incapable = no
+	has_trait = supernatural_hunter
+	# Not the creature itself, and not one of its own kind wearing the trait.
+	# This one clause also covers makers and progeny: both are creatures by definition, so
+	# spn_hunt_is_creature_trigger already excludes them and no relation check is needed.
+	NOT = { this = root }
+	NOT = { spn_hunt_is_creature_trigger = yes }
+}
+
+# CHARACTER scope: a hunter. Is there anything within reach of him to actually learn from?
+#
+# 2.35 -- read once a year by spn_check_hunter_skill_traits. Before this, a hunter's track was a pure
+# function of how long he had held the trait; a world with trails in it made no difference to him at all.
+# A landed hunter looks at his own realm; a landless one looks at the ground he is standing on, because he
+# has no realm to look at.
+spn_hunter_has_a_trail_to_learn_from_trigger = {
+	OR = {
+		AND = {
+			is_landed = yes
+			any_realm_county = { has_county_modifier = spn_menace_modifier }
+		}
+		location ?= { county ?= { has_county_modifier = spn_menace_modifier } }
+	}
+}
+
+# CHARACTER scope: the candidate. root = the hunter doing the drinking.
+#
+# 2.35 -- who is in the tavern. Thomas: "going to some city, showing up at a tavern, and that this specific
+# courier happens to be in that tavern as well. that's what we like to see." Monster Sighting
+# (spn_hunters.0010) used to conjure a drunkard at the capital for the portrait and nothing else; the man
+# telling you the story should be somebody who really lives where you are standing.
+spn_tavern_talker_candidate_trigger = {
+	is_alive = yes
+	is_adult = yes
+	is_imprisoned = no
+	is_incapable = no
+	NOT = { this = root }
+	# Somebody with nothing at stake, telling a stranger a story. Not a lord, and not one of the things the
+	# story is about.
+	is_ruler = no
+	NOT = { spn_hunt_is_creature_trigger = yes }
+	NOT = { has_trait = supernatural_hunter }
+}
+
+# CHARACTER scope: a hunter. 2.35b -- "the pickings get so slim."
+#
+# Thomas, 9 Sep 2026: "or if the pickings get so slim that they're like, alright, well, let's get the best
+# of us to take out this one creature that's left." A hunter who has one trail in the world and it is a bad
+# one still rides, because the alternative is not riding.
+#
+# Deliberately generous about what counts as "nothing else": a landless hunter has no realm to look at and
+# is therefore always in this state, which is correct -- he has no estate to sit on either.
+spn_hunter_has_nothing_else_trigger = {
+	OR = {
+		is_landed = no
+		NOT = {
+			any_realm_county = {
+				count >= 2
+				has_county_modifier = spn_menace_modifier
+			}
+		}
+	}
+}
+
+# 2.35b -- IS THE WITCH KIND OPEN TO THIS HUNTER? Character scope.
+#
+# Lifted verbatim out of the Witch kind's own is_valid (supernatural_hunt.txt) the moment a SECOND caller
+# appeared -- the activity's can_start gate. Two copies of one unlock rule is exactly the duplication that
+# goes stale, so there is one and both read it.
+#
+# READ THIS BEFORE DEBUGGING THE WITCH HUNT. The last two arms are dead letters as of 2.35b: nothing in the
+# mod ever writes a witch trail. spn_mark_menace_effect has exactly five call sites and the only KINDs ever
+# passed are vampire, werewolf and demon (zz_spn_menace_on_actions.txt:100/114/117,
+# 10_spn_gain_power_events.txt:908, 10_spn_ev1.txt:2116). Until a writer exists, a hunter reaches the Witch
+# kind only through the three things he went and earned, and a LANDLESS hunter can never reach a valid witch
+# LOCATION at all, because the other branch of is_location_valid wants a county he holds.
+spn_hunt_witch_kind_open_trigger = {
+	# 2.35c -- OPEN FROM THE START. Thomas, 9 Sep 2026: "I think 25 is a little high. Honestly, you should be
+	# able to do it from the get-go, but then like a lot of options and attempts and quality should be gated by
+	# the higher XP. Like you perform better the more XP you get."
+	#
+	# The four unlocks this replaces (the witch_hunter trait, antimage_perk, 25 on the witch-hunting track, or a
+	# witch trail in reach) are gone as a GATE. Two of them were unreachable anyway while nothing wrote a witch
+	# trail, and gating the whole activity kind behind a specialisation meant a hunter could play a full life
+	# without the card ever lighting. Progression moves to where Thomas wants it -- the options, the odds and
+	# the quality inside the hunt, which already read the witch_hunting track.
+	#
+	# The card's own is_shown already requires supernatural_hunter, so this is belt-and-braces for the second
+	# caller (the activity's can_start gate), where root is the would-be host and nothing else has checked.
+	has_trait = supernatural_hunter
+}
+
+# 2.35b -- IS THERE ANYWHERE TO RIDE AT ALL? Character scope. Read by the activity's
+# can_start_showing_failures_only so the Supernatural Hunt greys out in the activity list instead of letting
+# you walk the planner out to an empty map.
+#
+# DELIBERATELY WEAKER THAN is_location_valid, never stronger. It must pass whenever ANY location could be
+# valid, so it can never hide a hunt that was really there; a false pass just returns the old behaviour of an
+# empty planner, which is a wasted click rather than a lost mechanic. It therefore does NOT re-check the
+# distance leash, the county-capital gate or the four-year county breather -- every one of those only ever
+# REMOVES candidates, and copying them here is how the two would drift apart.
+#
+# The reach mirrors the Trailsman's exactly (zz_spn_trailsman_effects.txt): a landed ruler reads his realm, a
+# landless adventurer reads the ground he is standing on and the ground beside it.
+spn_hunt_has_any_quarry_trigger = {
+	# 2.35e -- FAIL OPEN. This gate has now blocked Thomas twice and both times it was this trigger's fault,
+	# so it is rebuilt to be structurally incapable of a false negative rather than merely intended to be.
+	#
+	#   2.35c  asked his realm, his province and its neighbours. A LANDLESS hunter has no realm, so it saw two
+	#          rings while is_location_valid reaches spn_max_hunt_distance. Valid trails were invisible to it.
+	#   2.35d  replaced that with a global list of trail counties -- correct for a world built with it, and
+	#          EMPTY IN EVERY EXISTING SAVE, because the list is only written when a new trail forms. On a
+	#          continued game it returned false forever and greyed the card out permanently.
+	#
+	# The rule now: only ever block when the world has POSITIVELY told us there is nothing. Any state we
+	# cannot read is a pass. An unnecessary click is a nuisance; a locked activity is a lost feature.
+	OR = {
+		# 1. THE ARM THAT MATTERS ON A CONTINUED SAVE. Nothing has ever been recorded, so we know nothing.
+		#    Do not block. This also covers a fresh world before anything has happened.
+		NOT = {
+			any_in_global_list = {
+				variable = spn_menace_counties
+				always = yes
+			}
+		}
+		# 2. The world's own record says a trail is live somewhere. This is the accurate answer once a game
+		#    has been played with 2.35d in place.
+		any_in_global_list = {
+			variable = spn_menace_counties
+			spn_trailsman_trail_is_warm_trigger = yes
+		}
+		# 3. Belt and braces for a trail older than the list: your realm, the ground underfoot, the ring around
+		#    it. These can only ADD ways to pass, never remove one.
+		any_realm_county = { spn_trailsman_trail_is_warm_trigger = yes }
+		location ?= { county ?= { spn_trailsman_trail_is_warm_trigger = yes } }
+		location ?= { county ?= { any_neighboring_county = { spn_trailsman_trail_is_warm_trigger = yes } } }
+	}
+}

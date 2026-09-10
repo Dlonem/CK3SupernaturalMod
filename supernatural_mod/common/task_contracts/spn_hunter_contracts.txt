@@ -1,0 +1,142 @@
+﻿# Supernatural 2.35 -- "The Hunt". The hunter contract (WORK-ORDER-2.35-THE-HUNT §7, D9).
+#
+# It does ONE thing: it is how an adventurer hunter gets PAID for a hunt a lord asked for. It never picks a target
+# and never kills anything -- the Supernatural Hunt does both. Created only from Something Stalks [county] ("Post a
+# bounty") with create_task_contract, in vanilla's own laamp_contracts_hunting_group; shape of laamp_magic_1001.
+# It stores the COUNTY (never the culprit) on the contract and on the taker, and What the Hunt Was Worth completes
+# it (spn_hunt_complete_contract_effect, every_character_active_contract) when the menace of THAT county is slain.
+# The hunt is free in that county while the contract stands (supernatural_hunt.txt cost).
+
+# The Menace of [county]
+laamp_hunter_1001 = {
+	group = laamp_contracts_hunting_group
+	icon = "gfx/interface/icons/activities/supernatural_hunt.dds"
+	travel = yes
+	use_diplomatic_range = yes
+
+	weight = {
+		value = task_contract_weight_default_value
+		scope:employer = {
+			multiply = task_contract_weight_by_tier_value
+			add = task_contract_weight_employer_contact_list_value
+		}
+	}
+
+	# Created ONLY by effect from Something Stalks [county]: that option stamps a one-day flag on the lord before
+	# create_task_contract, and nothing else can satisfy this -- the engine's own contract populator (the AI
+	# adventurers' yearly system and populate_task_contracts_for_area, which both draw from this group) never
+	# seeds it.
+	valid_to_create = {
+		exists = scope:employer
+		scope:employer = {
+			is_landed_or_landless_administrative = yes
+			has_character_flag = spn_posting_hunter_bounty
+		}
+	}
+	# root = the would-be taker.
+	valid_to_accept = {
+		valid_laamp_basic_accept_only_trigger = yes
+		valid_laamp_basic_trigger = {
+			EMPLOYER = scope:employer
+			LAAMP = root
+		}
+		has_trait = supernatural_hunter
+		NOT = { has_character_flag = spn_has_hunter_contract }
+		scope:employer = { is_landed_or_landless_administrative = yes }
+	}
+	# root = the contract.
+	valid_to_continue = {
+		valid_laamp_basic_trigger = {
+			EMPLOYER = root.task_contract_employer
+			LAAMP = root.task_contract_taker
+		}
+		task_contract_employer = { is_landed_or_landless_administrative = yes }
+		task_contract_taker = { has_trait = supernatural_hunter }
+	}
+	valid_to_keep = {
+		task_contract_employer = { is_landed_or_landless_administrative = yes }
+		# The trail is still warm; a cleared county needs no hunter.
+		exists = var:spn_contract_county
+		var:spn_contract_county = { has_county_modifier = spn_menace_modifier }
+	}
+
+	on_create = {
+		scope:contract = {
+			save_scope_as = task_contract
+			grab_gold_fuzz_number_effect = yes
+			set_variable = { name = gold_success_standard value = task_contract_taker.task_contract_success_gold_gain_full_value }
+			# The county, from the location the lord's event handed in (its capital). Never the culprit.
+			if = {
+				limit = { task_contract_location ?= { exists = county } }
+				set_variable = { name = spn_contract_county value = task_contract_location.county }
+				set_variable = { name = task_contract_destination value = task_contract_location }
+			}
+		}
+	}
+
+	on_accepted = {
+		task_contract_taker = { play_sound_effect = "event:/DLC/EP3/SFX/UI/Contracts/ep3_ui_contracts_accept_contract" }
+		save_scope_as = task_contract
+		task_contract_taker ?= {
+			add_character_flag = { flag = spn_has_hunter_contract years = 5 }
+			if = {
+				limit = { scope:task_contract = { exists = var:spn_contract_county } }
+				set_variable = { name = spn_hunter_contract_county value = scope:task_contract.var:spn_contract_county years = 5 }
+			}
+			trigger_event = spn_hunt.0010
+		}
+	}
+
+	on_invalidated = {
+		task_contract_taker ?= {
+			if = {
+				limit = { has_character_flag = spn_has_hunter_contract }
+				remove_character_flag = spn_has_hunter_contract
+			}
+			if = {
+				limit = { has_variable = spn_hunter_contract_county }
+				remove_variable = spn_hunter_contract_county
+			}
+		}
+	}
+
+	task_contract_reward = {
+		success_standard = {
+			should_print_on_complete = yes
+			effect = {
+				task_contract_taker = { play_sound_effect = "event:/DLC/EP3/SFX/UI/Contracts/ep3_ui_contracts_success_on_contract" }
+				save_scope_value_as = { name = extra_reward value = flag:no }
+				laamp_rewards_disburse_ordinary_currency_effect = {
+					GOLD = scope:task_contract.var:gold_success_standard
+					PRESTIGE = task_contract_success_prestige_gain_half_value
+					PIETY = 0
+					PROVISIONS = task_contract_success_provisions_gain_minor_value
+					OPINION = task_contract_opinion_standard_reward_value
+					OPINION_TYPE = succeeded_task_contract_opinion
+					CONTACT = yes
+					CONTACT_HOOK = no
+					EXTRA_REWARD = flag:no
+				}
+			}
+		}
+		failure_standard = {
+			positive = no
+			should_print_on_complete = yes
+			effect = {
+				task_contract_taker = { play_sound_effect = "event:/DLC/EP3/SFX/UI/Contracts/ep3_ui_contracts_failure_on_contract" }
+				save_scope_value_as = { name = extra_reward value = flag:no }
+				laamp_rewards_disburse_ordinary_currency_effect = {
+					GOLD = 0
+					PRESTIGE = task_contract_failure_prestige_loss_full_value
+					PIETY = 0
+					PROVISIONS = 0
+					OPINION = task_contract_opinion_standard_failure_value
+					OPINION_TYPE = failed_task_contract_opinion
+					CONTACT = no
+					CONTACT_HOOK = no
+					EXTRA_REWARD = flag:no
+				}
+			}
+		}
+	}
+}

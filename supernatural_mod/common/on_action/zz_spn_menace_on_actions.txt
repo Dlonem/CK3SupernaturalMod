@@ -1,0 +1,167 @@
+﻿# Supernatural 2.35 -- "The Hunt". W1: the one on_death hook that catches every creature kill with a known
+# killer (WORK-ORDER-2.35-THE-HUNT §3.2). The `on_actions` sub-list MERGES across files (the same idiom as
+# 10_death.txt on on_natural_death_second_chance), so this coexists with vanilla's death.txt and with the
+# Witchcraft on_death list in yearly2_on_actions.txt without touching either.
+#
+# Root = the character about to die. scope:killer is set by the engine when a killer is known (death.txt:1-2) --
+# every mod kill site passes `killer = root` or a saved hunter/creature scope.
+#
+# WHAT IS READ, AND WHAT IS NOT. The hook reads the KILLER, never the death reason: `death_reason` is a trigger
+# vanilla only ever evaluates on characters who are already dead (00_death_management_triggers.txt), and root here
+# is "just about to die". So a kill is a mark when the killer is a vampire, werewolf or hybrid; the KIND is the
+# killer's kind (a hybrid counts as a wolf while shapeshifted, a vampire otherwise). Kills BY hunters are not marks
+# (the killer is no creature); "silence the witness" is not a mark because that option stamps the dedupe flag
+# first -- covering the trail -- and a creature that just marked (the feed's kill option, W3) carries the same
+# flag. Sites with no killer stay uncovered on purpose (spn_embrace.3001 has no attacker).
+#
+# Covered sites (Evidence pass 2 §3): 10_spn_ev1.txt:257, 286, 547, 960, 2110; 10_spn_gain_power_events.txt:325,
+# 709; 10_spn_transition.txt:157, 262; 10_spn_embrace.txt:554, 867; spn_hunters_events.txt:1116, 1183, 1416, 1484.
+#
+# 2.35 PART TWO -- the killer test widened with spn_hunt_is_creature_trigger, which took demons this release,
+# so every violent demon kill with a known killer is now a demon/kill mark through this same hook and no new
+# writer was needed for it (D-W5). And a PLAYER creature's kill no longer marks here at all: it routes into
+# What They Will Find and the player decides what the county believes (§7).
+
+on_death = {
+	on_actions = {
+		spn_menace_on_death
+		spn_menace_culprit_death
+	}
+}
+
+# 2.35h -- AND THE OTHER HALF OF A DEATH: not who did it, but what he leaves unfinished.
+#
+# The census on Thomas's 346 A.C. save found 23 trails and only FOUR warm. A trail whose culprit is dead
+# is unhuntable forever and still sits on the county for five years. This hands it to whoever is still
+# there, or takes it off the map. No killer needed and no county scan: the culprit carries his own list
+# of trails (spn_my_trails, written at the mark).
+spn_menace_culprit_death = {
+	trigger = { has_variable_list = spn_my_trails }
+	effect  = { spn_menace_culprit_died_effect = yes }
+}
+
+# 2.35d -- the trigger that used to live here has MOVED to
+# common/scripted_triggers/zz_spn_menace_triggers.txt.
+#
+# It was defined in this file, and CK3 does not accept a scripted trigger inside common/on_action/.
+# The parser stopped at it -- error.log, 9 Sep 13:26: "Unexpected token: OR, near line: 45" and
+# "Unknown trigger: spn_menace_death_is_public_trigger, near line: 84" -- so EVERYTHING BELOW IT IN THIS
+# FILE FAILED TO REGISTER, including spn_menace_on_death itself. The on_death hook has therefore never
+# run since the trigger was added, which means no kill has written a county trail at all: no trails, so
+# nothing for the Trailsman to report and nothing for the planner to offer.
+
+
+spn_menace_on_death = {
+	trigger = {
+		exists = scope:killer
+		scope:killer = {
+			is_alive = yes
+			# 2.35c -- AND A WITCH, WHICH IS THE ONE GATE THAT KEPT THE WITCH HUNT FROM EXISTING.
+			#
+			# Everything downstream of a witch trail was already built and has been since 2.35 part two: the
+			# drains (spn_menace_drain_witch_kill_effect), the kind card, the planner tags, the coven tracking
+			# events (spn_hunt.0170-0172), the resolution (spn_hunt_slain_kind = flag:witch), and even the
+			# marking call itself -- zz_spn_consequence_effects.txt:496 passes KIND = witch, and
+			# spn_body_bind_effect:300 banks flag:witch as its else. NOTHING COULD EVER REACH ANY OF IT,
+			# because this trigger is the front door and spn_hunt_is_creature_trigger excludes witches. A witch
+			# is not a creature -- correctly so, and that trigger is NOT widened here, because pack counts and
+			# a dozen other reads depend on its meaning. The door is widened instead.
+			#
+			# Magic kills do pass a killer (00_magic_spells_effects.txt:757,770; 00_variety_magic_effects.txt:3560),
+			# so a killing spell now leaves the same county memory a fang does -- subject to the same noticing
+			# roll as everything else, so one dead miller is usually still just a dead miller.
+			# 2.35h -- AND THE SECRET ONES, which is the half of the witch world this door was still shut
+			# to. Thomas: "logically, if they're following a witch hunt trail, it leads to an actual witch,
+			# or a mage, or a warlock, or a necromancer." Vanilla's own definition of a witch is the trait
+			# OR the secret (00_crime_triggers.txt:6), and this mod's own witch-finder already asks it both
+			# ways (spn_real_witch_candidate_trigger). Only the trait was asked here, so a practitioner who
+			# has kept it quiet -- which is most of them, and all the interesting ones -- could kill with a
+			# spell and leave the county nothing to notice. Six of the ten kill sites in
+			# 00_magic_spells_effects.txt and four of the six in 00_variety_magic_effects.txt pass a killer,
+			# so there was real traffic arriving at a door that was only open to the openly damned.
+			OR = {
+				spn_hunt_is_creature_trigger = yes
+				has_trait = witch
+				any_secret = { secret_type = secret_witch }
+			}
+			NOT = { has_character_flag = spn_menace_marked_recently }
+			# 2.35h -- AND NOT WHILE HE IS ON A HUNT. Thomas, 9 Sep 2026, having killed a suspect during a
+			# Witch Hunt he was hosting and been handed What They Will Find for it: "I thought I was going
+			# through that event as a hunter... that was a little poorly timed."
+			#
+			# The door had opened correctly -- he is a SECRET WITCH, and this hook admits witches by secret
+			# since 2.35h, which is the interesting half of his character and stays. What was wrong was the
+			# moment. A body that turns up inside a supernatural hunt is the hunt's business: the hunt has
+			# its own outcomes, its own log entries and its own county consequences, and a second system
+			# writing a menace mark on top of them is not a twist, it is two authors talking over each other.
+			#
+			# Deliberately not narrowed to hunters: a CREATURE that kills during a hunt is also the hunt's
+			# business (the confrontation already handles what the county learns). Outside a hunt, a secret
+			# witch who kills someone leaves exactly the trail he should.
+			NOT = { involved_activity ?= { has_activity_type = supernatural_hunt } }
+		}
+		exists = location
+		location = { exists = county }
+		NOT = { spn_menace_death_is_public_trigger = yes }
+	}
+	effect = {
+		# 2.35 PART TWO -- bank the ground first. Root is about to die and a dead man's location is not a
+		# thing to build a county lookup on afterwards (the standing ordering rule); it is also the scope
+		# that has to survive being handed into another character's block below.
+		location.county = { save_scope_as = spn_menace_here }
+
+		# ------------------------------------------------------------------------------------------------
+		# 2.35 PART TWO (§7) -- AND NOW THE PLAYER GETS TO ANSWER FOR IT.
+		#
+		# Thomas: "Say I kill a guy as a werewolf. I could spend some gold or prestige as an excuse. I can
+		# hide the body and pay off..."
+		#
+		# Until now every kill a player creature made wrote its mark silently and the player found out when
+		# a hunter turned up. The five answers already existed -- they were reachable from exactly one
+		# interaction (a compelled suicide). This routes a PLAYER's kill through the same front door
+		# instead, so Satiate Thirst, Satiate Hunger, the border hunt and a demon's kill all stop being
+		# dead ends that offer only "Continue".
+		#
+		# AI kills are marked directly, as they always were: an AI has nothing to decide and the world does
+		# not need a thousand queued events to find that out. The front door stamps the incident-dedupe flag
+		# itself, so nothing double-marks.
+		# ------------------------------------------------------------------------------------------------
+		if = {
+			limit = { scope:killer = { is_ai = no } }
+			scope:killer = { spn_body_after_the_kill_effect = { COUNTY = scope:spn_menace_here } }
+		}
+		# 2.35 PART TWO -- and a demon reads as a demon (D-W5, E2: "any demon, by what it does"). This is
+		# what makes E2 true for a PLAYER demon as well as an AI one: kill someone and the county remembers,
+		# exactly as it does for a vampire.
+		else_if = {
+			limit = { scope:killer = { is_a_demon_trigger = yes } }
+			spn_mark_menace_effect = { COUNTY = scope:spn_menace_here CULPRIT = scope:killer KIND = demon SEVERITY = kill }
+		}
+		else_if = {
+			limit = {
+				scope:killer = {
+					OR = {
+						has_trait = supernatural_werewolf
+						AND = {
+							has_trait = supernatural_hybrid
+							is_shapeshifted_trigger = yes
+						}
+					}
+				}
+			}
+			spn_mark_menace_effect = { COUNTY = scope:spn_menace_here CULPRIT = scope:killer KIND = werewolf SEVERITY = kill }
+		}
+		# The vampire branch is now an explicit CREATURE test rather than the catch-all, because the catch-all
+		# has a new job below it. A vampire who is also a witch still reads as a vampire -- the county describes
+		# what it found, and it found a drained body.
+		else_if = {
+			limit = { scope:killer = { spn_hunt_is_creature_trigger = yes } }
+			spn_mark_menace_effect = { COUNTY = scope:spn_menace_here CULPRIT = scope:killer KIND = vampire SEVERITY = kill }
+		}
+		# 2.35c -- and what is left is a witch, by elimination: the trigger above admits creatures and witches
+		# and nothing else, and the three branches ahead of this one have taken every creature.
+		else = {
+			spn_mark_menace_effect = { COUNTY = scope:spn_menace_here CULPRIT = scope:killer KIND = witch SEVERITY = kill }
+		}
+	}
+}

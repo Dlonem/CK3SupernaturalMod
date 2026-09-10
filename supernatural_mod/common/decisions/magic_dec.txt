@@ -1989,6 +1989,27 @@ witch_hunting_decision = {
 			has_perk = antimage_perk
 			has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 25 }
 		}
+		# 2.35 (Supernatural) -- RETIRED for anyone who can ride the Supernatural Hunt instead.
+		#
+		# This decision was a button that fired one of two Witchcraft events at random. The Witch kind of the
+		# Supernatural Hunt now does everything it did -- the same magic_ev3.63/.65 pair, the same 7% magic_ev8.3
+		# roll -- and adds three weeks of actual hunting around them, against a witch who really lives in the
+		# county rather than one conjured for the occasion. Two buttons for one act is duplication, and the worse
+		# of the two should be the one to go.
+		#
+		# The clause is deliberately narrow: it hides the decision ONLY from a character who meets the activity's
+		# own is_shown (supernatural_hunter, adult, landed or a landless adventurer). A witch_hunter or an
+		# antimage who is none of those keeps the decision exactly as before, so nothing is taken away from
+		# anybody -- it is moved.
+		NOT = {
+			AND = {
+				has_trait = supernatural_hunter
+				OR = {
+					is_landed_or_landless_administrative = yes
+					is_landless_adventurer = yes
+				}
+			}
+		}
 	}
 
 	#is_valid_showing_failures_only = {
@@ -2620,14 +2641,24 @@ become_fallen_hunter_decision = {
 	confirm_text = become_fallen_hunter_decision_confirm
 	decision_group_type = magic_decisions
 	picture = {
-		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
+		reference = "gfx/interface/illustrations/decisions/decision_study_book.dds"
 	}
+	# 2.35 -- the catalyst requirement moved out of is_shown. It used to make the whole decision VANISH the
+	# moment the artifact left your inventory -- stolen, given away, lost on death -- with no explanation.
+	# is_shown still gates on the hunter trait and nothing else, so a werewolf or a vampire never sees this
+	# at all; a hunter without a catalyst sees it greyed out with the reason on it.
 	is_shown = {
 		has_trait = supernatural_hunter
-		any_character_artifact = {
-			has_variable = magic1
-		}
+	}
+
+	is_valid = {
 		is_imprisoned = no
+		custom_tooltip = {
+			text = become_fallen_hunter_needs_catalyst_tt
+			any_character_artifact = {
+				has_variable = magic1
+			}
+		}
 	}
 	decision_group_type = major
 	cooldown = { years = 5 }

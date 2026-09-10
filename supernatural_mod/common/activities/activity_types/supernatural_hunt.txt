@@ -1,1 +1,1703 @@
-﻿
+﻿# Supernatural 2.35 -- "The Hunt". The Supernatural Hunt activity (WORK-ORDER-2.35-THE-HUNT §6).
+#
+# Template: vanilla hunt.txt for the skeleton (special_option_category, options, phase event pools by on_action,
+# province_score + max_province_icons map markers, the success-bar widget), with the supernatural pieces copied
+# from vampire_feeding.txt (the distance gate, the province_filter = all / ai_province_filter = domicile_realm
+# split, the this = scope:host phase guards, the invite-rule shape). No key here reuses a vanilla hunt key
+# (§2.6): every new key carries spn_hunt_ or supernatural_hunt -- including the invite rules, because vanilla and AGOT both
+# define activity_invite_rule_hunters for their own hunt (found by the §2.1 sweep; the first draft collided with it).
+#
+# WHAT IT IS. A hunter (supernatural_hunter, landed or an adventurer) rides to a county that carries a menace mark
+# -- a creature did something there (zz_spn_menace_effects.txt) -- and works out WHAT it is and WHO it is. Nothing
+# here spawns a monster: the only valid Monster Hunt location is a county whose trail points at a living culprit.
+# Two KINDS, on the vanilla hunt's special-option shape: Monster Hunt (in full) and Witch Hunt (thin, D10: it runs
+# the existing Witchcraft chain magic_ev3.63/.65 inside the activity).
+#
+# THE CREATURE ALWAYS GETS TO ANSWER (§5): the tracking phase can warn every creature in the county (Whispers of a
+# Hunter), the culprit gets Someone Is Asking Questions before any fight, and nobody dies without having chosen
+# the option that risked it. Scopes and variables: see zz_spn_hunt_effects.txt.
+#
+# THE HUNT GROWS WITH THE HUNTER: below monster_hunting 50 the trail's KIND is hidden -- the planner tag reads
+# "Something.", the opener will not say drained or torn -- so the kit (Stakes / Silver, D12) is a real guess for a
+# young hunter and an informed one for a veteran. Bring the wrong kit and a vampire may look you in the eye.
+
+supernatural_hunt = {
+	is_shown = {
+		OR = {
+			is_landed_or_landless_administrative = yes
+			is_landless_adventurer = yes
+		}
+		is_playable_character = yes
+		is_adult = yes
+		has_trait = supernatural_hunter
+	}
+
+	can_start_showing_failures_only = {
+		is_available = yes
+		is_imprisoned = no
+		NOT = { is_incapable = yes }
+		is_travelling = no
+		custom_description = {
+			text = spn_hunt_cannot_start_recovering_tt
+			NOT = { has_character_modifier = spn_hunter_recovering_modifier }
+		}
+		# 2.35b -- AND NOTHING TO RIDE AT. Thomas, 9 Sep 2026: "I find myself clicking activity, clicking
+		# supernatural hunt, clicking monster hunt, and then looking around the map to see nothing, versus if
+		# I can just click the activity button, see that the supernatural hunt shows up there, but it's grayed
+		# out because there isn't any valid hunting opportunities. That would save me some extra clicks."
+		#
+		# The trigger is deliberately WEAKER than is_location_valid, never stronger: it passes whenever any
+		# location could be valid and fails only when none can, so it can never grey out a hunt that was
+		# actually available. It does not re-implement the distance leash, the county-capital gate or the
+		# four-year breather -- those only ever REMOVE candidates, and duplicating them here is how the two
+		# copies would drift.
+		custom_description = {
+			text = spn_hunt_cannot_start_no_quarry_tt
+			spn_hunt_has_any_quarry_trigger = yes
+		}
+	}
+
+	is_valid = {
+		NOT = { has_variable = activity_invalidated }
+		scope:host = {
+			OR = {
+				is_landed_or_landless_administrative = yes
+				is_landless_adventurer = yes
+			}
+			is_alive = yes
+			is_imprisoned = no
+			NOT = { is_incapable = yes }
+		}
+	}
+
+	# root = the activity. Bank the culprit and its track off the county's trail (Monster kind), and the bar.
+	on_start = {
+		# 2.35b -- THE COOLDOWN, MIRRORED IN SCRIPT. The engine's own `cooldown` above cannot be read from
+		# script: there is no cooldown trigger, and _activity_type.info:48 is explicit that
+		# can_start_showing_failures_only is for requirements that are "not costs or cooldown". So the host
+		# carries a flag for exactly as long, and anything that needs to know whether he can ride reads that.
+		# The Trailsman is the only reader today: he stops reporting trails you could not act on anyway.
+		scope:host ?= {
+			add_character_flag = { flag = spn_hunt_on_cooldown years = 2 }
+		}
+		scope:activity ?= {
+			if = {
+				limit = {
+					has_activity_option = { category = special_type option = spn_hunt_kind_monster }
+					activity_location.county ?= {
+						exists = var:spn_menace_culprit
+						var:spn_menace_culprit = { is_alive = yes }
+					}
+				}
+				activity_location.county = {
+					var:spn_menace_culprit = {
+						save_scope_as = spn_culprit_at_start
+						save_scope_value_as = { name = spn_culprit_track_at_start value = spn_hunt_creature_track_value }
+					}
+					if = {
+						limit = { exists = var:spn_menace_kind }
+						scope:activity = { set_variable = { name = spn_hunt_kind value = prev.var:spn_menace_kind } }
+					}
+				}
+				set_variable = { name = spn_hunt_culprit value = scope:spn_culprit_at_start }
+				set_variable = { name = spn_hunt_culprit_track value = scope:spn_culprit_track_at_start }
+			}
+			# 2.35 PART TWO (§6.2) -- THE WITCH KIND, WHEN IT HAS A TRAIL.
+			#
+			# The thin kind (D10) is unchanged and still runs upstream's own chain from the tracking phase.
+			# But a Witch Hunt ridden to a county carrying a WITCH menace mark is a real hunt with a real
+			# culprit, and from here it goes down the monster spine -- same bar, same weekly pool, same
+			# Cornered -- because that spine is already built and a second witch-finding system is exactly
+			# what §6 exists to avoid. var:spn_hunt_witch_trail is the switch, and everything downstream
+			# reads it rather than re-asking the question.
+			if = {
+				limit = {
+					has_activity_option = { category = special_type option = spn_hunt_kind_witch }
+					activity_location.county ?= {
+						has_county_modifier = spn_menace_modifier
+						var:spn_menace_kind ?= flag:witch
+						exists = var:spn_menace_culprit
+						var:spn_menace_culprit = { is_alive = yes }
+					}
+				}
+				set_variable = { name = spn_hunt_witch_trail value = yes }
+				activity_location.county = {
+					var:spn_menace_culprit = {
+						save_scope_as = spn_witch_at_start
+						save_scope_value_as = { name = spn_witch_track_at_start value = spn_hunt_creature_track_value }
+					}
+					scope:activity = { set_variable = { name = spn_hunt_kind value = flag:witch } }
+				}
+				set_variable = { name = spn_hunt_culprit value = scope:spn_witch_at_start }
+				set_variable = { name = spn_hunt_culprit_track value = scope:spn_witch_track_at_start }
+			}
+			set_variable = { name = spn_hunt_chance_event value = 0 }
+			# 2.35 -- bank whether the host already knows the culprit before the bar is first derived.
+			spn_hunt_refresh_known_effect = yes
+			set_variable = { name = spn_hunt_success_chance value = spn_hunt_success_chance_value }
+			# 2.35 PART TWO (§3.4.2) -- the world's hunt counter. Four at once, and only AI hunters are told no.
+			spn_hunt_running_open_effect = yes
+		}
+	}
+
+	on_invalidated = {
+		# 2.35 PART TWO -- the world's hunt counter closes on EVERY exit, and the activity variable is what
+		# makes that idempotent: whichever of these three hooks fires first does the decrement and the
+		# others find nothing left to do.
+		scope:activity ?= { spn_hunt_running_close_effect = yes }
+		if = {
+			limit = { scope:host = { is_incapable = yes } }
+			scope:activity = {
+				activity_type = { save_scope_as = activity_type }
+			}
+			scope:host = { trigger_event = activity_system.0330 }
+			every_attending_character = {
+				limit = { NOT = { this = scope:host } }
+				trigger_event = activity_system.0331
+			}
+		}
+	}
+
+	on_host_death = {
+		scope:activity = {
+			spn_hunt_running_close_effect = yes
+			set_variable = { name = activity_invalidated }
+		}
+	}
+
+	### Bottom-of-window tracking bar (copy of the feeding's widget, itself vanilla's hunt bar) ###
+	activity_window_widgets = {
+		supernatural_hunt_success_chance = "activity_plugin_widgets_summary"
+	}
+
+	###################
+	# COST (D5) -- the vanilla hunt shape: standard_activity_base_cost scaled by era; adventurers x0.25
+	# (04_ep2_hunt_values.txt:19); free under a hunter contract for the contract's county.
+	###################
+
+	cost = {
+		gold = {
+			add = {
+				value = standard_activity_base_cost
+				desc = hunt_base_cost
+			}
+			add = {
+				value = standard_activity_base_cost
+				multiply = activity_cost_scale_by_era
+				subtract = standard_activity_base_cost
+				desc = activity_cost_scale_by_era_desc
+			}
+			# 2.35h -- HALVED. Thomas, playing a high lord: "it costs 180 gold to host a supernatural hunt.
+			# I feel like at max it should be half of that." He is right, and the reason is that this is not
+			# a feast. standard_activity_base_cost prices a party you throw for other lords; a hunt is a man,
+			# a horse, some silver and a week of somebody else's county. The vanilla base stays as the anchor
+			# so era scaling still works, and this halves the whole thing after it. Applied in BOTH blocks --
+			# cost and ui_predicted_cost -- or the planner card would quote a price the activity does not charge.
+			multiply = 0.5
+			if = {
+				limit = { has_government = landless_adventurer_government }
+				multiply = 0.25
+			}
+			if = {
+				limit = { has_character_flag = spn_has_hunter_contract }
+				multiply = 0
+			}
+		}
+	}
+
+	ui_predicted_cost = {
+		gold = {
+			value = standard_activity_base_cost
+			add = {
+				value = standard_activity_base_cost
+				multiply = activity_cost_scale_by_era
+				subtract = standard_activity_base_cost
+			}
+			# 2.35h -- HALVED. Thomas, playing a high lord: "it costs 180 gold to host a supernatural hunt.
+			# I feel like at max it should be half of that." He is right, and the reason is that this is not
+			# a feast. standard_activity_base_cost prices a party you throw for other lords; a hunt is a man,
+			# a horse, some silver and a week of somebody else's county. The vanilla base stays as the anchor
+			# so era scaling still works, and this halves the whole thing after it. Applied in BOTH blocks --
+			# cost and ui_predicted_cost -- or the planner card would quote a price the activity does not charge.
+			multiply = 0.5
+			if = {
+				limit = { has_government = landless_adventurer_government }
+				multiply = 0.25
+			}
+			if = {
+				limit = { has_character_flag = spn_has_hunter_contract }
+				multiply = 0
+			}
+			divide = 5
+			ceiling = yes
+			multiply = 5
+		}
+	}
+
+	# 2.35b -- 3 -> 2. Thomas, 9 Sep 2026: "I think you should change the cooldown to two years." The trail
+	# itself lives five years and the county's own breather is four (spn_hunt_recently_hunted), so those two
+	# still do the pacing; this only stops the HUNTER being the bottleneck.
+	cooldown = { years = 2 }
+
+	wait_time_before_start = { weeks = 1 }
+	max_guest_arrival_delay_time = { months = 2 }
+	is_single_location = yes
+
+	###################
+	# AI VALUES (§6.10). Thomas's 60/40: AI hunters hunt less often than a player would -- base 30, personality
+	# carries it. Root = the character evaluating the activity.
+	###################
+
+	ai_will_do = {
+		value = 30
+		if = { limit = { has_trait = brave }      add = 20 }
+		if = { limit = { has_trait = zealous }    add = 15 }
+		if = { limit = { has_trait = vengeful }   add = 15 }
+		if = { limit = { has_trait = ambitious }  add = 10 }
+		add = { value = spn_hunt_hunter_track_value multiply = 0.2 }
+		# 2.35 -- THE WORLD'S OWN PULL, and it was missing entirely: every AI hunter weighed this activity
+		# exactly the same whether the county next door was burying people or nothing had happened in fifty
+		# years. Personality decided everything and the world decided nothing, which is backwards for a
+		# system whose entire premise is that trails bring hunters.
+		#
+		# Graded rather than flat (spn_hunter_pull_value): how CLOSE it is and how MUCH of it there is, 0 to
+		# 45. A hunter in a quiet realm barely moves off this base; one standing in a county on its fourth
+		# body is most of the way to riding out on his own.
+		add = { value = spn_hunter_pull_value }
+		# Somebody whose job is to bring him word. He hears about it sooner and rides sooner.
+		if = { limit = { any_court_position_holder = { type = spn_trailsman_court_position } } add = 15 }
+		# 2.35g -- GREED, which Thomas asked for and which belongs here rather than in the summons alone:
+		# "do you think a hunter that's greedy is more likely to take on work?" He is. Hunting is work, and
+		# a man who wants money takes work. Modest on its own (+10) because greed is not courage.
+		if = { limit = { has_trait = greedy }    add = 10 }
+		# ...and much larger when somebody has actually promised him some. A summons is a letter with a
+		# figure in it; the pull value already carries the county, this carries the purse.
+		if = {
+			limit = { has_character_flag = spn_summons_accepted }
+			add = 25
+			if = { limit = { has_trait = greedy } add = 15 }
+		}
+		if = { limit = { has_trait = craven }     add = -30 }
+		if = { limit = { has_trait = content }    add = -20 }
+		if = { limit = { has_trait = lazy }       add = -15 }
+		# ==================================================================================================
+		# 2.35h -- IS THIS A GOOD WEEK TO GO MONSTER HUNTING? Thomas, watching several AI hunts at once:
+		# "is this person incredibly stressed? Okay, why are they going on a supernatural hunt instead of
+		# throwing a feast?"
+		#
+		# Fair question, and until now this block had NO answer to it. Everything above weighs whether the
+		# hunter WANTS to ride and whether the world is calling him; nothing asked whether he is in any state
+		# to. Vanilla activities all carry this second half -- feast.txt reads ai_greed, ai_sociability and
+		# ai_energy, and checks its own cost against short_term_gold -- and the base is calibrated to it:
+		# feast 30, tournament 30, tour 30, debate 20, and vanilla's ordinary hunt opens at MINUS ten. Our
+		# base of 30 plus up to 45 of world-pull was therefore beating a feast on a bad week every time.
+		#
+		# These do not make the hunt rarer when the world is loud. They make it lose to a feast when the man
+		# is the one who needs looking after.
+		# ==================================================================================================
+		# He is not well in himself. This is the feast's week, not the hunt's.
+		if = { limit = { stress_level >= 2 }  add = -40 }
+		if = { limit = { stress_level >= 3 }  add = -40 }
+		# He is not well in his body. A man with a shattered arm does not go looking for a werewolf.
+		if = { limit = { has_trait = wounded_2 } add = -40 }
+		if = { limit = { has_trait = wounded_3 } add = -60 }
+		# Vanilla's own lethargy term, verbatim from feast.txt: a flat, tired AI stays home.
+		if = { limit = { ai_energy < 0 }  add = { value = ai_energy } }
+		# ...and its own courage term, which is the personality axis this activity is actually about.
+		add = { value = ai_boldness  multiply = 0.15 }
+		# His army needs him more than the county does.
+		if = { limit = { is_at_war = yes } add = -45 }
+		# Vanilla's courtesy: you do not ride off in the middle of your liege's grand activity.
+		if = {
+			limit = { liege ?= { has_ongoing_grand_activity_trigger = yes } }
+			add = -25
+		}
+		# Can he actually pay for it? The same shape feast.txt uses, against this activity's own base cost.
+		if = {
+			limit = { NOT = { short_term_gold >= standard_activity_base_cost } }
+			add = -50
+		}
+		if = {
+			limit = { short_term_gold >= major_gold_value }
+			add = 15
+		}
+		# ==================================================================================================
+		# 2.35 PART TWO (§8.5a) -- DO NOT START A HUNT YOU WILL LOSE.
+		#
+		# Thomas: "I don't want to be sending casual hunters to their death." This is the fix AT THE SOURCE,
+		# and it is the cheapest of the three off-ramps because most of the hunters it saves never leave
+		# home. The projected odds are the confrontation's own arithmetic run against the culprit of the
+		# county he is standing in, before the ride (spn_hunt_projected_odds_value).
+		#
+		# Below 35% he does not go -- unless he is brave, or vengeful, or has nothing else, which are the
+		# three reasons a real person rides at bad odds anyway.
+		# ==================================================================================================
+		if = {
+			limit = {
+				is_ai = yes
+				location ?= {
+					county ?= {
+						has_county_modifier = spn_menace_modifier
+						exists = var:spn_menace_culprit
+						var:spn_menace_culprit = { is_alive = yes }
+					}
+				}
+				spn_hunt_projected_odds_value < 35
+				NOR = {
+					has_trait = brave
+					has_trait = vengeful
+					spn_hunter_has_nothing_else_trigger = yes
+				}
+			}
+			multiply = 0
+		}
+		# 2.35 PART TWO (§3.4.2) -- and however many trails are warm, only four hunts run anywhere at once.
+		# A player is never blocked: a player's hunt is the one he chose to go on.
+		if = {
+			limit = { NOT = { spn_hunt_running_open_trigger = yes } }
+			multiply = 0
+		}
+	}
+
+	# 2.35 -- WAS 60. A menace trail lives five years (zz_spn_menace_effects.txt), so at a sixty-month check
+	# an AI hunter got roughly ONE look at any given trail in its whole lifetime, times ai_will_do -- which is
+	# why sixteen years of a live campaign produced three hunts in the entire world. 36 matches this activity's
+	# own three-year cooldown, gives about two looks per trail, and has vanilla precedent (monument_expedition).
+	ai_check_interval = 36
+
+	# scope:score = the province_score below
+	ai_will_select_province = {
+		value = 50
+		add = { value = scope:score multiply = 10 }
+	}
+
+	###################
+	# KINDS (§6.3) and OPTIONS (§6.4)
+	###################
+
+	# The category is named special_type like every vanilla and mod activity that has one: the engine and the
+	# activity GUI address the special option by that name (activity_special_type_progression.gui and friends).
+	special_option_category = special_type
+
+	options = {
+		special_type = {
+			# Monster Hunt -- track the creature preying on a county. Only trail counties are valid (is_location_valid).
+			spn_hunt_kind_monster = {
+				default = yes
+				is_shown = { has_trait = supernatural_hunter }
+				# 2.35 PART TWO (§6.4) -- HUNTERS CHOOSE THE LOUDER THREAT. Thomas: "I would almost prefer
+				# that hunters try to determine the bigger supernatural threat at the time... obviously
+				# they'll go toward where most of the bodies are showing up, but also where a shit ton of
+				# magic is occurring."
+				#
+				# Only possible at all once witches leave a trail (§3.3), and then nearly free: each kind
+				# weighs its own marks in reach. The same hunter, a different world state, a different
+				# answer -- which is the whole of what he asked for.
+				ai_will_do = {
+					value = 50
+					add = { value = spn_hunt_hunter_track_value multiply = 0.5 }
+					if = {
+						limit = { location ?= { county ?= { has_county_modifier = spn_menace_modifier  NOT = { var:spn_menace_kind ?= flag:witch } } } }
+						add = 8
+					}
+					if = {
+						limit = { is_landed = yes }
+						every_realm_county = {
+							limit = {
+								has_county_modifier = spn_menace_modifier
+								NOT = { var:spn_menace_kind ?= flag:witch }
+							}
+							add = 8
+						}
+					}
+				}
+			}
+			# Witch Hunt -- root out witchcraft in your own lands. The decision's own gate (magic_dec.txt:1983-1987).
+			# Thin (D10): runs magic_ev3.63 / .65 from the tracking phase; the confrontation phase is idle for it; no apprentice lesson.
+			spn_hunt_kind_witch = {
+				# Always shown so the planner offers both cards (a single shown option skips the choice); valid on the
+				# decision's own gate, with the reason on the greyed card.
+				is_shown = { has_trait = supernatural_hunter }
+				# 2.35a -- A FOURTH WAY IN, and it is the one the world hands you.
+				#
+				# Thomas, second boot: "I've yet to see a witch hunt activity option pop up." The card was
+				# there and greyed, which is not the same thing as never appearing but reads exactly like it.
+				# The three original unlocks are all things you have to have gone and got -- the witch_hunter
+				# trait, the first perk of that tree, or 25 on the witch track -- so a hunter who has never
+				# touched the witch half of the trait can play a whole game without the kind ever lighting up,
+				# no matter what is happening around him.
+				#
+				# The fourth is evidence. If a county in reach is carrying a witch trail with a live culprit,
+				# the hunt is available to any hunter, specialist or not, because the question has stopped
+				# being "are you qualified" and started being "somebody is doing this three counties over".
+				# The specialisation still matters -- it is what lets you run a witch hunt on nothing but
+				# suspicion, which is the darker and more interesting version -- but the world can now open
+				# the door on its own, and the trails he has been watching for on the map finally do something.
+				is_valid = {
+					custom_tooltip = {
+						text = spn_hunt_kind_witch_needs_tt
+						# 2.35b -- lifted into spn_hunt_witch_kind_open_trigger the moment a second caller appeared
+						# (the activity's can_start gate), so the kind card and that gate ask ONE question.
+						spn_hunt_witch_kind_open_trigger = yes
+					}
+				}
+				blocked_intents = { spn_train_the_apprentice_intent }
+				# (blocked_phases is documented in _activity_type.info but has zero vanilla uses, so it is not relied on:
+				# the Witch kind keeps the confrontation phase, which simply does nothing for it, and concludes at its end.)
+				# 2.35 PART TWO (§6.4) -- the other half of the comparison. Witch marks pull this way, and so
+				# does a county thick with people the witch-hunting trade would already be looking at
+				# (wh_attraction_value >= 9, which is upstream's own measure of exactly that).
+				ai_will_do = {
+					value = 30
+					if = {
+						limit = { has_trait = supernatural_hunter }
+						add = { value = "has_trait_xp(supernatural_hunter|witch_hunting)" multiply = 0.5 }
+					}
+					if = {
+						limit = { location ?= { county ?= { has_county_modifier = spn_menace_modifier  var:spn_menace_kind ?= flag:witch } } }
+						add = 8
+					}
+					if = {
+						limit = { is_landed = yes }
+						every_realm_county = {
+							limit = {
+								has_county_modifier = spn_menace_modifier
+								var:spn_menace_kind ?= flag:witch
+							}
+							add = 8
+						}
+					}
+					if = {
+						limit = {
+							any_courtier_or_guest = {
+								count >= 1
+								wh_attraction_value >= 9
+							}
+						}
+						add = 5
+					}
+				}
+			}
+		}
+
+		# Preparations -- the hunter has to guess what it is. One pick. Hybrids count as both: either kit +15.
+		spn_hunt_preparations = {
+			spn_hunt_prep_light = {
+				default = yes
+				cost = { gold = 0 }
+				ai_will_do = {
+					value = 0
+					add = activity_option_likes_cheap_expense_value
+				}
+			}
+			# Stakes (D12): +15 against a vampire or hybrid, and the creature cannot look you in the eye; -10 against a wolf.
+			spn_hunt_prep_stakes = {
+				cost = {
+					gold = {
+						add = {
+							add = { value = 25 desc = spn_hunt_prep_kit_cost }
+							add = {
+								value = 25
+								multiply = activity_cost_scale_by_era
+								subtract = 25
+								desc = activity_cost_scale_by_era_desc
+							}
+							min = 0
+						}
+					}
+				}
+				ai_will_do = {
+					value = 0
+					add = activity_option_likes_middling_expense_value
+					# A veteran reads the trail; a novice guesses.
+					if = {
+						limit = { spn_hunt_reads_the_kind_trigger = yes }
+						add = 40
+					}
+					else = { add = 15 }
+				}
+			}
+			# Silver (D12): +15 against a werewolf or hybrid; -10 against a vampire -- and a vampire of ANY track may
+			# compel a hunter who came with the wrong kit (§6.4).
+			spn_hunt_prep_silver = {
+				cost = {
+					gold = {
+						add = {
+							add = { value = 25 desc = spn_hunt_prep_kit_cost }
+							add = {
+								value = 25
+								multiply = activity_cost_scale_by_era
+								subtract = 25
+								desc = activity_cost_scale_by_era_desc
+							}
+							min = 0
+						}
+					}
+				}
+				ai_will_do = {
+					value = 0
+					add = activity_option_likes_middling_expense_value
+					if = {
+						limit = { spn_hunt_reads_the_kind_trigger = yes }
+						add = 40
+					}
+					else = { add = 15 }
+				}
+			}
+			# Hire Local Guides: +15 on the tracking bar.
+			spn_hunt_prep_guides = {
+				cost = {
+					gold = {
+						add = {
+							add = { value = 15 desc = spn_hunt_prep_guides_cost }
+							add = {
+								value = 15
+								multiply = activity_cost_scale_by_era
+								subtract = 15
+								desc = activity_cost_scale_by_era_desc
+							}
+							min = 0
+						}
+					}
+				}
+				ai_will_do = {
+					value = 0
+					add = activity_option_likes_middling_expense_value
+					add = 10
+				}
+			}
+		}
+
+		# Approach -- how the hunter goes about it.
+		spn_hunt_approach = {
+			# Ask Quietly (intrigue): nothing on the bar; the creatures roll to hear of you.
+			spn_hunt_approach_quiet = {
+				default = yes
+				cost = { gold = 0 }
+				ai_will_do = {
+					value = 20
+					if = { limit = { has_trait = paranoid }   add = 15 }
+					if = { limit = { has_trait = deceitful }  add = 10 }
+					add = { value = intrigue multiply = 0.5 }
+				}
+			}
+			# Ride In Openly (martial): +10 on the bar, and every creature in the county hears of you.
+			spn_hunt_approach_open = {
+				cost = { gold = 0 }
+				ai_will_do = {
+					value = 20
+					if = { limit = { has_trait = brave }      add = 15 }
+					if = { limit = { has_trait = arrogant }   add = 10 }
+					add = { value = martial multiply = 0.5 }
+				}
+			}
+			# Read the Signs (learning): +5 on the bar, +5 in the fight is paid by the opener.
+			spn_hunt_approach_signs = {
+				cost = { gold = 0 }
+				ai_will_do = {
+					value = 20
+					if = { limit = { has_trait = diligent }   add = 10 }
+					if = { limit = { has_trait = scholar }    add = 10 }
+					add = { value = learning multiply = 0.5 }
+				}
+			}
+		}
+	}
+
+	###################
+	# PHASES (§6.8). Phase hooks run once PER ATTENDEE (root = each attendee) -- hence the this = scope:host guards.
+	###################
+
+	phases = {
+		spn_tracking_phase = {
+			is_predefined = yes
+			order = 1
+			on_phase_active = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { weeks = 3 } }
+					spn_hunt_bind_scopes_effect = yes
+					# 2.35 PART TWO (§6.2) -- the Witch kind now has two shapes and they part company here.
+					# A Witch Hunt ridden to a WITCH TRAIL is a real hunt with a real culprit and runs the
+					# monster spine (The Trail, the early warning, the weekly pool, Cornered). A Witch Hunt
+					# in your own lands with nothing on the books is the thin kind (D10), unchanged, and
+					# runs upstream's chain exactly as it did.
+					if = {
+						limit = {
+							scope:activity = {
+								has_activity_option = { category = special_type option = spn_hunt_kind_witch }
+								NOT = { has_variable = spn_hunt_witch_trail }
+							}
+						}
+						# The Witch Hunt kind: upstream's own chain, run from here instead of the decision (D10).
+						random_list = {
+							50 = { trigger_event = { id = magic_ev3.63 days = 3 } }
+							50 = { trigger_event = { id = magic_ev3.65 days = 3 } }
+						}
+						# 2.35 -- the decision's third roll, which this kind was missing. witch_hunting_decision
+						# (magic_dec.txt) does exactly this at 7% on top of the pair above; without it the
+						# activity was not quite a superset of the decision, and the decision could not be
+						# retired without taking something away.
+						random = {
+							chance = 7
+							trigger_event = { id = magic_ev8.3 months = 1 }
+						}
+					}
+					else = {
+						trigger_event = spn_hunt.0100
+						spn_hunt_early_warning_effect = yes
+					}
+				}
+			}
+			# 2.35 -- the pulse now routes by KIND. It used to fire only for the Monster kind, which meant a
+			# Witch Hunt was three weeks of an empty window between the chain event at the start and the
+			# conclusion at the end. The witch pool is small on purpose: the resolution it feeds into
+			# (Decide on the Fate of the Witch) already exists and is good, so these events are the week's
+			# work rather than a second ending.
+			on_weekly_pulse = {
+				# 2.35 PART TWO -- a witch TRAIL draws from the monster pool, because the pool's events are
+				# about following a trail and that is what this hunt is doing. The witch-only events in it
+				# carry their own spn_hunt_witch_trail gate; the monster-only ones carry their kind gate.
+				# Nothing needed a third pool.
+				if = {
+					limit = {
+						this = scope:host
+						scope:activity = {
+							OR = {
+								has_activity_option = { category = special_type option = spn_hunt_kind_monster }
+								has_variable = spn_hunt_witch_trail
+							}
+						}
+					}
+					trigger_event = { on_action = spn_hunt_default_event_selection }
+				}
+				else_if = {
+					limit = {
+						this = scope:host
+						scope:activity = { has_activity_option = { category = special_type option = spn_hunt_kind_witch } }
+					}
+					trigger_event = { on_action = spn_hunt_witch_event_selection }
+				}
+				# 2.35b -- THE CREATURE HEARS ITS OWN NAME. He Asked About You By Name (spn_hunt.0155) is the
+				# culprit's one chance to act BEFORE Cornered, and it only comes once the hunter has actually
+				# got somewhere -- the bar past 60. Fired here rather than from the pool because the pool runs
+				# on the host and this event's root is the creature.
+				if = {
+					limit = {
+						this = scope:host
+						scope:activity = {
+							has_activity_option = { category = special_type option = spn_hunt_kind_monster }
+							NOT = { has_variable = spn_hunt_ev_0155 }
+							exists = var:spn_hunt_culprit
+							exists = var:spn_hunt_success_chance
+							var:spn_hunt_success_chance >= 60
+							var:spn_hunt_culprit = { is_alive = yes }
+						}
+					}
+					spn_hunt_bind_scopes_effect = yes
+					scope:activity = { set_variable = { name = spn_hunt_ev_0155 value = yes } }
+					# 2.35 PART TWO -- and a demon gets its own version of this, because a demon's answer to
+					# hearing that a hunter is in the county is not a vampire's. He Asked About You By Name
+					# is a creature deciding where else it could be; It Knows Your Name is a demon deciding
+					# what to do about the man.
+					if = {
+						limit = { scope:activity.var:spn_hunt_culprit = { is_a_demon_trigger = yes } }
+						scope:activity.var:spn_hunt_culprit = { trigger_event = { id = spn_hunt.0162 days = { 1 4 } } }
+					}
+					else = {
+						scope:activity.var:spn_hunt_culprit = { trigger_event = { id = spn_hunt.0155 days = { 1 4 } } }
+					}
+				}
+			}
+			on_end = {
+				if = {
+					limit = { this = scope:host }
+					spn_hunt_resolve_tracking_effect = yes
+				}
+			}
+		}
+
+		spn_confrontation_phase = {
+			is_predefined = yes
+			order = 2
+			# 2.35 -- on_enter_phase ADDED. Without it the hunt hangs here forever: the host arrives, the phase is
+			# entered but never made active, so on_phase_active never runs, so progress_activity_phase_after is
+			# never called, so on_end never fires and the conclusion never happens. The window sits on "You are
+			# waiting for the Confrontation to begin" and the activity cannot be left. The mod's own feeding
+			# activity has always scheduled the progression in BOTH hooks (vampire_feeding.txt, feeding_phase);
+			# this phase only had the second one, which is why the first phase worked and this one did not.
+			on_enter_phase = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { days = 5 } }
+				}
+			}
+			on_phase_active = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { days = 14 } }
+				}
+			}
+			on_end = {
+				if = {
+					limit = { this = scope:host }
+					trigger_event = spn_hunt.0300
+				}
+			}
+		}
+	}
+
+	###################
+	# LOCATION (§6.2). root = the province; scope:host; scope:special_option = the chosen kind.
+	###################
+
+	is_location_valid = {
+		exists = county
+		# 2.35a -- ONE PLACE PER COUNTY, and this is why six pins were landing on the same spot.
+		#
+		# Thomas, second boot: "in regard to those map icons, thank you for having them show up now. Perhaps
+		# if we limit them a little bit -- I think there was like six on the screen in the exact same spot.
+		# I'd like to think that maybe we should have only a max of like four or five showing up."
+		#
+		# The cap was the smaller half of it. The real cause is that a trail is a COUNTY fact -- the menace
+		# modifier sits on the county -- while a location is a PROVINCE. Every barony of a trail county
+		# therefore passed is_location_valid and every one of them earned a pin, so a six-barony county drew
+		# six pins on top of each other and spent the whole allowance on one trail.
+		#
+		# The county capital is the county, for this purpose. is_county_capital is a province trigger
+		# (01_event_backgrounds.txt:3501). Nothing else about the hunt changes: the trail, the fight, the
+		# menace and the reward are all county-scoped already.
+		custom_tooltip = {
+			text = spn_hunt_location_capital_tt
+			is_county_capital = yes
+		}
+		trigger_if = {
+			limit = { scope:special_option ?= flag:spn_hunt_kind_monster }
+			custom_tooltip = {
+				text = spn_hunt_location_needs_trail_tt
+				# ?= : the tooltip builder walks every branch, sea provinces included, so the county link must be soft here.
+				county ?= {
+					has_county_modifier = spn_menace_modifier
+					exists = var:spn_menace_culprit
+					# 2.35c -- GUARDED. This read produced 1,737 real errors in a 17-minute boot
+					# (error.log, 9 Sep): "is_alive trigger [ Wrong scope for trigger: landed_title, expected character ]".
+					# CK3 does NOT short-circuit the siblings of an AND: has_county_modifier failing does not stop the
+					# line below it being evaluated, so on every province in the world with no trail on it the unset
+					# var: read fell back to the county itself and is_alive got handed a landed_title. province_filter is
+					# `all`, so that is once per province per planner scan -- which is why this one line was 1.7% of the
+					# entire error log. trigger_if's limit DOES gate evaluation; the semantics are unchanged.
+					trigger_if = {
+						limit = { exists = var:spn_menace_culprit }
+						var:spn_menace_culprit = { is_alive = yes }
+					}
+				}
+			}
+			# 2.35 -- WHO DARES. Thomas, 9 Sep 2026: "all of the hunters know who resides in this specific county,
+			# but only the most daring of the daring, only somebody with monster hunter track at a hundred would
+			# even attempt to kill this specific vampire, because everybody knows previous hunters have gone
+			# missing."
+			#
+			# spn_creature_legend_value is exactly that reputation and it is earned the only way it could be: off
+			# the creature's own memories of hunters it beat and hunters it killed. Two rungs, so a county does not
+			# simply close -- it narrows to the people who have any business being there. This is also what the
+			# statement option in What They Will Find is FOR: daring them to come is how you eventually stop the
+			# ones who would have won.
+			custom_tooltip = {
+				text = spn_hunt_location_legend_tt
+				# 2.35b -- Thomas, 9 Sep 2026, on the first version of this gate: "maybe there's a good chance
+				# people won't do it unless they have a big enough hunting group -- or if the pickings get so
+				# slim that they're like, alright, well, let's get the best of us to take out this one creature
+				# that's left." Both are right, and a pure track gate said neither. Three ways in now, and the
+				# second and third are the interesting ones:
+				#   1. you are that good
+				#   2. you are not, but you can bring a band -- counted off your own hall, because the guest
+				#      list does not exist yet at planner time
+				#   3. you are not and you cannot, but this is the only trail you have -- when the world runs
+				#      out of easy work, somebody goes after the hard one anyway
+				trigger_if = {
+					limit = { county ?= { var:spn_menace_culprit ?= { spn_creature_legend_value >= 4 } } }
+					scope:host = {
+						OR = {
+							has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 75 }
+							AND = {
+								has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 40 }
+								any_courtier_or_guest = {
+									count >= 3
+									is_adult = yes
+									has_trait = supernatural_hunter
+								}
+							}
+							spn_hunter_has_nothing_else_trigger = yes
+						}
+					}
+				}
+				trigger_else_if = {
+					limit = { county ?= { var:spn_menace_culprit ?= { spn_creature_legend_value >= 2 } } }
+					scope:host = {
+						OR = {
+							has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 40 }
+							any_courtier_or_guest = {
+								count >= 2
+								is_adult = yes
+								has_trait = supernatural_hunter
+							}
+							spn_hunter_has_nothing_else_trigger = yes
+						}
+					}
+				}
+				trigger_else = { always = yes }
+			}
+			# 2.35 -- ONE HUNT AT A TIME. Thomas: "I don't wanna be loading into my next supernatural playthrough
+			# and then having to worry about hunters coming at me once every two years." A trail lives five years
+			# and a hunter's own cooldown is three, so without this a single careless night could bring three
+			# different hunters to the same county off one mark. The county gets four years' peace after any hunt
+			# that did not end the trail; a hunt that DID end it removes the trail anyway and this never applies.
+			custom_tooltip = {
+				text = spn_hunt_location_recently_hunted_tt
+				county ?= { NOT = { has_variable = spn_hunt_recently_hunted } }
+			}
+		}
+		trigger_if = {
+			limit = { scope:special_option ?= flag:spn_hunt_kind_witch }
+			# 2.35 PART TWO (§6.2) -- TWO WAYS A WITCH HUNT IS VALID NOW, and the second one is the release.
+			#
+			#   1. your own lands, nothing on the books  -- the thin kind (D10), exactly as it shipped
+			#   2. ANY county in reach carrying a witch trail with a live culprit -- a real hunt
+			#
+			# The second is what turns "root out witchcraft in your own realm" into "somebody is doing
+			# something three counties over and the county remembers it", which is the whole bridge.
+			custom_tooltip = {
+				text = spn_hunt_location_witch_tt
+				OR = {
+					county ?= {
+						holder ?= {
+							OR = {
+								this = scope:host
+								is_vassal_or_below_of = scope:host
+								scope:host = { is_vassal_or_below_of = prev }
+							}
+						}
+					}
+					county ?= {
+						has_county_modifier = spn_menace_modifier
+						var:spn_menace_kind ?= flag:witch
+						exists = var:spn_menace_culprit
+						# 2.35c -- same guard as the Monster branch above; 432 of the same error came from here.
+						trigger_if = {
+							limit = { exists = var:spn_menace_culprit }
+							var:spn_menace_culprit = { is_alive = yes }
+						}
+					}
+				}
+			}
+			# The same four years' peace the Monster kind gets, and for the same reason.
+			custom_tooltip = {
+				text = spn_hunt_location_recently_hunted_tt
+				county ?= { NOT = { has_variable = spn_hunt_recently_hunted } }
+			}
+		}
+		# The leash -- the feeding's own reach, under its own name (spn_max_hunt_distance).
+		# 2.35a -- WRAPPED. A bare script-value comparison makes the engine ask for the localisation key
+		# `province_named_script_value_less_or_equal`, which nothing in the game or the mod defines, so the
+		# planner printed that raw key in red under every province. The comparison is unchanged.
+		# 2.35h -- OR ANYWHERE UNDER YOUR OWN LIEGE, at any distance. Thomas: "if I am a duke, I should be
+		# able to hunt in the whole kingdom. If I'm a king, the whole empire." That is right and it is not
+		# really a distance question at all -- a man hunting inside his own king's realm is not travelling
+		# abroad, he is riding to the far end of the thing he belongs to, and nobody needs his permission.
+		#
+		# top_liege shared is exactly "the same realm, however big that realm is": for a duke under a king
+		# it is the kingdom, for a king under an emperor the empire, and for an independent ruler his own
+		# realm and no more. Distance still governs everything outside it, and province_score below still
+		# prefers near ground to far -- this widens what is POSSIBLE, not what is attractive.
+		custom_tooltip = {
+			text = spn_hunt_location_too_far_tt
+			OR = {
+				vf_host_distance_to_province <= spn_max_hunt_distance
+				AND = {
+					exists = scope:host.top_liege
+					county ?= { holder ?= { top_liege ?= { this = scope:host.top_liege } } }
+				}
+			}
+		}
+	}
+
+	# The player roams; the AI stays home (the 2.32 split, monument_expedition's idiom).
+	province_filter = all
+	# 2.35 -- WIDENED from domicile_realm, the same fix and for the same reason as vampire_feeding.txt:555.
+	# A trail is left where a creature chose to feed, which is very often NOT in the hunter's own realm --
+	# that is the whole appeal of feeding in your neighbour's city. domicile_realm meant an AI hunter could
+	# only ever ride to a trail that happened to land inside his own borders, so most of the world's trails
+	# were unhuntable by anyone but the player. top_realm gives him his top liege's whole realm; the distance
+	# leash in is_location_valid (spn_max_hunt_distance) is what actually stops him crossing the map.
+	# Not `all`: the engine's own warning in _activity_type.info:79 is explicit about the planner rescan cost.
+	# TRADE-OFF, identical to the feeding's: a landless AI adventurer has no realm and loses the domicile
+	# province it used to get here. The landless PLAYER is unaffected (province_filter = all).
+	ai_province_filter = top_realm
+
+	# 2.35a -- 6 -> 10000 -> 5. The 10000 was the right answer to the wrong question: it was set when the
+	# score handed every county in the world a flat 100, so raising the cap was the only way any trail got a
+	# pin at all. With the score fixed AND one valid location per county (is_county_capital, above), the
+	# candidates are already few and already correctly ranked, so the cap can go back to being a cap.
+	# 5 is vanilla's own number for the hunt (hunt.txt:2151) and the number Thomas asked for.
+	max_province_icons = 5
+	allow_zero_guest_invites = yes
+	open_invite = no
+
+	# Map markers (Thomas): a fresh trail with many marks and low control scores highest.
+	# ==========================================================================================================
+	# 2.35a -- WHY THERE WERE NO MAP PINS, and it was this block.
+	#
+	# Thomas, after the first boot: "it's only counties that get highlighted... the way I can tell that there
+	# is one available is I look for a green patch of land... Other activities provide like little map pin
+	# icons."
+	#
+	# max_province_icons does not CREATE pins -- _activity_type.info:126 is explicit that it only limits them:
+	# "if set we only show the top X scored provinces as map icons". Ours was set to 6. And the score below
+	# handed **every land province on the map** a flat 100 just for having a county, before any trail was
+	# considered at all.
+	#
+	# So the top six provinces in the world, by this score, were whichever six had the lowest county control.
+	# A lawless county with no trail scored 100. A county on its first mark with decent control scored
+	# 100 + 25 - 40 = 85 and lost to it. The six pins the engine was willing to draw were being spent on
+	# provinces that had nothing to do with the hunt, and the ones that did have a trail never got one.
+	#
+	# Fixed on both halves. The score now starts at zero and only a county with a live trail scores at all,
+	# so the ranking is a ranking of trails rather than of the whole world. And the cap goes up: valid
+	# locations are already few (a trail, in range, not hunted in four years), so every one of them should
+	# get a pin. Vanilla's own province_filter = all activity, monument_expedition, uses 10000 for exactly
+	# this reason.
+	#
+	# root = the province; scope:host = the hunter.
+	# ==========================================================================================================
+	province_score = {
+		value = 0
+		# 2.35h -- NEARER IS BETTER, and OWN GROUND FIRST. Thomas, seeing several AI hunts running at once:
+		# "they should prioritise their own county, their own fiefdom, their own domain before trying to go
+		# hunting elsewhere."
+		#
+		# Until now distance appeared in this activity ONLY as a cosmetic tag on the planner card (Very Long
+		# Ride), and never in the score -- so a trail on the other side of the world scored exactly as high
+		# as one in the hunter's own capital, and ai_will_select_province multiplies this by 10. That is the
+		# arithmetic behind hunts turning up in odd places.
+		#
+		# Both terms are outside the trail branch on purpose: they apply to the Witch kind's suspicion-only
+		# counties too, which is where an AI is most likely to wander for no reason at all.
+		if = {
+			limit = { NOT = { vf_host_distance_to_province <= squared_distance_medium } }
+			add = -25
+		}
+		if = {
+			limit = { NOT = { vf_host_distance_to_province <= squared_distance_large } }
+			add = -35
+		}
+		# Your own ground, or your own liege's. The second is smaller than the first by design: a lord
+		# answers for his own counties before he answers for his king's.
+		if = {
+			limit = { county ?= { holder ?= { OR = { this = scope:host  is_vassal_or_below_of = scope:host } } } }
+			add = 45
+		}
+		else_if = {
+			limit = {
+				exists = scope:host.top_liege
+				county ?= { holder ?= { top_liege ?= { this = scope:host.top_liege } } }
+			}
+			add = 20
+		}
+		if = {
+			limit = { county ?= { has_county_modifier = spn_menace_modifier } }
+			add = 100
+			# How warm. This is the term that should decide the ordering, so it is the biggest.
+			if = {
+				limit = { county = { exists = var:spn_menace_count } }
+				add = { value = county.var:spn_menace_count multiply = 25 }
+			}
+			# A county that has already lost its grip is a worse place to be and an easier place to work.
+			add = { value = county.county_control multiply = -0.5 }
+			# 2.35a -- a county that has forgotten a week is quieter and still a hunter's business.
+			if = {
+				limit = { county = { has_county_modifier = spn_compelled_modifier } }
+				add = 15
+			}
+			# 2.35a -- and the one the trade will not touch ranks top for the man who can take it.
+			if = {
+				limit = {
+					county = { has_county_modifier = spn_no_one_will_come_modifier }
+					scope:host = { has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 75 } }
+				}
+				add = 60
+			}
+		}
+		# 2.35a -- the WITCH kind ranks its own trails, which the old score could not see at all because it
+		# never looked at the kind.
+		if = {
+			limit = {
+				scope:special_option ?= flag:spn_hunt_kind_witch
+				county ?= {
+					has_county_modifier = spn_menace_modifier
+					var:spn_menace_kind ?= flag:witch
+				}
+			}
+			add = 40
+		}
+		# 2.35a -- and the Witch kind's OTHER validity branch needs a ranking of its own or the five pins get
+		# spent arbitrarily. A witch hunt is valid in any county you hold whether or not anything has happened
+		# there (is_location_valid, the first trigger_if branch), so without this every held county ties at
+		# zero and the engine picks five of them out of a hat. Development is the right tiebreak: witch-hunting
+		# is a thing that happens where there are enough people for a rumour to travel. Well under the 100 a
+		# real trail scores, so a county with actual evidence in it always outranks a big quiet one.
+		if = {
+			limit = {
+				scope:special_option ?= flag:spn_hunt_kind_witch
+				NOT = { county ?= { has_county_modifier = spn_menace_modifier } }
+				county ?= {
+					holder ?= {
+						OR = {
+							this = scope:host
+							is_vassal_or_below_of = scope:host
+							# 2.35b -- and your LIEGE's counties, which is_location_valid's witch branch has always
+							# allowed and this score did not. A vassal hunter's valid rides scored zero and so could
+							# never win one of the five pins.
+							scope:host = { is_vassal_or_below_of = prev }
+						}
+					}
+				}
+			}
+			add = 20
+			# Through the prosperity wrapper like every other development read in the mod (20_spn_utility_values.txt:588),
+			# and entering the county scope to do it -- a script value cannot be dereferenced through a scope path.
+			county = {
+				add = { value = spn_county_prosperity_value multiply = 0.5 }
+			}
+		}
+	}
+
+	# ==========================================================================================================
+	# 2.35a -- THE PLANNER TAGS, REWRITTEN IN VANILLA'S IDIOM.
+	#
+	# Thomas, second boot, with two screenshots side by side: "Notice how the localization looks. They have
+	# the pluses and the minuses before the text itself." He is right, and it is not a cosmetic point -- the
+	# planner is a comparison screen, and a column of signs down the left edge is what makes two provinces
+	# comparable at a glance. Ours buried the sign at the end of a sentence ("Recent attacks here: +") or
+	# omitted it entirely ("Torn."), so there was nothing to scan.
+	#
+	# Vanilla's shape, verbatim: colour tag, space, sign, space, name, close tag, then the category in
+	# brackets. journey_activity_l_english.yml:40 -- "\n#positive_value ++ Short Distance#!". The hunt uses
+	# #P/#N for the same thing (hunt_activity_l_english.yml:20-23); #positive_value / #negative_value is the
+	# one Thomas was looking at, so that is the one used here.
+	#
+	# And "as dynamic as possible", which is the other half of what he asked for: every term that varies now
+	# has its own rung rather than a single on/off line. The trail has three, the ride has four, and the
+	# things that make a county harder -- no witnesses, no hunter will take it, hunters died here -- each say
+	# so with a sign instead of being flavour text.
+	#
+	# root = the province; scope:host = the hunter.
+	# ==========================================================================================================
+	province_description = {
+		desc = spn_hunt_prov_base
+
+		# --- WHAT THE COUNTY HAS LOST. The biggest term in the score, so it reads first.
+		first_valid = {
+			triggered_desc = { trigger = { county ?= { exists = var:spn_menace_count var:spn_menace_count >= 5 } } desc = spn_hunt_tag_trail_3 }
+			triggered_desc = { trigger = { county ?= { exists = var:spn_menace_count var:spn_menace_count >= 3 } } desc = spn_hunt_tag_trail_2 }
+			triggered_desc = { trigger = { county ?= { has_county_modifier = spn_menace_modifier } } desc = spn_hunt_tag_trail_1 }
+		}
+
+		# --- WHAT LEFT IT, for a hunter who can read it (§6.2). Reading the sign is an advantage and now
+		#     says so; failing to read it is a real disadvantage and now says that too.
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					county ?= { has_county_modifier = spn_menace_modifier var:spn_menace_kind ?= flag:vampire }
+					scope:host = { spn_hunt_reads_the_kind_trigger = yes }
+				}
+				desc = spn_hunt_tag_kind_vampire
+			}
+			triggered_desc = {
+				trigger = {
+					county ?= { has_county_modifier = spn_menace_modifier var:spn_menace_kind ?= flag:werewolf }
+					scope:host = { spn_hunt_reads_the_kind_trigger = yes }
+				}
+				desc = spn_hunt_tag_kind_werewolf
+			}
+			# 2.35 PART TWO -- the two new kinds, each behind its own read. A demon costs 65 rather than 50
+			# (§4.2) and a witch is read off the WITCH track entirely, so a great monster hunter standing in
+			# front of a hexed byre still reads "Something." That is not a gap; it is the trait having two
+			# halves and this being the place a player finds that out.
+			triggered_desc = {
+				trigger = {
+					county ?= { has_county_modifier = spn_menace_modifier var:spn_menace_kind ?= flag:demon }
+					scope:host = { spn_hunt_reads_demon_trigger = yes }
+				}
+				desc = spn_hunt_tag_kind_demon
+			}
+			triggered_desc = {
+				trigger = {
+					county ?= { has_county_modifier = spn_menace_modifier var:spn_menace_kind ?= flag:witch }
+					scope:host = { spn_hunt_reads_witch_trigger = yes }
+				}
+				desc = spn_hunt_tag_kind_witch
+			}
+			triggered_desc = {
+				trigger = { county ?= { has_county_modifier = spn_menace_modifier } }
+				desc = spn_hunt_tag_kind_unknown
+			}
+		}
+
+		# --- THE COUNTY ITSELF. county_control is the same term the province_score subtracts on, so the tag
+		#     and the ranking agree: a county that has lost its grip is an easier place to work in.
+		first_valid = {
+			triggered_desc = { trigger = { county ?= { county_control < 25 } } desc = spn_hunt_tag_control_none }
+			triggered_desc = { trigger = { county ?= { county_control < 50 } } desc = spn_hunt_tag_control_low }
+		}
+		# A week nobody remembers is worth 15 in the score -- it is still a hunter's business -- but for the
+		# man doing the asking it is the worst thing a county can be, so the tag reads negative.
+		first_valid = {
+			triggered_desc = { trigger = { county ?= { has_county_modifier = spn_compelled_modifier } } desc = spn_hunt_tag_compelled }
+		}
+		first_valid = {
+			triggered_desc = { trigger = { county ?= { has_county_modifier = spn_no_one_will_come_modifier } } desc = spn_hunt_tag_no_one_comes }
+		}
+
+		# --- THE RIDE. Four rungs on vanilla's own ladder (pilgrimage.txt:430-455). vf_host_distance_to_province
+		#     already picks the right origin for a landed lord, a domicile holder or a landless adventurer.
+		first_valid = {
+			triggered_desc = { trigger = { vf_host_distance_to_province <= squared_distance_small } desc = spn_hunt_tag_ride_very_short }
+			triggered_desc = { trigger = { vf_host_distance_to_province <= squared_distance_medium } desc = spn_hunt_tag_ride_short }
+			triggered_desc = { trigger = { vf_host_distance_to_province <= squared_distance_large } desc = spn_hunt_tag_ride_long }
+			triggered_desc = { trigger = { always = yes } desc = spn_hunt_tag_ride_very_long }
+		}
+
+		# --- AND WHAT HAPPENED TO THE LAST ONES. Last so it reads last, and the only thing on this screen
+		#     that is a warning rather than a measurement.
+		first_valid = {
+			triggered_desc = {
+				trigger = { county ?= { var:spn_menace_culprit ?= { spn_creature_legend_value >= 4 } } }
+				desc = spn_hunt_tag_legend_high
+			}
+			triggered_desc = {
+				trigger = { county ?= { var:spn_menace_culprit ?= { spn_creature_legend_value >= 2 } } }
+				desc = spn_hunt_tag_legend
+			}
+		}
+	}
+
+	# ==========================================================================================================
+	# 2.35a -- THE CONCLUSION SCREEN HAD NO TEXT, and that is the other half of "there was no summary".
+	#
+	# Vanilla's hunt has a conclusion_description (hunt.txt:1660) and ours simply did not have the key. The
+	# conclusion window therefore drew the log lines with nothing above them saying what the three weeks had
+	# been. Between this and the log entries the rewards now write, the screen finally reads as an ending.
+	#
+	# root = the host; scope:activity set.
+	# ==========================================================================================================
+	conclusion_description = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:activity = { var:spn_hunt_outcome ?= flag:slain } }
+				desc = spn_hunt_conclusion_slain
+			}
+			triggered_desc = {
+				trigger = { scope:activity = { var:spn_hunt_outcome ?= flag:exorcised } }
+				desc = spn_hunt_conclusion_exorcised
+			}
+			triggered_desc = {
+				trigger = { scope:activity = { var:spn_hunt_outcome ?= flag:proxy_slain } }
+				desc = spn_hunt_conclusion_proxy
+			}
+			triggered_desc = {
+				trigger = { scope:activity = { var:spn_hunt_outcome ?= flag:fled } }
+				desc = spn_hunt_conclusion_fled
+			}
+			triggered_desc = {
+				trigger = { scope:activity = { var:spn_hunt_outcome ?= flag:withdrew } }
+				desc = spn_hunt_conclusion_withdrew
+			}
+			triggered_desc = {
+				trigger = { scope:activity = { var:spn_hunt_outcome ?= flag:bargained } }
+				desc = spn_hunt_conclusion_bargained
+			}
+			triggered_desc = {
+				trigger = { scope:activity = { var:spn_hunt_outcome ?= flag:hunter_beaten } }
+				desc = spn_hunt_conclusion_beaten
+			}
+			triggered_desc = {
+				trigger = { scope:activity = { var:spn_hunt_outcome ?= flag:witch } }
+				desc = spn_hunt_conclusion_witch
+			}
+			desc = spn_hunt_conclusion_cold
+		}
+	}
+
+	###################
+	# GUESTS (§6.6) -- one to five hunters: the host and up to four. Apprentices ride with their trainer.
+	###################
+
+	max_guests = 4
+
+	guest_invite_rules = {
+		defaults = {
+			1 = activity_invite_rule_spn_hunters
+			2 = activity_invite_rule_spn_hunter_players
+		}
+		rules = {
+			3 = activity_invite_rule_spn_apprentices
+		}
+	}
+
+	# root = the candidate, scope:host = the inviter.
+	can_be_activity_guest = {
+		is_alive = yes
+		is_adult = yes
+		is_travelling = no
+		is_imprisoned = no
+		is_incapable = no
+		is_in_army = no
+		NOT = { exists = involved_activity }
+		OR = {
+			has_trait = supernatural_hunter
+			spn_is_apprentice_of_trigger = { TRAINER = scope:host }
+		}
+	}
+
+	host_intents = {
+		intents = { spn_cleanse_the_land_intent spn_train_the_apprentice_intent spn_root_out_witchcraft_intent }
+		default = spn_cleanse_the_land_intent
+		player_defaults = { spn_cleanse_the_land_intent }
+	}
+
+	guest_intents = {
+		intents = { spn_earn_my_spurs_intent spn_cleanse_the_land_intent }
+		default = spn_earn_my_spurs_intent
+		player_defaults = { spn_earn_my_spurs_intent }
+	}
+
+	# root = the candidate guest; scope:host = the inviter.
+	guest_join_chance = {
+		base = 20
+		base_activity_modifier = yes
+		modifier = { has_trait = brave   add = 50  desc = spn_hunt_join_brave }
+		modifier = { has_trait = craven  add = -50 desc = spn_hunt_join_craven }
+		modifier = { has_relation_friend = scope:host add = 30 desc = spn_hunt_join_friend }
+		# 2.35 -- hunters want to ride with a hunter who has done it before. Two rungs off
+		# spn_hunter_reputation_value, which is read straight from his own memories of the kills.
+		modifier = { scope:host = { spn_hunter_reputation_value >= 2 } add = 15 desc = spn_hunt_join_renown }
+		modifier = { scope:host = { spn_hunter_reputation_value >= 4 } add = 15 desc = spn_hunt_join_renown }
+		modifier = {
+			spn_is_apprentice_of_trigger = { TRAINER = scope:host }
+			add = 100
+			desc = spn_hunt_join_apprentice
+		}
+		activity_guest_shared_ai_accept_modifier = yes
+	}
+
+	on_complete = {
+		scope:activity ?= { spn_hunt_running_close_effect = yes }
+		if = {
+			limit = { this = scope:host }
+			scope:activity = {
+				add_activity_log_entry = {
+					key = spn_hunt_activity_conclusion
+					tags = { completed }
+					show_in_conclusion = yes
+					character = scope:host
+				}
+			}
+			scope:host = { add_stress = minor_stress_loss }
+		}
+	}
+
+	###################
+	# GRAPHICS
+	###################
+
+	map_entity = {
+		trigger = {
+			activity_location.culture = {
+				OR = {
+					has_graphical_iranian_culture_group_trigger = yes
+					has_graphical_mena_culture_group_trigger = yes
+					has_graphical_steppe_culture_group_trigger = yes
+					has_graphical_african_culture_group_trigger = yes
+				}
+			}
+		}
+		reference = "building_mena_hunt_01_entity"
+	}
+
+	map_entity = {
+		trigger = {
+			activity_location.culture = {
+				has_graphical_india_culture_group_trigger = yes
+			}
+		}
+		reference = "building_indian_hunt_01_entity"
+	}
+
+	map_entity = "building_western_hunt_01_entity"
+
+
+	# Travel
+	background = { # Bridge
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				is_riverside_province = yes
+				#geographical_region = world_europe
+				OR = {
+					terrain = farmlands
+					terrain = plains
+					terrain = mountains
+					terrain = hills
+				}
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_bridge.dds"
+		environment = "environment_travel_bridge"
+		ambience = "event:/SFX/Events/Backgrounds/mountains_day"
+	}
+	
+	background = { # Farmland, settled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				terrain = farmlands
+				exists = province_owner
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_farm.dds"
+		environment = "environment_travel_farmlands"
+		ambience = "event:/SFX/Events/Backgrounds/fields_farms_day"
+	}
+	background = { # Farmland, unsettled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				terrain = farmlands
+				NOT = { exists = province_owner }
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/farms.dds"
+		environment = "environment_event_farms"
+		ambience = "event:/SFX/Events/Backgrounds/fields_farms_day"
+	}
+
+	background = { #Desert, settled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_desert_trigger = yes
+				exists = province_owner
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_desert.dds"
+		environment = "environment_travel_desert"
+		ambience = "event:/SFX/Events/Backgrounds/desert_day"
+	}
+	background = { #Desert, unsettled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_desert_trigger = yes
+				NOT = { exists = province_owner }
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/desert.dds"
+		environment = "environment_event_bp1_desert"
+		ambience = "event:/SFX/Events/Backgrounds/desert_day"
+	}
+
+	background = { #forest snowy
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location ?= { hunt_snowy_forest_trigger = yes }
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_hunt_snowy_forest.dds"
+		environment = "environment_hunt_snowy_forest"
+		ambience = "event:/SFX/Events/Backgrounds/mountains_day" 
+	}
+
+	background = { #forest_pine
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_forest_pine_trigger = yes
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/forest_pine.dds"
+		environment = "environment_event_forest_pine"
+		ambience = "event:/SFX/Events/Backgrounds/coniferous_forest_day"
+	}
+
+	background = { #forest
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_forest_trigger = yes
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/forest.dds"
+		environment = "environment_event_forest"
+		ambience = "event:/SFX/Events/Backgrounds/deciduous_forest_day"
+	}
+
+	background = { #mountains, settled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_mountains_trigger = yes
+				exists = province_owner
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_mountains.dds"
+		environment = "environment_travel_mountain_settlement"
+		ambience = "event:/SFX/Events/Backgrounds/mountains_day"
+	}
+	background = { #mountains, unsettled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_mountains_trigger = yes
+				NOT = { exists = province_owner }
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/mountains.dds"
+		environment = "environment_event_mountains"
+		ambience = "event:/SFX/Events/Backgrounds/mountains_day"
+	}
+
+	background = { #steppe, settled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_steppe_trigger = yes
+				exists = province_owner
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_steppe.dds"
+		environment = "environment_travel_steppe_settlement"
+		ambience = "event:/SFX/Events/Backgrounds/steppe_day"
+	}
+	background = { #steppe, unsettled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_steppe_trigger = yes
+				NOT = { exists = province_owner }
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/steppe.dds"
+		environment = "environment_event_steppe"
+		ambience = "event:/SFX/Events/Backgrounds/steppe_day"
+	}
+
+	background = { #drylands (formerly desert)
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_drylands_trigger = yes
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/drylands.dds"
+		environment = "environment_event_desert"
+		ambience = "event:/SFX/Events/Backgrounds/desert_day"
+	}
+
+	background = { #wetlands
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_wetlands_trigger = yes
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/bp1_wetlands.dds"
+		environment = "environment_event_bp1_wetlands" 
+		ambience = "event:/SFX/Events/Backgrounds/deciduous_forest_day"
+	}
+
+	background = { #jungle
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_jungle_trigger = yes
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/bp1_jungle.dds"
+		environment = "environment_event_bp1_jungle"
+		ambience = "event:/SFX/Events/Backgrounds/deciduous_forest_day"
+	}
+
+	background = { #plains, settled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_plains_trigger = yes
+				exists = province_owner
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_hills.dds"
+		environment = "environment_travel_hills_settlement"
+		ambience = "event:/SFX/Events/Backgrounds/fields_farms_day"
+	}
+	background = { #plains, unsettled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_plains_trigger = yes
+				NOT = { exists = province_owner }
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/bp1_plains.dds"
+		environment = "environment_event_bp1_plains"
+		ambience = "event:/SFX/Events/Backgrounds/fields_farms_day"
+	}
+
+	background = { #hills, settled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_hills_trigger = yes
+				exists = province_owner
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_hills.dds"
+		environment = "environment_travel_hills_settlement"
+		ambience = "event:/SFX/Events/Backgrounds/fields_farms_day"
+	}
+	background = { #hills, unsettled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_hills_trigger = yes
+				NOT = { exists = province_owner }
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/bp1_hills.dds"
+		environment = "environment_event_bp1_hills"
+		ambience = "event:/SFX/Events/Backgrounds/fields_farms_day"
+	}
+
+	background = { #sea
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				is_sea_province = yes
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/fp1_ocean.dds"
+		environment = "environment_event_fp1_ocean"
+		ambience = "event:/DLC/FP1/SFX/Events/event_ocean_longship"
+	}
+
+	# Phase backgrounds. The tracking is done in taverns and on the roads; the confrontation in the dark.
+	background = {
+		trigger = {
+			NOR = {
+				has_current_phase = spn_tracking_phase
+				has_current_phase = spn_confrontation_phase
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/tavern.dds"
+		environment = "environment_event_feast"
+		ambience = "event:/SFX/Events/Backgrounds/tavern"
+	}
+	background = {
+		trigger = {
+			has_current_phase = spn_tracking_phase
+		}
+		texture = "gfx/interface/illustrations/event_scenes/tavern.dds"
+		environment = "environment_event_feast"
+		ambience = "event:/SFX/Events/Backgrounds/tavern"
+	}
+	background = {
+		trigger = {
+			has_current_phase = spn_confrontation_phase
+		}
+		texture = "gfx/interface/illustrations/event_scenes/alley.dds"
+		environment = "environment_event_fp2_throneroom"
+		ambience = "event:/DLC/FP2/SFX/Events/throneroom"
+	}
+
+	window_characters = {
+		host = {
+			camera = camera_event_center
+			effect = {
+				if = {
+					limit = { scope:host.location = scope:activity.activity_location }
+					scope:host = { add_to_list = characters }
+				}
+			}
+			scripted_animation = {
+				triggered_animation = {
+					trigger = { scope:character = { has_trait = brave } }
+					animation = { marshal war_attacker }
+				}
+				animation = idle
+			}
+		}
+
+		guest = {
+			camera = camera_event_center
+			effect = {
+				every_attending_character = {
+					limit = {
+						scope:host.location = scope:activity.activity_location
+						NOT = { this = scope:host }
+					}
+					add_to_list = characters
+				}
+			}
+			scripted_animation = {
+				triggered_animation = {
+					trigger = { scope:character = { has_trait = craven } }
+					animation = worry
+				}
+				triggered_animation = {
+					trigger = { scope:character = { NOT = { has_trait = craven } } }
+					animation = { idle scheme spymaster }
+				}
+				animation = idle
+			}
+		}
+
+		guest = {
+			camera = camera_event_center
+			effect = {
+				every_attending_character = {
+					limit = {
+						scope:host.location = scope:activity.activity_location
+						NOT = { this = scope:host }
+					}
+					add_to_list = characters
+				}
+			}
+			scripted_animation = {
+				triggered_animation = {
+					trigger = { scope:character = { NOT = { has_trait = craven } } }
+					animation = { idle scheme spymaster }
+				}
+				animation = idle
+			}
+		}
+
+		travel_host = {
+			camera = camera_activity_horse
+			effect = {
+				if = {
+					limit = { NOT = { scope:host.location = scope:activity.activity_location } }
+					scope:host = { add_to_list = characters }
+				}
+			}
+			scripted_animation = {
+				triggered_animation = {
+					trigger = { scope:character.location = { is_sea_province = yes } }
+					animation = { idle }
+				}
+				triggered_animation = {
+					trigger = { scope:character = { has_trait = impatient } }
+					animation = { jockey_gallop }
+				}
+				animation = jockey_walk
+			}
+		}
+	}
+}

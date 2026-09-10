@@ -17,6 +17,8 @@ spn_train_hunter.0001 = {
 	
 	trigger = {
 		spn_has_supernatural_trait = no
+		# 2.35a -- and not already a hunter. See the note at the head of this file.
+		NOT = { has_trait = supernatural_hunter }
 	}
 
 	left_portrait = {
@@ -124,6 +126,24 @@ spn_train_hunter.0001 = {
 		
 	}
 
+	# 2.35a -- THE THIRD SILENT EXIT, and the earliest one.
+	#
+	# This option ends the chain one day after the offer was accepted, and it did nothing whatsoever: no
+	# flag, no toast, no follow-up. The trainer heard nothing, the trainee kept no mark of having said no,
+	# and (before the in-training state was added) the interaction was live again the same afternoon.
+	#
+	# WORSE, it was a coin flip. Three options here, all at ai_chance base 50, so an AI trainee backed out
+	# about a third of the time -- having ALREADY accepted, through the interaction's own ai_accept block
+	# with its thirty-odd modifiers, opinion comparison, health term and hook. That is the same decision put
+	# to them twice, and then a third time at spn_train_hunter.0002 option b, also base 50.
+	#
+	# End to end that made the chain roughly 0.67 x 0.50 x 0.80 = 27 per cent: three months of waiting, a
+	# three-in-four chance of nothing, and no notification on any of the failing paths. Thomas, testing:
+	# "I've clicked her a couple times and she has yet to become an actual hunter."
+	#
+	# Base 15 rather than 50 -- a change of heart rather than a re-vote. With the same drop on 0002 option b
+	# (50 -> 20) the chain comes out around 62 per cent reaching hunter, and every one of the other 38 says
+	# so out loud. THESE TWO NUMBERS ARE THE TUNING KNOB if that shape is wrong.
 	option = { # On second thought.. 
 		name = spn_train_hunter.0001.c
 		custom_tooltip = spn_train_hunter.0001.c.tt
@@ -132,8 +152,18 @@ spn_train_hunter.0001 = {
 			craven = minor_stress_impact_loss
 		}
 
+		spn_end_hunter_training_effect = yes
+		add_character_flag = { flag = spn_refused_hunter_training years = 5 }
+		scope:actor = {
+			send_interface_toast = {
+				title = spn_train_hunter_refused_toast
+				left_icon = root
+				custom_tooltip = spn_train_hunter_refused_toast_tt
+			}
+		}
+
 		ai_chance = {
-			base = 50
+			base = 15
 
 			modifier = { add = 10 has_trait = craven }
 			modifier = { add = 10 has_trait = shy }
@@ -168,6 +198,8 @@ spn_train_hunter.0002 = {
 	
 	trigger = {
 		spn_has_supernatural_trait = no
+		# 2.35a -- and not already a hunter. See the note at the head of this file.
+		NOT = { has_trait = supernatural_hunter }
 	}
 
 	left_portrait = {
@@ -216,7 +248,7 @@ spn_train_hunter.0002 = {
 
 		random_list = {
 		
-			55 = {
+			80 = { # 2.35 (D2): 80 complete / 20 "not yet" -- the failed roll wounds and makes an apprentice; training never kills.
 				show_as_tooltip = {
 					if = { 
 						limit = {	
@@ -228,6 +260,7 @@ spn_train_hunter.0002 = {
 						custom_tooltip = spn_msg_tooltip_train_live_desc
 					}
 				}
+				spn_end_hunter_training_effect = yes # 2.35a -- the chain has resolved; drop the in-training state
 				spn_assign_hunter_trainer = { CHARACTER = scope:actor } # 2.34: set before the initiate event so the hunter memory can name the trainer
 				trigger_event = spn_initiate.3001 #Initiate Hunter
 				add_trait_force_tooltip = supernatural_hunter
@@ -291,23 +324,21 @@ spn_train_hunter.0002 = {
 				}
 
 			}
-			45 = {
-				show_as_tooltip = {
-					if = { 
-						limit = {	
-							scope:actor = {
-								is_ai = no
-							}
-						}
-						custom_tooltip = spn_msg_tooltip_train_die_desc
+			20 = {
+				# 2.35 (D2) -- "Not yet." The trainee is hurt, not buried; scope:actor becomes their trainer now and finishes the
+				# lesson on a Supernatural Hunt (the apprentice completes on slain / proxy_slain / fled -- spn_hunt_conclude_effect).
+				# The flag expiring after ten years is the fail-open for trainers who never host.
+				custom_tooltip = spn_msg_tooltip_train_not_yet_desc
+				increase_wounds_no_death_effect = { REASON = accident }
+				spn_end_hunter_training_effect = yes # 2.35a -- apprenticeship is the state now, not training
+				spn_assign_hunter_trainer = { CHARACTER = scope:actor }
+				add_character_flag = { flag = spn_hunter_apprentice years = 10 }
+				scope:actor = {
+					send_interface_toast = {
+						title = spn_train_hunter_not_yet_toast
+						left_icon = root
+						custom_tooltip = spn_train_hunter_not_yet_toast_tt
 					}
-				}
-				death = {
-					death_reason = death_training_accident
-				}
-				
-				trigger_event = {
-					id = spn_message.9001
 				}
 				
 				modifier = { add = -10 has_trait = whole_of_body }
@@ -366,8 +397,11 @@ spn_train_hunter.0002 = {
 			callous = medium_stress_impact_gain
 		}
 		
+		# 2.35a -- 50 -> 20. The second of the two re-votes; see the note on the "On second thought" option
+		# of spn_train_hunter.0001. Still a real out -- three months in, some people find out it is not for
+		# them -- but no longer a coin toss thrown after they already agreed.
 		ai_chance = {
-			base = 50
+			base = 20
 
 			modifier = { add = -10 has_trait = adventurer }
 			modifier = { add = -10 has_trait = berserker }
@@ -388,7 +422,21 @@ spn_train_hunter.0002 = {
 
 		}
 		
+		# 2.35a -- AND THE TRAINER FINDS OUT. This branch was completely silent. The trainee took a wound,
+		# the chain ended, and the person who offered to train them was told nothing whatsoever -- three
+		# months after the offer, so there was nothing on screen connecting the two events either. What the
+		# player saw was an interaction that did nothing except injure their wife, and a button that lit up
+		# again the same afternoon. Now the refusal is reported, and it sticks for five years.
+		spn_end_hunter_training_effect = yes
+		add_character_flag = { flag = spn_refused_hunter_training years = 5 }
 		increase_wounds_no_death_effect = { REASON = battle }
+		scope:actor = {
+			send_interface_toast = {
+				title = spn_train_hunter_refused_toast
+				left_icon = root
+				custom_tooltip = spn_train_hunter_refused_toast_tt
+			}
+		}
 
 	}
 
@@ -412,6 +460,8 @@ spn_train_hunter.0003 = {
 	
 	trigger = {
 		spn_has_supernatural_trait = no
+		# 2.35a -- and not already a hunter. See the note at the head of this file.
+		NOT = { has_trait = supernatural_hunter }
 	}
 
 	left_portrait = {
@@ -519,6 +569,7 @@ spn_train_hunter.0003 = {
 		
 	}
 
+	# 2.35a -- the mirror of the note on spn_train_hunter.0001. Here the trainer is the one who was asked.
 	option = { # On second thought.. 
 		name = spn_train_hunter.0001.c
 		custom_tooltip = spn_train_hunter.0001.c.tt
@@ -527,8 +578,18 @@ spn_train_hunter.0003 = {
 			craven = minor_stress_impact_loss
 		}
 
+		spn_end_hunter_training_effect = yes
+		add_character_flag = { flag = spn_refused_hunter_training years = 5 }
+		scope:recipient = {
+			send_interface_toast = {
+				title = spn_train_hunter_refused_toast
+				left_icon = root
+				custom_tooltip = spn_train_hunter_refused_toast_tt
+			}
+		}
+
 		ai_chance = {
-			base = 50
+			base = 15
 
 			modifier = { add = 10 has_trait = craven }
 			modifier = { add = 10 has_trait = shy }
@@ -563,6 +624,8 @@ spn_train_hunter.0004 = {
 	
 	trigger = {
 		spn_has_supernatural_trait = no
+		# 2.35a -- and not already a hunter. See the note at the head of this file.
+		NOT = { has_trait = supernatural_hunter }
 	}
 
 	left_portrait = {
@@ -611,7 +674,7 @@ spn_train_hunter.0004 = {
 
 		random_list = {
 		
-			55 = {
+			80 = { # 2.35 (D2): 80 complete / 20 "not yet" -- the failed roll wounds and makes an apprentice; training never kills.
 				show_as_tooltip = {
 					if = { 
 						limit = {	
@@ -623,6 +686,7 @@ spn_train_hunter.0004 = {
 						custom_tooltip = spn_msg_tooltip_train_live_desc
 					}
 				}
+				spn_end_hunter_training_effect = yes # 2.35a -- the chain has resolved; drop the in-training state
 				spn_assign_hunter_trainer = { CHARACTER = scope:recipient } # 2.34: set before the initiate event so the hunter memory can name the trainer
 				trigger_event = spn_initiate.3001 #Initiate Hunter
 				add_trait_force_tooltip = supernatural_hunter
@@ -686,23 +750,21 @@ spn_train_hunter.0004 = {
 				modifier = { add = 15 age < 18 }
 
 			}
-			45 = {
-				show_as_tooltip = {
-					if = { 
-						limit = {	
-							scope:actor = {
-								is_ai = no
-							}
-						}
-						custom_tooltip = spn_msg_tooltip_train_die_desc
+			20 = {
+				# 2.35 (D2) -- "Not yet." The trainee is hurt, not buried; scope:recipient becomes their trainer now and finishes the
+				# lesson on a Supernatural Hunt (the apprentice completes on slain / proxy_slain / fled -- spn_hunt_conclude_effect).
+				# The flag expiring after ten years is the fail-open for trainers who never host.
+				custom_tooltip = spn_msg_tooltip_train_not_yet_desc
+				increase_wounds_no_death_effect = { REASON = accident }
+				spn_end_hunter_training_effect = yes # 2.35a -- apprenticeship is the state now, not training
+				spn_assign_hunter_trainer = { CHARACTER = scope:recipient }
+				add_character_flag = { flag = spn_hunter_apprentice years = 10 }
+				scope:recipient = {
+					send_interface_toast = {
+						title = spn_train_hunter_not_yet_toast
+						left_icon = root
+						custom_tooltip = spn_train_hunter_not_yet_toast_tt
 					}
-				}
-				death = {
-					death_reason = death_training_accident
-				}
-				
-				trigger_event = {
-					id = spn_message.9001
 				}
 				
 				modifier = { add = -10 has_trait = whole_of_body }
@@ -761,8 +823,11 @@ spn_train_hunter.0004 = {
 			callous = medium_stress_impact_gain
 		}
 		
+		# 2.35a -- 50 -> 20. The second of the two re-votes; see the note on the "On second thought" option
+		# of spn_train_hunter.0001. Still a real out -- three months in, some people find out it is not for
+		# them -- but no longer a coin toss thrown after they already agreed.
 		ai_chance = {
-			base = 50
+			base = 20
 
 			modifier = { add = -10 has_trait = adventurer }
 			modifier = { add = -10 has_trait = berserker }
@@ -783,7 +848,21 @@ spn_train_hunter.0004 = {
 
 		}
 		
+		# 2.35a -- AND THE TRAINER FINDS OUT. This branch was completely silent. The trainee took a wound,
+		# the chain ended, and the person who offered to train them was told nothing whatsoever -- three
+		# months after the offer, so there was nothing on screen connecting the two events either. What the
+		# player saw was an interaction that did nothing except injure their wife, and a button that lit up
+		# again the same afternoon. Now the refusal is reported, and it sticks for five years.
+		spn_end_hunter_training_effect = yes
+		add_character_flag = { flag = spn_refused_hunter_training years = 5 }
 		increase_wounds_no_death_effect = { REASON = battle }
+		scope:recipient = {
+			send_interface_toast = {
+				title = spn_train_hunter_refused_toast
+				left_icon = root
+				custom_tooltip = spn_train_hunter_refused_toast_tt
+			}
+		}
 
 	}
 
@@ -809,8 +888,11 @@ spn_train_hunter.0005 = {
 		spn_has_supernatural_trait = no
 	}
 
+	# 2.35a -- scope:spn_trainee, not scope:recipient. This event fires at the trainer from BOTH interactions,
+	# and in spn_ask_to_turn_into_hunter the recipient IS the trainer -- so the left and right portraits were
+	# the same man, standing next to himself. The two interactions now save the roles at on_accept.
 	left_portrait = {
-		character = scope:recipient
+		character = scope:spn_trainee
 		animation = admiration
 	}
 

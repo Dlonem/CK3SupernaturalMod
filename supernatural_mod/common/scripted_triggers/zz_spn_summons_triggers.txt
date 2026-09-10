@@ -1,0 +1,108 @@
+﻿# Supernatural 2.35g -- THE LORD SENDS FOR A HUNTER, BY NAME.
+#
+# Thomas, 9 Sep 2026: "I'm wondering if we should create a decision for that, and that decision sends an
+# event out. And then in that event, you get to choose between three different hunters... if I'm ignoring
+# the needs of my county... then they'll never receive that basically golden ticket into the county."
+#
+# What already existed on Something Stalks [county] was Post a Bounty (option c): a real task contract in
+# vanilla's own laamp_contracts_hunting_group, which is how an ADVENTURER hunter gets paid. It works, it is
+# kept, and it is not this. That option throws a notice on a wall and waits. This one writes to three men by
+# name, and the player picks which of them gets the road into his county.
+#
+# Everything here is CHARACTER scope. root = the lord doing the sending.
+
+# Can this man be sent for? The filter Thomas asked for, line by line: "as long as they aren't in prison, as
+# long as they aren't already on a hunt, as long as they aren't already involved in an activity, that kind
+# of thing."
+spn_summons_candidate_trigger = {
+	is_alive = yes
+	is_adult = yes
+	is_imprisoned = no
+	is_incapable = no
+	is_travelling = no
+	has_trait = supernatural_hunter
+	NOT = { this = root }
+	# Already in something. involved_activity is the real test -- `is_in_an_activity` is a
+	# trigger_localization key and not a trigger at all (that mistake cost us the whole hunter movement
+	# layer this same session; see zz_spn_hunter_movement_on_actions.txt).
+	NOT = { exists = involved_activity }
+	# Already riding on somebody's behalf: the hunt's own two-year stamp, and a summons he has not answered.
+	NOT = { has_character_flag = spn_hunt_on_cooldown }
+	NOT = { has_variable = spn_summons_county }
+	# A hunter who is himself the thing in the woods is not the man for this.
+	NOT = { spn_hunt_is_creature_trigger = yes }
+	# ...and not the culprit, however that came to be true.
+	trigger_if = {
+		limit = { exists = scope:spn_menace_county  scope:spn_menace_county = { exists = var:spn_menace_culprit } }
+		NOT = { this = scope:spn_menace_county.var:spn_menace_culprit }
+	}
+}
+
+# The wide sweep's extra condition: close enough that a letter and a horse are a plausible answer.
+#
+# squared_distance_large is the base game's own "is this contract reachable" distance
+# (laamp_nm_contracts.txt:29-34, four separate uses), and the block form of squared_distance is used
+# rather than the string form because that is how vanilla writes it where the target is a character's
+# location rather than a bare province scope.
+spn_summons_in_reach_trigger = {
+	trigger_if = {
+		limit = { exists = location  exists = root.location }
+		location = {
+			squared_distance = {
+				target = root.location
+				value <= squared_distance_large
+			}
+		}
+	}
+	trigger_else = { always = no }
+}
+
+# Is there anybody at all worth writing to? Deliberately CHEAP -- it is asked on the option card of
+# Something Stalks, which the AI evaluates. The expensive world sweep only runs once the option is TAKEN.
+# A lord whose own hall and vassals hold no hunter still gets the option, because the roster event's third
+# pass is where the world's own hunters come in; this is only here to keep the card off a landless
+# nobody's screen.
+spn_summons_worth_sending_trigger = {
+	is_landed_or_landless_administrative = yes
+	NOT = { has_character_flag = spn_summons_sent_recently }
+	trigger_if = {
+		limit = { exists = scope:spn_menace_county }
+		scope:spn_menace_county = { NOT = { has_variable = spn_summons_answered } }
+	}
+}
+
+# ----------------------------------------------------------------------------------------------------------
+# 2.35g -- "THERE IS WORSE THAN ME IN THIS LAND" (spn_hunt.0200 option f).
+#
+# Thomas: "what if I'm a rival with a demon and a hunter comes asking for me? And I try to negotiate with
+# the hunter and say, hey, you have bigger fish to fry... Do you have it written so that they could
+# possibly change their target?" Until now: no. This is the gate for it.
+#
+# CHARACTER scope: the cornered creature. scope:spn_cornered = itself (banked in the event's immediate,
+# because comparing "not me" four scopes deep through a neighbouring county reads fine and resolves badly).
+#
+# The bar is a NEIGHBOURING county carrying a trail at three marks or more. Three is the same number the
+# lord's own letter goes out on, which is the point -- you are not inventing a rumour, you are pointing at
+# somewhere the world has already noticed. Comparing creature tracks directly was the first version and was
+# dropped: two script values compared across scopes is a fragile construction, and "that county is on its
+# third body" is the more honest argument anyway.
+spn_redirect_has_bigger_fish_trigger = {
+	exists = scope:spn_cornered
+	location ?= {
+		county ?= {
+			any_neighboring_county = {
+				has_county_modifier = spn_menace_modifier
+				exists = var:spn_menace_count
+				trigger_if = {
+					limit = { exists = var:spn_menace_count  exists = var:spn_menace_culprit }
+					var:spn_menace_count >= 3
+					var:spn_menace_culprit = {
+						is_alive = yes
+						NOT = { this = scope:spn_cornered }
+					}
+				}
+				trigger_else = { always = no }
+			}
+		}
+	}
+}

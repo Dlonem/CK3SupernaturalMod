@@ -667,3 +667,701 @@ spn_blood_blow_chance = {
 	}
 	divide = 22.5
 }
+
+# ============================================================================
+# 2.35 -- THE HUNT (WORK-ORDER-2.35-THE-HUNT §6). Values for the Supernatural Hunt activity.
+# ============================================================================
+
+# How far a hunter will ride to a trail. An alias of the feeding's reach so the two halves of the loop share one
+# knob (and so the compatibility patch's AGOT override of the feeding distance carries over untouched).
+# 2.35h -- AND A LANDLESS HUNTER REACHES FURTHER, which Thomas asked for twice and was right about
+# both times: "as a landless adventurer, you should be able to catch a warm trail further away than
+# you currently do."
+#
+# The asymmetry it fixes is real and it is not about eyesight. A LANDED lord's realm is a standing
+# supply of counties he is entitled to hunt in -- a duke walks a dozen of them without going anywhere.
+# A landless adventurer has no realm at all, so the leash IS his entire world, and the same radius that
+# is generous to a duke is a cage for a man whose whole premise is that he goes where the work is.
+#
+# x4 on a SQUARED distance is exactly double the radius. Root here is the PROVINCE (is_location_valid's
+# own scope), so the question is asked of scope:host with `?=`, which is also why this cannot simply
+# read is_landless_adventurer off root.
+spn_max_hunt_distance = {
+	value = spn_vf_max_feeding_distance
+	if = {
+		limit = { scope:host ?= { is_landless_adventurer = yes } }
+		# 2.35h, second pass -- x4 was better and still not right. Thomas, looking at the widened map:
+		# "the range should arguably be even further... maybe it's not too crazy that I'm trying to travel
+		# to this monster hunt all the way at the north of the game, because I'm an adventurer. I don't
+		# mind travelling more versus a county lord." x25 on a squared distance is FIVE times the radius,
+		# which from anywhere in Westeros is most of Westeros. The brake is no longer the leash: it is the
+		# distance penalty in province_score and the travel time he actually has to spend.
+		multiply = 25
+	}
+}
+
+# CHARACTER scope. The creature's track: vampirism, lycanthropy, or for a hybrid the HIGHER of its two tracks
+# (value = lycanthropy, then add max(0, vampirism - lycanthropy)). 0 for anyone who is not a creature.
+spn_hunt_creature_track_value = {
+	value = 0
+	if = {
+		limit = { has_trait = supernatural_vampire }
+		add = "has_trait_xp(supernatural_vampire|vampirism)"
+	}
+	else_if = {
+		limit = { has_trait = supernatural_werewolf }
+		add = "has_trait_xp(supernatural_werewolf|lycanthropy)"
+	}
+	else_if = {
+		limit = { has_trait = supernatural_hybrid }
+		add = "has_trait_xp(supernatural_hybrid|hybrid_lycanthropy)"
+		add = {
+			value = "has_trait_xp(supernatural_hybrid|hybrid_vampirism)"
+			subtract = "has_trait_xp(supernatural_hybrid|hybrid_lycanthropy)"
+			min = 0
+		}
+	}
+	# 2.35 PART TWO (§4.4) -- DEMONS ON THE SAME LADDER. The fight, the lord's investigation duel, the bar's
+	# culprit term and the prestige for the kill all read this one number, so a demon has to have one or the
+	# whole hunt treats it as a fledgling.
+	#
+	# Upstream gives demon1 NO tracks at all -- it is a flat trait -- and demon2 two of them (hell_powers,
+	# demon_reputation, 00_traits_magic.txt:563, :586). So the arithmetic has to supply the floor that the
+	# trait does not, and the floor is the design statement: a demon is categorically not a man, and there is
+	# no such thing as a weak one.
+	#
+	#   demon1                       45   -- above a middling vampire, below an old one. No gradient, because
+	#                                        upstream gives it nothing to grade on.
+	#   demon2   70 + hp*0.25 + dr*0.05   -- 70 at nothing, 100 at both tracks full. A Prince of Hell is the
+	#                                        top of this ladder and is meant to be: nothing else in the mod
+	#                                        can be ended by exorcism alone (E10).
+	else_if = {
+		limit = { has_trait = demon2 }
+		add = 70
+		add = { value = "has_trait_xp(demon2|hell_powers)" multiply = 0.25 }
+		add = { value = "has_trait_xp(demon2|demon_reputation)" multiply = 0.05 }
+	}
+	else_if = {
+		limit = { has_trait = demon1 }
+		# CHECKLIST §4 -- a continuous quantity deserves a continuous curve. Upstream gives demon1 no trait
+		# track at all, so the first draft of this was a flat 45 and a demon that had been in the world for
+		# two centuries read exactly like one summoned last Tuesday. It does have magical potential, which is
+		# the one thing that does grow, so the floor is 40 and the gradient is that: 40 at nothing, 55 at a
+		# full source track. Still coarser than a vampire's, because upstream has less to grade on.
+		add = 40
+		add = { value = my_smp_value multiply = 0.15 }
+	}
+	# 2.35 PART TWO (§6.2) -- AND WITCHES, off the number upstream already keeps for exactly this.
+	# wh_attraction_value is a witch's visibility to the people who hunt witches -- artifacts, black magic,
+	# a coven, open practice, an archmage's name -- which is precisely "how much witch is standing there".
+	# Thomas guessed the design that already existed. It runs on small integers, so it is scaled into the
+	# 0-100 space the rest of this value lives in.
+	else_if = {
+		limit = { is_witch_trigger = yes }
+		add = spn_hunt_witch_strength_value
+	}
+}
+
+# CHARACTER scope. 2.35 PART TWO -- how much witch is standing there.
+#
+# CHECKLIST §5 -- SAY WHAT THE NUMBER MEANS BEFORE YOU CHOOSE IT, and the first draft failed this. It was
+# wh_attraction_value x 6, on the order's reading that upstream's own value "becomes the culprit-strength
+# term". But wh_attraction_value does not measure power; it measures VISIBILITY TO PEOPLE WHO HUNT WITCHES --
+# artifacts, open practice, a coven, a tyrant's reputation. Fed straight into spn_menace_hide_value, which is
+# "how well is the culprit hidden", that ordered it exactly backwards: the most conspicuous witch in the
+# province came out as the hardest one to find.
+#
+# So the number is power-led and notoriety only contributes:
+#   my_smp_value x 0.6        0 .. 60   raw magical potential -- the thing that actually makes her dangerous
+#   wh_attraction x 3         small     and a witch the county already fears IS harder to corner in it
+#
+# wh_attraction_value returns -1000 for anyone who is not a witch, so the floor at zero is load-bearing
+# rather than tidy. FLAGGED FOR THOMAS in the session doc: the order specified the other reading, and both
+# are defensible -- this is the one where every reader of the value means the same thing by it.
+spn_hunt_witch_strength_value = {
+	value = 0
+	add = { value = my_smp_value multiply = 0.6 }
+	add = { value = wh_attraction_value multiply = 3 }
+	min = 0
+	max = 90
+}
+
+# CHARACTER scope. 2.35 -- THE RESERVE. The vampirism-side track, whichever trait carries it.
+#
+# This number is the vampire's hunger clock, and the mod has always treated it as one without ever naming it:
+# every command in Compel Mortal and Invoke the Bond is PAID FOR out of this track (5 for a release, 15 for a
+# court, 35 for a hook, 85 for a life), and a feeding activity is what puts it back. Thomas, 8 Sep 2026:
+# "that's currently how the cost is calculated... which in a way can get replenished by doing feeding
+# activities. So in a way that kind of does function as a hunger system."
+#
+# Written once here so the AI weights read the same number the costs are charged against, rather than the
+# eleven-rung has_trait_xp ladders scattered through spn_compulsion_actor_power. Same idiom as
+# spn_hunt_creature_track_value below.
+spn_vampiric_reserve_value = {
+	value = 0
+	if = {
+		limit = { has_trait = supernatural_vampire }
+		add = "has_trait_xp(supernatural_vampire|vampirism)"
+	}
+	else_if = {
+		limit = { has_trait = supernatural_hybrid }
+		add = "has_trait_xp(supernatural_hybrid|hybrid_vampirism)"
+	}
+}
+
+# 2.35 -- HOW WELL YOU DRESS A BODY. Evaluated in the interaction's scope (scope:actor set), read by both
+# hiding and blaming in What They Will Find; blaming subtracts 15 on top, because a lie has to survive being
+# checked and hiding only has to survive being ignored.
+#
+# Roughly 25 for a weak reckless creature and 90 for a very old careful one. The reserve is doing most of the
+# work, which is the point: this is another thing power buys that is not a fight.
+# 2.35 PART TWO -- was scope:actor, which only exists inside a character interaction. The family reads
+# scope:spn_body_actor now so it can be called from any kill site (spn_body_bind_effect sets it, and the
+# compulsion path hands its own scope:actor straight into that).
+#
+# A demon is a poor liar about its own work, because its work does not look like anything a person does.
+spn_body_dressing_value = {
+	value = 20
+	scope:spn_body_actor = { add = { value = spn_vampiric_reserve_value multiply = 0.5 } }
+	if = { limit = { scope:spn_body_actor = { has_trait = deceitful } } add = 12 }
+	if = { limit = { scope:spn_body_actor = { has_trait = shrewd } } add = 8 }
+	if = { limit = { scope:spn_body_actor = { has_trait = patient } } add = 6 }
+	if = { limit = { scope:spn_body_actor = { has_trait = arrogant } } subtract = 10 }
+	if = { limit = { scope:spn_body_actor = { has_trait = reckless } } subtract = 10 }
+	if = { limit = { scope:spn_body_actor = { spn_hunt_is_known_creature_trigger = yes } } subtract = 10 }
+	if = { limit = { scope:spn_body_actor = { is_a_demon_trigger = yes } } subtract = 15 }
+	min = 5
+	max = 90
+}
+
+# COUNTY scope. 2.35 PART TWO (§7) -- what it costs to make a lord look somewhere else. A rich county has a
+# lord with less use for your money and more people who would notice; a poor one has neither.
+# 40 at nothing, 250 at a great city.
+spn_body_hush_money_value = {
+	value = 40
+	add = { value = spn_county_prosperity_value multiply = 6 }
+	min = 40
+	max = 250
+}
+
+# CHARACTER scope. 2.35 -- WHAT THE WORLD HAS HEARD ABOUT YOU. 0 to 5, both of them.
+#
+# Read off the character's own MEMORIES rather than a new counter, because the mod already writes one every
+# time either of these things happens (spn_write_slew_the_beast_memory_effect,
+# spn_write_bested_the_hunter_memory_effect, spn_write_confrontation_memory_effect). A reputation that is
+# literally the list of things a character remembers doing needs no bookkeeping, survives saves, and can
+# never drift out of step with the events that earned it.
+#
+# These are the mod's first genuinely TWO-WAY numbers: fame helps you and costs you, on both sides.
+#   A known hunter gets better guests, better cooperation from a county, and men lent to him on his name --
+#   and every creature in the county hears he is coming, because his name travels ahead of him.
+#   A known creature is harder to corner and frightens hunters into taking the careful option -- and is
+#   exactly the reputation that brings the next hunter.
+spn_hunter_reputation_value = {
+	value = 0
+	if = { limit = { any_memory = { count >= 1 has_memory_type = spn_slew_the_beast_memory } } add = 1 }
+	if = { limit = { any_memory = { count >= 2 has_memory_type = spn_slew_the_beast_memory } } add = 1 }
+	if = { limit = { any_memory = { count >= 3 has_memory_type = spn_slew_the_beast_memory } } add = 1 }
+	if = { limit = { any_memory = { count >= 5 has_memory_type = spn_slew_the_beast_memory } } add = 1 }
+	if = { limit = { any_memory = { count >= 8 has_memory_type = spn_slew_the_beast_memory } } add = 1 }
+}
+
+# CHARACTER scope. The other side of it. A hunter walked away beaten, or did not walk away at all.
+spn_creature_legend_value = {
+	value = 0
+	if = { limit = { any_memory = { count >= 1 has_memory_type = spn_bested_the_hunter_memory } } add = 1 }
+	if = { limit = { any_memory = { count >= 3 has_memory_type = spn_bested_the_hunter_memory } } add = 1 }
+	if = { limit = { any_memory = { count >= 1 has_memory_type = spn_killed_the_hunter_memory } } add = 2 }
+	if = { limit = { any_memory = { count >= 3 has_memory_type = spn_killed_the_hunter_memory } } add = 1 }
+	# 2.35 PART TWO (§8.5c) -- and the rung nobody had to survive a fight for. Three hunts on your county
+	# ended in a man riding home or not riding home, the trade stopped coming, and that is a reputation too.
+	# The carrier is spn_they_stopped_coming_modifier, granted by spn_hunt_refusal_effect.
+	if = { limit = { has_character_modifier = spn_they_stopped_coming_modifier } add = 1 }
+}
+
+# CHARACTER scope. 2.35 -- HOW LOUD IS IT WHERE YOU ARE.
+#
+# Thomas, 8 Sep 2026: "Definitely keep it on the low side in regard to hunters actually going on
+# supernatural hunts. But it increases in relation to how close that kind of stuff is happening to them...
+# they're more likely to get involved if the county that they're residing in is having a lot of these
+# trails left."
+#
+# The first draft of the hunt's AI weight was a flat +35 for "a trail exists somewhere in reach", which is
+# the same answer for one quiet mark two counties away and for a town on its fourth body. This is graded on
+# both axes he named -- how CLOSE and how MUCH -- and capped, so the baseline stays low and only a genuinely
+# bad neighbourhood pulls a hunter off his estate.
+#
+#   the ground under your feet          20, +4 per incident there (max 16)
+#   each county of your own carrying one 6
+#   a county that has forgotten a week   8   (spn_compelled_modifier -- quieter, and still a hunter's business)
+#   ceiling                             45
+spn_hunter_pull_value = {
+	value = 0
+	if = {
+		limit = { location ?= { county ?= { has_county_modifier = spn_menace_modifier } } }
+		add = 20
+		location.county = {
+			if = {
+				limit = { exists = var:spn_menace_count }
+				add = { value = var:spn_menace_count multiply = 4 max = 16 }
+			}
+		}
+	}
+	if = {
+		limit = { is_landed = yes }
+		every_realm_county = {
+			limit = { has_county_modifier = spn_menace_modifier }
+			add = 6
+		}
+	}
+	if = {
+		limit = { location ?= { county ?= { has_county_modifier = spn_compelled_modifier } } }
+		add = 8
+	}
+	# 2.35g -- HE WAS SENT FOR. A lord wrote to him by name and a fee is on the table, so the county he
+	# was asked about outranks anything he might have wandered toward on his own. +40 against this
+	# value's own ceiling of 45 is close to "he is going", which is the point of a summons.
+	if = {
+		limit = {
+			# 2.35h -- NOT prev.prev. Two scope changes deep, CK3 rejects it outright: "Link 'prev' is a
+			# global link but follows a 'prev' link" (error.log 9 Sep 16:25:35, twice, one per term).
+			# Comparing the two title paths directly from character scope needs no prev at all, and the
+			# `?=` chain above it is what makes the read safe when he is standing nowhere.
+			trigger_if = {
+				limit = {
+					has_variable = spn_summons_county
+					location ?= { county ?= { always = yes } }
+				}
+				location.county = var:spn_summons_county
+			}
+			trigger_else = { always = no }
+		}
+		add = 40
+	}
+	# ...and the same weight for a county something TALKED him into, which is the other new way a
+	# hunter ends up somewhere he did not choose (spn_hunt.0200 option f -- "there is worse than me").
+	if = {
+		limit = {
+			# 2.35h -- NOT prev.prev. Two scope changes deep, CK3 rejects it outright: "Link 'prev' is a
+			# global link but follows a 'prev' link" (error.log 9 Sep 16:25:35, twice, one per term).
+			# Comparing the two title paths directly from character scope needs no prev at all, and the
+			# `?=` chain above it is what makes the read safe when he is standing nowhere.
+			trigger_if = {
+				limit = {
+					has_variable = spn_redirect_county
+					location ?= { county ?= { always = yes } }
+				}
+				location.county = var:spn_redirect_county
+			}
+			trigger_else = { always = no }
+		}
+		add = 40
+	}
+	# 2.35 PART TWO (§8.5c) -- NO ONE WILL COME, and the yin and yang of it in four lines.
+	#
+	# A county that has turned three hunters back is a county the trade avoids: -30, which against this
+	# value's own ceiling of 45 is enough to take a bad neighbourhood off an ordinary hunter's map entirely.
+	# For a hunter at monster_hunting >= 75 the SAME FACT reads the other way and pulls him toward it at +20.
+	# Nobody else will go, so it is his. The county everyone else avoids is the one a legend rides toward.
+	#
+	# The max below is applied after both, so the veteran's +20 lands inside the ceiling like every other
+	# term; the -30 is deliberately allowed to take the total negative, because "stop coming here" has to
+	# mean something against an ai_will_do base of 30.
+	if = {
+		limit = { location ?= { county ?= { has_county_modifier = spn_no_one_will_come_modifier } } }
+		if = {
+			limit = { has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 75 } }
+			add = 20
+		}
+		else = {
+			add = -30
+		}
+	}
+	max = 45
+}
+
+# ==========================================================================================================
+# 2.35 PART TWO (§5.2) -- THE EXORCISM ROLL. Thomas's design, verbatim: "perhaps the exorcising thing performs
+# better the higher your monster hunting is, but then exorcising it provides witch hunting XP, just a small
+# amount. That way there's an opportunity to gain it."
+#
+# So the roll is mostly MONSTER hunting -- how well you have it cornered, how long you can hold it in one
+# place, whether you can keep your feet while it works on you -- and only a fifth of it is knowing the words.
+# The XP is paid on the witch track either way. That is the bridge: the only place in the mod where
+# monster-hunting work pays into the witch-hunting ladder, which is what makes a career hunter eventually able
+# to do this at all.
+#
+#   base                                   40
+#   + monster_hunting x 0.5            0 .. 50
+#   + witch_hunting  x 0.2             0 .. 20
+#   + caught in the act                    15   (the fight's own caught-off-guard term, same source)
+#   + 10 per hunter guest, max             20
+#   - a Greater Demon                      25
+#   - hell_powers x 0.2                0 .. 20
+#   - demon_reputation x 0.1           0 .. 10
+#   min 5, max 90
+#
+# WORKED (checklist §3): a career hunter (monster 90, witch 60) alone against a plain demon1 reads
+# 40 + 45 + 12 = 97 -> capped 90. The same man against a Prince at hell_powers 80 / reputation 60:
+# 40 + 45 + 12 - 25 - 16 - 6 = 50. A green hunter (monster 20, witch 25) against that same Prince:
+# 40 + 10 + 5 - 25 - 16 - 6 = 8. Which is the intended shape -- a Prince of Hell is a career's work.
+#
+# Root = the hunter. scope:spn_defender = the demon. scope:spn_hunt_activity may be set.
+# ==========================================================================================================
+spn_hunt_exorcism_value = {
+	value = 40
+	add = { value = "has_trait_xp(supernatural_hunter|monster_hunting)" multiply = 0.5 }
+	add = { value = "has_trait_xp(supernatural_hunter|witch_hunting)" multiply = 0.2 }
+	# Caught mid-feed or mid-rage: it has both hands full and nowhere in this room to be. The fight's own
+	# term, read the same way (spn_hunt_compute_fight_bonus_effect).
+	if = {
+		limit = { scope:spn_defender ?= { involved_activity ?= { has_activity_type = vampire_feeding } } }
+		add = 15
+	}
+	# `NOT = { this = scope:spn_hunter }` rather than the bar's own `prev.activity_host`: the bar is
+	# evaluated with the ACTIVITY as root, so prev works there. This value is evaluated with the HUNTER as
+	# root and enters the activity through a saved scope, so inside the list builder `prev` is a character
+	# and `prev.activity_host` resolves to nothing. The bound scope is correct at any depth.
+	if = {
+		limit = {
+			scope:spn_hunt_activity ?= {
+				any_attending_character = { count >= 1  has_trait = supernatural_hunter  NOT = { this = scope:spn_hunter } }
+			}
+		}
+		add = 10
+	}
+	if = {
+		limit = {
+			scope:spn_hunt_activity ?= {
+				any_attending_character = { count >= 2  has_trait = supernatural_hunter  NOT = { this = scope:spn_hunter } }
+			}
+		}
+		add = 10
+	}
+	# A Prince of Hell. The dotted-path form is the one the mod already uses to read another character's
+	# track from inside a value (zz_spn_hunt_effects.txt, the fight's hunter term).
+	if = {
+		limit = { scope:spn_defender ?= { has_trait = demon2 } }
+		subtract = 25
+		subtract = { value = "scope:spn_defender.has_trait_xp(demon2|hell_powers)" multiply = 0.2 }
+		subtract = { value = "scope:spn_defender.has_trait_xp(demon2|demon_reputation)" multiply = 0.1 }
+	}
+	min = 5
+	max = 90
+}
+
+# ==========================================================================================================
+# 2.35 PART TWO (§8.5a) -- DO NOT START A HUNT YOU WILL LOSE. Thomas: "I don't want to be sending casual
+# hunters to their death."
+#
+# The cheapest of the three off-ramps and the only one that costs nothing to run, because most of the hunters
+# who would have died never leave home. This is the confrontation's own arithmetic (§6.8: track x 0.6 on both
+# sides, prowess capped at +-25) run BEFORE the ride, against the culprit of the county the hunter is standing
+# in -- which is the only culprit a character-scope value can reach without a province scope.
+#
+# Read by the activity's ai_will_do. Deliberately optimistic in one respect: it counts the hunters in his own
+# hall as if they would all come, because at planner time the guest list does not exist yet and a hunter who
+# CAN bring a band should not be talked out of the ride by a value that assumes he will ride alone.
+#
+# Root = the hunter.
+# ==========================================================================================================
+spn_hunt_projected_odds_value = {
+	value = 50
+	add = { value = spn_hunt_hunter_track_value multiply = 0.6 }
+	if = {
+		limit = {
+			location ?= {
+				county ?= {
+					exists = var:spn_menace_culprit
+					var:spn_menace_culprit = { is_alive = yes }
+				}
+			}
+		}
+		# Entering the culprit's scope and subtracting from inside it is the mod's own idiom for reading a
+		# scripted script value off another character (spn_menace_hide_value, spn_compel_hide_value).
+		location.county.var:spn_menace_culprit = {
+			subtract = { value = spn_hunt_creature_track_value multiply = 0.6 }
+		}
+	}
+	if = {
+		limit = { any_courtier_or_guest = { count >= 1  is_adult = yes  has_trait = supernatural_hunter } }
+		add = 5
+	}
+	if = {
+		limit = { any_courtier_or_guest = { count >= 2  is_adult = yes  has_trait = supernatural_hunter } }
+		add = 5
+	}
+	if = {
+		limit = { any_courtier_or_guest = { count >= 3  is_adult = yes  has_trait = supernatural_hunter } }
+		add = 10
+	}
+	if = { limit = { has_trait = spn_true_monster_hunter } add = 10 }
+	min = 5
+	max = 95
+}
+
+# CHARACTER scope. The hunter's monster_hunting track (0 for a non-hunter).
+spn_hunt_hunter_track_value = {
+	value = 0
+	if = {
+		limit = { has_trait = supernatural_hunter }
+		add = "has_trait_xp(supernatural_hunter|monster_hunting)"
+	}
+}
+
+# The tracking bar (§6.7). Evaluated with the ACTIVITY as root (on_start + the GUI breakdown), like
+# vf_feeding_success_chance: activity_host / activity_location / any_attending_character / var:.
+#   35 + monster_hunting/2 (0..50) + 10 per hunter guest (max 30) + guides 15 + approach + 20 if the host knows
+#   the culprit's secret or the culprit is known - culprit track/4 (0..25) - 25 if the culprit is not in the county
+#   now, + everything the events changed (var:spn_hunt_chance_event, through spn_hunt_chance_change_effect).
+#   min 5 max 95. The culprit's track is a snapshot banked at on_start (var:spn_hunt_culprit_track).
+#
+# 2.35 -- NEVER use `root` in here. Root is the activity when the GUI asks (the widget does
+# GuiScope.SetRoot(Activity)) but the CHARACTER when an event option re-derives the bar through
+# spn_hunt_chance_apply_delta_effect, and the two disagreed for three terms. Everything below is relative
+# to `this` (the activity), or `prev` inside a list builder, or a variable banked on the activity.
+spn_hunt_success_chance_value = {
+	value = 35
+	if = {
+		limit = { exists = activity_host }
+		add = { value = "activity_host.has_trait_xp(supernatural_hunter|monster_hunting)" multiply = 0.5 desc = spn_hunt_sc_track }
+	}
+	# 2.35 -- REPUTATION, both ways. A county opens doors to a man whose name it already knows; a creature
+	# whose name IT knows is one the county has learned not to talk about. Small either side -- three points
+	# of track is worth more than three dead monsters -- but they are the terms that make a long campaign's
+	# history show up in a number.
+	if = {
+		limit = { exists = activity_host }
+		activity_host = { add = { value = spn_hunter_reputation_value multiply = 3 desc = spn_hunt_sc_renown } }
+	}
+	if = {
+		limit = { exists = var:spn_hunt_culprit }
+		var:spn_hunt_culprit = { add = { value = spn_creature_legend_value multiply = -3 desc = spn_hunt_sc_legend } }
+	}
+	if = {
+		limit = { any_attending_character = { count >= 1 has_trait = supernatural_hunter NOT = { this = prev.activity_host } } }
+		add = { value = 10 desc = spn_hunt_sc_guests }
+	}
+	if = {
+		limit = { any_attending_character = { count >= 2 has_trait = supernatural_hunter NOT = { this = prev.activity_host } } }
+		add = { value = 10 desc = spn_hunt_sc_guests }
+	}
+	if = {
+		limit = { any_attending_character = { count >= 3 has_trait = supernatural_hunter NOT = { this = prev.activity_host } } }
+		add = { value = 10 desc = spn_hunt_sc_guests }
+	}
+	if = {
+		limit = { has_activity_option = { category = spn_hunt_preparations option = spn_hunt_prep_guides } }
+		add = { value = 15 desc = spn_hunt_sc_guides }
+	}
+	# 2.35 -- the silence is a clue. A county that has forgotten a week (spn_compelled_modifier) is telling a
+	# hunter who can hear it that something has been reaching into it. Small, because it is a feeling and not
+	# a grave -- but it is the only term on this bar that a creature put here by trying to hide.
+	if = {
+		limit = { activity_location ?= { county ?= { has_county_modifier = spn_compelled_modifier } } }
+		add = { value = 8 desc = spn_hunt_sc_silence }
+	}
+	if = {
+		limit = { has_activity_option = { category = spn_hunt_approach option = spn_hunt_approach_open } }
+		add = { value = 10 desc = spn_hunt_sc_approach }
+	}
+	# 2.35 -- the local hunter who agreed to ride with you (Another Man's Trail). He has been asking these
+	# questions longer than you have.
+	if = {
+		limit = { activity_host ?= { has_character_flag = spn_hunt_rode_together } }
+		add = { value = 10 desc = spn_hunt_sc_partner }
+	}
+	else_if = {
+		limit = { has_activity_option = { category = spn_hunt_approach option = spn_hunt_approach_signs } }
+		add = { value = 5 desc = spn_hunt_sc_approach }
+	}
+	# 2.35 -- was `activity_host = { spn_hunt_knows_culprit_trigger = { CULPRIT = root.var:spn_hunt_culprit } }`.
+	# root is the ACTIVITY only when the GUI evaluates this value (the widget does GuiScope.SetRoot(Activity)).
+	# When spn_hunt_chance_apply_delta_effect re-derives the bar from an event option, root is the CHARACTER --
+	# and a character holds no spn_hunt_culprit variable, so this whole term silently read as false for the run.
+	# `prev` cannot rescue the macro either: spn_knows_about_character_being_*_trigger pastes $CHARACTER$ once at
+	# the host's depth and again inside any_known_secret, one level deeper, so no single prev chain is right for
+	# both. The answer is banked on the activity instead -- the same contract as var:spn_hunt_culprit_track --
+	# and refreshed by spn_hunt_refresh_known_effect at on_start and on every delta, so a lead that names the
+	# creature still moves the bar in the tick it lands.
+	if = {
+		limit = { exists = var:spn_hunt_host_knows }
+		add = { value = 20 desc = spn_hunt_sc_known }
+	}
+	if = {
+		limit = { exists = var:spn_hunt_culprit_track }
+		add = { value = var:spn_hunt_culprit_track multiply = -0.25 desc = spn_hunt_sc_culprit_track }
+	}
+	# 2.35 -- both sides are now paths from the activity, so the term reads the same whether the GUI or an
+	# event effect is asking. Vanilla ships this exact shape in coronation.txt:3159
+	# (`scope:activity.var:officiator.location ?= scope:activity.activity_location`). ?= on the left is
+	# deliberate: a culprit with no resolvable location counts as gone, which is what the term means.
+	if = {
+		limit = {
+			exists = var:spn_hunt_culprit
+			activity_location = { exists = county }
+			NOT = { var:spn_hunt_culprit.location.county ?= activity_location.county }
+		}
+		add = { value = -25 desc = spn_hunt_sc_gone }
+	}
+	if = {
+		limit = { exists = var:spn_hunt_chance_event }
+		add = { value = var:spn_hunt_chance_event desc = spn_hunt_sc_events }
+	}
+	min = 5
+	max = 95
+}
+
+# 2.35 -- the same duel for the OTHER kind of trail: a county that has forgotten a week rather than one
+# that has buried somebody (Nobody Here Remembers, spn_hunt.0130). Evaluated in the LORD's scope with
+# scope:spn_compel_hole_county set; 12 + the culprit's reserve / 5, so the same power that made the
+# compulsion clean is what makes the lord's questions go nowhere. The value form of `duel` keeps the
+# culprit's name out of the tooltip, exactly as spn_menace_hide_value does below.
+spn_compel_hide_value = {
+	value = 12
+	if = {
+		limit = {
+			exists = scope:spn_compel_hole_county
+			scope:spn_compel_hole_county = { exists = var:spn_compel_culprit }
+		}
+		scope:spn_compel_hole_county.var:spn_compel_culprit = {
+			add = { value = spn_vampiric_reserve_value multiply = 0.2 }
+		}
+	}
+}
+
+# The lord's investigation duel (§4): how well the culprit is hidden. Evaluated in the LORD's scope with
+# scope:spn_menace_county set; 10 + the culprit's creature track / 5. The value form of `duel` keeps the culprit's
+# name out of the tooltip.
+spn_menace_hide_value = {
+	value = 10
+	if = {
+		limit = { exists = scope:spn_menace_county  scope:spn_menace_county = { exists = var:spn_menace_culprit } }
+		scope:spn_menace_county.var:spn_menace_culprit = {
+			add = { value = spn_hunt_creature_track_value multiply = 0.2 }
+		}
+	}
+}
+
+
+# PROVINCE scope. 2.35 PART TWO (§8.1-8.4) -- how loud is this province, from outside it.
+#
+# spn_hunter_pull_value is character-scoped and reads where a hunter is STANDING; this is the same question
+# asked of somewhere he is not. Small integers on purpose: the movement pulse compares them against a margin
+# of 3, so one quiet mark two valleys away never gets anybody on a horse.
+#
+#   a trail at all                 2
+#   + 1 per incident, max          4
+#   a county that has forgotten a week   1
+#   the culprit is a legend        2   -- and only a hunter at 75+ can see this province at all (the pulse's
+#                                        own limit), so for him it is the reason to go rather than not to
+spn_hunter_province_draw_value = {
+	value = 0
+	if = {
+		limit = { county ?= { has_county_modifier = spn_menace_modifier } }
+		add = 2
+		county = {
+			if = {
+				limit = { exists = var:spn_menace_count }
+				add = { value = var:spn_menace_count max = 4 }
+			}
+			if = {
+				limit = { has_county_modifier = spn_compelled_modifier }
+				add = 1
+			}
+			if = {
+				limit = { var:spn_menace_culprit ?= { spn_creature_legend_value >= 3 } }
+				add = 2
+			}
+		}
+	}
+}
+
+# ==========================================================================================================
+# 2.35a -- THE BOUNTY. Root = the hunter; scope:spn_hunt_county and scope:spn_hunt_activity set.
+#
+# Thomas, after the first boot: "There was no opportunity to get some extra money out of it. I spent forty
+# five gold to take out this alleged vampire."
+#
+# Part one built the task contract as the way an ADVENTURER gets paid for a hunt a lord asked for (D9), and
+# then never gave the ordinary case anything, so a landed hunter who rode out on his own coin came home
+# strictly poorer for having done the county a favour. This is the lord's purse, and it scales on the two
+# things a lord would actually price it by: what his county can afford, and what the thing turned out to be.
+#
+#   base                             40
+#   + county development x 5    0 .. ~250
+#   + what it was (slain track) x 1.2   0 .. 120
+#   floor 40, ceiling 320
+#
+# Against a hunt that costs roughly 45 at standard era scaling, a poor county's ordinary vampire pays about
+# 90 and a rich city's elder pays a few hundred. Worth riding for, never worth farming.
+spn_hunt_bounty_value = {
+	value = 40
+	if = {
+		limit = { exists = scope:spn_hunt_county }
+		scope:spn_hunt_county = { add = { value = spn_county_prosperity_value multiply = 5 } }
+	}
+	if = {
+		limit = { scope:spn_hunt_activity ?= { exists = var:spn_hunt_slain_track } }
+		add = { value = scope:spn_hunt_activity.var:spn_hunt_slain_track multiply = 1.2 }
+	}
+	min = 40
+	max = 320
+}
+
+# 2.35c -- THE TUNING KNOB FOR THE WHOLE HUNTING LAYER (zz_spn_menace_effects.txt).
+#
+# The chance that the FIRST incident on clean ground is noticed outright instead of becoming a one-year
+# whisper. A second incident inside that year opens the trail regardless of these numbers, so these govern
+# one thing only: how often a single isolated act is enough.
+#
+# Thomas: "There should be an opportunity for it, but the odds are small." A body is harder to explain away
+# than a fright, so a kill rolls better than a prowl.
+#
+# Set both to 0 and nothing is ever noticed on the first incident -- the world then runs entirely on the
+# two-inside-a-year rule, which is a legitimate way to play it.
+#
+# 2.35g -- REVISITED, and only half of it moved. Thomas asked whether to take these to 30/12.
+#
+# The prowl number did move, 8 -> 12. A prowl is the cheap incident and 8% made a creature that only
+# ever frightens people effectively invisible: it needed two prowls inside twelve months before the
+# world would look up at all, which is most of a decade for a careful vampire.
+#
+# The KILL number did NOT, and the reason is Thomas's own earlier design call, which this would have
+# contradicted: "I don't want to kill one person as a vampire, total accident, and then I have a hunter
+# show up a month from now. There should be an opportunity for it, but the odds are small." 20 is that
+# sentence in a number. And the thing that actually makes the world feel awake is not this roll but the
+# WHISPER underneath it: a second body inside a year opens the trail with certainty whatever this says.
+# Raising it to 30 would not make the world livelier, it would make one bad night riskier -- which is
+# the opposite of the intended shape. Easy to change if playtesting disagrees; it is one number.
+# 2.35h -- AND THEN IT MOVED ANYWAY, 20 -> 30, at Thomas's call after a live campaign in which he saw
+# nothing. His evidence beats my arithmetic and it is his design. Recorded honestly, though: I do not
+# think this number was the reason, and the two changes made alongside it are the ones I expect to
+# account for what he was seeing -- the hunter pulse (spn_hunters_yearly_on_actions.txt, which was
+# firing its two "spotted" events at roughly 0.6% per pulse) and the census event that can now prove
+# whether trails exist at all (spn_debug_events.0200). If the world gets noisy, this is the first
+# number to put back.
+spn_menace_first_notice_kill_value = {
+	value = 30
+}
+spn_menace_first_notice_prowl_value = {
+	value = 12
+}
+
+# 2.35g -- WHAT A LORD PAYS A HUNTER HE SENT FOR BY NAME (zz_spn_summons_effects.txt). CHARACTER scope:
+# the lord. Written down at the letter, paid at the kill.
+#
+# A floor of 60 so it is always worth a poor count's while to ask, and a rate on the hunter's own
+# reputation rather than the lord's purse -- you are paying for the man, not haggling from your ledger.
+# Doubled by The Hunter Names His Price (spn_hunt.0008), so the ceiling a greedy man can reach is 300.
+spn_summons_fee_value = {
+	value = 60
+	if = {
+		limit = { exists = scope:spn_summons_target }
+		add = { value = scope:spn_summons_target.spn_hunt_hunter_track_value  multiply = 0.6 }
+	}
+	if = { limit = { has_trait = generous } add = 25 }
+	if = { limit = { has_trait = greedy }   add = -15 }
+	min = 40
+	max = 150
+}

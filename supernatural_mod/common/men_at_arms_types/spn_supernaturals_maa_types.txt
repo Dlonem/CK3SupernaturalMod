@@ -17,10 +17,16 @@ wolves = {
 		# "Scoped object of type 'character' is not valid ((no character))". Vanilla's own
 		# valid_for_maa_trigger dodges this with ?= on its scope path; this is the same idea.
 		# Triggers short-circuit, so nothing below is evaluated when there is no character.
-		exists = this
-		OR = {
-			has_trait = supernatural_werewolf	
-			has_trait = supernatural_hybrid
+		# 2.35f -- AND THE 2.33 COMMENT ABOVE IS WRONG, which is why this was still throwing. CK3 does NOT
+		# short-circuit the siblings of an AND: `exists = this` failing does not stop the lines after it being
+		# evaluated. error.log 9 Sep 14:16 caught 20 of them in one 26-minute boot, four from each of the five
+		# regiments. trigger_if's limit is what actually gates. Semantics are unchanged.
+		trigger_if = {
+			limit = { exists = this }
+			OR = {
+				has_trait = supernatural_werewolf	
+				has_trait = supernatural_hybrid
+			}
 		}
 	}
 	
@@ -67,10 +73,16 @@ bats = {
 		# "Scoped object of type 'character' is not valid ((no character))". Vanilla's own
 		# valid_for_maa_trigger dodges this with ?= on its scope path; this is the same idea.
 		# Triggers short-circuit, so nothing below is evaluated when there is no character.
-		exists = this
-		OR = {
-			has_trait = supernatural_vampire	
-			has_trait = supernatural_hybrid
+		# 2.35f -- AND THE 2.33 COMMENT ABOVE IS WRONG, which is why this was still throwing. CK3 does NOT
+		# short-circuit the siblings of an AND: `exists = this` failing does not stop the lines after it being
+		# evaluated. error.log 9 Sep 14:16 caught 20 of them in one 26-minute boot, four from each of the five
+		# regiments. trigger_if's limit is what actually gates. Semantics are unchanged.
+		trigger_if = {
+			limit = { exists = this }
+			OR = {
+				has_trait = supernatural_vampire	
+				has_trait = supernatural_hybrid
+			}
 		}
 	}
 	
@@ -117,19 +129,25 @@ vampires = {
 		# "Scoped object of type 'character' is not valid ((no character))". Vanilla's own
 		# valid_for_maa_trigger dodges this with ?= on its scope path; this is the same idea.
 		# Triggers short-circuit, so nothing below is evaluated when there is no character.
-		exists = this
-		OR = {
-			has_trait_xp = {
-				trait = supernatural_vampire
-				track = vampirism
-				value >= 50
-			}		
-			has_trait_xp = {
-				trait = supernatural_hybrid
-				track = hybrid_vampirism
-				value >= 50
-			}
+		# 2.35f -- AND THE 2.33 COMMENT ABOVE IS WRONG, which is why this was still throwing. CK3 does NOT
+		# short-circuit the siblings of an AND: `exists = this` failing does not stop the lines after it being
+		# evaluated. error.log 9 Sep 14:16 caught 20 of them in one 26-minute boot, four from each of the five
+		# regiments. trigger_if's limit is what actually gates. Semantics are unchanged.
+		trigger_if = {
+			limit = { exists = this }
+			OR = {
+				has_trait_xp = {
+					trait = supernatural_vampire
+					track = vampirism
+					value >= 50
+				}		
+				has_trait_xp = {
+					trait = supernatural_hybrid
+					track = hybrid_vampirism
+					value >= 50
+				}
 
+			}
 		}
 	}
 	
@@ -178,19 +196,25 @@ werewolves = {
 		# "Scoped object of type 'character' is not valid ((no character))". Vanilla's own
 		# valid_for_maa_trigger dodges this with ?= on its scope path; this is the same idea.
 		# Triggers short-circuit, so nothing below is evaluated when there is no character.
-		exists = this
-		OR = {
-			has_trait_xp = {
-				trait = supernatural_werewolf
-				track = lycanthropy
-				value >= 50
-			}		
-			has_trait_xp = {
-				trait = supernatural_hybrid
-				track = hybrid_lycanthropy
-				value >= 50
-			}
+		# 2.35f -- AND THE 2.33 COMMENT ABOVE IS WRONG, which is why this was still throwing. CK3 does NOT
+		# short-circuit the siblings of an AND: `exists = this` failing does not stop the lines after it being
+		# evaluated. error.log 9 Sep 14:16 caught 20 of them in one 26-minute boot, four from each of the five
+		# regiments. trigger_if's limit is what actually gates. Semantics are unchanged.
+		trigger_if = {
+			limit = { exists = this }
+			OR = {
+				has_trait_xp = {
+					trait = supernatural_werewolf
+					track = lycanthropy
+					value >= 50
+				}		
+				has_trait_xp = {
+					trait = supernatural_hybrid
+					track = hybrid_lycanthropy
+					value >= 50
+				}
 
+			}
 		}
 	}
 	
@@ -228,3 +252,85 @@ werewolves = {
 	icon = werewolves
 }
 
+
+#############################
+### Supernatural: Hunters ###
+#############################
+
+		#HUNTER TRAINEES (2.35, D3 / D11 -- one regiment, Thomas's numbers)
+
+# The vestigial `witchhunters` key finally gets its definition: the loc slots (all eight languages) and both
+# illustration sets already existed under this name. Name in English: "Hunter Trainees".
+#
+# THE FIGHT, IN NUMBERS (checklist §3). One vampire sub-regiment (stack 10, damage 185, toughness 175) hits for
+# 1,850 and takes 1,750; one full trainee stack (50 x 14 / 18) hits for 700 and takes 900. Trainees do not out-fight
+# monsters and are not meant to -- the 0.25 counter is the point. Counter keys are regiment TYPES (every vanilla
+# counter key is a base type): supernatural_monster (vampires, werewolves), supernatural_animal (wolves, bats),
+# demonic_knights (its own type, 01_magic_maa_types.txt:120). 0.25 is Thomas's "purest equivalent of 25%" --
+# counter values are relative, not percent (MEN_AT_ARMS_MAX_COUNTER 0.9 / RATIO_FOR_MAX_COUNTER 2.0,
+# 00_defines.txt:600-601); the in-game counter tooltip is the arbiter (boot §14.12).
+#
+# stack = 50 and max_sub_regiments = 10: 50 men a stack, +50 per size upgrade, 500 at the cap -- and
+# _men_at_arms_types.info:59 says max_sub_regiments also means ONLY ONE regiment of this type (the cultists use it
+# the same way). A maxed hunter's guard neutralises one monster regiment, not an army of them.
+#
+# The mod's own dead counters (bats -> werewolves, werewolves -> vampires, keyed on regiment KEYS, not types) are
+# recorded here and NOT fixed: a fix needs a type split that breaks supernatural_monster_max_size_add on two perks
+# and two trait tiers.
+
+witchhunters = {
+	type = skirmishers
+	icon = torch_bearers
+
+	can_recruit = {
+		# Same null-scope guard as the four regiments above (2.33).
+		# 2.35f -- AND THE 2.33 COMMENT ABOVE IS WRONG, which is why this was still throwing. CK3 does NOT
+		# short-circuit the siblings of an AND: `exists = this` failing does not stop the lines after it being
+		# evaluated. error.log 9 Sep 14:16 caught 20 of them in one 26-minute boot, four from each of the five
+		# regiments. trigger_if's limit is what actually gates. Semantics are unchanged.
+		trigger_if = {
+			limit = { exists = this }
+			has_trait = supernatural_hunter
+			# 2.35b -- AND THE ACADEMY THAT TRAINS THEM. Thomas, 9 Sep 2026: "part of the idea I had behind hunter
+			# trainees like the men-at-arms unit was to gate that behind the Hunter Academies perk under the witch
+			# hunting lifestyle perk tree... I just want to make sure that normal people aren't getting that
+			# men-at-arms unit type unless they are actually hunters, or their parents were hunters and they
+			# happened to inherit that specific men-at-arms unit type."
+			#
+			# hunter_academy_perk already grants skirmishers_max_size_add = 1 for exactly this regiment
+			# (00_hunter_1_witch_hunter_perks.txt:227-258), so the perk was the academy in everything but the gate.
+			# AND THE INHERITANCE CASE COMES FREE: can_recruit governs RAISING and REINFORCING, not keeping. An
+			# heir who inherits a standing regiment of Trainees still fields it; he simply cannot replace the men
+			# he loses until he has earned the academy himself.
+			# 2.35f -- the 2.35d guard that wrapped this one line is gone; the trigger_if at the head of the
+			# block now gates everything, so a second one here only added nesting.
+			has_perk = hunter_academy_perk
+		}
+	}
+
+	damage = 14
+	toughness = 18
+	pursuit = 12
+	screen = 16
+
+	terrain_bonus = {
+		forest = { damage = 4 toughness = 6 }
+		taiga = { damage = 4 toughness = 6 }
+	}
+
+	counters = {
+		supernatural_monster = 0.25
+		supernatural_animal = 0.25
+		demonic_knights = 0.1
+	}
+
+	buy_cost = { gold = 60 }
+	low_maintenance_cost = { gold = 0.2 }
+	high_maintenance_cost = { gold = 0.4 }
+	provision_cost = 3
+
+	stack = 50
+	max_sub_regiments = 10
+
+	ai_quality = { value = 10 }
+}

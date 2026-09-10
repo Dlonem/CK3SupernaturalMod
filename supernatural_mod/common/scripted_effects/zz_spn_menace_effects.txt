@@ -1,0 +1,502 @@
+﻿# Supernatural 2.35 -- "The Hunt". The trail: a county's memory of what a creature did to it.
+# WORK-ORDER-2.35-THE-HUNT §3. Modelled on vanilla's hunt sightings (hunt_create_sighting_effect,
+# 00_hunt_effects.txt:4055-4083): a county modifier with years, county variables holding a character and a
+# flag with years, and a count. Everything here expires -- 5 years from the LAST mark.
+#
+# ONE CALL PER INCIDENT. A mark is an incident, never a body: one feed (however many died in it), one claw-kill,
+# one border hunt. The 3-day dedupe flag on the culprit is what makes "a feed that ends in a kill" one mark and
+# not two (the feed option marks first, then the death fires the on_death hook, which sees the flag and skips).
+#
+# Arithmetic (checklist §3):
+#   ten vampires each killing once in the same city -> ten marks, -50 control, ONE notification (the notified
+#   flag), and the modifier refreshed to 5 years on every mark.
+#   the count carries no `years` on its change_variable branch, so a count can outlive its modifier by up to five
+#   years -- the hunt gates on the MODIFIER, so nothing reads a stale count except the notification threshold.
+#
+# Writers (all of them -- §3.2): W1 the on_death hook (zz_spn_menace_on_actions.txt), W2 vf_mark_fed_on_effect
+# (20_spn_secret_effects.txt), W3 the feed's kill option (supernatural_ev1.23), W4 the werewolf border hunt
+# (spn_gain_power.4026), and 2.35's W5 spn_compel_leaves_a_trace_effect (zz_spn_consequence_effects.txt) --
+# the compulsion, at low odds, because Thomas wants every supernatural action to be able to cost you
+# something and none of them to cost you much. Nothing else records who did it, and nothing spawns a culprit.
+#
+# W1 also gained a filter in 2.35 (spn_menace_death_is_public_trigger): a death a crowd watched or the law
+# wrote down -- a melee, a battlefield, an execution -- explains itself and is not a mark.
+#
+# 2.35 PART TWO -- "The Bridge". KIND grows from two to four. Nothing here was rebuilt; two values were added.
+#
+#   KIND = vampire | werewolf | demon | witch
+#
+# Demons (D-W1..D-W5) and witches (W-W1..W-W4) now leave the same county trail creatures always have. The whole
+# point of the release is that this file is the ONE place harm is recorded, so a demon that ruins a village and a
+# vampire that drains a girl are read by the same lord, the same planner and the same hunter.
+#
+# Demons are written BY WHAT THEY DO, never by the trait (Thomas, E2): the escape into the world, the village
+# event, the rage chain, the courtier, and any violent kill the on_death hook catches. Summoning one into your
+# own hall is your business and marks nothing. Witches are written by the ten big spells that used to spawn a
+# hunter in your hall at 100% -- the county remembers instead, which is the single most-hated behaviour in the
+# Witchcraft layer routed around rather than repaired (E4).
+#
+# COUNTY = a county (landed title) scope; CULPRIT = the creature; KIND = vampire | werewolf | demon | witch;
+# SEVERITY = kill | prowl.
+
+# ==========================================================================================================
+# 2.35c -- WHAT THE COUNTY ACTUALLY NOTICES. Thomas, 9 Sep 2026:
+#
+#   "not everything gets noticed or logged... I don't want to kill one person as a vampire, total accident,
+#    and then I have a hunter show up a month from now. There should be an opportunity for it, but the odds
+#    are small. We want hunters to basically definitely notice when there's like multiple deaths within a
+#    year."
+#
+# Until now EVERY incident opened a full five-year trail on the first body. One careless night and a hunter
+# was on the map. That is the behaviour this replaces, and it is replaced with two stages rather than a
+# smaller number, because a probability alone would still let one kill start a hunt and would ALSO let three
+# kills start nothing.
+#
+#   STAGE 1  A WHISPER.  The first incident on clean ground is a story nobody can place. It writes
+#                        spn_menace_whisper on the county for ONE YEAR: no modifier, no map pin, no culprit
+#                        recorded, nothing a Trailsman or a planner can read. It is not a trail.
+#   STAGE 2  A TRAIL.    A second incident while that whisper is still live opens the real thing, at once.
+#                        That is Thomas's "multiple deaths within a year", and the one-year life of the
+#                        whisper IS that window.
+#
+# And the small door stays open: the first incident can be noticed outright, on a roll. A kill is likelier to
+# be noticed than a prowl because a body is harder to explain than a fright. Both numbers are script values
+# and they are THE tuning knob for the whole hunting layer -- raise them and the world fills with hunters,
+# drop them to 0 and nothing is ever noticed on the first try.
+#
+# WHAT DELIBERATELY DOES NOT CHANGE: once a trail is open, every later incident behaves exactly as it always
+# did -- it bumps the count, refreshes the five years and re-runs the drain. The escalation a lord sees is
+# untouched; only the FIRST step onto clean ground is now uncertain.
+# ==========================================================================================================
+spn_mark_menace_effect = {
+	if = {
+		limit = {
+			$COUNTY$ = {
+				OR = {
+					# A trail is already open here: this is escalation, and escalation is never in doubt.
+					has_county_modifier = spn_menace_modifier
+					# ...or the county is already whispering, and this is the second thing inside a year.
+					has_variable = spn_menace_whisper
+				}
+			}
+		}
+		spn_open_menace_trail_effect = { COUNTY = $COUNTY$ CULPRIT = $CULPRIT$ KIND = $KIND$ SEVERITY = $SEVERITY$ }
+	}
+	else = {
+		# Clean ground. Roll for it being noticed anyway; the odds are deliberately poor.
+		random = {
+			chance = spn_menace_first_notice_$SEVERITY$_value
+			spn_open_menace_trail_effect = { COUNTY = $COUNTY$ CULPRIT = $CULPRIT$ KIND = $KIND$ SEVERITY = $SEVERITY$ }
+		}
+		# If the roll failed, the county still half-remembers. Tested on the MODIFIER rather than on the roll,
+		# because the roll's own result is not a thing script can read afterwards.
+		if = {
+			limit = { $COUNTY$ = { NOT = { has_county_modifier = spn_menace_modifier } } }
+			$COUNTY$ = {
+				set_variable = { name = spn_menace_whisper value = $CULPRIT$ years = 1 }
+			}
+			# The incident dedupe still has to happen, or a feed that ends in a kill rolls twice for one night.
+			# spn_open_menace_trail_effect sets this itself on the other path; this is the whisper's copy.
+			$CULPRIT$ = {
+				add_character_flag = { flag = spn_menace_marked_recently days = 3 }
+			}
+		}
+	}
+}
+
+# The trail proper. This is the body spn_mark_menace_effect had before 2.35c and it is UNCHANGED below this
+# line -- it is only reached now when the county has actually noticed. Every existing caller still calls
+# spn_mark_menace_effect and does not know the difference.
+spn_open_menace_trail_effect = {
+	$COUNTY$ = {
+		# A trail supersedes the whisper that led to it.
+		remove_variable = spn_menace_whisper
+		add_county_modifier = { modifier = spn_menace_modifier years = 5 }
+		# 2.35d -- AND THE WORLD KEEPS A LIST. There is no global county iterator in CK3, so without this the
+		# only way to ask "is anything being hunted anywhere" is to walk a realm -- which a landless adventurer
+		# does not have. That is exactly how 2.35c's can_start gate came to grey the activity out for a landless
+		# hunter who had trails three counties away: it could only see his own province and its neighbours.
+		#
+		# The entry expires on its own after the same five years the modifier does, and readers test the modifier
+		# anyway (spn_trailsman_trail_is_warm_trigger), so a stale entry is inert rather than wrong. Guarded so a
+		# county that is marked twice is listed once.
+		if = {
+			limit = { NOT = { is_target_in_global_variable_list = { name = spn_menace_counties target = this } } }
+			add_to_global_variable_list = { name = spn_menace_counties target = this years = 5 }
+		}
+		set_variable = { name = spn_menace_culprit value = $CULPRIT$ years = 5 }
+		# 2.35h -- THE CULPRIT'S OWN LIST OF WHAT HE HAS LEFT BEHIND, so that when he dies the trails he
+		# made can be found without scanning the world. Read by spn_menace_culprit_died_effect below.
+		$CULPRIT$ = {
+			if = {
+				limit = { NOT = { is_target_in_variable_list = { name = spn_my_trails target = $COUNTY$ } } }
+				add_to_variable_list = { name = spn_my_trails target = $COUNTY$ }
+			}
+		}
+		set_variable = { name = spn_menace_kind value = flag:$KIND$ years = 5 }
+		# 2.35 PART TWO -- THE CEILING, and it is the first of five balance levers (order §3.4). Thomas:
+		# "I don't know if it can scale infinitely... the last thing I want is hunters coming after me all the
+		# time." The count was uncapped, so a vampire who fed forty times in one city was forty marks deep and
+		# every planner in reach scored that province off the chart. Past SIX an incident refreshes the
+		# five-year timer and does not raise the number: forty feeds in one city makes a legend, not forty
+		# hunters. The other four levers are the global concurrent-hunt cap (spn_hunt_running_open_trigger),
+		# the new ways to clear a trail (below), the four-year county breather (spn_hunt_recently_hunted),
+		# and No One Will Come (spn_no_one_will_come_modifier).
+		if = {
+			limit = { has_variable = spn_menace_count }
+			if = {
+				limit = { var:spn_menace_count < 6 }
+				change_variable = { name = spn_menace_count add = 1 }
+			}
+			else = {
+				set_variable = { name = spn_menace_count value = 6 years = 5 }
+			}
+		}
+		else = {
+			set_variable = { name = spn_menace_count value = 1 years = 5 }
+		}
+		spn_menace_drain_$KIND$_$SEVERITY$_effect = yes
+		# The lord finds out on the third INCIDENT (§4). Never the culprit himself -- a vampire count preying on
+		# his own county does not need a letter about it.
+		if = {
+			limit = {
+				var:spn_menace_count >= 3
+				NOT = { has_variable = spn_menace_notified }
+				exists = holder
+				NOT = { holder = $CULPRIT$ }
+			}
+			set_variable = { name = spn_menace_notified value = yes years = 5 }
+			save_scope_as = spn_menace_county
+			holder = {
+				trigger_event = { id = spn_hunt.0001 days = { 3 10 } }
+			}
+			# 2.35 PART TWO (§7.1) -- THE MAN ASKING QUESTIONS. The third mark is the moment a trail stops
+			# being weather and becomes a thing somebody is following. The player learns that by being told
+			# a priest has started writing names down, once per character, ever.
+			$CULPRIT$ = {
+				if = {
+					limit = {
+						is_ai = no
+						is_alive = yes
+						NOT = { has_character_flag = spn_taught_asking }
+					}
+					add_character_flag = spn_taught_asking
+					trigger_event = { id = spn_hunt.0502 days = { 4 12 } }
+				}
+			}
+		}
+	}
+	# Incident dedupe: a feed that ends in a kill is ONE mark (the feed marks, then W1 sees this flag and skips).
+	$CULPRIT$ = {
+		add_character_flag = { flag = spn_menace_marked_recently days = 3 }
+		# 2.35 PART TWO (§7.1) -- THE FIRST BODY. Teaching by consequence, never by explanation: the first
+		# time a county remembers you, somebody mentions that the priest has been asking questions. Once per
+		# character, permanent flag, players only -- an AI creature does not need to be taught the rules.
+		if = {
+			limit = {
+				is_ai = no
+				is_alive = yes
+				NOT = { has_character_flag = spn_taught_first_body }
+			}
+			add_character_flag = spn_taught_first_body
+			trigger_event = { id = spn_hunt.0500 days = { 3 8 } }
+		}
+		spn_menace_teach_$SEVERITY$_effect = yes
+	}
+}
+
+# 2.35 PART TWO (§7.1) -- the severity-keyed half of the teaching hooks, written the same way the drains are so
+# the macro does the branching the script cannot.
+spn_menace_teach_kill_effect = {
+	# Nothing. A kill is not the lesson this pair is about. The guard keeps this a legal, non-empty effect.
+	if = {
+		limit = { always = no }
+		add_character_flag = spn_menace_teach_noop
+	}
+}
+
+# WHAT THE OLD WOMAN TOLD YOU. Thomas: "whomever turned me into a werewolf didn't teach me much about it."
+# A creature with no maker and no wolf who clawed him is one nobody ever explained any of this to, and the first
+# time he takes someone and leaves them breathing is when the world finally does.
+spn_menace_teach_prowl_effect = {
+	if = {
+		limit = {
+			is_ai = no
+			is_alive = yes
+			NOT = { has_character_flag = spn_taught_no_maker }
+			spn_hunt_is_creature_trigger = yes
+			NOT = { any_relation = { type = mmaker } }
+			NOT = { any_relation = { type = ww_clawed_by } }
+		}
+		add_character_flag = spn_taught_no_maker
+		trigger_event = { id = spn_hunt.0503 days = { 5 15 } }
+	}
+}
+
+# D4 -- Thomas's numbers. Vampires drain control; werewolves drain control and (on a kill) development.
+# County scope. The prosperity wrapper is the ONLY development writer (DESIGN-the-linked-supernatural-world).
+spn_menace_drain_vampire_kill_effect = {
+	change_county_control = -5
+}
+spn_menace_drain_vampire_prowl_effect = {
+	change_county_control = -1
+}
+spn_menace_drain_werewolf_kill_effect = {
+	change_county_control = -2
+	spn_county_prosperity_change_effect = { VALUE = -1 }
+}
+spn_menace_drain_werewolf_prowl_effect = {
+	change_county_control = -1
+}
+
+# 2.35 PART TWO (§3.1) -- the two new kinds, against Thomas's part-one arithmetic (vampire kill -5, werewolf
+# -2/-1).
+#
+# A DEMON sits between the two on control and is the only kind that hurts BOTH meters on a kill, because a
+# demon does not feed -- it ruins. Nothing is taken; everything is spoiled, and the county pays for that twice.
+#
+# A WITCH is the quietest of the four. Nobody is found in an alley; a harvest fails, a child sickens, a man
+# swears the miller's wife was standing in his room. The county loses faith in its lord faster than it loses
+# people, which is why the witch numbers sit on control and only a killing spell touches prosperity.
+spn_menace_drain_demon_kill_effect = {
+	change_county_control = -4
+	spn_county_prosperity_change_effect = { VALUE = -1 }
+}
+spn_menace_drain_demon_prowl_effect = {
+	change_county_control = -2
+}
+spn_menace_drain_witch_kill_effect = {
+	change_county_control = -2
+	spn_county_prosperity_change_effect = { VALUE = -1 }
+}
+spn_menace_drain_witch_prowl_effect = {
+	change_county_control = -1
+}
+
+# The lord's investigation found the culprit (§4). Root = the investigating lord. scope:spn_menace_county = the
+# county. Reveals the culprit's creature secret to the lord by the mod's own reveal_to idiom
+# (spn_give_knowledge_of_*_secret); a culprit already carrying the known trait needs no reveal. The secret carries
+# spn_*_crime -- vanilla's imprison and execute tools are the lord's next move.
+spn_hunt_learn_culprit_effect = {
+	if = {
+		limit = {
+			exists = scope:spn_menace_county
+			scope:spn_menace_county = { exists = var:spn_menace_culprit }
+		}
+		scope:spn_menace_county.var:spn_menace_culprit = {
+			save_scope_as = spn_menace_culprit
+			random_secret = {
+				limit = {
+					OR = {
+						secret_type = spn_secret_vampire
+						secret_type = spn_secret_werewolf
+						secret_type = spn_secret_hybrid
+					}
+					NOT = { is_known_by = scope:spn_hunt_lord }
+				}
+				reveal_to = scope:spn_hunt_lord
+			}
+		}
+	}
+}
+
+
+# ==========================================================================================================
+# 2.35 PART TWO -- CLEARING A TRAIL (§3.4.3). Until now compulsion was the only way off a county's books, and
+# a creature who had been careless once had no move except to stop being anywhere near it for five years.
+# Three ways out now, all of them costing something, none of them free.
+# ==========================================================================================================
+
+# COUNTY scope. One incident off the books. Used by Pay It Away (What They Will Find) and by a creature that
+# leaves the county when it hears a hunter is asking. Never takes the count below one -- something did happen
+# here, and the modifier stands until it expires on its own.
+spn_menace_clear_one_effect = {
+	if = {
+		limit = {
+			has_variable = spn_menace_count
+			var:spn_menace_count > 1
+		}
+		change_variable = { name = spn_menace_count subtract = 1 }
+	}
+}
+
+# CHARACTER scope (the creature). Leaving is now worth something. Thomas asked for more ways to clear a trail
+# and this is the cheapest of them: you are not here any more, and the county's memory of you gets one mark
+# shorter for it. Called wherever spn_gone_to_ground_modifier is granted.
+spn_menace_gone_to_ground_effect = {
+	if = {
+		limit = { location ?= { county ?= { has_county_modifier = spn_menace_modifier } } }
+		location.county = { spn_menace_clear_one_effect = yes }
+	}
+}
+
+# COUNTY scope. The lord was paid to let it lie. PAYER = the creature who paid. Five years, and it is a debt
+# rather than a purchase: if a hunter later proves what was living here anyway, the holder learns he was bought
+# and remembers it (spn_hunt_conclude_effect reads this).
+spn_menace_buy_silence_effect = {
+	set_variable = { name = spn_bought_silence value = yes years = 5 }
+	set_variable = { name = spn_bought_silence_payer value = $PAYER$ years = 5 }
+	spn_menace_clear_one_effect = yes
+}
+
+# ==========================================================================================================
+# 2.35 PART TWO (§3.4.2) -- THE GLOBAL CONCURRENT-HUNT CAP. The second balance lever, and the one that stops
+# the world piling on: however many trails are warm, only four hunts run anywhere at once. Above that, AI
+# hunters stand down; a player is never blocked, because a player's hunt is the one he chose to go on.
+#
+# Counted on the ACTIVITY (var:spn_hunt_counted) rather than on the hunter, so the decrement cannot double-fire
+# and cannot be lost if the host dies mid-hunt -- every exit path (complete, invalidated, host death) runs the
+# same effect and the variable is what makes it idempotent.
+# ==========================================================================================================
+
+# ACTIVITY scope.
+spn_hunt_running_open_effect = {
+	if = {
+		limit = { NOT = { has_variable = spn_hunt_counted } }
+		set_variable = { name = spn_hunt_counted value = yes }
+		if = {
+			limit = { NOT = { exists = global_var:spn_hunts_running } }
+			set_global_variable = { name = spn_hunts_running value = 0 }
+		}
+		change_global_variable = { name = spn_hunts_running add = 1 }
+	}
+}
+
+# ACTIVITY scope. Floored at zero: a save made before this release has no global counter, and an old activity
+# finishing after it must not push the world into negative hunts.
+spn_hunt_running_close_effect = {
+	if = {
+		limit = { has_variable = spn_hunt_counted }
+		remove_variable = spn_hunt_counted
+		if = {
+			limit = {
+				exists = global_var:spn_hunts_running
+				global_var:spn_hunts_running > 0
+			}
+			change_global_variable = { name = spn_hunts_running subtract = 1 }
+		}
+	}
+}
+
+# ==========================================================================================================
+# 2.35 PART TWO (§8.5c) -- NO ONE WILL COME. Thomas: "that could leave a modifier that hunters won't touch it
+# once that happens enough."
+#
+# Three withdrawals or deaths on one county and ordinary hunters stop riding to it for a decade. The reason
+# they will not come is the thing living there, so the culprit gets a rung of legend out of it -- and the same
+# modifier reads as an ATTRACTION to a hunter at monster_hunting >= 75 (spn_hunter_pull_value). The county
+# everyone else avoids is the one a legend rides toward. That is the fifth balance lever: a county that has
+# eaten enough hunters gets ten years of quiet.
+#
+# COUNTY scope.
+# ==========================================================================================================
+spn_hunt_refusal_effect = {
+	if = {
+		limit = { has_variable = spn_hunt_refusals }
+		change_variable = { name = spn_hunt_refusals add = 1 }
+	}
+	else = {
+		set_variable = { name = spn_hunt_refusals value = 1 years = 10 }
+	}
+	if = {
+		limit = {
+			var:spn_hunt_refusals >= 3
+			NOT = { has_county_modifier = spn_no_one_will_come_modifier }
+		}
+		add_county_modifier = { modifier = spn_no_one_will_come_modifier years = 10 }
+		# The reason nobody will come is still standing in it.
+		if = {
+			limit = {
+				exists = var:spn_menace_culprit
+				var:spn_menace_culprit = { is_alive = yes }
+			}
+			var:spn_menace_culprit = {
+				add_character_modifier = { modifier = spn_they_stopped_coming_modifier years = 10 }
+			}
+		}
+	}
+}
+
+# ==========================================================================================================
+# 2.35h -- WHEN THE CULPRIT DIES, THE COUNTY DOES NOT STOP BEING FRIGHTENED.
+#
+# Thomas ran the census on a live 346 A.C. save: 23 trails in the world, and only FOUR of them warm. A trail
+# whose culprit is dead can never be hunted -- is_location_valid requires a living one -- so nineteen
+# counties were carrying a mark that no hunter could ever answer, for five years each. That is the whole
+# reason the map looked empty while the system was working perfectly.
+#
+# Two honest outcomes, and no third:
+#
+#   RE-ATTRIBUTED. There is another creature living in that county -- the holder, or somebody in his hall.
+#     The county has a mark, a memory and a monster; it does not have a coroner. Suspicion lands on the one
+#     who is still there. This is how a real panic works and it is why 50-odd living vampires and 19 dead
+#     trails should not coexist.
+#   CLEARED. Nobody is left. The modifier and every variable come off, the county is quiet again, and the
+#     census stops counting a trail that means nothing.
+#
+# Root = the character who just died. Cost is one variable-list walk per death of a character who ever made
+# a mark -- the list is written at the mark, so no county scan happens anywhere.
+# ==========================================================================================================
+spn_menace_culprit_died_effect = {
+	every_in_list = {
+		variable = spn_my_trails
+		limit = { has_county_modifier = spn_menace_modifier }
+		# TEMPORARY scopes throughout: this walks several counties in one call and a saved scope would leak
+		# from one iteration into the next. Every branch below re-saves before it reads.
+		save_temporary_scope_as = spn_dead_culprit_county
+		if = {
+			limit = {
+				holder ?= {
+					OR = {
+						spn_menace_heir_candidate_trigger = yes
+						any_courtier_or_guest = { spn_menace_heir_candidate_trigger = yes }
+					}
+				}
+			}
+			holder = {
+				if = {
+					limit = { spn_menace_heir_candidate_trigger = yes }
+					save_temporary_scope_as = spn_menace_heir
+				}
+				else = {
+					random_courtier_or_guest = {
+						limit = { spn_menace_heir_candidate_trigger = yes }
+						save_temporary_scope_as = spn_menace_heir
+					}
+				}
+			}
+			set_variable = { name = spn_menace_culprit value = scope:spn_menace_heir years = 5 }
+			# The kind follows the new name, or the county would be looking for fangs and find a wolf.
+			scope:spn_menace_heir = {
+				if = {
+					limit = { is_a_demon_trigger = yes }
+					scope:spn_dead_culprit_county = { set_variable = { name = spn_menace_kind value = flag:demon years = 5 } }
+				}
+				else_if = {
+					limit = { has_trait = supernatural_werewolf }
+					scope:spn_dead_culprit_county = { set_variable = { name = spn_menace_kind value = flag:werewolf years = 5 } }
+				}
+				else_if = {
+					limit = { spn_hunt_is_creature_trigger = yes }
+					scope:spn_dead_culprit_county = { set_variable = { name = spn_menace_kind value = flag:vampire years = 5 } }
+				}
+				else = {
+					scope:spn_dead_culprit_county = { set_variable = { name = spn_menace_kind value = flag:witch years = 5 } }
+				}
+				# The new name inherits the trail, so this can happen to them in turn.
+				if = {
+					limit = { NOT = { is_target_in_variable_list = { name = spn_my_trails target = scope:spn_dead_culprit_county } } }
+					add_to_variable_list = { name = spn_my_trails target = scope:spn_dead_culprit_county }
+				}
+			}
+		}
+		else = {
+			# Nothing left here. Take the whole thing off rather than leave an unhuntable mark on the map.
+			remove_county_modifier = spn_menace_modifier
+			if = { limit = { has_variable = spn_menace_culprit }  remove_variable = spn_menace_culprit }
+			if = { limit = { has_variable = spn_menace_kind }     remove_variable = spn_menace_kind }
+			if = { limit = { has_variable = spn_menace_count }    remove_variable = spn_menace_count }
+			if = { limit = { has_variable = spn_menace_notified } remove_variable = spn_menace_notified }
+		}
+	}
+}

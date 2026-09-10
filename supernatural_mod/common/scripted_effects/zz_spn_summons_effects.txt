@@ -1,0 +1,233 @@
+﻿# Supernatural 2.35g -- THE SUMMONS. Effects for "Send for a Hunter" (Something Stalks [county], option e).
+#
+# NOT in common/on_action/. Third time this update: a scripted effect defined in that folder does not parse
+# and everything below it in the file silently ceases to exist.
+
+# ----------------------------------------------------------------------------------------------------------
+# THE ROSTER. root = the lord. scope:spn_menace_county set. Leaves scope:spn_summons_a / _b / _c, any of
+# which may be missing -- the event shows only the cards it has.
+#
+# Three passes, nearest first, and the order is the point: the man in your own hall, then the men who owe you,
+# then the world. A lord who has kept a hunter at court gets to send the one he knows.
+#
+# COST. Pass three is every_ruler, which is not cheap -- so it runs only when the first two passes have not
+# filled the bench, and only when this option has actually been CHOSEN. The option's own card asks
+# spn_summons_worth_sending_trigger instead, which touches nothing but root. A handful of these a decade
+# worldwide is the shape of it; vanilla runs every_ruler on war declarations (00_religious_war.txt:4176).
+# ----------------------------------------------------------------------------------------------------------
+spn_summons_build_roster_effect = {
+	# Pass 1 -- your own hall.
+	every_courtier_or_guest = {
+		limit = { spn_summons_candidate_trigger = yes }
+		add_to_list = spn_summons_pool
+	}
+	# Pass 2 -- the men who owe you. Vassals only, not vassal_or_below: a king does not know every knight in
+	# every county, and every_vassal_or_below on an emperor is a scan nobody should pay for.
+	every_vassal = {
+		limit = { spn_summons_candidate_trigger = yes }
+		add_to_list = spn_summons_pool
+	}
+	# Pass 3 -- the world, if the bench is still thin.
+	if = {
+		limit = { NOT = { any_in_list = { list = spn_summons_pool  count >= 3 } } }
+		every_ruler = {
+			limit = {
+				spn_summons_candidate_trigger = yes
+				spn_summons_in_reach_trigger = yes
+			}
+			add_to_list = spn_summons_pool
+		}
+	}
+	# Three names off the bench. Distinct by construction.
+	random_in_list = {
+		list = spn_summons_pool
+		weight = { base = 1  modifier = { add = 2  has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 40 } } }
+		save_scope_as = spn_summons_a
+	}
+	random_in_list = {
+		list = spn_summons_pool
+		limit = { NOT = { this = scope:spn_summons_a } }
+		save_scope_as = spn_summons_b
+	}
+	random_in_list = {
+		list = spn_summons_pool
+		limit = {
+			NOT = { this = scope:spn_summons_a }
+			trigger_if = { limit = { exists = scope:spn_summons_b }  NOT = { this = scope:spn_summons_b } }
+		}
+		save_scope_as = spn_summons_c
+	}
+}
+
+# ----------------------------------------------------------------------------------------------------------
+# THE LETTER GOES OUT. root = the lord. $HUNTER$ = the man he picked. scope:spn_menace_county set.
+#
+# Nothing is paid here and nothing is promised in gold the lord does not have -- the fee is written down and
+# comes due when the thing is dead. That is deliberate: a lord who sends for a hunter and then loses his
+# treasury still owes him, and the payoff checks that he is alive and can pay.
+# ----------------------------------------------------------------------------------------------------------
+spn_summons_send_effect = {
+	# Banked before the fee is computed: spn_summons_fee_value reads the hunter's own reputation off
+	# scope:spn_summons_target, and a value cannot read a scope that is set after it.
+	$HUNTER$ = { save_scope_as = spn_summons_target }
+	add_character_flag = { flag = spn_summons_sent_recently years = 3 }
+	scope:spn_menace_county = { set_variable = { name = spn_summons_answered value = yes years = 10 } }
+	$HUNTER$ = {
+		set_variable = { name = spn_summons_county value = scope:spn_menace_county years = 10 }
+		set_variable = { name = spn_summons_lord value = root years = 10 }
+		set_variable = { name = spn_summons_fee value = root.spn_summons_fee_value years = 10 }
+		trigger_event = { id = spn_hunt.0007 days = { 5 20 } }
+	}
+}
+
+# root = the hunter. He said yes. The county is already on him from the letter; this is the part the lord
+# is told about, and the reason the hunt itself changes shape (spn_hunter_pull_value reads spn_summons_county).
+spn_summons_accept_effect = {
+	add_character_flag = { flag = spn_summons_accepted days = 3650 }
+	if = {
+		limit = { exists = var:spn_summons_lord }
+		var:spn_summons_lord = {
+			add_opinion = { target = root  modifier = spn_answered_the_summons_opinion  years = 10 }
+			trigger_event = { id = spn_hunt.0009 days = { 3 8 } }
+		}
+	}
+}
+
+# root = the hunter. He said no, or the lord refused his price. Everything is torn up; the county is free to
+# send for somebody else in a year rather than ten.
+spn_summons_refuse_effect = {
+	if = {
+		limit = { exists = var:spn_summons_county }
+		var:spn_summons_county = { set_variable = { name = spn_summons_answered value = yes years = 1 } }
+	}
+	if = {
+		limit = { exists = var:spn_summons_lord }
+		var:spn_summons_lord = { trigger_event = { id = spn_hunt.0011 days = { 3 8 } } }
+	}
+	spn_summons_clear_effect = yes
+}
+
+spn_summons_clear_effect = {
+	if = { limit = { has_variable = spn_summons_county } remove_variable = spn_summons_county }
+	if = { limit = { has_variable = spn_summons_lord }   remove_variable = spn_summons_lord }
+	if = { limit = { has_variable = spn_summons_fee }    remove_variable = spn_summons_fee }
+	if = { limit = { has_character_flag = spn_summons_accepted } remove_character_flag = spn_summons_accepted }
+}
+
+# ----------------------------------------------------------------------------------------------------------
+# THE PURSE. root = the hunter. scope:spn_hunt_county set. Called from the hunt's conclusion beside
+# spn_hunt_complete_contract_effect, and shaped like it on purpose: same guard, same clear-up, same idea that
+# the county the contract named is the only county that pays.
+#
+# Thomas: "say I get like 100 gold for completing the contract, and then the event triggers after everything's
+# said and done that the lord pays me." That is exactly the order -- the kill is resolved, THEN the purse.
+# ----------------------------------------------------------------------------------------------------------
+spn_hunt_summons_payoff_effect = {
+	if = {
+		limit = {
+			has_character_flag = spn_summons_accepted
+			exists = var:spn_summons_county
+			exists = scope:spn_hunt_county
+			var:spn_summons_county = scope:spn_hunt_county
+			exists = var:spn_summons_lord
+			var:spn_summons_lord = { is_alive = yes }
+		}
+		var:spn_summons_lord = { save_scope_as = spn_summons_payer }
+		save_scope_value_as = { name = spn_summons_purse  value = var:spn_summons_fee }
+		# A lord who cannot pay pays what he has and wears it. pay_short_term_gold is vanilla's own
+		# transfer and prints the line in the toast; the shortfall becomes a debt on him, which is the
+		# correct outcome for a man who hired a hunter he could not afford.
+		scope:spn_summons_payer = {
+			pay_short_term_gold = { gold = scope:spn_summons_purse  target = root }
+			add_opinion = { target = root  modifier = spn_paid_the_hunter_opinion  years = 10 }
+		}
+		add_prestige = medium_prestige_gain
+		trigger_event = { id = spn_hunt.0012 days = { 2 6 } }
+		spn_summons_clear_effect = yes
+	}
+}
+
+# ----------------------------------------------------------------------------------------------------------
+# THE REDIRECT. root = the cornered creature. scope:spn_hunter, scope:spn_cornered set.
+#
+# It does NOT invent a new hunt outcome. The hunter's side is `fled` -- from where he is standing the
+# result is identical, he came for something and it is not here any more -- so the entire existing tail
+# (spn_hunt.0211, the conclusion, the log entry) runs unchanged. What is new is the county he now cannot
+# stop thinking about, which spn_hunter_pull_value reads at +40 for five years.
+# ----------------------------------------------------------------------------------------------------------
+spn_redirect_effect = {
+	location.county = {
+		random_neighboring_county = {
+			limit = {
+				has_county_modifier = spn_menace_modifier
+				exists = var:spn_menace_count
+				trigger_if = {
+					limit = { exists = var:spn_menace_count  exists = var:spn_menace_culprit }
+					var:spn_menace_count >= 3
+					var:spn_menace_culprit = { is_alive = yes  NOT = { this = scope:spn_cornered } }
+				}
+				trigger_else = { always = no }
+			}
+			save_scope_as = spn_redirect_county
+			var:spn_menace_culprit = { save_scope_as = spn_thrown_to_the_wolves }
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_redirect_county }
+		scope:spn_hunter = {
+			set_variable = { name = spn_redirect_county value = scope:spn_redirect_county years = 5 }
+			# He rode out for nothing and was told where to go instead. The two-year stamp is what would
+			# otherwise keep him at home for the whole of that window, so it comes off -- being talked into
+			# a different county is the one case where a hunt SHOULD be able to follow another immediately.
+			if = {
+				limit = { has_character_flag = spn_hunt_on_cooldown }
+				remove_character_flag = spn_hunt_on_cooldown
+			}
+		}
+		# The man you just sold. He does not know it was you unless he is good enough to work it out.
+		if = {
+			limit = { exists = scope:spn_thrown_to_the_wolves }
+			scope:spn_thrown_to_the_wolves = { trigger_event = { id = spn_hunt.0031 days = { 10 40 } } }
+		}
+	}
+}
+
+# ----------------------------------------------------------------------------------------------------------
+# THE WARNING. root = a creature that has just gone to ground. Called wherever spn_gone_to_ground_modifier
+# is granted from a hunt.
+#
+# Thomas: "I'm a hunter and I'm trying to go after a vampire, but I got that gone event because they
+# bailed out. I think it would be really cool if the vampire who bailed out gets an event opportunity to
+# let their progeny and/or sire know that a hunter just came after them and to be a little more careful."
+#
+# Only fires if there is somebody to write to -- a creature with no maker and no get gets nothing, which
+# is its own kind of answer.
+# ----------------------------------------------------------------------------------------------------------
+spn_kin_warning_check_effect = {
+	if = {
+		limit = {
+			is_alive = yes
+			NOT = { has_character_flag = spn_sent_word_recently }
+			OR = {
+				any_relation = { type = pprogeny     is_alive = yes  is_adult = yes }
+				any_relation = { type = mmaker       is_alive = yes  is_adult = yes }
+				any_relation = { type = ww_clawed    is_alive = yes  is_adult = yes }
+				any_relation = { type = ww_clawed_by is_alive = yes  is_adult = yes }
+			}
+		}
+		add_character_flag = { flag = spn_sent_word_recently years = 3 }
+		trigger_event = { id = spn_hunt.0030 days = { 3 12 } }
+	}
+}
+
+# root = the creature sending word. $TYPE$ = pprogeny | mmaker | ww_clawed | ww_clawed_by.
+# Forewarned is the SAME flag the hunt's own early-warning beat grants (spn_hunt.0020 option a), so kin who
+# are told get exactly the advantage the creature itself would have had: +10 on the going-to-ground duel.
+spn_warn_kin_effect = {
+	every_relation = {
+		type = $TYPE$
+		limit = { is_alive = yes  is_adult = yes  spn_hunt_is_creature_trigger = yes }
+		add_character_flag = { flag = spn_forewarned years = 1 }
+		add_opinion = { target = root  modifier = spn_warned_me_opinion  years = 10 }
+	}
+}

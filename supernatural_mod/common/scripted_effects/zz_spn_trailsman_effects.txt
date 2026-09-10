@@ -1,0 +1,134 @@
+﻿# Supernatural 2.35 -- the Trailsman. The two reports (2.35 §3, §4).
+#
+# Root = the EMPLOYER in both effects. scope:spn_trailsman is the court position holder, saved by the task's
+# on_yearly before it calls in here, so the report events can show his face.
+#
+# Landed rulers: random_realm_county. Landless adventurers: the county the camp stands in, else one beside it
+# (random_neighboring_county) -- an adventurer has no realm to walk, only the ground he is on. Same split the
+# hunt itself uses (province_filter = all for the player, ai_province_filter = domicile_realm for the AI).
+#
+# Each county is stamped when it is used, so a Trailsman kept on the same task for a decade does not report the
+# same trail every spring. The stamps run 5 years, the same life as the trail itself.
+
+# WHERE. Finds one unreported trail and sends Word from the Trailsman.
+spn_trailsman_find_trail_effect = {
+	if = {
+		limit = { is_landless_adventurer = yes }
+		# 2.35h -- THE ADVENTURER'S TRAILSMAN WAS LOOKING AT ONE RING AND FINDING NOTHING.
+		#
+		# Thomas: "I don't think I've ever received a notification that, hey, there's actually a monster
+		# available." He never would have. The old version looked at the county the camp was standing in
+		# and its immediate neighbours -- about six counties -- against a world that the census showed
+		# holds four warm trails. A landed lord meanwhile scanned random_realm_county, a dozen counties
+		# he is entitled to, every single year. The position was doing its job for one kind of employer
+		# and quietly nothing for the other.
+		#
+		# The fix is not a bigger ring. It is to ask the question a Trailsman actually answers: of every
+		# trail the WORLD is carrying, is any of them close enough to ride to? spn_menace_counties is the
+		# global list the trail writer already maintains, and the reach test is the hunt's own
+		# (spn_max_hunt_distance), so the Trailsman can never report a county the planner would then
+		# refuse -- which is the failure mode that would make him worse than useless.
+		random_in_global_list = {
+			variable = spn_menace_counties
+			limit = {
+				spn_trailsman_trail_is_news_trigger = yes
+				trigger_if = {
+					limit = { exists = root.location }
+					title_province ?= {
+						squared_distance = {
+							target = root.location
+							value <= squared_distance_large
+						}
+					}
+				}
+				trigger_else = { always = no }
+			}
+			save_scope_as = spn_menace_county
+		}
+		# ...and the ground he is actually standing on, if the list has not caught up with it (the global
+		# list only holds trails opened since 2.35c; an older save's counties are not in it).
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_menace_county }
+				location ?= { county ?= { spn_trailsman_trail_is_news_trigger = yes } }
+			}
+			location.county = { save_scope_as = spn_menace_county }
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_menace_county }
+				location ?= { county ?= { always = yes } }
+			}
+			location.county = {
+				random_neighboring_county = {
+					limit = { spn_trailsman_trail_is_news_trigger = yes }
+					save_scope_as = spn_menace_county
+				}
+			}
+		}
+	}
+	else = {
+		random_realm_county = {
+			limit = { spn_trailsman_trail_is_news_trigger = yes }
+			save_scope_as = spn_menace_county
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_menace_county }
+		save_scope_as = spn_hunt_lord
+		scope:spn_menace_county = {
+			set_variable = { name = spn_trailsman_reported value = yes years = 5 }
+		}
+		trigger_event = { id = spn_hunt.0400 days = { 0 20 } }
+	}
+}
+
+# WHO. Runs a warm trail down to the creature standing at the end of it.
+# The county is picked on county-side facts only; whether this lord can already name the culprit is checked
+# afterwards, off the saved scope, where root is unambiguously the lord. A lord who already holds the secret
+# gets nothing but the stamp -- the Trailsman spent the year confirming what his master already knew.
+# spn_hunt_learn_culprit_effect is 2.35's own reveal (random_secret ... reveal_to), not a second copy of it.
+spn_trailsman_follow_trail_effect = {
+	if = {
+		limit = { is_landless_adventurer = yes }
+		if = {
+			limit = {
+				exists = location
+				location = { exists = county }
+				location.county = { spn_trailsman_trail_is_unnamed_trigger = yes }
+			}
+			location.county = { save_scope_as = spn_menace_county }
+		}
+		else_if = {
+			limit = { exists = location  location = { exists = county } }
+			location.county = {
+				random_neighboring_county = {
+					limit = { spn_trailsman_trail_is_unnamed_trigger = yes }
+					save_scope_as = spn_menace_county
+				}
+			}
+		}
+	}
+	else = {
+		random_realm_county = {
+			limit = { spn_trailsman_trail_is_unnamed_trigger = yes }
+			save_scope_as = spn_menace_county
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_menace_county }
+		save_scope_as = spn_hunt_lord
+		scope:spn_menace_county = {
+			set_variable = { name = spn_trailsman_named value = yes years = 5 }
+		}
+		if = {
+			limit = {
+				NOT = {
+					spn_hunt_knows_culprit_trigger = { CULPRIT = scope:spn_menace_county.var:spn_menace_culprit }
+				}
+			}
+			spn_hunt_learn_culprit_effect = yes
+			trigger_event = { id = spn_hunt.0401 days = { 0 20 } }
+		}
+	}
+}

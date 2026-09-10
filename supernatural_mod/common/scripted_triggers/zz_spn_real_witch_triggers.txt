@@ -1,0 +1,30 @@
+﻿# Supernatural 2.35 -- find a real witch before inventing one.
+#
+# Same principle as zz_spn_real_hunter_triggers.txt, applied to the other half of the hunter's world. Thomas,
+# 8 Sep 2026: "I want every interaction to be as, like, oh my god. I'm interacting with real characters versus
+# random ass characters that I'll never see again."
+#
+# "Someone spotted a witch" (spn_hunters.0001) has always called create_character unconditionally: a woman is
+# conjured at your capital, used for one chain, and left in the world as set dressing. The Witchcraft half of
+# this mod puts real witches in courts everywhere -- the witch trait, secret_witch, the covens -- and the beat
+# should use one of them whenever one is close enough to be the person the county is whispering about.
+#
+# Character scope: the candidate. root = the hunter who is looking.
+
+spn_real_witch_candidate_trigger = {
+	is_alive = yes
+	is_adult = yes
+	is_imprisoned = no
+	is_incapable = no
+	NOT = { this = root }
+	# Vanilla's own definition of a witch (00_crime_triggers.txt:6), written out rather than called: the
+	# scripted trigger wraps itself in a custom_description, which inside an any_ list makes the engine log
+	# "Scope dependent values in localization inside an any trigger" on every evaluation.
+	OR = {
+		has_trait = witch
+		any_secret = { secret_type = secret_witch }
+	}
+	# A creature is somebody else's problem. This chain is the witch chain.
+	NOT = { spn_hunt_is_creature_trigger = yes }
+	NOT = { has_trait = supernatural_hunter }
+}

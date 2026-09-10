@@ -17,6 +17,8 @@
 			has_trait = supernatural_vampire
 			has_trait = supernatural_hybrid
 		}
+		# 2.35 -- a vampire that has gone to ground from a hunter (spn_hunt.0020 / .0200) stays in for the year.
+		NOT = { has_character_modifier = spn_gone_to_ground_modifier }
 	}
 	
 	#is_grand_activity = no
@@ -537,7 +539,12 @@
 		# Constantinople on the menu from Ireland. Travel time does the rest of the limiting.
 		# This is the tuning knob if the range ever feels wrong: small / medium / large / huge.
 		# The threshold is its own script value so the AGOT patch can retune it for that map.
-		vf_host_distance_to_province <= spn_vf_max_feeding_distance
+		# 2.35a -- WRAPPED, same defect as the hunt: the bare comparison printed
+		# `province_named_script_value_less_or_equal` in red on the feeding planner. Unchanged otherwise.
+		custom_tooltip = {
+			text = spn_vf_location_too_far_tt
+			vf_host_distance_to_province <= spn_vf_max_feeding_distance
+		}
 	}
 
 	# 2.32 -- was domicile_realm for both, which meant every city on the picker was yours or a
@@ -545,7 +552,15 @@
 	# The player roams; the AI stays home, so no worldwide scan runs on every AI planner tick.
 	# Vanilla splits these the same way in monument_expedition (all / top_realm).
 	province_filter = all
-	ai_province_filter = domicile_realm
+	# 2.35 -- WIDENED from domicile_realm. The AI never once started this activity in a 20-year test
+	# campaign: domicile_realm confined it to its own realm, is_location_valid needs a city or tribal
+	# holding, and an AI vampire whose realm is all castles therefore had no valid province, ever.
+	# top_realm gives a vassal the whole of his top liege's realm -- a count can now feed in his
+	# neighbour's city, which is the point -- without `all`, which the engine explicitly warns against
+	# because the planner rescans it on every AI tick.
+	# TRADE-OFF: a landless AI adventurer has no realm, so it loses the domicile province it used to
+	# get here. Landless AI creatures are rare; the landless PLAYER is unaffected (province_filter = all).
+	ai_province_filter = top_realm
 
 	max_province_icons = 6
 	allow_zero_guest_invites = yes

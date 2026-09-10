@@ -1,0 +1,53 @@
+﻿# Supernatural 2.35 -- the Trailsman. Triggers for the court position that reads the trail (2.35 §3).
+#
+# A "trail" is the county modifier Something Stalks Here (spn_menace_modifier) plus the county variables
+# spn_menace_culprit / spn_menace_kind / spn_menace_count that spn_mark_menace_effect writes. Nothing here
+# creates a trail; the Trailsman only reads what the four writers (W1-W4) already put on the map.
+#
+# All three are COUNTY-side only. The "does this lord already know the culprit" test deliberately lives in the
+# effect instead, where the county is a saved scope (scope:spn_menace_county.var:spn_menace_culprit) and the
+# lord is root -- reaching back up to a county's variable with `prev` from inside a nested character scope is
+# the kind of construction that reads fine and resolves badly.
+
+# A trail worth walking out to: still warm, and its culprit still breathing.
+spn_trailsman_trail_is_warm_trigger = {
+	has_county_modifier = spn_menace_modifier
+	exists = var:spn_menace_culprit
+	# 2.35c -- GUARDED, and the `exists` line above was NOT enough on its own. CK3 evaluates every sibling of
+	# an AND regardless of whether an earlier one failed, so on a county with no culprit the read below fell
+	# back to the county scope and is_alive was handed a landed_title -- 33 real errors in one 17-minute boot,
+	# one per realm county the Trailsman looked at. trigger_if's limit is what actually gates evaluation.
+	trigger_if = {
+		limit = { exists = var:spn_menace_culprit }
+		var:spn_menace_culprit = { is_alive = yes }
+	}
+}
+
+# ...and not already reported by Read the Countryside. The report stamps spn_trailsman_reported for 5 years, so
+# the same county is not walked twice while the same trail is on it.
+spn_trailsman_trail_is_news_trigger = {
+	spn_trailsman_trail_is_warm_trigger = yes
+	NOT = { has_variable = spn_trailsman_reported }
+}
+
+# ...and not already run down by Follow the Trail. Same idea, its own stamp.
+spn_trailsman_trail_is_unnamed_trigger = {
+	spn_trailsman_trail_is_warm_trigger = yes
+	NOT = { has_variable = spn_trailsman_named }
+}
+
+# Character scope. Is there ground here for a Trailsman to read at all? A landed ruler reads his own realm; a
+# landless adventurer reads the county the camp is standing in and the ones beside it, because he has no realm.
+spn_trailsman_has_ground_to_read_trigger = {
+	OR = {
+		AND = {
+			is_landless_adventurer = no
+			any_realm_county = { always = yes }
+		}
+		AND = {
+			is_landless_adventurer = yes
+			exists = location
+			location = { exists = county }
+		}
+	}
+}

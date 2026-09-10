@@ -110,3 +110,86 @@ spn_debug_events.0100 = {
 		spn_blood_took_the_blow_effect = yes
 	}
 }
+
+# ==================================================================================================
+# 0200 -- THE CENSUS.  Console:  event spn_debug_events.0200
+#
+# Written 9 Sep 2026 because Thomas asked the right question -- "is it that no trails are being
+# created, or that other hunters are beating me to them?" -- and the honest answer was that nobody
+# could tell from outside the save. This counts, on the spot, the things the hunting layer runs on.
+#
+# It is a MANUAL event (orphan = yes) and it walks every county and every ruler in the world, which
+# is exactly the kind of scan that must never be on a pulse. Run it, read it, move on.
+#
+# What the numbers mean:
+#   TRAILS      counties currently carrying Something Stalks Here. If this is 0 after years of play,
+#               nothing is writing marks and the problem is upstream of every roll.
+#   WARM        of those, the ones whose culprit is still alive -- the only ones a hunt can use.
+#   WITCH       of those, the ones a Witch Hunt can be pointed at.
+#   HUNTERS     living adult rulers carrying the hunter trait. The pool the summons draws from.
+#   CREATURES   living adult rulers who are a vampire, werewolf, hybrid or demon.
+#   WITCHES     living adult rulers carrying the witch trait.
+#   RUNNING     global_var:spn_hunts_running against the world cap of four.
+# ==================================================================================================
+spn_debug_events.0200 = {
+	type = character_event
+	title = spn_debug_events.0200.t
+	desc = spn_debug_events.0200.desc
+	orphan = yes
+	theme = intrigue
+
+	immediate = {
+		# 2.35h -- a NAMED scope, because [ROOT.MakeScope.Var(...)] printed the raw key in red.
+		# Vanilla's own working form is a named scope every time (Activity.MakeScope.Var('skill_chance')).
+		save_scope_as = spn_census
+		set_variable = { name = spn_dbg_trails   value = 0 }
+		set_variable = { name = spn_dbg_warm     value = 0 }
+		set_variable = { name = spn_dbg_witch    value = 0 }
+		set_variable = { name = spn_dbg_hunters  value = 0 }
+		set_variable = { name = spn_dbg_creature value = 0 }
+		set_variable = { name = spn_dbg_witches  value = 0 }
+		set_variable = { name = spn_dbg_running  value = 0 }
+		# 2.35h -- and the two questions Thomas could not answer about HIMSELF after a kill of his own left a
+		# trail: the on_death writer's door opens for a creature, a witch by trait, or a witch by SECRET.
+		set_variable = { name = spn_dbg_self_creature value = 0 }
+		set_variable = { name = spn_dbg_self_witch    value = 0 }
+		if = { limit = { spn_hunt_is_creature_trigger = yes } set_variable = { name = spn_dbg_self_creature value = 1 } }
+		if = {
+			limit = { OR = { has_trait = witch  any_secret = { secret_type = secret_witch } } }
+			set_variable = { name = spn_dbg_self_witch value = 1 }
+		}
+		if = {
+			limit = { exists = global_var:spn_hunts_running }
+			set_variable = { name = spn_dbg_running value = global_var:spn_hunts_running }
+		}
+		every_county = {
+			limit = { has_county_modifier = spn_menace_modifier }
+			root = { change_variable = { name = spn_dbg_trails add = 1 } }
+			if = {
+				limit = { spn_trailsman_trail_is_warm_trigger = yes }
+				root = { change_variable = { name = spn_dbg_warm add = 1 } }
+				if = {
+					limit = { var:spn_menace_kind ?= flag:witch }
+					root = { change_variable = { name = spn_dbg_witch add = 1 } }
+				}
+			}
+		}
+		every_ruler = {
+			limit = { is_alive = yes  is_adult = yes }
+			if = {
+				limit = { has_trait = supernatural_hunter }
+				root = { change_variable = { name = spn_dbg_hunters add = 1 } }
+			}
+			if = {
+				limit = { spn_hunt_is_creature_trigger = yes }
+				root = { change_variable = { name = spn_dbg_creature add = 1 } }
+			}
+			if = {
+				limit = { has_trait = witch }
+				root = { change_variable = { name = spn_dbg_witches add = 1 } }
+			}
+		}
+	}
+
+	option = { name = spn_debug_events.0200.a }
+}

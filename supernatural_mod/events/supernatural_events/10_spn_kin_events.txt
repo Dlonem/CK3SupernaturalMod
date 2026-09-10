@@ -1,0 +1,218 @@
+﻿namespace = spn_hunt
+
+# Supernatural 2.35g -- THE CASCADE. What a creature does the night after it got away.
+#
+# Thomas, 9 Sep 2026: "do we have any external events? For example... I'm a hunter and I'm trying to go after
+# a vampire, but I got that gone event because they bailed out. I think it would be really cool if the vampire
+# who bailed out gets an event opportunity to let their progeny and/or sire know that a hunter just came after
+# them and to be a little more careful."
+#
+# Until now, going to ground ended the story at the person it happened to. It should not: a bloodline is the
+# one structure in this mod that already links creatures to each other by name (pprogeny/mmaker, and
+# ww_clawed/ww_clawed_by for the wolves), and a hunter in the county is exactly the news that travels along it.
+#
+# The warning is not a new mechanic. It grants spn_forewarned -- the SAME flag the hunt's own early-warning
+# beat grants -- so kin who are told get precisely the advantage the creature itself would have had, +10 on
+# the duel to disappear. Nothing new to balance, and the loop reads correctly: the thing that saved you is
+# the thing you can hand on.
+
+# ==========================================================================================================
+# Send Word. root = the creature that just went to ground.
+# ==========================================================================================================
+spn_hunt.0030 = {
+	type = character_event
+	title = spn_hunt.0030.t
+	desc = spn_hunt.0030.desc
+	theme = intrigue
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = paranoia }
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+	}
+
+	immediate = {
+		save_scope_as = spn_kin_sender
+		random_relation = {
+			type = pprogeny
+			limit = { is_alive = yes is_adult = yes spn_hunt_is_creature_trigger = yes }
+			save_scope_as = spn_kin_get
+		}
+		if = {
+			limit = { NOT = { exists = scope:spn_kin_get } }
+			random_relation = {
+				type = ww_clawed
+				limit = { is_alive = yes is_adult = yes spn_hunt_is_creature_trigger = yes }
+				save_scope_as = spn_kin_get
+			}
+		}
+		random_relation = {
+			type = mmaker
+			limit = { is_alive = yes is_adult = yes spn_hunt_is_creature_trigger = yes }
+			save_scope_as = spn_kin_maker
+		}
+		if = {
+			limit = { NOT = { exists = scope:spn_kin_maker } }
+			random_relation = {
+				type = ww_clawed_by
+				limit = { is_alive = yes is_adult = yes spn_hunt_is_creature_trigger = yes }
+				save_scope_as = spn_kin_maker
+			}
+		}
+	}
+
+	# Warn my get.
+	option = {
+		name = spn_hunt.0030.a
+		trigger = { exists = scope:spn_kin_get }
+		custom_tooltip = spn_hunt.0030.a.tt
+		spn_warn_kin_effect = { TYPE = pprogeny }
+		spn_warn_kin_effect = { TYPE = ww_clawed }
+		ai_chance = {
+			base = 40
+			modifier = { add = 25 has_trait = compassionate }
+			modifier = { add = 20 has_trait = family_first }
+			modifier = { add = -20 has_trait = callous }
+		}
+	}
+	# Warn the one who made me.
+	option = {
+		name = spn_hunt.0030.b
+		trigger = { exists = scope:spn_kin_maker }
+		custom_tooltip = spn_hunt.0030.b.tt
+		spn_warn_kin_effect = { TYPE = mmaker }
+		spn_warn_kin_effect = { TYPE = ww_clawed_by }
+		ai_chance = {
+			base = 30
+			modifier = { add = 25 has_trait = humble }
+			modifier = { add = 20 scope:spn_kin_maker ?= { opinion = { target = root value >= 30 } } }
+			modifier = { add = -25 has_trait = arrogant }
+		}
+	}
+	# Everyone. It is a longer night and more mouths, and it costs to keep them all straight.
+	option = {
+		name = spn_hunt.0030.c
+		trigger = {
+			exists = scope:spn_kin_get
+			exists = scope:spn_kin_maker
+		}
+		custom_tooltip = spn_hunt.0030.c.tt
+		spn_warn_kin_effect = { TYPE = pprogeny }
+		spn_warn_kin_effect = { TYPE = ww_clawed }
+		spn_warn_kin_effect = { TYPE = mmaker }
+		spn_warn_kin_effect = { TYPE = ww_clawed_by }
+		add_stress = minor_stress_impact_gain
+		ai_chance = {
+			base = 25
+			modifier = { add = 30 has_trait = diligent }
+			modifier = { add = 20 has_trait = paranoid }
+		}
+	}
+	# 2.35g -- AND THE OTHER THING HE ASKED FOR, IN THE SAME EVENT: "I can throw another creature under the
+	# bus." This is that, aimed at family, which is the worst version of it and therefore the one worth having.
+	# It writes a real trail on the county your get is standing in, with your get's name on it -- the same
+	# writer the world uses, so it escalates exactly like an honest one and the lord there will eventually get
+	# his own letter about it. Costs you nothing tonight and may cost you everything later: the mark is real,
+	# and so is what happens if they work out where it came from.
+	option = {
+		name = spn_hunt.0030.d
+		trigger = {
+			exists = scope:spn_kin_get
+			scope:spn_kin_get = {
+				exists = location
+				location = { exists = county }
+			}
+			NOT = { scope:spn_kin_get.location.county = root.location.county }
+		}
+		custom_tooltip = spn_hunt.0030.d.tt
+		hidden_effect = {
+			scope:spn_kin_get = {
+				if = {
+					limit = { OR = { has_trait = supernatural_vampire  has_trait = supernatural_hybrid } }
+					spn_mark_menace_effect = { COUNTY = scope:spn_kin_get.location.county  CULPRIT = scope:spn_kin_get  KIND = vampire  SEVERITY = prowl }
+				}
+				else = {
+					spn_mark_menace_effect = { COUNTY = scope:spn_kin_get.location.county  CULPRIT = scope:spn_kin_get  KIND = werewolf  SEVERITY = prowl }
+				}
+			}
+		}
+		add_stress = medium_stress_impact_gain
+		ai_chance = {
+			base = 5
+			modifier = { add = 35 has_trait = callous }
+			modifier = { add = 30 has_trait = deceitful }
+			modifier = { add = 25 has_trait = craven }
+			modifier = { add = -100 has_trait = compassionate }
+			modifier = { add = -50 has_trait = family_first }
+		}
+	}
+	# Say nothing.
+	option = {
+		name = spn_hunt.0030.e
+		custom_tooltip = spn_hunt.0030.e.tt
+		ai_chance = {
+			base = 20
+			modifier = { add = 30 has_trait = callous }
+			modifier = { add = 25 has_trait = paranoid }
+			modifier = { add = 20 has_trait = arrogant }
+		}
+	}
+}
+
+# ==========================================================================================================
+# Somebody Gave You Up. root = the creature a cornered rival pointed a hunter at (spn_hunt.0200 option f).
+#
+# It does NOT name who did it. The whole value of the redirect as a play is that it is deniable; what arrives
+# here is the fact that a hunter has started asking about you specifically, and the chance to work out why.
+# The intrigue duel is against the man who sold you -- win it and you know, and the opinion hit lands.
+# ==========================================================================================================
+spn_hunt.0031 = {
+	type = character_event
+	title = spn_hunt.0031.t
+	desc = spn_hunt.0031.desc
+	theme = dread
+	override_background = { reference = tavern }
+	left_portrait = { character = root animation = paranoia }
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:spn_cornered
+		scope:spn_cornered = { is_alive = yes }
+	}
+
+	# Who talked?
+	option = {
+		name = spn_hunt.0031.a
+		duel = {
+			skill = intrigue
+			target = scope:spn_cornered
+			localization = spn_hunt_whotalked_duel
+			50 = {
+				desc = spn_hunt.0031.a.found_tt
+				compare_modifier = { value = scope:duel_value multiplier = 2 min = -45 }
+				min = 5
+				add_opinion = { target = scope:spn_cornered  modifier = spn_gave_me_up_opinion  years = 25 }
+				add_character_flag = { flag = spn_forewarned years = 1 }
+			}
+			50 = {
+				desc = spn_hunt.0031.a.lost_tt
+				compare_modifier = { value = scope:duel_value multiplier = -2 min = -45 }
+				min = 5
+				add_stress = minor_stress_impact_gain
+			}
+		}
+	}
+	# Watch the road instead.
+	option = {
+		name = spn_hunt.0031.b
+		custom_tooltip = spn_hunt.0031.b.tt
+		add_character_flag = { flag = spn_forewarned years = 1 }
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = craven }
+			modifier = { add = 20 has_trait = paranoid }
+		}
+	}
+}

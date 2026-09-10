@@ -4388,6 +4388,41 @@ add_xp_2_grandmaster_inheriting = {
 }
 spawn_witch_hunter_full_chance_effect = {
 	$EMPL$ = { save_scope_as = empl }
+	# ==========================================================================================================
+	# SUPERNATURAL 2.35 PART TWO -- ADDED, one block at the top, nothing below changed. (W-W2, order §3.3, §12.)
+	#
+	# THE BRIDGE, in one place. Thomas: "I would get insta-arrested and then put on trial and then killed more
+	# or less out of complete thin air, which is why I typically turn the W-Hunters off in the game rules."
+	#
+	# The spawn is deliberately LEFT ALONE this pass -- upstream's behaviour is upstream's. What is added is
+	# the thing that was missing on the other side of it: a county that remembers. After this, casting a big
+	# spell does what feeding does. It writes a mark, the lord notices at three, and a hunter can come and
+	# LOOK -- which means the caster can see it coming, and can cover it up with the same five answers every
+	# other creature in this mod gets.
+	#
+	# ONE BLOCK RATHER THAN TEN. The order's §12 lists this as ten separate hunks at the ten ungated call
+	# sites in 00_magic_interactions.txt. Putting it in the shared effect instead is strictly narrower --
+	# one added block instead of ten edits, in a file already on the permitted list -- it cannot miss a call
+	# site, and it covers the ev10 callers too. Recorded in the session doc as a deliberate narrowing.
+	#
+	# SEVERITY is prowl here: nobody was found in an alley. The two spells that DO leave a body (consume_child
+	# and plague_spell) write their own `kill` mark first, and the incident-dedupe flag that mark leaves is
+	# what makes this one skip -- so a killing spell is one incident, not two.
+	if = {
+		limit = {
+			scope:empl = {
+				NOT = { has_character_flag = spn_menace_marked_recently }
+				exists = location
+				location = { exists = county }
+			}
+		}
+		spn_mark_menace_effect = {
+			COUNTY = scope:empl.location.county
+			CULPRIT = scope:empl
+			KIND = witch
+			SEVERITY = prowl
+		}
+	}
 	hidden_effect_new_object = {
 		if = {
 			limit = {
@@ -9629,6 +9664,17 @@ make_demon_effect = {
 			remove_trait = demon0
 		}
 		healing_old_age_effect = yes
+		# SUPERNATURAL 2.35 PART TWO -- ADDED, one line, nothing above changed. (Order §5.4, §12.)
+		#
+		# THERE WAS A PERSON HERE. Every path that MAKES a demon out of somebody runs this effect -- the
+		# demon0 maturation (magic_ev3.75, magic_ev2.38), the magic eruption, the Ascendancy project,
+		# Abraxas's courtier -- and no path that SUMMONS one does, because a summoned demon is created from
+		# a character template and never comes through here.
+		#
+		# So this flag is the whole of the question exorcism turns on: the ones who were made can be given
+		# back, and the ones who were only ever smoke wearing a body cannot. It changes nothing about how
+		# the demon behaves, and nothing upstream reads it.
+		add_character_flag = spn_was_mortal
 	}
 }
 
@@ -12105,6 +12151,31 @@ demon_escapes_effect = {
 			start_scheme = {
 				type = murder
 				target_character = scope:this0
+			}
+		}
+		# ==================================================================================================
+		# SUPERNATURAL 2.35 PART TWO -- ADDED, one call, nothing above changed. (D-W1, order §3.2, §12.)
+		#
+		# This is the canonical "a demon is loose in the world" path and it was already shaped like a loose
+		# monster: it gives the escapee a landless adventurer title, a nemesis relation and a murder scheme
+		# against the man who let it out. Everything except a county that remembers -- which is now the one
+		# thing the Supernatural hunt needs in order to be able to come and look for it.
+		#
+		# The mark goes on the SUMMONER's county, because that is where it happened and where the bodies
+		# will be. Guarded so it cannot fire without a county to write on.
+		# ==================================================================================================
+		if = {
+			limit = {
+				exists = scope:demon
+				exists = scope:this0
+				scope:this0 = { exists = location }
+				scope:this0.location = { exists = county }
+			}
+			spn_mark_menace_effect = {
+				COUNTY = scope:this0.location.county
+				CULPRIT = scope:demon
+				KIND = demon
+				SEVERITY = kill
 			}
 		}
 	}

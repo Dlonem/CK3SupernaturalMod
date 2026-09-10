@@ -1,0 +1,592 @@
+﻿namespace = spn_hunt
+
+# Supernatural 2.35 PART TWO -- "The Bridge". THE DEMON HUNT.
+# WORK-ORDER-2.35-PART-TWO-THE-BRIDGE §4.3-4.5 and §5.
+#
+# Before this release demons were not in the trail system at all. spn_hunt_is_creature_trigger was three lines
+# -- vampire, werewolf, hybrid -- and no demon had ever left a mark, been a culprit, or drawn a hunt. There was
+# no exorcism anywhere in the mod: fourteen case-insensitive hits on "exorcis", all of them localisation, in
+# seven languages, reducing to two English lines that nothing ever printed.
+#
+# So this file is where the two halves of the mod meet. A demon leaves the same county trail a vampire does,
+# a lord gets the same letter, a hunter rides to the same county -- and then everything is different, because
+# a demon does not run, does not feed, and cannot be staked.
+#
+# THE REGISTER (Thomas, 9 Sep 2026): "Borrow some of that demon lore from Supernatural for sure... demons are
+# from hell, and they're black smoke -- obviously we don't allude to it too far." Folklore and TV-show
+# demonology, lightly worn. No "elder", no underworld mumbo jumbo. A demon is smoke that wears a person.
+#
+# Numbers 0160-0169 so nothing collides with the tracking pool (0100-0113), the witch pool (0120s), the lord's
+# chain (0001-0010, 0130), What They Will Find (0140), or the field events (0150s).
+#
+# Root = the host (activity events) except It Knows Your Name, which is the demon's.
+
+# ==========================================================================================================
+# §4.3 THE FIELD -- two for the tracking pool, one for the demon.
+# ==========================================================================================================
+
+# Nothing Was Taken -- the distinguishing tell, and the reason a demon reads at 65 rather than 50.
+# A vampire's kill is missing something. A wolf's is torn. A demon's is complete, and wrong.
+spn_hunt.0160 = {
+	type = activity_event
+	title = spn_hunt.0160.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { spn_hunt_reads_demon_trigger = yes }
+				desc = spn_hunt.0160.desc_reads
+			}
+			desc = spn_hunt.0160.desc
+		}
+	}
+	theme = dread
+	override_background = { reference = ce1_condemned_village }
+	left_portrait = { character = root animation = disbelief }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0160 }
+			has_activity_option = { category = special_type option = spn_hunt_kind_monster }
+			var:spn_hunt_kind ?= flag:demon
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0160 value = yes } }
+	}
+
+	# Stop looking for what is missing. Start looking at what was left.
+	option = {
+		name = spn_hunt.0160.a
+		custom_tooltip = spn_hunt.0160.a.tt
+		spn_hunt_chance_change_effect = { VALUE = 14 }
+		add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 4 9 } }
+		ai_chance = {
+			base = 55
+			modifier = { add = 30 spn_hunt_reads_demon_trigger = yes }
+			modifier = { add = 25 has_trait = shrewd }
+			modifier = { add = 20 learning >= 12 }
+		}
+	}
+	# Ask the priest what he is not writing down.
+	option = {
+		name = spn_hunt.0160.b
+		custom_tooltip = spn_hunt.0160.b.tt
+		spn_hunt_chance_change_effect = { VALUE = 8 }
+		add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 3 8 } }
+		ai_chance = {
+			base = 45
+			modifier = { add = 35 has_trait = zealous }
+			modifier = { add = 25 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 25 } }
+			modifier = { add = -20 has_trait = cynical }
+		}
+	}
+}
+
+# The Ones Who Signed -- the cyrograph's fingerprint, read from OUTSIDE for the first time in the mod.
+#
+# no_soul_modifier has existed since the Witchcraft layer shipped and nothing has ever looked at it from the
+# outside: it is a thing that happens to you, not a thing anyone can see. A hunter who knows what a room full
+# of very lucky, very unhappy people means can follow the contracts back to what wrote them.
+spn_hunt.0161 = {
+	type = activity_event
+	title = spn_hunt.0161.t
+	desc = spn_hunt.0161.desc
+	theme = intrigue
+	override_background = { reference = feast } # 2.35a art pass -- was market. The Ones Who Signed: you notice him because he is the only man in the HALL having a good year.
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_hunt_signatory animation = worry }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0161 }
+			# 2.35 PART TWO -- was the monster-kind option. A Witch Hunt on a witch trail runs the same
+			# spine and this beat belongs to it too.
+			spn_hunt_runs_the_trail_trigger = yes
+		}
+		scope:activity.activity_location.county ?= {
+			holder ?= {
+				any_courtier_or_guest = {
+					count >= 1
+					is_alive = yes
+					has_character_modifier = no_soul_modifier
+				}
+			}
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = { set_variable = { name = spn_hunt_ev_0161 value = yes } }
+		scope:activity.activity_location.county.holder = {
+			random_courtier_or_guest = {
+				limit = { is_alive = yes  has_character_modifier = no_soul_modifier }
+				save_scope_as = spn_hunt_signatory
+			}
+		}
+	}
+
+	# Follow the contracts.
+	option = {
+		name = spn_hunt.0161.a
+		trigger = { exists = scope:spn_hunt_signatory }
+		custom_tooltip = spn_hunt.0161.a.tt
+		spn_hunt_chance_change_effect = { VALUE = 16 }
+		add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 4 10 } }
+		ai_chance = {
+			base = 60
+			modifier = { add = 30 has_trait = diligent }
+			modifier = { add = 25 intrigue >= 12 }
+		}
+	}
+	# Tell him what he signed, and what is coming for it.
+	option = {
+		name = spn_hunt.0161.b
+		trigger = { exists = scope:spn_hunt_signatory }
+		custom_tooltip = spn_hunt.0161.b.tt
+		spn_hunt_chance_change_effect = { VALUE = 6 }
+		scope:spn_hunt_signatory = {
+			add_opinion = { target = root modifier = spn_slew_the_menace_opinion }
+			add_stress = medium_stress_impact_gain
+		}
+		stress_impact = {
+			base = minor_stress_impact_gain
+			compassionate = minor_stress_impact_gain
+		}
+		ai_chance = {
+			base = 35
+			modifier = { add = 35 has_trait = honest }
+			modifier = { add = 30 has_trait = compassionate }
+			modifier = { add = 25 has_trait = just }
+			modifier = { add = -30 has_trait = callous }
+		}
+	}
+	# Leave them to it. Whatever they signed, they signed.
+	option = {
+		name = spn_hunt.0161.c
+		custom_tooltip = spn_hunt.0161.c.tt
+		ai_chance = {
+			base = 20
+			modifier = { add = 35 has_trait = callous }
+			modifier = { add = 25 has_trait = cynical }
+			modifier = { add = -35 has_trait = compassionate }
+		}
+	}
+}
+
+# It Knows Your Name -- the demon-side mirror of He Asked About You By Name, and the demon's answer is
+# different. A vampire that hears a hunter is in the county thinks about where else it could be. A demon
+# thinks about the hunter.
+spn_hunt.0162 = {
+	type = character_event
+	title = spn_hunt.0162.t
+	desc = spn_hunt.0162.desc
+	theme = dread
+	override_background = { reference = study } # 2.35a art pass -- was corridor_night. It Knows Your Name: the demon is not fleeing, it is thinking about him.
+	left_portrait = { character = root animation = scheme }
+	right_portrait = { character = scope:spn_hunter animation = aggressive_sword }
+
+	trigger = {
+		is_alive = yes
+		is_a_demon_trigger = yes
+		exists = scope:spn_hunter
+		scope:spn_hunter = { is_alive = yes }
+		exists = scope:spn_hunt_activity
+	}
+
+	# Let him come and find out.
+	option = {
+		name = spn_hunt.0162.a
+		custom_tooltip = spn_hunt.0162.a.tt
+		add_character_flag = { flag = spn_forewarned days = 180 }
+		ai_chance = {
+			base = 70
+			modifier = { add = 25 has_trait = arrogant }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = 25 has_trait = demon2 }
+		}
+	}
+	# Find out what he wants first. Everybody wants something.
+	option = {
+		name = spn_hunt.0162.b
+		trigger = { has_perk = deals_with_mortals_perk }
+		custom_tooltip = spn_hunt.0162.b.tt
+		add_character_flag = { flag = spn_demon_will_deal days = 180 }
+		ai_chance = {
+			base = 50
+			modifier = { add = 40 has_perk = crossroad_dealer_perk }
+			modifier = { add = 30 has_trait = deceitful }
+			modifier = { add = 25 has_trait = patient }
+			modifier = { add = -30 has_trait = wrathful }
+		}
+	}
+	# Make the county quieter before he gets to it.
+	option = {
+		name = spn_hunt.0162.c
+		custom_tooltip = spn_hunt.0162.c.tt
+		spn_hunt_chance_change_effect = { VALUE = -12 }
+		if = {
+			limit = { location ?= { county ?= { has_county_modifier = spn_menace_modifier } } }
+			location.county = { spn_menace_clear_one_effect = yes }
+		}
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = paranoid }
+			modifier = { add = 25 has_trait = shrewd }
+			modifier = { add = 25 has_trait = craven }
+		}
+	}
+}
+
+# ==========================================================================================================
+# §4.4 THE CONFRONTATION -- five ways it ends.
+#
+# This is the demon's door, fired from Cornered's `after` in place of Someone Is Asking Questions: the demon
+# does not get the creature's menu because a demon does not flee, does not send its progeny and cannot be
+# looked in the eye. It gets a conversation, and the hunter gets four ways to end it and one way to leave.
+#
+# The title is the moment: he has opened the door and the thing on the other side of it is wearing somebody.
+# ==========================================================================================================
+spn_hunt.0163 = {
+	type = activity_event
+	title = spn_hunt.0163.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_defender = { spn_hunt_demon_is_named_trigger = yes } }
+				desc = spn_hunt.0163.desc_named
+			}
+			triggered_desc = {
+				trigger = { scope:spn_defender = { has_trait = demon2 } }
+				desc = spn_hunt.0163.desc_greater
+			}
+			triggered_desc = {
+				trigger = { scope:spn_defender = { spn_hunt_demon_was_mortal_trigger = yes } }
+				desc = spn_hunt.0163.desc_made
+			}
+			desc = spn_hunt.0163.desc
+		}
+	}
+	theme = dread
+	override_background = { reference = ruined_holding } # 2.35a art pass -- was corridor_night. What Is Standing There: the room a demon chose to be found in.
+	left_portrait = { character = root animation = aggressive_sword }
+	right_portrait = { character = scope:spn_defender animation = scheme }
+
+	# The scopes ride in from Cornered's `after`, where scope:spn_defender was saved in its immediate. The
+	# trigger tests the CULPRIT rather than the defender, and the immediate re-derives the defender if it is
+	# somehow missing -- an event that silently does not fire here would end the confrontation with no
+	# outcome and no explanation, which is the one failure mode this whole release exists to remove.
+	trigger = {
+		exists = scope:spn_culprit
+		scope:spn_culprit = { is_alive = yes }
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		if = {
+			limit = { NOT = { exists = scope:spn_defender } }
+			scope:spn_culprit = { save_scope_as = spn_defender }
+			spn_hunt_compute_fight_bonus_effect = yes
+		}
+	}
+
+	# Exorcise it. The whole point of the release.
+	option = {
+		name = spn_hunt.0163.a
+		trigger = {
+			custom_tooltip = {
+				text = spn_hunt_exorcise_needs_tt
+				spn_hunt_can_exorcise_trigger = yes
+			}
+			custom_tooltip = {
+				text = spn_hunt_exorcise_named_tt
+				scope:spn_defender = { spn_hunt_demon_is_named_trigger = no }
+			}
+		}
+		custom_tooltip = spn_hunt.0163.a.tt
+		spn_hunt_exorcise_effect = yes
+		ai_chance = {
+			base = 55
+			modifier = { add = 30 has_trait = zealous }
+			modifier = { add = 25 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 60 } }
+			# The only thing that ends a Prince of Hell (E10), and a hunter who knows that knows it.
+			modifier = { add = 40 scope:spn_defender = { has_trait = demon2 } }
+			# There is a person under it.
+			modifier = { add = 35 scope:spn_defender = { spn_hunt_demon_was_mortal_trigger = yes } has_trait = compassionate }
+			modifier = { add = 20 scope:spn_defender = { spn_hunt_demon_was_mortal_trigger = yes } has_trait = just }
+		}
+	}
+	# Banish it. Fast, clean, and available to almost nobody.
+	option = {
+		name = spn_hunt.0163.b
+		trigger = {
+			custom_tooltip = {
+				text = spn_hunt_banish_needs_tt
+				spn_hunt_can_banish_trigger = yes
+			}
+			# Upstream's own immunity (00_magic_interactions.txt:1114). A Prince of Hell cannot be banished by
+			# anyone, which is exactly why exorcism had to exist.
+			custom_tooltip = {
+				text = spn_hunt_banish_greater_tt
+				scope:spn_defender = { NOT = { has_trait = demon2 } }
+			}
+			custom_tooltip = {
+				text = spn_hunt_exorcise_named_tt
+				scope:spn_defender = { spn_hunt_demon_is_named_trigger = no }
+			}
+		}
+		custom_tooltip = spn_hunt.0163.b.tt
+		spn_hunt_set_outcome_effect = { OUTCOME = slain }
+		add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 8 16 } }
+		# BANK FIRST -- the track and the household are both read off a demon this option is about to kill,
+		# and the conclusion pays the prestige and fires the orphan out of them afterwards.
+		scope:spn_defender = {
+			save_scope_value_as = { name = spn_hunt_banished_track value = spn_hunt_creature_track_value }
+			spn_hunt_bank_the_household_effect = yes
+		}
+		scope:spn_hunt_activity = {
+			set_variable = { name = spn_hunt_slain_kind value = flag:demon }
+			set_variable = { name = spn_hunt_slain_track value = scope:spn_hunt_banished_track }
+		}
+		scope:spn_hunter = { spn_write_slew_the_beast_memory_effect = { CREATURE = scope:spn_defender } }
+		# LAST. Upstream's banish_demon_spell_effect reads scope:recipient and scope:actor, so both are set
+		# here and the effect itself is untouched -- it runs `death = natural` inside its own custom tooltip.
+		save_scope_as = actor
+		scope:spn_defender = { save_scope_as = recipient }
+		banish_demon_spell_effect = yes
+		ai_chance = {
+			base = 70
+			modifier = { add = 25 has_trait = impatient }
+			modifier = { add = 20 has_trait = zealous }
+		}
+	}
+	# Fight it. The part-one fight, unchanged.
+	option = {
+		name = spn_hunt.0163.c
+		custom_tooltip = spn_hunt.0163.c.tt
+		spn_hunt_fight_effect = { DEFENDER = scope:spn_defender }
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = 20 prowess >= 15 }
+			modifier = { add = -35 has_trait = craven }
+			# Nothing you can do with a blade ends a Prince of Hell, and a veteran knows it.
+			modifier = { add = -40 scope:spn_defender = { has_trait = demon2 } spn_hunt_reads_demon_trigger = yes }
+		}
+	}
+	# Hear it out.
+	option = {
+		name = spn_hunt.0163.d
+		trigger = {
+			scope:spn_defender = {
+				OR = {
+					has_perk = deals_with_mortals_perk
+					has_character_flag = spn_demon_will_deal
+				}
+			}
+			# You already heard it out and told it no. It does not offer twice, and without this the refusal
+			# in The Bargain in the Field re-opens this door and the pair loop forever.
+			scope:spn_hunt_activity = { NOT = { has_variable = spn_hunt_refused_the_deal } }
+		}
+		custom_tooltip = spn_hunt.0163.d.tt
+		trigger_event = spn_hunt.0164
+		ai_chance = {
+			base = 15
+			modifier = { add = 35 has_trait = greedy }
+			modifier = { add = 25 has_trait = ambitious }
+			modifier = { add = 30 has_trait = craven }
+			modifier = { add = -45 has_trait = zealous }
+			modifier = { add = -35 has_trait = just }
+			modifier = { add = -25 has_trait = honest }
+		}
+	}
+	# Walk away. §8.5's exit, on the branch that needs it most.
+	option = {
+		name = spn_hunt.0163.e
+		custom_tooltip = spn_hunt.0163.e.tt
+		spn_hunt_set_outcome_effect = { OUTCOME = withdrew }
+		add_prestige = -25
+		add_stress = minor_stress_impact_gain
+		ai_chance = {
+			base = 20
+			modifier = { add = 45 has_trait = craven }
+			modifier = { add = 25 has_trait = content }
+			modifier = { add = 25 has_trait = calm }
+			# Nothing here can hurt it and it knows that.
+			modifier = { add = 40 scope:spn_defender = { has_trait = demon2 } NOT = { spn_hunt_can_exorcise_trigger = yes } }
+			modifier = { add = 30 NOT = { spn_hunt_can_exorcise_trigger = yes } }
+			# A good hunter takes the exit RATIONALLY, which is its own characterisation.
+			modifier = { add = 20 spn_hunt_reads_demon_trigger = yes scope:spn_defender = { has_trait = demon2 } }
+			modifier = { add = -35 has_trait = brave }
+			modifier = { add = -35 has_trait = zealous }
+			modifier = { add = -25 has_trait = vengeful }
+		}
+	}
+}
+
+# §4.5 The Bargain in the Field.
+spn_hunt.0164 = {
+	type = activity_event
+	title = spn_hunt.0164.t
+	desc = spn_hunt.0164.desc
+	theme = intrigue
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = worry }
+	right_portrait = { character = scope:spn_defender animation = scheme }
+
+	trigger = {
+		exists = scope:spn_defender
+		scope:spn_defender = { is_alive = yes }
+	}
+
+	immediate = { spn_hunt_bind_scopes_effect = yes }
+
+	# Sign.
+	option = {
+		name = spn_hunt.0164.a
+		custom_tooltip = spn_hunt.0164.a.tt
+		custom_tooltip = spn_hunt.0164.a.tt2
+		spn_hunt_demon_bargain_effect = yes
+		ai_chance = {
+			base = 25
+			modifier = { add = 40 has_trait = greedy }
+			modifier = { add = 30 has_trait = ambitious }
+			modifier = { add = 25 has_trait = craven }
+			modifier = { add = 30 health < 0.5 }
+			modifier = { add = 25 age >= 55 }
+			modifier = { add = -50 has_trait = zealous }
+			modifier = { add = -40 has_trait = just }
+			modifier = { add = -30 has_trait = honest }
+			# A man who can put demons down does not need to owe one anything -- and upstream already knew
+			# that: magic_ev8.20's renege weight carries the same test the other way round.
+			modifier = { add = -40 spn_hunt_can_banish_trigger = yes }
+		}
+	}
+	# Do not sign. The insult is worth something.
+	option = {
+		name = spn_hunt.0164.b
+		custom_tooltip = spn_hunt.0164.b.tt
+		scope:spn_hunt_activity = { set_variable = { name = spn_hunt_refused_the_deal value = yes } }
+		add_prestige = 50
+		add_piety = { value = minor_piety_value multiply = 2 }
+		scope:spn_hunt_activity = {
+			if = {
+				limit = { NOT = { exists = var:spn_hunt_fight_bonus } }
+				set_variable = { name = spn_hunt_fight_bonus value = 0 }
+			}
+			change_variable = { name = spn_hunt_fight_bonus add = 5 }
+		}
+		trigger_event = spn_hunt.0163
+		ai_chance = {
+			base = 60
+			modifier = { add = 40 has_trait = zealous }
+			modifier = { add = 30 has_trait = just }
+			modifier = { add = 25 has_trait = brave }
+			modifier = { add = -35 has_trait = greedy }
+		}
+	}
+}
+
+# The One You Brought Back -- the questline after a made demon is freed (§5.4). Root = the hunter.
+spn_hunt.0165 = {
+	type = character_event
+	title = spn_hunt.0165.t
+	desc = spn_hunt.0165.desc
+	theme = family
+	override_background = { reference = courtyard } # 2.35a art pass -- was corridor_day. The One You Brought Back: waiting at the gate since before light.
+	left_portrait = { character = root animation = personality_honorable }
+	right_portrait = { character = scope:spn_freed_person animation = shame }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_freed_person
+		scope:spn_freed_person = { is_alive = yes }
+	}
+
+	# Take them in.
+	option = {
+		name = spn_hunt.0165.a
+		trigger = { is_landed_or_landless_administrative = yes }
+		custom_tooltip = spn_hunt.0165.a.tt
+		scope:spn_freed_person = {
+			set_employer = root
+			add_character_flag = spn_owes_the_hunter
+		}
+		add_stress = minor_stress_impact_loss
+		ai_chance = {
+			base = 60
+			modifier = { add = 30 has_trait = compassionate }
+			modifier = { add = 25 has_trait = just }
+			modifier = { add = 20 has_trait = generous }
+			modifier = { add = -25 has_trait = paranoid }
+		}
+	}
+	# Send them into the world owing you one.
+	option = {
+		name = spn_hunt.0165.b
+		custom_tooltip = spn_hunt.0165.b.tt
+		scope:spn_freed_person = {
+			add_character_flag = spn_owes_the_hunter
+			add_gold = 25
+		}
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = paranoid }
+			modifier = { add = 25 has_trait = cynical }
+			modifier = { add = 20 has_trait = callous }
+		}
+	}
+}
+
+# It Did Not Go -- the exorcism failed (§5.3). Root = the hunter. Failure does NOT kill him: it drops him into
+# the part-one fight at -20, and the way out is a grudge rather than a grave.
+spn_hunt.0166 = {
+	type = activity_event
+	title = spn_hunt.0166.t
+	desc = spn_hunt.0166.desc
+	theme = dread
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = stress }
+	right_portrait = { character = scope:spn_defender animation = anger }
+
+	trigger = {
+		exists = scope:spn_defender
+		scope:spn_defender = { is_alive = yes }
+	}
+
+	immediate = { spn_hunt_bind_scopes_effect = yes }
+
+	# Finish it with steel.
+	option = {
+		name = spn_hunt.0166.a
+		custom_tooltip = spn_hunt.0166.a.tt
+		spn_hunt_fight_effect = { DEFENDER = scope:spn_defender }
+		ai_chance = {
+			base = 40
+			modifier = { add = 35 has_trait = brave }
+			modifier = { add = 25 has_trait = wrathful }
+			modifier = { add = 20 has_trait = zealous }
+			modifier = { add = -40 has_trait = craven }
+			modifier = { add = -30 scope:spn_defender = { has_trait = demon2 } }
+		}
+	}
+	# Break it off. Thomas: "beat the snot out of him and send him running."
+	option = {
+		name = spn_hunt.0166.b
+		custom_tooltip = spn_hunt.0166.b.tt
+		spn_hunt_break_it_off_effect = yes
+		ai_chance = {
+			base = 55
+			modifier = { add = 35 has_trait = craven }
+			modifier = { add = 25 has_trait = calm }
+			modifier = { add = 25 has_trait = patient }
+			modifier = { add = 30 scope:spn_defender = { has_trait = demon2 } }
+			# A good hunter knows the odds. That is what makes him a good hunter.
+			modifier = { add = 25 spn_hunt_reads_demon_trigger = yes }
+			modifier = { add = -30 has_trait = brave }
+			modifier = { add = -30 has_trait = vengeful }
+		}
+	}
+}

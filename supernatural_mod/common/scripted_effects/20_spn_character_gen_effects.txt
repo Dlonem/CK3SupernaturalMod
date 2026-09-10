@@ -38,14 +38,30 @@ spn_create_local_vampire_effect = {
 	}
 }
 
+# 2.35h -- capital_province IS NULL FOR ANYONE UNLANDED, and this effect is called on characters who
+# are: "Fetched null province from capital_province link", 24 times in one observer run, each of which
+# aborts the create. location is the link that always resolves -- the same correction
+# spn_find_or_make_tavern_talker_effect already carries in its own comment.
 spn_create_local_lycan_effect = {
-	#Create them
-	create_character = {
-		save_temporary_scope_as = spn_created_lycan
-		location = $FROMCHAR$.capital_province
-		culture = $FROMCHAR$.culture
-		faith = $FROMCHAR$.faith
-		template = spn_werewolf_template
+	if = {
+		limit = { $FROMCHAR$ = { exists = capital_province } }
+		create_character = {
+			save_temporary_scope_as = spn_created_lycan
+			location = $FROMCHAR$.capital_province
+			culture = $FROMCHAR$.culture
+			faith = $FROMCHAR$.faith
+			template = spn_werewolf_template
+		}
+	}
+	else_if = {
+		limit = { $FROMCHAR$ = { exists = location } }
+		create_character = {
+			save_temporary_scope_as = spn_created_lycan
+			location = $FROMCHAR$.location
+			culture = $FROMCHAR$.culture
+			faith = $FROMCHAR$.faith
+			template = spn_werewolf_template
+		}
 	}
 }
 

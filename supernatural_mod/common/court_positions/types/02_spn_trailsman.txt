@@ -1,0 +1,343 @@
+﻿# Supernatural 2.35 -- the Trailsman. Two entries, one job: a man who reads what a creature left behind.
+#
+# WHY TWO. CK3 keeps landed court positions and landless camp officers in the same database but gates them on
+# opposite government flags, and an officer takes no salary. Supernatural already does this once -- the Court
+# Mage is landed, cult_priest_camp_officer is the camp -- so the Trailsman follows that house pattern rather
+# than inventing a third shape. Both share the same three tasks (02_spn_trailsman_tasks.txt).
+#
+# The employer does NOT have to be a hunter. A lord who has never held a stake still wants to know which of his
+# counties is being fed on; that is the whole point of Something Stalks [county]. Being a hunter only makes you
+# BETTER at the job, which is why supernatural_hunter is the biggest term in the aptitude below.
+
+spn_trailsman_court_position = {
+	sort_order = 697
+	max_available_positions = 1
+	minimum_rank = county
+	skill = prowess
+
+	court_position_asset = {
+		animation = hunting_knife_start
+		background = "gfx/interface/illustrations/event_scenes/ep2_hunt_foggy_forest.dds"
+	}
+
+	is_shown = {
+		is_landed_or_landless_administrative = yes
+	}
+
+	opinion = {
+		value = regular_court_position_opinion
+	}
+
+	aptitude_level_breakpoints = { 20 40 60 80 }
+
+	# root = the courtier being weighed. Tracking is legs and eyes (prowess), and knowing what you are looking
+	# at (martial). Everything above that is having done it before.
+	aptitude = {
+		value = 1
+		add = {
+			value = prowess
+			multiply = 1.5
+			max = 30
+			desc = court_position_skill_prowess
+		}
+		add = {
+			value = martial
+			multiply = 0.75
+			max = 15
+			desc = court_position_skill_martial
+		}
+		if = {
+			limit = { has_trait = supernatural_hunter }
+			add = {
+				value = 35
+				desc = spn_trailsman_aptitude_hunter
+			}
+		}
+		else_if = {
+			limit = { has_trait = witch_hunter }
+			add = {
+				value = 15
+				desc = spn_trailsman_aptitude_witch_hunter
+			}
+		}
+		if = {
+			limit = { has_trait = lifestyle_hunter }
+			add = {
+				value = 15
+				desc = spn_trailsman_aptitude_lifestyle_hunter
+			}
+		}
+		if = {
+			limit = { has_trait = patient }
+			add = {
+				value = 10
+				desc = spn_trailsman_aptitude_patient
+			}
+		}
+		if = {
+			limit = { has_trait = athletic }
+			add = {
+				value = 5
+				desc = spn_trailsman_aptitude_athletic
+			}
+		}
+		# A creature does not report on its own kind.
+		if = {
+			limit = { spn_hunt_is_creature_trigger = yes }
+			add = {
+				value = -40
+				desc = spn_trailsman_aptitude_creature
+			}
+		}
+		add = court_position_aptitude_family_business_value
+		add = court_position_aptitude_low_penalty_value
+	}
+
+	valid_position = { }
+
+	is_shown_character = {
+		scope:employee = {
+			OR = {
+				is_courtier_of = scope:liege
+				is_vassal_of = scope:liege
+			}
+		}
+	}
+
+	valid_character = {
+		scope:employee = {
+			is_imprisoned = no
+			is_adult = yes
+			NOT = { has_trait = incapable }
+		}
+	}
+
+	revoke_cost = {
+		prestige = {
+			value = minor_court_position_prestige_revoke_cost
+		}
+	}
+
+	salary = {
+		round = no
+		gold = {
+			value = medium_court_position_salary
+		}
+	}
+
+	scaling_employer_modifiers = {
+		terrible = {
+			monthly_prestige = 0.05
+		}
+		poor = {
+			monthly_prestige = 0.1
+		}
+		average = {
+			monthly_prestige = 0.15
+		}
+		good = {
+			monthly_prestige = 0.2
+		}
+		excellent = {
+			monthly_prestige = 0.25
+		}
+	}
+
+	modifier = {
+		monthly_prestige = 0.1
+	}
+
+	on_court_position_received = {
+		basic_gained_court_position_effect = yes
+	}
+	on_court_position_revoked = {
+		basic_revoked_court_position_effect = yes
+	}
+	on_court_position_invalidated = {
+		basic_invalidated_court_position_effect = yes
+	}
+
+	ai_position_score = {
+		value = 40
+		# A lord whose lands are already being walked on wants one badly.
+		if = {
+			limit = {
+				scope:liege = {
+					any_realm_county = { has_county_modifier = spn_menace_modifier }
+				}
+			}
+			add = 120
+		}
+		if = {
+			limit = { scope:liege = { has_trait = supernatural_hunter } }
+			add = 40
+		}
+		if = {
+			limit = { scope:liege = { has_trait = paranoid } }
+			add = 20
+		}
+	}
+
+	ai_candidate_score = {
+		value = 50
+		add = scope:base_value
+		add = court_position_candidate_score_base_value
+		add = court_position_candidate_aptitude_value
+		add = court_position_debt_considerations_value
+		if = {
+			limit = { scope:employee = { spn_hunt_is_creature_trigger = yes } }
+			add = -400
+		}
+	}
+}
+
+# The camp version. Same job, no salary, and it reads the ground the camp is standing on instead of a realm.
+spn_trailsman_camp_officer = {
+	sort_order = 696
+	max_available_positions = 1
+	skill = prowess
+
+	court_position_asset = {
+		animation = hunting_knife_start
+		background = "gfx/interface/illustrations/event_scenes/ep2_hunt_foggy_forest.dds"
+	}
+
+	is_shown = {
+		government_has_flag = government_is_landless_adventurer
+		has_ep3_dlc_trigger = yes
+	}
+
+	opinion = {
+		value = high_camp_officer_opinion
+	}
+
+	aptitude_level_breakpoints = { 20 40 60 80 }
+
+	aptitude = {
+		value = 0
+		add = {
+			value = prowess
+			multiply = 2
+			max = 40
+			desc = court_position_skill_prowess
+		}
+		add = {
+			value = martial
+			multiply = 1
+			max = 20
+			desc = court_position_skill_martial
+		}
+		if = {
+			limit = { has_trait = supernatural_hunter }
+			add = {
+				value = 35
+				desc = spn_trailsman_aptitude_hunter
+			}
+		}
+		else_if = {
+			limit = { has_trait = witch_hunter }
+			add = {
+				value = 15
+				desc = spn_trailsman_aptitude_witch_hunter
+			}
+		}
+		if = {
+			limit = { has_trait = lifestyle_hunter }
+			add = {
+				value = 15
+				desc = spn_trailsman_aptitude_lifestyle_hunter
+			}
+		}
+		if = {
+			limit = { has_trait = patient }
+			add = {
+				value = 10
+				desc = spn_trailsman_aptitude_patient
+			}
+		}
+		if = {
+			limit = { spn_hunt_is_creature_trigger = yes }
+			add = {
+				value = -40
+				desc = spn_trailsman_aptitude_creature
+			}
+		}
+		add = court_position_aptitude_high_penalty_value
+	}
+
+	valid_position = { }
+
+	is_shown_character = {
+		scope:employee = {
+			is_incapable = no
+		}
+	}
+
+	valid_character = {
+		scope:employee = {
+			is_adult = yes
+			is_imprisoned = no
+			NOT = { has_trait = incapable }
+		}
+	}
+
+	revoke_cost = {
+		prestige = {
+			value = minor_court_position_prestige_revoke_cost
+		}
+	}
+
+	salary = {
+		# Camp officers take no salary.
+	}
+
+	scaling_employer_modifiers = {
+		terrible = {
+			monthly_prestige = 0.05
+		}
+		poor = {
+			monthly_prestige = 0.1
+		}
+		average = {
+			monthly_prestige = 0.2
+		}
+		good = {
+			monthly_prestige = 0.3
+		}
+		excellent = {
+			monthly_prestige = 0.4
+		}
+	}
+
+	modifier = {
+		monthly_prestige = 0.1
+	}
+
+	on_court_position_received = {
+		basic_gained_camp_officer_effect = yes
+	}
+	on_court_position_revoked = {
+		basic_revoked_camp_officer_effect = yes
+	}
+	on_court_position_invalidated = {
+		basic_invalidated_camp_officer_effect = yes
+	}
+
+	ai_position_score = {
+		value = 80
+		if = {
+			limit = { scope:liege = { has_trait = supernatural_hunter } }
+			add = 60
+		}
+	}
+
+	ai_candidate_score = {
+		value = 200
+		add = court_position_candidate_score_base_value
+		add = court_position_candidate_aptitude_value
+		if = {
+			limit = { scope:employee = { spn_hunt_is_creature_trigger = yes } }
+			add = -400
+		}
+	}
+}

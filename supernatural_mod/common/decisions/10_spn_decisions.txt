@@ -336,7 +336,11 @@ spn_abandon_hunter_decision = {
 ### Vampire Feeding | Satiate Bloodthirst ###
 #############################################
 spn_satiate_bloodlust_decision = {
-	ai_check_interval = 0
+	# 2.35 -- WAS 0. _decisions.info:109 -- "An interval of 0 means the AI will never check this
+	# decision." Every AI weight below was therefore inert: 12 years of a fresh campaign with ~96
+	# vampires produced zero feeds and zero trails, because no AI ever looked at this at all.
+	# 24 months against a 14-year AI cooldown is about seven chances per cycle.
+	ai_check_interval = 24
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_activity.dds"
 	}
@@ -347,13 +351,46 @@ spn_satiate_bloodlust_decision = {
 	# 2.32 -- revived. This was 100% commented out, which meant PURE VAMPIRES HAD NO FEEDING
 	# DECISION AT ALL: the 50/50 that felt familiar belongs to the hybrid decision below.
 	# All six loc keys have been shipping in eight languages the whole time.
-	# Player-only, matching every other live decision in this file.
+	# 2.35 -- no longer player-only; see the ai_potential / ai_will_do below.
 	ai_potential = {
-		always = no
+		# is_shown is not evaluated for the AI, so the species gate has to be here as well --
+		# otherwise every character in the world is run through this decision every cycle.
+		has_trait = supernatural_vampire
+		is_available_adult = yes
+		is_at_war = no
+		is_imprisoned = no
+		NOT = { has_character_flag = spn_ai_satiated_recently }
 	}
 
+	# 2.35 -- the AI feeds. It never did before: ai_potential was `always = no` and ai_will_do was 0, so
+	# in a 20-year test campaign not one county in the world carried a trail. Weights are the feeding
+	# activity's own 2.33 personality block, so the lord who would host a feeding is the lord who slips
+	# out for one, and the two never drift apart.
 	ai_will_do = {
-		base = 0
+		base = 40
+		modifier = { add = 20  has_trait = gluttonous }
+		modifier = { add = 15  has_trait = sadistic }
+		modifier = { add = 10  has_trait = callous }
+		modifier = { add = 12  has_trait = ambitious }
+		modifier = { add = 10  has_trait = wrathful }
+		modifier = { add = 8  has_trait = arrogant }
+		modifier = { add = 8  has_trait = lustful }
+		modifier = { add = 6  has_trait = impatient }
+		modifier = { add = -20 has_trait = content }
+		modifier = { add = -15 has_trait = temperate }
+		modifier = { add = -15 has_trait = paranoid }
+		modifier = { add = -12 has_trait = calm }
+		modifier = { add = -12 has_trait = compassionate }
+		modifier = { add = -10 has_trait = craven }
+		modifier = { add = -10 has_trait = zealous }
+		modifier = { add = -8 has_trait = humble }
+		modifier = { add = -8 has_trait = chaste }
+		# Hunger overrides temperament.
+		modifier = { add = 25 stress_level >= 2 }
+		# Early in the blood, and still hungry for it.
+		modifier = { add = 20 has_trait_xp = { trait = supernatural_vampire track = vampirism value < 25 } }
+		# A hall with people in it. A lord alone with his guards does not go out for the night.
+		modifier = { add = 15 any_courtier = { is_adult = yes } }
 	}
 
 	is_shown = {
@@ -369,6 +406,8 @@ spn_satiate_bloodlust_decision = {
 			value < 100
 		}
 		is_imprisoned = no
+		# 2.35 -- a creature that has gone to ground from a hunter does not go out to feed (spn_hunt.0020 / .0200).
+		NOT = { has_character_modifier = spn_gone_to_ground_modifier }
 		years_from_game_start >= 1
 	}
 
@@ -388,6 +427,15 @@ spn_satiate_bloodlust_decision = {
 			id = spn_gain_power.4010
 			days = 3
 		}
+	
+
+		# 2.35 -- the AI's own cadence. The cooldown above is the player's; an AI creature that has just
+		# fed carries this for fourteen years, so the world's creatures feed on a slow, visible rhythm
+		# rather than every lord in the realm slipping out the moment a cooldown lifts.
+		if = {
+			limit = { is_ai = yes }
+			add_character_flag = { flag = spn_ai_satiated_recently years = 14 }
+		}
 	}
 }
 
@@ -395,8 +443,12 @@ spn_satiate_bloodlust_decision = {
 #########################################
 ### Werewolf Feeding | Satiate Hunger ###
 #########################################
- spn_satiate_hunger_decision = {
- 	ai_check_interval = 0
+spn_satiate_hunger_decision = {
+	# 2.35 -- WAS 0. _decisions.info:109 -- "An interval of 0 means the AI will never check this
+	# decision." Every AI weight below was therefore inert: 12 years of a fresh campaign with ~96
+	# vampires produced zero feeds and zero trails, because no AI ever looked at this at all.
+	# 24 months against a 14-year AI cooldown is about seven chances per cycle.
+	ai_check_interval = 24
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_activity.dds"
 	}
@@ -404,13 +456,46 @@ spn_satiate_bloodlust_decision = {
 	selection_tooltip = spn_satiate_hunger_decision_tooltip
  	cooldown = { years = 5 }
 	
- 	ai_potential = {
- 		always = no
- 	}
-	
- 	ai_will_do = {
- 		base = 0
- 	}
+	ai_potential = {
+		# is_shown is not evaluated for the AI, so the species gate has to be here as well --
+		# otherwise every character in the world is run through this decision every cycle.
+		has_trait = supernatural_werewolf
+		is_available_adult = yes
+		is_at_war = no
+		is_imprisoned = no
+		NOT = { has_character_flag = spn_ai_satiated_recently }
+	}
+
+	# 2.35 -- the AI feeds. It never did before: ai_potential was `always = no` and ai_will_do was 0, so
+	# in a 20-year test campaign not one county in the world carried a trail. Weights are the feeding
+	# activity's own 2.33 personality block, so the lord who would host a feeding is the lord who slips
+	# out for one, and the two never drift apart.
+	ai_will_do = {
+		base = 40
+		modifier = { add = 20  has_trait = gluttonous }
+		modifier = { add = 15  has_trait = sadistic }
+		modifier = { add = 10  has_trait = callous }
+		modifier = { add = 12  has_trait = ambitious }
+		modifier = { add = 10  has_trait = wrathful }
+		modifier = { add = 8  has_trait = arrogant }
+		modifier = { add = 8  has_trait = lustful }
+		modifier = { add = 6  has_trait = impatient }
+		modifier = { add = -20 has_trait = content }
+		modifier = { add = -15 has_trait = temperate }
+		modifier = { add = -15 has_trait = paranoid }
+		modifier = { add = -12 has_trait = calm }
+		modifier = { add = -12 has_trait = compassionate }
+		modifier = { add = -10 has_trait = craven }
+		modifier = { add = -10 has_trait = zealous }
+		modifier = { add = -8 has_trait = humble }
+		modifier = { add = -8 has_trait = chaste }
+		# Hunger overrides temperament.
+		modifier = { add = 25 stress_level >= 2 }
+		# Early in the blood, and still hungry for it.
+		modifier = { add = 20 has_trait_xp = { trait = supernatural_werewolf track = lycanthropy value < 25 } }
+		# A hall with people in it. A lord alone with his guards does not go out for the night.
+		modifier = { add = 15 any_courtier = { is_adult = yes } }
+	}
  	is_shown = {
 		has_trait = supernatural_werewolf
 	}
@@ -422,6 +507,8 @@ spn_satiate_bloodlust_decision = {
 			value < 100
 		}
 		is_imprisoned = no
+		# 2.35 -- a creature that has gone to ground from a hunter does not go out to feed (spn_hunt.0020 / .0200).
+		NOT = { has_character_modifier = spn_gone_to_ground_modifier }
 		years_from_game_start >= 1
  	}
 
@@ -439,6 +526,15 @@ spn_satiate_bloodlust_decision = {
 			id = spn_gain_power.4020 #Determine Which Hunt Event to Trigger
 			days = 3
 		}
+	
+
+		# 2.35 -- the AI's own cadence. The cooldown above is the player's; an AI creature that has just
+		# fed carries this for fourteen years, so the world's creatures feed on a slow, visible rhythm
+		# rather than every lord in the realm slipping out the moment a cooldown lifts.
+		if = {
+			limit = { is_ai = yes }
+			add_character_flag = { flag = spn_ai_satiated_recently years = 14 }
+		}
 	}
 }
 
@@ -446,8 +542,12 @@ spn_satiate_bloodlust_decision = {
 #########################################
 ### Hybrid Feeding | Satiate Hunger ###
 #########################################
- spn_satiate_bloodhunger_decision = {
- 	ai_check_interval = 0
+spn_satiate_bloodhunger_decision = {
+	# 2.35 -- WAS 0. _decisions.info:109 -- "An interval of 0 means the AI will never check this
+	# decision." Every AI weight below was therefore inert: 12 years of a fresh campaign with ~96
+	# vampires produced zero feeds and zero trails, because no AI ever looked at this at all.
+	# 24 months against a 14-year AI cooldown is about seven chances per cycle.
+	ai_check_interval = 24
 	picture = {
 		reference = "gfx/interface/illustrations/decisions/decision_activity.dds"
 	}
@@ -455,13 +555,46 @@ spn_satiate_bloodlust_decision = {
 	selection_tooltip = spn_satiate_bloodhunger_decision_tooltip
  	cooldown = { years = 7 }
 	
- 	ai_potential = {
- 		always = no
- 	}
-	
- 	ai_will_do = {
- 		base = 0
- 	}
+	ai_potential = {
+		# is_shown is not evaluated for the AI, so the species gate has to be here as well --
+		# otherwise every character in the world is run through this decision every cycle.
+		has_trait = supernatural_hybrid
+		is_available_adult = yes
+		is_at_war = no
+		is_imprisoned = no
+		NOT = { has_character_flag = spn_ai_satiated_recently }
+	}
+
+	# 2.35 -- the AI feeds. It never did before: ai_potential was `always = no` and ai_will_do was 0, so
+	# in a 20-year test campaign not one county in the world carried a trail. Weights are the feeding
+	# activity's own 2.33 personality block, so the lord who would host a feeding is the lord who slips
+	# out for one, and the two never drift apart.
+	ai_will_do = {
+		base = 40
+		modifier = { add = 20  has_trait = gluttonous }
+		modifier = { add = 15  has_trait = sadistic }
+		modifier = { add = 10  has_trait = callous }
+		modifier = { add = 12  has_trait = ambitious }
+		modifier = { add = 10  has_trait = wrathful }
+		modifier = { add = 8  has_trait = arrogant }
+		modifier = { add = 8  has_trait = lustful }
+		modifier = { add = 6  has_trait = impatient }
+		modifier = { add = -20 has_trait = content }
+		modifier = { add = -15 has_trait = temperate }
+		modifier = { add = -15 has_trait = paranoid }
+		modifier = { add = -12 has_trait = calm }
+		modifier = { add = -12 has_trait = compassionate }
+		modifier = { add = -10 has_trait = craven }
+		modifier = { add = -10 has_trait = zealous }
+		modifier = { add = -8 has_trait = humble }
+		modifier = { add = -8 has_trait = chaste }
+		# Hunger overrides temperament.
+		modifier = { add = 25 stress_level >= 2 }
+		# Early in the blood, and still hungry for it.
+		modifier = { add = 20 has_trait_xp = { trait = supernatural_hybrid track = hybrid_lycanthropy value < 25 } }
+		# A hall with people in it. A lord alone with his guards does not go out for the night.
+		modifier = { add = 15 any_courtier = { is_adult = yes } }
+	}
  	is_shown = {
 		has_trait = supernatural_hybrid
  	}
@@ -473,6 +606,8 @@ spn_satiate_bloodlust_decision = {
 			value < 100
 		}
 		is_imprisoned = no
+		# 2.35 -- a creature that has gone to ground from a hunter does not go out to feed (spn_hunt.0020 / .0200).
+		NOT = { has_character_modifier = spn_gone_to_ground_modifier }
 		years_from_game_start >= 1
  	}
 
@@ -505,148 +640,18 @@ spn_satiate_bloodlust_decision = {
 				}
 			}
 		}
+	
+
+		# 2.35 -- the AI's own cadence. The cooldown above is the player's; an AI creature that has just
+		# fed carries this for fourteen years, so the world's creatures feed on a slow, visible rhythm
+		# rather than every lord in the realm slipping out the moment a cooldown lifts.
+		if = {
+			limit = { is_ai = yes }
+			add_character_flag = { flag = spn_ai_satiated_recently years = 14 }
+		}
 	}
 }
 
 
-### Go on a Supernatural Hunt
-# spn_supernatural_hunt_decision = {
-# 	ai_check_interval = 0
-# 	picture = {
-#		reference = "gfx/interface/illustrations/decisions/decision_destiny_goal.dds"
-#	}
-# 	desc = spn_supernatural_hunt_decision_desc
-# 	selection_tooltip = spn_supernatural_hunt_decision_tooltip
-#
-# 	cost = {
-# 		gold = {
-# 			if = {
-# 				limit = {
-# 					spn_has_hunter_trait = yes
-# 					monthly_character_income > 10
-# 				}
-# 				add = monthly_character_income
-# 				multiply = 5
-# 			}
-# 			else = {
-# 				add = 50
-# 			}
-#
-# 			if = {
-# 				limit = {
-# 					OR = {
-#						has_trait_xp = {
-#							trait = supernatural_hybrid
-#							track = hybrid_vampirism
-#							value < 100
-#						}
-#						has_trait_xp = {
-#							trait = supernatural_hybrid
-#							track = hybrid_lycanthropy
-#							value < 100
-#						}
-#						has_trait_xp = {
-#							trait = supernatural_werewolf
-#							track = lycanthropy
-#							value < 100
-#						}
-#						has_trait_xp = {
-#							trait = supernatural_vampire
-#							track = vampirism
-#							value < 100
-#						}
-#						has_trait_xp = {
-#							trait = supernatural_hunter
-#							track = monster_hunting
-#							value < 100
-#						}
-# 					}
-# 				}
-# 				multiply = 1.5
-# 			}
-# 			else_if = {
-# 				limit = {
-# 					OR = {
-#						has_trait_xp = {
-#							trait = supernatural_hybrid
-#							track = hybrid_vampirism
-#							value <= 200
-#						}
-#						has_trait_xp = {
-#							trait = supernatural_hybrid
-#							track = hybrid_lycanthropy
-#							value <= 200
-#						}
-#						has_trait_xp = {
-#							trait = supernatural_werewolf
-#							track = lycanthropy
-#							value <= 200
-#						}
-#						has_trait_xp = {
-#							trait = supernatural_vampire
-#							track = vampirism
-#							value <= 200
-#						}
-#						has_trait_xp = {
-#							trait = supernatural_hunter
-#							track = monster_hunting
-#							value <= 200
-#						}
-# 					}
-# 				}
-# 				multiply = 2
-# 			}
-# 		}
-# 	}
-#
-# 	cooldown = { years = 5 }
-#
-# 	is_shown = {
-# 		OR = {
-# 			spn_has_supernatural_trait = yes
-# 			has_trait = supernatural_hunter
-# 		}
-# 	}
-#
-# 	is_valid = {
-# 		OR = {
-# 			spn_has_supernatural_trait = yes
-# 			has_trait = supernatural_hunter
-# 		}
-# 	}
-#
-# 	is_valid_showing_failures_only = {
-# 		is_available_adult = yes
-# 	}
-#
-# 	effect = {
-# 		custom_tooltip = spn_msg_tooltip_supernatural_hunt_desc
-#
-# 		hidden_effect = {
-# 			trigger_event = spn_hunt.0001 #Determine Which Hunt Event to Trigger
-# 		}
-#
-# 		#Stress loss
-# 		stress_impact = {
-# 			base = hunt_stress_loss_value
-# 			lazy = activity_stress_gain_impact
-# 			craven = activity_stress_gain_impact
-# 			diligent = activity_stress_loss_impact
-# 			athletic = activity_stress_loss_impact
-# 			sadistic = activity_stress_loss_impact
-# 			brave = activity_stress_loss_impact
-# 			supernatural_hunter = activity_stress_loss_impact
-# 			supernatural_vampire = activity_stress_loss_impact
-# 			supernatural_werewolf = activity_stress_loss_impact
-# 			supernatural_hybrid = activity_stress_loss_impact
-# 		}
-# 	}
-#
-# 	ai_potential = {
-# 		always = no
-# 	}
-#
-# 	ai_will_do = {
-# 		base = 0
-# 	}
-# }
+# 2.35 -- the commented-out spn_supernatural_hunt_decision (a 2.2x sketch, zero references) was removed here.
+# The Supernatural Hunt is an ACTIVITY now: common/activities/activity_types/supernatural_hunt.txt.

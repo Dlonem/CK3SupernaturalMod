@@ -1,0 +1,156 @@
+﻿# Supernatural 2.35 -- find a real witch before inventing one. See zz_spn_real_witch_triggers.txt for why.
+#
+# Root = the hunter. Leaves scope:witch exactly as the create_character in spn_hunters.0001 did, so the whole
+# existing chain (spn_hunters.0001 -> .0002 -> .0003, Decide on the Fate of the Witch) works unchanged and the
+# person on the other end of it is now usually somebody the player can go back at afterwards.
+#
+# Order is nearest-first. The first branch is the best version of this: the woman the county is whispering
+# about turns out to be sitting at your own table.
+
+spn_find_or_make_witch_effect = {
+	# 0. 2.35g -- THE TRAIL'S OWN CULPRIT, and this is the branch that should have been here first.
+	#
+	#    Thomas: "logically, if they're following a witch hunt trail, it leads to an actual witch, or a
+	#    mage, or a warlock, or a necromancer... So logically, we shouldn't ever have to worry about the
+	#    create character part." He is right, and the reason the fallback kept firing is that this effect
+	#    was never asked the one question the whole hunting layer exists to answer: WHO IS THE COUNTY
+	#    WHISPERING ABOUT. A witch trail already names its culprit (spn_menace_culprit, written by the
+	#    four W-writers). If the hunter is standing on one, the search is over before it starts, and
+	#    "someone spotted a witch" resolves to the person he has actually been tracking.
+	#
+	#    trigger_if, not a bare `exists` sibling: CK3 does not short-circuit AND siblings, and reading
+	#    var:spn_menace_culprit off a county that has none hands a landed_title to a character trigger.
+	#    Same bug, same shape, as the 1,770-error one in zz_spn_trailsman_triggers.txt.
+	if = {
+		limit = {
+			location ?= {
+				county ?= {
+					has_county_modifier = spn_menace_modifier
+					var:spn_menace_kind ?= flag:witch
+					trigger_if = {
+						limit = { exists = var:spn_menace_culprit }
+						var:spn_menace_culprit = { spn_real_witch_candidate_trigger = yes }
+					}
+					trigger_else = { always = no }
+				}
+			}
+		}
+		location.county.var:spn_menace_culprit = { save_scope_as = witch }
+	}
+	# 1. Your own court.
+	else_if = {
+		limit = { any_courtier_or_guest = { spn_real_witch_candidate_trigger = yes } }
+		random_courtier_or_guest = {
+			limit = { spn_real_witch_candidate_trigger = yes }
+			save_scope_as = witch
+		}
+	}
+	# 2. The court of the lord whose ground you are standing on. Covers the landless adventurer, who has no
+	#    court of his own but is always somewhere.
+	else_if = {
+		limit = {
+			location ?= { county ?= { exists = holder } }
+			location.county.holder = { any_courtier_or_guest = { spn_real_witch_candidate_trigger = yes } }
+		}
+		location.county.holder = {
+			random_courtier_or_guest = {
+				limit = { spn_real_witch_candidate_trigger = yes }
+				save_scope_as = witch
+			}
+		}
+	}
+	# 3. That lord himself.
+	else_if = {
+		limit = {
+			location ?= { county ?= { exists = holder } }
+			location.county.holder = { spn_real_witch_candidate_trigger = yes }
+		}
+		location.county.holder = { save_scope_as = witch }
+	}
+	# 4. Your liege's court -- further away, and the last place worth looking before inventing somebody.
+	else_if = {
+		limit = {
+			exists = liege
+			liege = { any_courtier_or_guest = { spn_real_witch_candidate_trigger = yes } }
+		}
+		liege = {
+			random_courtier_or_guest = {
+				limit = { spn_real_witch_candidate_trigger = yes }
+				save_scope_as = witch
+			}
+		}
+	}
+	# 4b. 2.35g -- SOMEBODY HE ALREADY KNOWS ABOUT. Before inventing a stranger, ask the hunter what he
+	#     already knows: a secret_witch he is a knower of is a real person, already in his story, and
+	#     usually one he has been deciding what to do about for years. This is the cheapest possible
+	#     widening (it reads his own known-secret list, not the world) and it is the most interesting
+	#     outcome in the whole ladder: the woman the county is whispering about is one he let live.
+	else_if = {
+		limit = {
+			any_known_secret = {
+				secret_type = secret_witch
+				secret_owner = { spn_real_witch_candidate_trigger = yes }
+			}
+		}
+		random_known_secret = {
+			limit = {
+				secret_type = secret_witch
+				secret_owner = { spn_real_witch_candidate_trigger = yes }
+			}
+			secret_owner = { save_scope_as = witch }
+		}
+	}
+	# 5. Nobody real is in reach. Make one, as the mod always did -- but not the way it did.
+	#
+	#    10_wam_template.txt hardcodes `faith = faith:slavic_pagan` and `dynasty_house = house:house_hell`.
+	#    Under a total conversion that replace_paths religions -- AGOT replaces common/religion/religion_types
+	#    among 25 others -- neither exists, and a character created against a faith handle that does not
+	#    resolve is precisely the shape of the null-handle crash diagnosed on 8 Sep 2026. The culture and
+	#    faith of the ground he is standing on always resolve, so they are passed explicitly and win over the
+	#    template's, the same hardening spn_create_skilled_hunter_effect got earlier in 2.35.
+	else = {
+		if = {
+			limit = { exists = location }
+			create_character = {
+				gender = female
+				age = { 17 75 }
+				location = root.location
+				# 2.35h -- A PROVINCE'S faith DOES NOT RESOLVE HERE. root.location.faith produced
+				# "Invalid faith in HandleFaith" / "No faith for character" and then
+				# "create_character effect [ Errors in character config ]" -- error.log 9 Sep 16:39:39,
+				# called from spn_hunters.0001's immediate. The consequence was the whole point of the
+				# beat: the create failed, scope:witch was never set, and "someone spotted a witch" died
+				# on the spot every time the ladder above found nobody real. The hunter's OWN faith always
+				# resolves, and it is the better story anyway -- a witch inside his own faith is a heretic,
+				# not a foreigner. Culture stays local; that link is fine.
+				# 2.35h -- NEITHER A PROVINCE'S culture NOR ITS faith RESOLVES for create_character under this
+				# playset. Both produce "Invalid <x> in Handle<X>" / "No <x> for character" and then
+				# "create_character effect [ Errors in character config ]", which aborts the whole create and
+				# leaves the caller with no saved scope. Faith was caught first (error.log 16:39:39); fixing it
+				# only exposed culture behind it (17:49:26). root is a living character and both of ROOT's always
+				# resolve, which is the only property that matters here.
+				culture = root.culture
+				faith = root.faith
+				template = witch_character
+				save_scope_as = witch
+			}
+		}
+		# 2.35g -- AND THE BRANCH BELOW WAS INVALID ON ITS FACE. create_character requires a location or an
+		# employer; this one had neither, so the engine rejected it at LOAD time, every boot, whether or
+		# not it ever ran: "create_character effect [ Invalid/missing location or employer ]" followed by
+		# "PostValidate of effect 'create_character' returned false" (error.log 9 Sep 13:51:14). root is
+		# the hunter and always exists, so employing her is both valid and better than the old version:
+		# she turns up in his own court, where he can look at her, instead of nowhere.
+		else = {
+			create_character = {
+				gender = female
+				age = { 17 75 }
+				employer = root
+				culture = root.culture
+				faith = root.faith
+				template = witch_character
+				save_scope_as = witch
+			}
+		}
+	}
+}

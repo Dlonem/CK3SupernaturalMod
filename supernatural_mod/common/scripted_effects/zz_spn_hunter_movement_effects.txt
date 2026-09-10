@@ -1,0 +1,86 @@
+﻿# Supernatural 2.35d -- how a landless AI hunter walks toward a trail.
+#
+# Moved out of common/on_action/zz_spn_hunter_movement_on_actions.txt, where it did not parse. The body
+# below is UNCHANGED; only its address is different. Called from spn_hunter_movement_pulse in that file.
+
+# Root = the landless hunter.
+spn_hunter_seek_the_trail_effect = {
+	save_scope_as = spn_moving_hunter
+	location = { save_scope_as = spn_hunter_here }
+
+	# Two rings out. The inner loop re-adds provinces the outer one already listed; the ordered_in_list
+	# below takes the best one once whatever happens, so a duplicate costs nothing but a comparison.
+	scope:spn_hunter_here = {
+		every_neighboring_province = {
+			limit = { is_sea_province = no }
+			add_to_list = spn_hunter_scan
+			every_neighboring_province = {
+				limit = { is_sea_province = no }
+				add_to_list = spn_hunter_scan
+			}
+		}
+	}
+
+	ordered_in_list = {
+		list = spn_hunter_scan
+		order_by = spn_hunter_province_draw_value
+		max = 1
+		check_range_bounds = no
+		limit = {
+			exists = county
+			county = {
+				has_county_modifier = spn_menace_modifier
+				exists = var:spn_menace_culprit
+				var:spn_menace_culprit = { is_alive = yes }
+				# He is already beside it. Nothing to do.
+				NOT = { this = scope:spn_hunter_here.county }
+				# NO ONE WILL COME (§8.5c), read from the outside for the first time: an ordinary hunter
+				# does not ride toward a county that has already turned three of them back, and a hunter at
+				# monster_hunting 75 rides toward it precisely because nobody else will.
+				trigger_if = {
+					limit = { has_county_modifier = spn_no_one_will_come_modifier }
+					scope:spn_moving_hunter = { has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 75 } }
+				}
+			}
+		}
+		save_scope_as = spn_hunter_target
+	}
+
+	if = {
+		limit = {
+			exists = scope:spn_hunter_target
+			# It has to be worth saddling a horse for. The margin is what stops a hunter shuffling between
+			# two equally quiet counties forever.
+			scope:spn_hunter_target = { spn_hunter_province_draw_value >= 3 }
+		}
+		# ADJACENT to it, not in it -- Thomas's "right outside the range". A hunter camps near the trouble.
+		# It reads correctly and it is mechanically right too: standing in the county would put him inside
+		# the thing he is meant to be watching.
+		scope:spn_hunter_target = {
+			random_neighboring_province = {
+				limit = {
+					is_sea_province = no
+					NOT = { this = scope:spn_hunter_target }
+				}
+				save_scope_as = spn_hunter_camp
+			}
+		}
+		# 2.35h -- move_domicile IS A DOMICILE EFFECT, not a character one. Written in character scope it
+		# throws "move_domicile effect [ Wrong scope for effect: character, expected domicile ]" and the
+		# hunter does not move -- error.log 9 Sep 16:28:24, the FIRST log in which this effect ran at all
+		# (the on_action that calls it was dead until this morning's is_in_an_activity fix, so its own bug
+		# had never had the chance to surface). Vanilla's two callers both step into the domicile first:
+		# 09_mpo_wars.txt:142-144 and 10_tgp_interactions.txt:10970-10972. `?=` because a hunter with no
+		# domicile is a real case and should simply not move.
+		if = {
+			limit = { exists = scope:spn_hunter_camp }
+			domicile ?= { move_domicile = scope:spn_hunter_camp }
+			add_character_flag = { flag = spn_hunter_moved_recently years = 5 }
+		}
+		else = {
+			# No dry ground beside it. Camp in it rather than not moving at all.
+			domicile ?= { move_domicile = scope:spn_hunter_target }
+			add_character_flag = { flag = spn_hunter_moved_recently years = 5 }
+		}
+	}
+}

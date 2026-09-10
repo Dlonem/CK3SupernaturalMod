@@ -1,0 +1,644 @@
+﻿# Supernatural 2.35 -- WHAT YOUR POWERS LEAVE BEHIND, AND WHAT THEY CLEAN UP.
+#
+# Thomas, 8 Sep 2026, on the first draft of this file:
+#
+#   "The compulsion is a good fifth writer. The thing is it shouldn't be an obvious [one], because compelling
+#    by itself in a way is, like, covering up your tracks. It depends how sloppily you do it, how often you do
+#    it. If an entire town doesn't know anything about what a hunter clearly saw was true, then there would
+#    definitely be some funny business there."
+#
+# That is a better model than the one it replaces, and it inverts the whole thing. A compulsion is not an
+# incident. It is the OPPOSITE of an incident -- it is a creature reaching into a county and taking a week out
+# of somebody's head. So:
+#
+#   1. ONE command is still a body. End Your Life leaves a corpse with nothing to explain it, and that is a
+#      menace mark by the mod's own definition (W3 marks a feed that ends in a kill in exactly these terms).
+#
+#   2. EVERY other command can CLEAN. Used in a county that already carries this creature's own trail, a
+#      compulsion buries an incident: spn_menace_count comes down by one, and when it reaches zero the trail
+#      lifts and the culprit variable with it. This is what the power is FOR, it is why an elder is hard to
+#      find, and it gives the vampirism track a use that is not an attack.
+#
+#   3. SLOPPINESS is what leaves a mark, not the act. A creature that barely had the strength for it, that
+#      did it three times this decade, that did it to somebody the county would notice -- that creature
+#      leaves a hole. Holes accumulate on the COUNTY (var:spn_compel_count), and at three the county gets
+#      spn_compelled_modifier: "Nobody Here Remembers." A town that is certain nothing happened is its own
+#      kind of evidence, the hunt's tracking bar reads it, and the county's lord eventually notices.
+#
+# Nothing here is loud. A vampire that feeds carefully, compels rarely and has the power to do it cleanly is
+# effectively invisible, which is exactly the standing brief: "if you're just living life doing your own
+# thing, there's a very small chance a hunter is going to find you."
+#
+# WRITER LIST (work order §3.2, kept current): W1 the on_death hook, W2 vf_mark_fed_on_effect, W3 the feed's
+# kill option, W4 the werewolf border hunt, W5 this file.
+
+# Root/this = the compelling creature (the call site enters scope:actor). scope:recipient = the compelled.
+# scope:spn_body_county = the county it happened in, BANKED BEFORE anything irreversible ran -- End Your
+# Life kills the recipient, and a dead man's location is not something to build a county lookup on. That
+# ordering is Thomas's standing rule: read and bank everything that depends on the pre-change state first.
+# The send_option flag scopes (compel_mortal_*) are still set here.
+#
+# CULPRIT is passed as scope:actor rather than root. _character_interactions.info:42 says root IS scope:actor
+# inside an interaction, so the two are the same thing today -- but spn_mark_menace_effect pastes $CULPRIT$ at
+# two different scope depths, and a saved scope is the only form correct at both regardless of the caller.
+spn_compel_leaves_a_trace_effect = {
+	if = {
+		limit = { exists = scope:spn_body_county }
+
+		# ---- 1. THE ONE THAT IS STILL A BODY, AND WHOSE BODY IT LOOKS LIKE --------------------------------
+		# End Your Life leaves a corpse in a street. What the county makes of that corpse is the last thing a
+		# careful creature still gets to decide, and it is the only place in the mod where a creature can aim a
+		# hunter at somebody on purpose.
+		if = {
+			limit = {
+				scope:compel_mortal_suicide = yes
+				NOT = { has_character_flag = spn_menace_marked_recently }
+			}
+			# 2.35 PART TWO (§7) -- THE FAMILY MOVED OUT OF THE COMPEL NAMESPACE. It was written for one
+			# case, a compelled suicide inside an interaction, and so it read scope:actor -- which only
+			# exists inside an interaction. Everything below now reads scope:spn_body_actor and the banked
+			# kind instead, so the same five answers are reachable from any kill site in the mod. This line
+			# is the compulsion path's own handshake into that; nothing about the compulsion changed.
+			scope:actor = { spn_body_bind_effect = yes }
+			spn_body_dress_the_body_effect = yes
+		}
+		else = {
+			# ---- 2. COVERING YOUR TRACKS ------------------------------------------------------------------
+			# Only your own trail, and only in the county you are standing in. You cannot tidy up after
+			# somebody else, and you cannot do it from three realms away.
+			if = {
+				limit = {
+					scope:spn_body_county = {
+						has_county_modifier = spn_menace_modifier
+						var:spn_menace_culprit ?= scope:actor
+					}
+				}
+				random = {
+					chance = {
+						# The reserve is the whole of it: power is what makes this clean. 30 at nothing,
+						# 80 at a full track.
+						value = 30
+						# The scope is ENTERED rather than dereferenced: a script value cannot be reached
+						# through a scope path in CK3 (the rule this mod already records on
+						# spn_county_prosperity_value, and spn_menace_hide_value is the worked example).
+						scope:actor = { add = { value = spn_vampiric_reserve_value multiply = 0.5 } }
+						# Somebody who lies for a living is better at telling people what they saw.
+						if = { limit = { scope:actor = { has_trait = deceitful } } add = 10 }
+						if = { limit = { scope:actor = { has_trait = shrewd } } add = 6 }
+						# And somebody who cannot stop talking about himself is not.
+						if = { limit = { scope:actor = { has_trait = arrogant } } subtract = 8 }
+						if = { limit = { scope:actor = { has_trait = reckless } } subtract = 8 }
+						min = 5
+						max = 90
+					}
+					scope:spn_body_county = {
+						# 2.35 PART TWO -- duplication audit: the decrement half of this was the third of
+						# three hand-written copies and is now spn_menace_clear_one_effect. The else branch
+						# stays here, because clearing the LAST mark is this site's own behaviour and no
+						# other caller wants it.
+						if = {
+							limit = {
+								exists = var:spn_menace_count
+								var:spn_menace_count > 1
+							}
+							spn_menace_clear_one_effect = yes
+						}
+						else = {
+							# The last one. There is nothing left in this county pointing at anybody.
+							remove_county_modifier = spn_menace_modifier
+							remove_variable = spn_menace_culprit
+							remove_variable = spn_menace_kind
+							remove_variable = spn_menace_count
+							remove_variable = spn_menace_notified
+						}
+					}
+				}
+			}
+
+			# ---- 3. SLOPPINESS ----------------------------------------------------------------------------
+			# Rolled whether or not there was anything to clean. This is the only way a compulsion can make
+			# things worse, and it is about HOW, not WHAT.
+			random = {
+				chance = {
+					value = 4
+					# THE MAIN DRIVER: doing it on an empty tank. At reserve 15 (the floor an AI will spend
+					# from) this is +22; at 60 and above it is nothing at all.
+					if = {
+						limit = { scope:actor = { spn_vampiric_reserve_value < 60 } }
+						add = 30
+						scope:actor = { add = { value = spn_vampiric_reserve_value multiply = -0.5 } }
+					}
+					# HOW OFTEN. The flag below lasts three years; a creature leaning on this in a single
+					# decade is leaving a pattern rather than an incident.
+					if = { limit = { scope:actor = { has_character_flag = spn_compelled_recently } } add = 14 }
+					# WHO. A servant's missing evening is not discussed. A lord's is.
+					if = { limit = { scope:recipient = { is_ruler = yes } } add = 12 }
+					else_if = { limit = { scope:recipient = { is_landed = yes } } add = 6 }
+					# Somebody vanishing from one hall and turning up in another is the loudest of the eight.
+					if = { limit = { scope:compel_mortal_join_me = yes } add = 10 }
+					else_if = { limit = { scope:compel_mortal_release = yes } add = 8 }
+					# WHO DID IT. People already read everything a known creature does.
+					if = { limit = { scope:actor = { spn_hunt_is_known_creature_trigger = yes } } add = 12 }
+					if = { limit = { scope:actor = { has_trait = arrogant } } add = 6 }
+					if = { limit = { scope:actor = { has_trait = reckless } } add = 6 }
+					if = { limit = { scope:actor = { has_trait = deceitful } } subtract = 8 }
+					if = { limit = { scope:actor = { has_trait = paranoid } } subtract = 6 }
+					if = { limit = { scope:actor = { has_trait = shy } } subtract = 4 }
+					min = 0
+					max = 45
+				}
+				spn_compel_left_a_hole_effect = yes
+			}
+		}
+		# The pattern, either way. Three years is long enough that an occasional user never trips it.
+		scope:actor = { add_character_flag = { flag = spn_compelled_recently years = 3 } }
+	}
+}
+
+# A hole in the county's week. Root/this = the creature. scope:spn_body_county set.
+#
+# Deliberately NOT a menace mark: nobody died, there is no body, and a hunter riding in on this finds a town
+# that is simply wrong rather than a grave to read. It has its own county variable, its own modifier, and its
+# own way of reaching a lord.
+spn_compel_left_a_hole_effect = {
+	scope:spn_body_county = {
+		if = {
+			limit = { has_variable = spn_compel_count }
+			change_variable = { name = spn_compel_count add = 1 }
+		}
+		else = {
+			set_variable = { name = spn_compel_count value = 1 years = 5 }
+		}
+		# Who left it. The county cannot say so and neither can anybody in it -- but if its lord ever works
+		# out that the silence is the evidence, this is the name at the end of it. Mirrors spn_menace_culprit
+		# deliberately: the two variables are read the same way and expire on the same five-year clock.
+		set_variable = { name = spn_compel_culprit value = scope:actor years = 5 }
+		# THE THRESHOLD. Three inside five years and the county stops adding up.
+		if = {
+			limit = {
+				var:spn_compel_count >= 3
+				NOT = { has_county_modifier = spn_compelled_modifier }
+			}
+			add_county_modifier = { modifier = spn_compelled_modifier years = 5 }
+			# Somebody has to be the one who notices, and it is not the creature who did it.
+			if = {
+				limit = {
+					exists = holder
+					NOT = { holder = scope:actor }
+					holder = { is_alive = yes }
+				}
+				save_scope_as = spn_compel_hole_county
+				holder = { trigger_event = { id = spn_hunt.0130 days = { 5 20 } } }
+			}
+		}
+	}
+}
+
+# THE LOOP CLOSING. Root = the county's lord (Nobody Here Remembers, spn_hunt.0130), scope:spn_compel_hole_county
+# set. He has worked out that the silence is the evidence.
+#
+# There is still no body -- so the mark is prowl, not kill -- but the county now carries a real trail with a
+# real name on it, which means the Trailsman can report it, the planner will offer it, and a hunter can ride
+# to it. A creature that covered its tracks badly has just written the trail it was hiding, which is the whole
+# point of doing it badly.
+#
+# The county stops being merely strange in the same breath: the holes are accounted for now, so the
+# compelled modifier and its bookkeeping come off. One state replaces the other rather than stacking.
+spn_compel_investigation_lands_effect = {
+	if = {
+		limit = {
+			exists = scope:spn_compel_hole_county
+			scope:spn_compel_hole_county = {
+				exists = var:spn_compel_culprit
+				var:spn_compel_culprit = { is_alive = yes }
+			}
+		}
+		scope:spn_compel_hole_county.var:spn_compel_culprit = { save_scope_as = spn_compel_culprit }
+		# BANK BEFORE CLEARING, the standing ordering rule: the mark reads the culprit out of the county, so it
+		# is written while the county still holds him.
+		spn_mark_menace_effect = { COUNTY = scope:spn_compel_hole_county CULPRIT = scope:spn_compel_culprit KIND = vampire SEVERITY = prowl }
+		# And the lord learns what he is dealing with, through the mod's one reveal path rather than a second
+		# one -- spn_hunt_learn_culprit_effect reads scope:spn_menace_county and scope:spn_hunt_lord, both of
+		# which the mark above and spn_hunt.0130's immediate have just set.
+		scope:spn_compel_hole_county = { save_scope_as = spn_menace_county }
+		spn_hunt_learn_culprit_effect = yes
+		scope:spn_compel_hole_county = {
+			remove_county_modifier = spn_compelled_modifier
+			remove_variable = spn_compel_count
+			remove_variable = spn_compel_culprit
+		}
+	}
+}
+
+# DRESSING THE BODY. Root/this = the creature (the call site entered scope:actor). scope:spn_body_county
+# and the compel_mortal_* flag scopes are set.
+#
+# Three outcomes, one roll:
+#   WELL, with somebody to blame  -> the mark is written against ANOTHER creature standing in that county,
+#                                    and it carries THEIR kind. A vampire can leave a wolf's work behind.
+#   WELL, with nobody to blame    -> no mark at all. A man died and the county cannot say why, which is the
+#                                    cleanest thing that can happen to a creature and costs 85 to buy.
+#   BADLY                         -> the mark is yours, exactly as it looks.
+#
+# The roll is the same currency as everything else: power, plus a talent for lying, minus the traits that
+# make a creature conspicuous. Roughly 15% clean for a weak reckless one, roughly 90% for a full deceitful
+# elder -- and a creature that leans on this repeatedly is spending 85 a time, which is its own limit.
+#
+# The framed creature takes the mark's own dedupe flag rather than the actor: nothing about this night
+# happened to you.
+# ==========================================================================================================
+# 2.35 PART TWO (§7) -- COVERING YOUR TRACKS, EVERYWHERE.
+#
+# Thomas, 9 Sep 2026: "Say I kill a guy as a werewolf. I could spend some gold or prestige as an excuse. I can
+# hide the body and pay off, or if there was a witness who saw it, I could try to kill the last witness -- but
+# then it turns into, oh, I thought I covered my tracks, and boom, there's two bodies in this county."
+#
+# NOTHING BELOW IS NEW CODE. Part one shipped the whole family for exactly one case -- a mortal compelled to
+# end their life -- and it has been sitting there reachable from a single interaction ever since. This release
+# renames it out of the compel namespace, parameterises the one thing that was hard-coded (the kind of mark it
+# writes), and gives it a front door any kill site can knock on. The five answers are unchanged:
+#
+#   1. HIDE IT WELL      the dressing roll. Clean: no mark at all. Failed: the mark is yours anyway.
+#   2. PAY IT AWAY       new. Gold to the man who would have to answer for it, and one incident off the books.
+#   3. BLAME SOMEBODY    the mark carries ANOTHER creature's kind and points at a real neighbour.
+#   4. OWN IT            the mark is yours, loud, and the county's hall is told what you are.
+#   (and 5, SILENCE THE WITNESS, which lives at the feed because that is the only place a witness exists --
+#    and which since this release can leave two bodies instead of one, 10_spn_ev1.txt.)
+#
+# SCOPES: scope:spn_body_actor (the creature), scope:spn_body_county (where), scope:spn_body_frame (a real
+# neighbour who could plausibly have done it, if the county has one). The KIND of mark is banked as
+# var:spn_body_kind on the actor rather than a saved scope value, because What They Will Find fires a day
+# later and a variable is the form that cannot be lost in between.
+# ==========================================================================================================
+
+# CHARACTER scope (the creature). Bind the scope the whole family reads, and work out what kind of mark this
+# creature's work leaves. Mirrors the on_death hook's own test (zz_spn_menace_on_actions.txt): a hybrid counts
+# as a wolf while shapeshifted and a vampire otherwise, and a demon is a demon.
+spn_body_bind_effect = {
+	save_scope_as = spn_body_actor
+	if = {
+		limit = { is_a_demon_trigger = yes }
+		set_variable = { name = spn_body_kind value = flag:demon days = 30 }
+	}
+	else_if = {
+		limit = {
+			OR = {
+				has_trait = supernatural_werewolf
+				AND = {
+					has_trait = supernatural_hybrid
+					is_shapeshifted_trigger = yes
+				}
+			}
+		}
+		set_variable = { name = spn_body_kind value = flag:werewolf days = 30 }
+	}
+	else_if = {
+		limit = { spn_hunt_is_creature_trigger = yes }
+		set_variable = { name = spn_body_kind value = flag:vampire days = 30 }
+	}
+	else = {
+		set_variable = { name = spn_body_kind value = flag:witch days = 30 }
+	}
+}
+
+# CHARACTER scope (the creature). THE FRONT DOOR. Call this at a kill site instead of writing a mark, and the
+# creature gets What They Will Find in the morning and decides for itself what the county believes.
+#
+# The dedupe flag goes on IMMEDIATELY, before the event is even scheduled, so the on_death hook (W1) leaves
+# this body alone and the option the player picks a day later is the only thing that writes anything. That is
+# also what makes this safe to call before a `death` in the same effect: the order is bank, route, kill.
+#
+# COUNTY = a county scope.
+spn_body_after_the_kill_effect = {
+	add_character_flag = { flag = spn_menace_marked_recently days = 3 }
+	spn_body_bind_effect = yes
+	$COUNTY$ = { save_scope_as = spn_body_county }
+	spn_body_dress_the_body_effect = yes
+}
+
+# (spn_body_hush_money_value lives in common/script_values/20_spn_utility_values.txt, where script values go.)
+
+spn_body_dress_the_body_effect = {
+	# Who is standing in this county who could plausibly have done it. Read the same way
+	# spn_hunt_early_warning_effect and spn_hunt_count_the_pack_effect read a county -- the holder, his court
+	# and guests -- so this is always a real neighbour and never an invention. Found BEFORE the event so the
+	# blame option can name them on the card.
+	scope:spn_body_county = {
+		holder ?= {
+			if = {
+				limit = { spn_body_frameable_trigger = yes }
+				add_to_list = spn_body_frame_pool
+			}
+			every_courtier_or_guest = {
+				limit = { spn_body_frameable_trigger = yes }
+				add_to_list = spn_body_frame_pool
+			}
+		}
+	}
+	# Somebody you already wanted gone, first. This is where the world's creature politics live: a vampire
+	# who hates the local wolf now has a way to spend a life on getting hunters to do something about him.
+	random_in_list = {
+		list = spn_body_frame_pool
+		limit = {
+			OR = {
+				has_relation_rival = scope:spn_body_actor
+				has_relation_nemesis = scope:spn_body_actor
+			}
+		}
+		save_scope_as = spn_body_frame
+	}
+	if = {
+		limit = { NOT = { exists = scope:spn_body_frame } }
+		random_in_list = {
+			list = spn_body_frame_pool
+			save_scope_as = spn_body_frame
+		}
+	}
+	# 2.35 -- AND NOW IT IS A DECISION, not a hidden roll. Thomas, 9 Sep 2026, on the first version of this:
+	# "Do you have that done through an event? Like a bit that pops up? That's a really cool mechanic and a
+	# perfect opportunity to have done what I mentioned."
+	#
+	# The event is What They Will Find (spn_hunt.0140). Intent is the choice; execution is still a roll inside
+	# each option, so deciding to hide a body and being able to hide it stay two different things. The AI
+	# takes the same event and picks by ai_chance, so there is one code path and not two.
+	#
+	# 2.35 PART TWO -- bank the price of the lord's silence before the window is drawn, so Pay It Away can
+	# both show the number on the card and spend exactly that number when it is picked.
+	if = {
+		limit = { exists = scope:spn_body_county }
+		scope:spn_body_county = {
+			save_scope_value_as = { name = spn_body_hush_money value = spn_body_hush_money_value }
+		}
+	}
+
+	# A day's delay: the compulsion's own notification (spn_message.4001) fires first, and this reads as the
+	# morning after.
+	trigger_event = { id = spn_hunt.0140 days = 1 }
+}
+
+# THE THREE ANSWERS. Root/this = the creature. scope:spn_body_county set; scope:spn_body_frame may be.
+#
+# The shared execution roll: power, plus a talent for lying, minus the traits that make a creature
+# conspicuous. Blaming somebody is harder than hiding, because a lie has to survive being checked.
+spn_body_hide_the_body_effect = {
+	random = {
+		chance = { value = spn_body_dressing_value }
+		add_character_flag = { flag = spn_body_dressed_it days = 1 }
+	}
+	if = {
+		limit = { has_character_flag = spn_body_dressed_it }
+		remove_character_flag = spn_body_dressed_it
+		# Nothing. A man died and the county cannot say why, which is the cleanest thing that can happen to a
+		# creature and costs 85 to buy.
+		#
+		# 2.35 PART TWO (§7.1) -- NOBODY SAW ANYTHING. The second teaching event, and the one that tells the
+		# player the most: it CAN be hidden. Once per character, ever, and only for a player -- the AI does
+		# not need to be told what it just did.
+		if = {
+			limit = {
+				is_ai = no
+				NOT = { has_character_flag = spn_taught_hidden }
+			}
+			add_character_flag = spn_taught_hidden
+			trigger_event = { id = spn_hunt.0501 days = { 3 9 } }
+		}
+	}
+	else = {
+		spn_body_own_it_effect = yes
+	}
+}
+
+# 2.35 PART TWO (§7) -- PAY IT AWAY. Thomas: "I could spend some gold or prestige as an excuse."
+#
+# No roll. You are not hiding anything from anybody clever; you are handing money to the one man in the county
+# whose job it would have been to write this down, and he is not going to. The body leaves no mark, and one
+# incident already on the books goes with it.
+#
+# What it costs is on the other side of the system and it is a debt rather than a purchase: the county
+# remembers who paid (spn_menace_buy_silence_effect), and if a hunter later proves what was living here
+# anyway, the holder learns what he took and remembers that for a decade (spn_hunt_conclude_effect).
+#
+# Root/this = the creature. scope:spn_body_county set.
+spn_body_pay_it_away_effect = {
+	remove_short_term_gold = scope:spn_body_hush_money
+	scope:spn_body_county = {
+		spn_menace_buy_silence_effect = { PAYER = scope:spn_body_actor }
+		holder ?= {
+			add_opinion = { target = scope:spn_body_actor modifier = spn_took_my_coin_opinion }
+		}
+	}
+}
+
+spn_body_blame_effect = {
+	random = {
+		chance = {
+			value = spn_body_dressing_value
+			# A lie has to survive being checked. Hiding only has to survive being ignored.
+			subtract = 15
+			min = 5
+		}
+		add_character_flag = { flag = spn_body_dressed_it days = 1 }
+	}
+	if = {
+		limit = {
+			has_character_flag = spn_body_dressed_it
+			exists = scope:spn_body_frame
+		}
+		remove_character_flag = spn_body_dressed_it
+		# THEIR kind, not yours -- the whole point. Mirrors the on_death hook's own test
+		# (zz_spn_menace_on_actions.txt): a hybrid counts as a wolf while shapeshifted, a vampire otherwise.
+		# 2.35 PART TWO -- and a demon reads as a demon, now that a demon can be framed at all.
+		if = {
+			limit = { scope:spn_body_frame = { is_a_demon_trigger = yes } }
+			spn_mark_menace_effect = { COUNTY = scope:spn_body_county CULPRIT = scope:spn_body_frame KIND = demon SEVERITY = kill }
+		}
+		else_if = {
+			limit = {
+				scope:spn_body_frame = {
+					OR = {
+						has_trait = supernatural_werewolf
+						AND = {
+							has_trait = supernatural_hybrid
+							is_shapeshifted_trigger = yes
+						}
+					}
+				}
+			}
+			spn_mark_menace_effect = { COUNTY = scope:spn_body_county CULPRIT = scope:spn_body_frame KIND = werewolf SEVERITY = kill }
+		}
+		else = {
+			spn_mark_menace_effect = { COUNTY = scope:spn_body_county CULPRIT = scope:spn_body_frame KIND = vampire SEVERITY = kill }
+		}
+	}
+	else = {
+		if = {
+			limit = { has_character_flag = spn_body_dressed_it }
+			remove_character_flag = spn_body_dressed_it
+		}
+		spn_body_own_it_effect = yes
+	}
+}
+
+# It reads as exactly what it was. 2.35 PART TWO -- and what it was is no longer assumed to be a vampire:
+# the kind was banked by spn_body_bind_effect at the kill, so a wolf's work reads as a wolf's and a demon's
+# reads as a demon's.
+spn_body_own_it_effect = {
+	if = {
+		limit = { scope:spn_body_actor.var:spn_body_kind ?= flag:demon }
+		spn_mark_menace_effect = { COUNTY = scope:spn_body_county CULPRIT = scope:spn_body_actor KIND = demon SEVERITY = kill }
+	}
+	else_if = {
+		limit = { scope:spn_body_actor.var:spn_body_kind ?= flag:werewolf }
+		spn_mark_menace_effect = { COUNTY = scope:spn_body_county CULPRIT = scope:spn_body_actor KIND = werewolf SEVERITY = kill }
+	}
+	else_if = {
+		limit = { scope:spn_body_actor.var:spn_body_kind ?= flag:witch }
+		spn_mark_menace_effect = { COUNTY = scope:spn_body_county CULPRIT = scope:spn_body_actor KIND = witch SEVERITY = kill }
+	}
+	else = {
+		spn_mark_menace_effect = { COUNTY = scope:spn_body_county CULPRIT = scope:spn_body_actor KIND = vampire SEVERITY = kill }
+	}
+}
+
+# THE STATEMENT. Thomas, 9 Sep 2026: "you could be trying to make a statement... so who cares if somebody
+# knows that I, a vampire, killed this person. I want the hunters to come. I dare them to."
+#
+# No roll -- you are not hiding, so there is nothing to fail at. The mark is yours, and it is LOUD: two extra
+# incidents on the county's count, which is what drives the lord's letter (three marks and he is written to)
+# and what the planner scores a province on. And the county's lord and his whole household are simply told
+# what you are, through the mod's one reveal path.
+#
+# What it buys is on the other side of the system: spn_creature_legend_value grows off hunters you beat, and
+# a county whose culprit is a legend is one that green hunters will not ride to at all (supernatural_hunt.txt,
+# is_location_valid). Daring them to come is how you eventually stop the ones who would have won.
+spn_body_signature_effect = {
+	# 2.35 PART TWO -- the mark is written by Own It so the kind is read in exactly one place, and then this
+	# adds the two extra incidents and the reveal on top. The old copy of the mark call is gone; nothing else
+	# about the statement changed.
+	spn_body_own_it_effect = yes
+	scope:spn_body_county = {
+		if = {
+			limit = { exists = var:spn_menace_count }
+			change_variable = { name = spn_menace_count add = 2 }
+		}
+		# Everyone who serves here learns what came through, starting with the man who has to answer for it.
+		holder ?= {
+			save_scope_as = spn_body_witness
+			add_to_list = spn_body_witnesses
+			every_courtier_or_guest = {
+				limit = { is_alive = yes }
+				add_to_list = spn_body_witnesses
+			}
+		}
+	}
+	every_in_list = {
+		list = spn_body_witnesses
+		save_temporary_scope_as = spn_body_one_witness
+		scope:spn_body_actor = {
+			if = {
+				limit = { has_trait = supernatural_hybrid }
+				spn_give_knowledge_of_hybrid_secret = { CHARACTER = scope:spn_body_one_witness }
+			}
+			else = {
+				spn_give_knowledge_of_vampire_secret = { CHARACTER = scope:spn_body_one_witness }
+			}
+		}
+	}
+}
+
+
+# ----------------------------------------------------------------------------------------------------------
+# 2.35 -- THE LONG COUNT's reward. Root = the creature. AMOUNT = how many points.
+#
+# add_<lifestyle>_lifestyle_perk_points is generated by the engine for every lifestyle, including the mod's
+# own (common/lifestyles/01_lifestyles_spn.txt) -- vanilla's six are the ones that also get hand-written
+# effect_localization (00_character_effects.txt:1824-1869), which is why every call site wraps this in a
+# custom_tooltip and a hidden_effect rather than letting it print itself.
+#
+# A hybrid gets it in the hybrid tree, which is the one that actually costs 27,000 XP to fill.
+# ----------------------------------------------------------------------------------------------------------
+spn_long_count_grant_perk_effect = {
+	if = {
+		limit = { has_trait = supernatural_hybrid }
+		add_hybrid_lifestyle_perk_points = $AMOUNT$
+	}
+	else_if = {
+		limit = { has_trait = supernatural_werewolf }
+		add_werewolf_lifestyle_perk_points = $AMOUNT$
+	}
+	else_if = {
+		limit = { has_trait = supernatural_vampire }
+		add_vampire_lifestyle_perk_points = $AMOUNT$
+	}
+}
+
+
+# ==========================================================================================================
+# 2.35 PART TWO (§7.4) -- SILENCING THE WITNESS, AND THE BACKFIRE.
+#
+# Thomas, 9 Sep 2026: "if there was a witness who saw it, I could try to kill the last witness -- but then it
+# turns into, oh, I thought I covered my tracks, and boom, there's two bodies in this county."
+#
+# Until now this was the one unconditionally clean option in the mod: the botched feed's "Silence the witness"
+# stamped the incident-dedupe flag and killed, and the county never heard about either of them. It was also
+# the strictly correct play every single time, which is what made it wrong.
+#
+# It is a roll on the same dressing value everything else in this family uses, so the same power and the same
+# talent for lying that buy a hidden body buy a silenced witness -- and failing it does not merely leave the
+# mark you were trying to avoid, it leaves TWO. The second body is the man who came round the corner while you
+# were making the first one quiet.
+#
+# Root/this = the creature. WITNESS = the person being silenced. COUNTY = where.
+#
+# ORDER (the standing rule): the marks are written first, from live characters, and both deaths are last.
+# ==========================================================================================================
+spn_body_witness_backfire_effect = {
+	spn_body_bind_effect = yes
+	$COUNTY$ = { save_scope_as = spn_body_county }
+	random = {
+		chance = { value = spn_body_dressing_value }
+		add_character_flag = { flag = spn_body_silenced_clean days = 1 }
+	}
+	if = {
+		limit = { has_character_flag = spn_body_silenced_clean }
+		remove_character_flag = spn_body_silenced_clean
+		# One body, and nobody can say whose work it was. The dedupe flag is what keeps the on_death hook
+		# off it -- exactly as this option has always worked.
+		add_character_flag = { flag = spn_menace_marked_recently days = 3 }
+		$WITNESS$ = { death = { death_reason = death_murder killer = scope:spn_body_actor } }
+	}
+	else = {
+		# Somebody came round the corner. Find him before anybody dies -- a body you have not made yet is
+		# not a body you can look for.
+		$COUNTY$ = {
+			holder ?= {
+				random_courtier_or_guest = {
+					# Saved scopes rather than a prev chain: the chain here is creature -> county -> holder ->
+					# courtier, so `prev.prev` is the COUNTY and not the creature. Exactly the class of quiet
+					# scope bug this file's own headers keep warning about.
+					limit = {
+						is_alive = yes
+						is_adult = yes
+						NOT = { this = scope:spn_body_actor }
+						NOT = { this = $WITNESS$ }
+						spn_hunt_is_creature_trigger = no
+					}
+					save_scope_as = spn_body_second
+				}
+			}
+		}
+		# Two incidents, written from the pre-change state. The kind is the one banked at the kill, so a
+		# wolf's panic reads as a wolf's and a demon's reads as a demon's.
+		spn_body_own_it_effect = yes
+		if = {
+			limit = { exists = scope:spn_body_second }
+			spn_body_own_it_effect = yes
+		}
+		# LAST.
+		$WITNESS$ = { death = { death_reason = death_murder killer = scope:spn_body_actor } }
+		if = {
+			limit = { exists = scope:spn_body_second }
+			scope:spn_body_second = { death = { death_reason = death_murder killer = scope:spn_body_actor } }
+		}
+	}
+}

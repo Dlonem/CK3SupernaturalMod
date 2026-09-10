@@ -1,0 +1,321 @@
+﻿namespace = spn_hunt
+
+# Supernatural 2.35 PART TWO -- "The Bridge". THE WITCH KIND, PROMOTED FROM THIN TO REAL, AND THE COVEN.
+# WORK-ORDER-2.35-PART-TWO-THE-BRIDGE §6.
+#
+# WHAT THIS IS ROUTING AROUND. Thomas: "I would get insta-arrested and then put on trial and then killed more
+# or less out of complete thin air, which is why I typically turn the W-Hunters off in the game rules. Like,
+# what the shit was that about?"
+#
+# Every line of that is verifiable and the autopsy is in the order's §6.1: there is no "off" (low_whunters is
+# the floor and the mod already defaults to it); ten spawn branches fire regardless, two of them at 100% with
+# no gate and no roll; victim selection is GLOBAL, with no diplomatic range, no faith filter and no test of
+# whether the hunter has learned anything about you; nineteen sites imprison you with a raw `imprison = { }`
+# that bypasses reasons, tyranny and the imprisoned_me opinion; and the trial has no roll at all -- denying it
+# is accepted as grounds to burn you.
+#
+# NONE OF THAT IS REPAIRED HERE (E4). It stays behind the game rule as legacy, and the good path is built
+# beside it: a witch leaves a county trail like anything else, the county remembers, and a hunter comes and
+# LOOKS. The player is no longer teleported into a trial; they are tracked, they can see it coming, and they
+# can cover it up with the same five answers everything else in this mod uses.
+#
+# THE COVEN. A coven is a house modifier (witch_coven) plus a grandmaster_coven head plus a culture tradition,
+# and there is currently NO scheme, decision, interaction or event anywhere that lets an outsider learn that a
+# house is one -- the only reads are reward multipliers AFTER you have already burned somebody. That makes it
+# the cleanest hook point in the layer, and this is the hook.
+#
+# Numbers 0170-0179. Root = the host except where noted.
+
+# ==========================================================================================================
+# They Are Not Working Alone -- tracking phase. The moment the hunt stops being about one woman.
+# ==========================================================================================================
+spn_hunt.0170 = {
+	type = activity_event
+	title = spn_hunt.0170.t
+	desc = spn_hunt.0170.desc
+	theme = secret
+	override_background = { reference = market }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_culprit animation = scheme }
+
+	trigger = {
+		scope:activity = {
+			NOT = { has_variable = spn_hunt_ev_0170 }
+			has_variable = spn_hunt_witch_trail
+			exists = var:spn_hunt_culprit
+			var:spn_hunt_culprit = {
+				is_alive = yes
+				house ?= { has_house_modifier = witch_coven }
+			}
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:activity = {
+			set_variable = { name = spn_hunt_ev_0170 value = yes }
+			set_variable = { name = spn_hunt_coven_known value = yes }
+		}
+	}
+
+	# Count the house before you knock on it.
+	option = {
+		name = spn_hunt.0170.a
+		custom_tooltip = spn_hunt.0170.a.tt
+		spn_hunt_chance_change_effect = { VALUE = 12 }
+		add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 5 12 } }
+		ai_chance = {
+			base = 60
+			modifier = { add = 30 has_trait = diligent }
+			modifier = { add = 25 has_trait = paranoid }
+			modifier = { add = 20 spn_hunt_reads_witch_trigger = yes }
+		}
+	}
+	# Send for men before you go anywhere near it.
+	option = {
+		name = spn_hunt.0170.b
+		custom_tooltip = spn_hunt.0170.b.tt
+		add_character_flag = { flag = spn_hunt_county_men_pledged days = 120 }
+		spn_hunt_chance_change_effect = { VALUE = -5 }
+		ai_chance = {
+			base = 45
+			modifier = { add = 35 has_trait = craven }
+			modifier = { add = 25 has_trait = calm }
+			modifier = { add = 25 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value < 60 } }
+		}
+	}
+}
+
+# ==========================================================================================================
+# Where the Work Was Done -- the WITCH confrontation, fired from Cornered's `after` when the hunt is running
+# on a witch trail. A witch does not fight at the door the way a wolf does, so the choices are not the wolf's:
+# you can take her, you can force it, you can leave -- and if she is not working alone and you are good enough
+# for that to be a survivable idea, you can go through the house.
+# ==========================================================================================================
+spn_hunt.0171 = {
+	type = activity_event
+	title = spn_hunt.0171.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_hunt_activity = { has_variable = spn_hunt_coven_known } }
+				desc = spn_hunt.0171.desc_coven
+			}
+			desc = spn_hunt.0171.desc
+		}
+	}
+	theme = secret
+	override_background = { reference = bp1_wine_cellar }
+	left_portrait = { character = root animation = aggressive_sword }
+	right_portrait = { character = scope:spn_defender animation = anger }
+
+	# Same contract as the demon's door: test the culprit, re-derive the defender if it is missing. A
+	# confrontation event that quietly fails its trigger leaves the hunt with no outcome at all.
+	trigger = {
+		exists = scope:spn_culprit
+		scope:spn_culprit = { is_alive = yes }
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		if = {
+			limit = { NOT = { exists = scope:spn_defender } }
+			scope:spn_culprit = { save_scope_as = spn_defender }
+			spn_hunt_compute_fight_bonus_effect = yes
+		}
+	}
+
+	# Take her, and let a court do the rest. The mod's THIRD use of vanilla's own imprisonment effect --
+	# the Witchcraft layer's nineteen raw `imprison = { }` sites are exactly what §6.1 is an autopsy of.
+	option = {
+		name = spn_hunt.0171.a
+		trigger = { is_landed_or_landless_administrative = yes }
+		custom_tooltip = spn_hunt.0171.a.tt
+		imprison_character_effect = {
+			TARGET = scope:spn_defender
+			IMPRISONER = root
+		}
+		spn_hunt_set_outcome_effect = { OUTCOME = slain }
+		scope:spn_hunt_activity = {
+			set_variable = { name = spn_hunt_slain_kind value = flag:witch }
+			if = {
+				limit = { NOT = { exists = var:spn_hunt_slain_track } }
+				set_variable = { name = spn_hunt_slain_track value = 40 }
+			}
+		}
+		add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 10 22 } }
+		ai_chance = {
+			base = 60
+			modifier = { add = 30 has_trait = just }
+			modifier = { add = 25 has_trait = calm }
+			modifier = { add = 20 has_trait = patient }
+			modifier = { add = -25 has_trait = wrathful }
+		}
+	}
+	# Force it here.
+	option = {
+		name = spn_hunt.0171.b
+		custom_tooltip = spn_hunt.0171.b.tt
+		spn_hunt_fight_effect = { DEFENDER = scope:spn_defender }
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = wrathful }
+			modifier = { add = 30 has_trait = zealous }
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = -30 has_trait = craven }
+		}
+	}
+	# Go through the house. §6.3 -- the hunt that could end five people, and should nearly kill you.
+	option = {
+		name = spn_hunt.0171.c
+		trigger = {
+			scope:spn_hunt_activity = { has_variable = spn_hunt_coven_known }
+			# A LATE-CAREER SET PIECE, NOT A TUESDAY. Two ways in, and the second one is the interesting
+			# one: a man the world already tells stories about can walk into a house that would kill
+			# somebody with the same numbers and no name, because the house has heard of him too.
+			custom_tooltip = {
+				text = spn_hunt_coven_needs_tt
+				OR = {
+					has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 60 }
+					spn_hunter_reputation_value >= 2
+				}
+			}
+		}
+		custom_tooltip = spn_hunt.0171.c.tt
+		spn_hunt_coven_begin_effect = yes
+		ai_chance = {
+			base = 25
+			modifier = { add = 35 has_trait = zealous }
+			modifier = { add = 25 has_trait = vengeful }
+			modifier = { add = 25 has_trait = brave }
+			modifier = { add = 20 has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 90 } }
+			modifier = { add = -45 has_trait = craven }
+			modifier = { add = -30 has_trait = compassionate }
+			modifier = { add = -25 has_trait = content }
+		}
+	}
+	# Walk away. §8.5's off-ramp, on this branch too.
+	option = {
+		name = spn_hunt.0171.d
+		custom_tooltip = spn_hunt.0171.d.tt
+		spn_hunt_set_outcome_effect = { OUTCOME = withdrew }
+		add_prestige = -25
+		add_stress = minor_stress_impact_gain
+		ai_chance = {
+			base = 20
+			modifier = { add = 45 has_trait = craven }
+			modifier = { add = 30 has_trait = compassionate }
+			modifier = { add = 25 has_trait = content }
+			modifier = { add = 30 scope:spn_hunt_activity = { has_variable = spn_hunt_coven_known } NOT = { has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 60 } } }
+			modifier = { add = -35 has_trait = zealous }
+			modifier = { add = -30 has_trait = brave }
+		}
+	}
+}
+
+# ==========================================================================================================
+# Another One in the House -- one coven round. Fires once per member, re-entered from the fight's own
+# hunter-won path, and every round is a separate decision with a separate way out.
+#
+# WOUNDS ACCUMULATE (§6.3): from the second round on, winning still costs you. Five kills is possible and
+# should very nearly kill you.
+# ==========================================================================================================
+spn_hunt.0172 = {
+	type = activity_event
+	title = spn_hunt.0172.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_hunt_activity = { var:spn_hunt_coven_round >= 4 } }
+				desc = spn_hunt.0172.desc_late
+			}
+			desc = spn_hunt.0172.desc
+		}
+	}
+	theme = secret
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = stress }
+	right_portrait = { character = scope:spn_defender animation = fear }
+
+	# The trigger reads the ACTIVITY VARIABLE, not scope:spn_defender. At the moment this event is queued,
+	# scope:spn_defender is still the PREVIOUS round's member and that member is usually dead -- testing it
+	# would fail the trigger and stop the sweep halfway up the stairs with people still in the house.
+	trigger = {
+		scope:spn_hunt_activity ?= {
+			exists = var:spn_hunt_coven_next
+			var:spn_hunt_coven_next = { is_alive = yes }
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:spn_hunt_activity.var:spn_hunt_coven_next = { save_scope_as = spn_defender }
+		spn_hunt_compute_fight_bonus_effect = yes
+	}
+
+	# This one too.
+	option = {
+		name = spn_hunt.0172.a
+		custom_tooltip = spn_hunt.0172.a.tt
+		spn_hunt_fight_effect = { DEFENDER = scope:spn_defender }
+		ai_chance = {
+			base = 45
+			modifier = { add = 30 has_trait = zealous }
+			modifier = { add = 25 has_trait = wrathful }
+			modifier = { add = -30 has_trait = compassionate }
+			modifier = { add = -35 scope:spn_hunt_activity = { var:spn_hunt_coven_round >= 4 } has_trait = calm }
+		}
+	}
+	# Take this one alive.
+	option = {
+		name = spn_hunt.0172.b
+		trigger = { is_landed_or_landless_administrative = yes }
+		custom_tooltip = spn_hunt.0172.b.tt
+		imprison_character_effect = {
+			TARGET = scope:spn_defender
+			IMPRISONER = root
+		}
+		add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 4 9 } }
+		spn_hunt_coven_next_effect = yes
+		ai_chance = {
+			base = 40
+			modifier = { add = 35 has_trait = just }
+			modifier = { add = 25 has_trait = calm }
+			modifier = { add = 25 scope:spn_defender = { is_adult = no } }
+		}
+	}
+	# Let this one run.
+	option = {
+		name = spn_hunt.0172.c
+		custom_tooltip = spn_hunt.0172.c.tt
+		scope:spn_defender = {
+			add_character_modifier = { modifier = spn_gone_to_ground_modifier years = 2 }
+			spn_menace_gone_to_ground_effect = yes
+			add_opinion = { target = root modifier = spn_slew_the_menace_opinion }
+		}
+		spn_hunt_coven_next_effect = yes
+		ai_chance = {
+			base = 30
+			modifier = { add = 40 has_trait = compassionate }
+			modifier = { add = 30 has_trait = forgiving }
+			modifier = { add = 25 scope:spn_defender = { is_adult = no } }
+			modifier = { add = -35 has_trait = zealous }
+		}
+	}
+	# Stop. There is a point at which a house full of them stops being work and starts being how you die.
+	option = {
+		name = spn_hunt.0172.d
+		custom_tooltip = spn_hunt.0172.d.tt
+		spn_hunt_coven_end_effect = yes
+		ai_chance = {
+			base = 25
+			modifier = { add = 45 has_trait = craven }
+			modifier = { add = 30 has_trait = calm }
+			modifier = { add = 35 scope:spn_hunt_activity = { var:spn_hunt_coven_round >= 3 } }
+			modifier = { add = 40 has_trait = wounded_2 }
+			modifier = { add = 60 has_trait = wounded_3 }
+			modifier = { add = -30 has_trait = zealous }
+			modifier = { add = -25 has_trait = vengeful }
+		}
+	}
+}

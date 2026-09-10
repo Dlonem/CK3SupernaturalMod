@@ -39,6 +39,12 @@ spn_message.1001 { #Send confer lycanthropy acceptance message
 	type = character_event
 	hidden = yes
 
+	# 2.35h -- GUARDED. spn_complete_wound_turn (20_spn_sire_effects.txt:245) fires this from the wound
+	# chain, where there is no scope:recipient -- the turning had no conferrer. "Undefined event target
+	# 'recipient'", error.log 9 Sep 16:38:00, four per turning. The message simply has nobody to send to
+	# in that case, which is correct; it should not log about it.
+	trigger = { exists = scope:recipient  exists = scope:actor }
+
 	immediate = {
 		scope:recipient = {
 			send_interface_message = {
