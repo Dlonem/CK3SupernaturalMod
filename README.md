@@ -14,8 +14,11 @@ every released version stays available. The files here are the same files the Wo
 
 ## Installing without Steam
 
-Take the archive from the [latest release](https://github.com/Dlonem/CK3SupernaturalMod/releases/latest) —
-not the green **Code** button, which gives you the repository rather than something the launcher can read.
+Take the archive from the [latest release](https://github.com/Dlonem/CK3SupernaturalMod/releases/latest).
+
+If what you downloaded is **Source code (zip)**, everything sits one folder deeper — open
+`CK3SupernaturalMod-<version>/` first and take the two items out of it. The rest of what is in there is
+repository housekeeping and the game does not want it.
 
 Extract it and drop **both** items into your CK3 mod folder:
 
