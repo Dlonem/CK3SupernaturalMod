@@ -114,8 +114,14 @@ spn_hunters.0001 = { # Someone spotted a witch
 			craven = minor_stress_loss
 		}
 		hidden_effect = {
-			scope:witch = {
-				death = { death_reason = death_vanished	}
+			# 2.35a -- ONLY IF SHE WAS INVENTED. See zz_spn_real_witch_effects.txt for the whole story. Until
+			# 2.35 this scope was always a conjured character and this line was housekeeping; since the
+			# witch-finder ladder it is usually somebody real, and this was silently deleting them.
+			if = {
+				limit = { scope:witch = { has_variable = spn_invented_witch } }
+				scope:witch = {
+					death = { death_reason = death_vanished	}
+				}
 			}
 		}
 		
@@ -165,8 +171,14 @@ spn_hunters.0001 = { # Someone spotted a witch
 			zealous = minor_stress_loss
 		}
 		hidden_effect = {
-			scope:witch = {
-				death = { death_reason = death_vanished	}
+			# 2.35a -- ONLY IF SHE WAS INVENTED. See zz_spn_real_witch_effects.txt for the whole story. Until
+			# 2.35 this scope was always a conjured character and this line was housekeeping; since the
+			# witch-finder ladder it is usually somebody real, and this was silently deleting them.
+			if = {
+				limit = { scope:witch = { has_variable = spn_invented_witch } }
+				scope:witch = {
+					death = { death_reason = death_vanished	}
+				}
 			}
 		}
 		
@@ -592,6 +604,24 @@ spn_hunters.0010 = { # Hunter: Monster Sighting
 	
 	title = spn_hunters.0010.t
 	desc = spn_hunters.0010.desc
+	
+	# 2.35a -- THIS EVENT HAD NO TRIGGER AT ALL.
+	#
+	# Its twin .0001 has carried one since it was written. This one was declared in
+	# spn_hunters_yearly_on_actions.txt under the comment "the events gate on the hunter trait themselves",
+	# and it does not and never did: there was no gate of any kind here, so Monster Sighting fired on any
+	# playable character the pulse reached, including the imprisoned, the incapable and the mid-transition.
+	# Its immediate then conjures a person, and its .0013 / .0014 continuations conjure a WEREWOLF or a
+	# VAMPIRE before the player has clicked anything.
+	#
+	# Plato in the Cave, Steam, 11 Sep 2026: "The hunt event can be hosted by non hunters, and can turn
+	# them into hunters. It can also generate monsters that survive the event."
+	#
+	# basic_is_valid_for_yearly_events_trigger is the same gate .0001 uses. The hunter/non-hunter split now
+	# lives on the on_action, where the RATE lives, because that is the thing that was actually wrong.
+	trigger = {
+		basic_is_valid_for_yearly_events_trigger = yes
+	}
 	
     immediate = {
         # 2.35 -- was an unconditional create_character at root.capital_province (which a landless

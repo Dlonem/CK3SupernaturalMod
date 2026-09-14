@@ -31,19 +31,62 @@ spn_hunter_yearly_random_on_action = {
     random_on_action = {
         chance_of_no_event = { value = 10 }
         1 = spn_hunter_on_action
+        1 = spn_hunter_bystander_on_action
     }
 }
 
+# 2.35a -- AND THE RATE ABOVE WAS BEING PAID BY THE WHOLE WORLD.
+#
+# The arithmetic in the block above is correct and the conclusion drawn from it was not. It measures ONE
+# hunter's wait -- Thomas's -- and the fix multiplied the rate about seventeenfold to shorten it. But this
+# pulse does not run for one hunter. It runs for EVERY playable character, and the old trigger
+# (spn_has_supernatural_trait = no) excludes only vampires, werewolves, hybrids and demons: every ordinary
+# ruler on the map passed it. So the seventeenfold rise applied to a couple of thousand characters at once,
+# and both events it feeds are manufacturing plants -- .0001 conjures or CONDEMNS a witch, .0010 leads to
+# .0013 / .0014, which conjure a werewolf or a vampire and hand out the hunter trait on a 50% roll.
+#
+# Plato in the Cave, Steam, 10-11 Sep 2026: "There are way, way too many hunters appearing now and their
+# hunts go on and on... This update wont break saves but it will flood your world with monsters and hunters."
+# That is this line, and it compounds: every new hunter is a new subscriber to the same pulse.
+#
+# THE SPLIT. The rate was never the problem; the population it was charged to was. A hunter keeps the whole
+# 2.35h rate, because he is the man the news is for and there are a few dozen of him. Everybody else keeps
+# the pre-2.35h rate, because there are thousands of them and the event is only an on-ramp -- non-hunters
+# still have their own options in both events (.0001.c, .0010.b) and can still be recruited, just not at a
+# pace that repopulates Westeros.
 spn_hunter_on_action = {
 	trigger = {
 		spn_has_supernatural_trait = no
+		has_trait = supernatural_hunter
 	}
 	random_events = {
 		chance_to_happen = 40
 		40 = 0  # nothing
 
-		# Witch or Monster Hunter events (the events gate on the hunter trait themselves)
+		# 2.35a -- the old comment here read "the events gate on the hunter trait themselves". They do not.
+		# .0001 gates on faith doctrine and yearly validity only; .0010 had no trigger whatsoever until 2.35a.
+		# The gate is on this on_action now, where it can be read next to the rate it belongs to.
 		30 = spn_hunters.0001  # Witch spotted
 		30 = spn_hunters.0010  # Monster spotted	
+	}
+}
+
+# 2.35a -- EVERYBODY ELSE. Same two events, the rate the world ran at for every release before 2.35h.
+#
+#     0.90 x 0.10 x 0.10 = 0.9% per pulse per event, against a pulse of one to two years.
+#
+# For a single ordinary ruler that is a once-in-a-lifetime piece of news, which is what "someone spotted a
+# witch" should be. Across a full map it is still the steady trickle of new hunters the mod has always had.
+spn_hunter_bystander_on_action = {
+	trigger = {
+		spn_has_supernatural_trait = no
+		NOT = { has_trait = supernatural_hunter }
+	}
+	random_events = {
+		chance_to_happen = 10
+		80 = 0  # nothing
+
+		10 = spn_hunters.0001  # Witch spotted
+		10 = spn_hunters.0010  # Monster spotted
 	}
 }
