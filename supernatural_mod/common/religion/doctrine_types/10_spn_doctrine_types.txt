@@ -1,283 +1,471 @@
-﻿spn_doctrine_vampirism_crime = {
+﻿# Supernatural -- doctrines (CK3 1.20 format).
+#
+# Every doctrine names its group (doctrine_group_type) and its place on the spectrum (index). Both are
+# mandatory in 1.20: a doctrine without a group is dropped at load and its group is left empty. The 1.19
+# format logged 38 such errors on the first 1.20 boot (30 Sep 2026). It did not cause that boot's crash,
+# which was Mikael's history (common/landed_titles/zz_spn_landed_titles.txt).
+#
+# Each block is vanilla 1.20's doctrine_witchcraft_* (20_doctrines.txt) with Supernatural's names in it:
+#   * index 0..3 and divergence 0 / 5 / 15 / 20 -- the witchcraft values;
+#   * piety_cost is evaluated in RITE scope in 1.20, so the checks read rite_has_doctrine;
+#   * parameters are bare flags (the `= yes` form is gone);
+#   * Criminal lists the KNOWN trait as a sin and Virtuous lists it as a virtue, opinion scale 2 as
+#     vanilla's witch. The virtue keeps vanilla's weight (100): a Rite that reveres your kind fits your
+#     life, and you are fulfilled by it. The sin is weight 1, not vanilla's 80. A sin's weight is
+#     resting Spiritual Fulfillment and is the same for everyone who holds the trait, so at 80 a cynic
+#     who has stopped caring about his faith sat at -80 for being found out. Thomas, 1 Oct 2026: the
+#     last thing he would want is to not care about religion, be a vampire, and have it hurt anyway.
+#     So the faithful still judge a known creature (the sin's opinion and piety drain stay), and the
+#     weight on the creature's own soul moved to what it does, scaled by how much it still cares:
+#     zz_spn_fulfillment_effects.txt. Weight 1 is the documented default (_religion_types.info).
+#   The known traits keep their own triggered_opinion (spn_*_crime / spn_*_intolerant), as vanilla's
+#   witch keeps witchcraft_crime / witchcraft_intolerant alongside the new sin entry.
+
+
+####################################################################################################
+# VAMPIRISM
+####################################################################################################
+
+spn_doctrine_vampirism_crime = {
+	doctrine_group_type = spn_doctrine_vampirism
+	index = 0
+	divergence = 0
+
 	piety_cost = {
 		value = faith_doctrine_cost_low
 		if = {
-			limit = { has_doctrine = spn_doctrine_vampirism_crime }
+			limit = { rite_has_doctrine = spn_doctrine_vampirism_crime }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_vampirism_accepted }
+			limit = { rite_has_doctrine = spn_doctrine_vampirism_accepted }
 			multiply = faith_changed_doctrine_cost_mult_two_step
 		}
+		else_if = {
+			limit = { rite_has_doctrine = spn_doctrine_vampirism_virtuous }
+			multiply = faith_changed_doctrine_cost_mult_three_step
+		}
 	}
+
 	parameters = {
-		spn_vampirism_illegal = yes
+		spn_vampirism_illegal
+	}
+
+	traits = {
+		sins = {
+			spn_known_vampire = { weight = 1 scale = 2 }	# 2.36: was 80 -- see the header
+		}
 	}
 }
 
 spn_doctrine_vampirism_shunned = {
+	doctrine_group_type = spn_doctrine_vampirism
+	index = 1
+	divergence = 5
+
 	piety_cost = {
 		value = faith_doctrine_cost_low
 		if = {
-			limit = { has_doctrine = spn_doctrine_vampirism_shunned }
+			limit = { rite_has_doctrine = spn_doctrine_vampirism_shunned }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
+		else_if = {
+			limit = { rite_has_doctrine = spn_doctrine_vampirism_virtuous }
+			multiply = faith_changed_doctrine_cost_mult_two_step
+		}
 	}
+
 	parameters = {
-		spn_vampirism_shunned = yes
+		spn_vampirism_shunned
 	}
 }
 
 spn_doctrine_vampirism_accepted = {
+	doctrine_group_type = spn_doctrine_vampirism
+	index = 2
+	divergence = 15
+
 	piety_cost = {
 		value = faith_doctrine_cost_low
 		if = {
-			limit = { has_doctrine = spn_doctrine_vampirism_accepted }
+			limit = { rite_has_doctrine = spn_doctrine_vampirism_accepted }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_vampirism_crime }
+			limit = { rite_has_doctrine = spn_doctrine_vampirism_crime }
 			multiply = faith_changed_doctrine_cost_mult_two_step
 		}
 	}
+
 	parameters = {
-		spn_vampirism_accepted = yes
+		spn_vampirism_accepted
 	}
 }
 
 spn_doctrine_vampirism_virtuous = {
+	doctrine_group_type = spn_doctrine_vampirism
+	index = 3
+	divergence = 20
+
 	piety_cost = {
 		value = faith_tenet_cost_massive
 		if = {
-			limit = { has_doctrine = spn_doctrine_vampirism_virtuous }
+			limit = { rite_has_doctrine = spn_doctrine_vampirism_virtuous }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_vampirism_shunned }
+			limit = { rite_has_doctrine = spn_doctrine_vampirism_shunned }
 			multiply = faith_changed_doctrine_cost_mult_two_step
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_vampirism_crime }
+			limit = { rite_has_doctrine = spn_doctrine_vampirism_crime }
 			multiply = faith_changed_doctrine_cost_mult_three_step
 		}
 	}
+
 	traits = {
-		virtues = { spn_known_vampire }
+		virtues = {
+			spn_known_vampire = { weight = 100 scale = 2 }
+		}
 	}
+
 	parameters = {
-		spn_vampirism_accepted = yes
+		spn_vampirism_accepted
 	}
 }
 
+####################################################################################################
+# LYCANTHROPY
+####################################################################################################
+
 spn_doctrine_lycanthropy_crime = {
+	doctrine_group_type = spn_doctrine_lycanthropy
+	index = 0
+	divergence = 0
+
 	piety_cost = {
 		value = faith_doctrine_cost_low
 		if = {
-			limit = { has_doctrine = spn_doctrine_lycanthropy_crime }
+			limit = { rite_has_doctrine = spn_doctrine_lycanthropy_crime }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_lycanthropy_accepted }
+			limit = { rite_has_doctrine = spn_doctrine_lycanthropy_accepted }
 			multiply = faith_changed_doctrine_cost_mult_two_step
 		}
+		else_if = {
+			limit = { rite_has_doctrine = spn_doctrine_lycanthropy_virtuous }
+			multiply = faith_changed_doctrine_cost_mult_three_step
+		}
 	}
+
 	parameters = {
-		spn_lycanthropy_illegal = yes
+		spn_lycanthropy_illegal
+	}
+
+	traits = {
+		sins = {
+			spn_known_werewolf = { weight = 1 scale = 2 }	# 2.36: was 80 -- see the header
+		}
 	}
 }
 
 spn_doctrine_lycanthropy_shunned = {
+	doctrine_group_type = spn_doctrine_lycanthropy
+	index = 1
+	divergence = 5
+
 	piety_cost = {
 		value = faith_doctrine_cost_low
 		if = {
-			limit = { has_doctrine = spn_doctrine_lycanthropy_shunned }
+			limit = { rite_has_doctrine = spn_doctrine_lycanthropy_shunned }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
+		else_if = {
+			limit = { rite_has_doctrine = spn_doctrine_lycanthropy_virtuous }
+			multiply = faith_changed_doctrine_cost_mult_two_step
+		}
 	}
+
 	parameters = {
-		spn_lycanthropy_shunned = yes
+		spn_lycanthropy_shunned
 	}
 }
 
 spn_doctrine_lycanthropy_accepted = {
+	doctrine_group_type = spn_doctrine_lycanthropy
+	index = 2
+	divergence = 15
+
 	piety_cost = {
 		value = faith_doctrine_cost_low
 		if = {
-			limit = { has_doctrine = spn_doctrine_lycanthropy_accepted }
+			limit = { rite_has_doctrine = spn_doctrine_lycanthropy_accepted }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_lycanthropy_crime }
+			limit = { rite_has_doctrine = spn_doctrine_lycanthropy_crime }
 			multiply = faith_changed_doctrine_cost_mult_two_step
 		}
 	}
+
 	parameters = {
-		spn_lycanthropy_accepted = yes
+		spn_lycanthropy_accepted
 	}
 }
 
 spn_doctrine_lycanthropy_virtuous = {
+	doctrine_group_type = spn_doctrine_lycanthropy
+	index = 3
+	divergence = 20
+
 	piety_cost = {
 		value = faith_tenet_cost_massive
 		if = {
-			limit = { has_doctrine = spn_doctrine_lycanthropy_virtuous }
+			limit = { rite_has_doctrine = spn_doctrine_lycanthropy_virtuous }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_lycanthropy_shunned }
+			limit = { rite_has_doctrine = spn_doctrine_lycanthropy_shunned }
 			multiply = faith_changed_doctrine_cost_mult_two_step
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_lycanthropy_crime }
+			limit = { rite_has_doctrine = spn_doctrine_lycanthropy_crime }
 			multiply = faith_changed_doctrine_cost_mult_three_step
 		}
 	}
+
 	traits = {
-		virtues = { spn_known_werewolf }
+		virtues = {
+			spn_known_werewolf = { weight = 100 scale = 2 }
+		}
 	}
+
 	parameters = {
-		spn_lycanthropy_accepted = yes
+		spn_lycanthropy_accepted
 	}
 }
 
+####################################################################################################
+# HYBRID
+####################################################################################################
+
 spn_doctrine_hybrid_crime = {
+	doctrine_group_type = spn_doctrine_hybrid
+	index = 0
+	divergence = 0
+
 	piety_cost = {
 		value = faith_doctrine_cost_low
 		if = {
-			limit = { has_doctrine = spn_doctrine_hybrid_crime }
+			limit = { rite_has_doctrine = spn_doctrine_hybrid_crime }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_hybrid_accepted }
+			limit = { rite_has_doctrine = spn_doctrine_hybrid_accepted }
 			multiply = faith_changed_doctrine_cost_mult_two_step
 		}
+		else_if = {
+			limit = { rite_has_doctrine = spn_doctrine_hybrid_virtuous }
+			multiply = faith_changed_doctrine_cost_mult_three_step
+		}
 	}
+
 	parameters = {
-		spn_hybrid_illegal = yes
+		spn_hybrid_illegal
+	}
+
+	traits = {
+		sins = {
+			spn_known_hybrid = { weight = 1 scale = 2 }	# 2.36: was 80 -- see the header
+		}
 	}
 }
 
 spn_doctrine_hybrid_shunned = {
+	doctrine_group_type = spn_doctrine_hybrid
+	index = 1
+	divergence = 5
+
 	piety_cost = {
 		value = faith_doctrine_cost_low
 		if = {
-			limit = { has_doctrine = spn_doctrine_hybrid_shunned }
+			limit = { rite_has_doctrine = spn_doctrine_hybrid_shunned }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
+		else_if = {
+			limit = { rite_has_doctrine = spn_doctrine_hybrid_virtuous }
+			multiply = faith_changed_doctrine_cost_mult_two_step
+		}
 	}
+
 	parameters = {
-		spn_hybrid_shunned = yes
+		spn_hybrid_shunned
 	}
 }
 
 spn_doctrine_hybrid_accepted = {
+	doctrine_group_type = spn_doctrine_hybrid
+	index = 2
+	divergence = 15
+
 	piety_cost = {
 		value = faith_doctrine_cost_low
 		if = {
-			limit = { has_doctrine = spn_doctrine_hybrid_accepted }
+			limit = { rite_has_doctrine = spn_doctrine_hybrid_accepted }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_hybrid_crime }
+			limit = { rite_has_doctrine = spn_doctrine_hybrid_crime }
 			multiply = faith_changed_doctrine_cost_mult_two_step
 		}
 	}
+
 	parameters = {
-		spn_hybrid_accepted = yes
+		spn_hybrid_accepted
 	}
 }
 
 spn_doctrine_hybrid_virtuous = {
+	doctrine_group_type = spn_doctrine_hybrid
+	index = 3
+	divergence = 20
+
 	piety_cost = {
 		value = faith_tenet_cost_massive
 		if = {
-			limit = { has_doctrine = spn_doctrine_hybrid_virtuous }
+			limit = { rite_has_doctrine = spn_doctrine_hybrid_virtuous }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_hybrid_shunned }
+			limit = { rite_has_doctrine = spn_doctrine_hybrid_shunned }
 			multiply = faith_changed_doctrine_cost_mult_two_step
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_hybrid_crime }
+			limit = { rite_has_doctrine = spn_doctrine_hybrid_crime }
 			multiply = faith_changed_doctrine_cost_mult_three_step
 		}
 	}
+
 	traits = {
-		virtues = { spn_known_hybrid }
+		virtues = {
+			spn_known_hybrid = { weight = 100 scale = 2 }
+		}
 	}
+
 	parameters = {
-		spn_hybrid_accepted = yes
+		spn_hybrid_accepted
 	}
 }
 
+####################################################################################################
+# HUNTER
+####################################################################################################
+
 spn_doctrine_hunter_crime = {
+	doctrine_group_type = spn_doctrine_hunter
+	index = 0
+	divergence = 0
+
 	piety_cost = {
 		value = faith_doctrine_cost_low
 		if = {
-			limit = { has_doctrine = spn_doctrine_hunter_crime }
+			limit = { rite_has_doctrine = spn_doctrine_hunter_crime }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_hunter_accepted }
+			limit = { rite_has_doctrine = spn_doctrine_hunter_accepted }
 			multiply = faith_changed_doctrine_cost_mult_two_step
 		}
+		else_if = {
+			limit = { rite_has_doctrine = spn_doctrine_hunter_virtuous }
+			multiply = faith_changed_doctrine_cost_mult_three_step
+		}
 	}
+
 	parameters = {
-		spn_hunter_illegal = yes
+		spn_hunter_illegal
+	}
+
+	traits = {
+		sins = {
+			spn_known_hunter = { weight = 1 scale = 2 }	# 2.36: was 80 -- see the header
+		}
 	}
 }
 
 spn_doctrine_hunter_shunned = {
+	doctrine_group_type = spn_doctrine_hunter
+	index = 1
+	divergence = 5
+
 	piety_cost = {
 		value = faith_doctrine_cost_low
 		if = {
-			limit = { has_doctrine = spn_doctrine_hunter_shunned }
+			limit = { rite_has_doctrine = spn_doctrine_hunter_shunned }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
+		else_if = {
+			limit = { rite_has_doctrine = spn_doctrine_hunter_virtuous }
+			multiply = faith_changed_doctrine_cost_mult_two_step
+		}
 	}
+
 	parameters = {
-		spn_hunter_shunned = yes
+		spn_hunter_shunned
 	}
 }
 
 spn_doctrine_hunter_accepted = {
+	doctrine_group_type = spn_doctrine_hunter
+	index = 2
+	divergence = 15
+
 	piety_cost = {
 		value = faith_doctrine_cost_low
 		if = {
-			limit = { has_doctrine = spn_doctrine_hunter_accepted }
+			limit = { rite_has_doctrine = spn_doctrine_hunter_accepted }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_hunter_crime }
+			limit = { rite_has_doctrine = spn_doctrine_hunter_crime }
 			multiply = faith_changed_doctrine_cost_mult_two_step
 		}
 	}
+
 	parameters = {
-		spn_hunter_accepted = yes
+		spn_hunter_accepted
 	}
 }
 
 spn_doctrine_hunter_virtuous = {
+	doctrine_group_type = spn_doctrine_hunter
+	index = 3
+	divergence = 20
+
 	piety_cost = {
 		value = faith_tenet_cost_massive
 		if = {
-			limit = { has_doctrine = spn_doctrine_hunter_virtuous }
+			limit = { rite_has_doctrine = spn_doctrine_hunter_virtuous }
 			multiply = faith_unchanged_doctrine_cost_mult
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_hunter_shunned }
+			limit = { rite_has_doctrine = spn_doctrine_hunter_shunned }
 			multiply = faith_changed_doctrine_cost_mult_two_step
 		}
 		else_if = {
-			limit = { has_doctrine = spn_doctrine_hunter_crime }
+			limit = { rite_has_doctrine = spn_doctrine_hunter_crime }
 			multiply = faith_changed_doctrine_cost_mult_three_step
 		}
 	}
+
 	traits = {
-		virtues = { spn_known_hunter }
+		virtues = {
+			spn_known_hunter = { weight = 100 scale = 2 }
+		}
 	}
+
 	parameters = {
-		spn_hunter_accepted = yes
+		spn_hunter_accepted
 	}
 }

@@ -1,4 +1,4 @@
-version="2.35a"
+version="2.36"
 picture="thumbnail.png"
 tags={
 	"Alternative History"
@@ -7,5 +7,5 @@ tags={
 	"Character Interactions"
 }
 name="Supernatural"
-supported_version="1.19.0.6"
+supported_version="1.20.*"
 path="mod/supernatural_mod"

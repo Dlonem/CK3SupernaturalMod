@@ -6,22 +6,33 @@
 	desc = disinherit_interaction_desc
 	use_diplomatic_range = no
 	
+	is_available = {
+		trigger_if = {
+			limit = { is_ai = yes }
+			is_dynast = yes
+			NOT = {
+				has_trait = forgiving
+			}
+			is_at_war = no
+		}
+	}
+
 	is_shown = {
-		NOT = { 
-			scope:recipient = scope:actor 
+		NOR = { 
+			scope:recipient = scope:puppet_or_actor 
 
 			AND = { # Explicit AND to ensure no funny business
-				scope:recipient = { is_child_of = scope:actor }
-				scope:actor.dynasty = {
+				scope:recipient = { is_child_of = scope:puppet_or_actor }
+				scope:puppet_or_actor.dynasty ?= {
 					this = scope:recipient.dynasty
 					has_dynasty_perk = fp2_coterie_legacy_5
 				}
 			}
 		}
 
-		scope:actor = {
+		scope:puppet_or_actor ?= {
 			is_dynast = yes
-			dynasty = scope:recipient.dynasty
+			dynasty ?= scope:recipient.dynasty
 
 		}
 		scope:recipient = {
@@ -33,9 +44,9 @@
 
 	is_valid = {
 		custom_description = {
-			scope:actor.culture = {
+			scope:puppet_or_actor.culture = {
 				NOT = { has_cultural_parameter = cannot_disherit }
-			}
+			} 
 			text = "mystical_ancestors_disinherit"
 		}
 	}
@@ -49,36 +60,38 @@
 							has_trait = disputed_heritage
 							any_secret = {
 								type = secret_disputed_heritage
-								is_known_by = scope:actor
+								is_known_by = scope:puppet_or_actor
 							}
 							has_trait = bastard
 						}
 					}
 				}
 			}
-			scope:actor.dynasty = {
+			scope:puppet_or_actor.dynasty = {
 				dynasty_prestige >= medium_dynasty_prestige_value
 			}
 		}
-		scope:recipient = { NOT = { has_strong_hook = scope:actor } }
+
+		scope:recipient = { NOT = { has_strong_hook = scope:puppet_or_actor } }
 		trigger_if = {
 			limit = {
 				scope:recipient = {
 					NOR = {
-						is_child_of = scope:actor
-						is_grandchild_of = scope:actor
-						is_great_grandchild_of = scope:actor
+						is_child_of = scope:puppet_or_actor
+						is_grandchild_of = scope:puppet_or_actor
+						is_great_grandchild_of = scope:puppet_or_actor
 					}
 				}
 			}
 			custom_description = {
-				scope:recipient.top_liege = scope:actor.top_liege
+				scope:recipient.top_liege = scope:puppet_or_actor.top_liege
+				subject = scope:puppet_or_actor
 				text = "same_realm_as"
 			}
 		}
 		custom_tooltip = {
 			text = cannot_take_overt_hostile_actions_against_diarch.tt
-			NOT = { scope:recipient ?= scope:actor.diarch }
+			NOT = { scope:recipient ?= scope:puppet_or_actor.diarch }
 		}
 	}
 
@@ -89,10 +102,16 @@
 	}
 	
 	on_accept = {
-		scope:actor = {
-			stress_impact = {
-				forgiving = minor_stress_impact_gain
-				compassionate = minor_stress_impact_gain
+		scope:puppet_or_actor = {
+			# Only get stressed/SP penalties if you don't have the parameter
+			if = {
+				limit = {
+					NOT = { sp_hostile_schemes_except_murder_no_stress_or_fulfillment_trigger = yes }
+				}
+				stress_and_fulfillment_impact = {
+					forgiving = minor_stress_impact_gain
+					compassionate = minor_stress_impact_gain
+				}
 			}
 			
 			#Legitimacy loss
@@ -127,27 +146,23 @@
 				}
 				#Legitimacy loss
 				if = {
-					limit = {
-						scope:recipient = { is_primary_heir_of = scope:actor }
-					}
+					limit = { scope:recipient = { is_primary_heir_of = scope:puppet_or_actor } }
 					add_legitimacy = {
 						value = medium_legitimacy_loss
-						multiply = scope:actor.primary_title.tier
+						multiply = scope:puppet_or_actor.primary_title.tier
 					}
 				}
 				else_if = {
-					limit = {
-						scope:recipient = { is_child_of = scope:actor }
-					}
+					limit = { scope:recipient = { is_child_of = scope:puppet_or_actor } }
 					add_legitimacy = {
 						value = minor_legitimacy_loss
-						multiply = scope:actor.primary_title.tier
+						multiply = scope:puppet_or_actor.primary_title.tier
 					}
 				}
 				else = {
 					add_legitimacy = {
 						value = miniscule_legitimacy_loss
-						multiply = scope:actor.primary_title.tier
+						multiply = scope:puppet_or_actor.primary_title.tier
 					}
 				}
 			}
@@ -155,12 +170,34 @@
 				send_interface_toast = {
 					title = disinherit_interaction_notification
 					type = event_toast_effect_neutral
-					left_icon = scope:actor					
+					left_icon = scope:puppet_or_actor					
 					right_icon = scope:recipient
 
 					scope:recipient = {
 						show_as_tooltip = {
-							disinherit_effect = { DISINHERITOR = scope:actor }
+							disinherit_effect = { DISINHERITOR = scope:puppet_or_actor }
+						}
+					}
+				}
+			}
+		}
+		hidden_effect = {
+			if = {
+				limit = {
+					scope:is_puppet_action ?= yes
+				}
+				scope:actor = {
+					send_interface_toast = {
+						type = event_toast_effect_neutral
+						title = disinherit_interaction_notification
+
+						left_icon = scope:puppet_or_actor
+						right_icon = scope:recipient
+
+						scope:recipient = {
+							show_as_tooltip = {
+								disinherit_effect = { DISINHERITOR = scope:puppet_or_actor }
+							}
 						}
 					}
 				}
@@ -168,12 +205,12 @@
 		}
 
 		scope:recipient = {
-			disinherit_effect = { DISINHERITOR = scope:actor }
+			disinherit_effect = { DISINHERITOR = scope:puppet_or_actor }
 		}
 
 		# If we're a clan this interaction affects unity
 		add_clan_unity_interaction_effect = {
-			CHARACTER = scope:actor
+			CHARACTER = scope:puppet_or_actor
 			TARGET = scope:recipient
 			VALUE = medium_unity_loss
 			DESC = clan_unity_disinheritance.desc
@@ -185,7 +222,7 @@
 				scope:recipient = {
 					any_secret = {
 						type = secret_disputed_heritage
-						is_known_by = scope:actor
+						is_known_by = scope:puppet_or_actor
 						save_temporary_scope_as = secret_to_reveal
 					}
 				}
@@ -204,25 +241,25 @@
 	cost = {
 		renown = {
 			value = {
-				add = scope:actor.dynasty.medium_dynasty_prestige_value
+				add = scope:puppet_or_actor.dynasty.medium_dynasty_prestige_value
 				if = {
 					limit = {
 						scope:recipient = {
-							is_landed_or_landless_administrative = yes
+							is_landed_or_landless_administrative_or_theocratic = yes
 						}
 					}
-					add = scope:actor.dynasty.major_dynasty_prestige_value
+					add = scope:puppet_or_actor.dynasty.major_dynasty_prestige_value
 				}
 				if = {
 					limit = {
 						scope:recipient = {
-							is_landed_or_landless_administrative = no
+							is_landed_or_landless_administrative_or_theocratic = no
 							any_heir_title = {
 								exists = holder
 							}
 						}
 					}
-					add = scope:actor.dynasty.medium_dynasty_prestige_value
+					add = scope:puppet_or_actor.dynasty.medium_dynasty_prestige_value
 				}
 				if = {
 					limit = {
@@ -231,7 +268,7 @@
 								has_trait = disputed_heritage
 								any_secret = {
 									type = secret_disputed_heritage
-									is_known_by = scope:actor
+									is_known_by = scope:puppet_or_actor
 								}
 								has_trait = bastard
 							}
@@ -265,6 +302,10 @@
 					multiply = 0
 				}
 			}
+			if = {
+				limit = { scope:is_puppet_action ?= yes }
+				multiply = 0
+			}
 		}
 		prestige = {
 			value = {
@@ -272,7 +313,7 @@
 				if = {
 					limit = {
 						scope:recipient = {
-							is_landed_or_landless_administrative = yes
+							is_landed_or_landless_administrative_or_theocratic = yes
 						}
 					}
 					add = massive_prestige_value
@@ -280,7 +321,7 @@
 				if = {
 					limit = {
 						scope:recipient = {
-							is_landed_or_landless_administrative = no
+							is_landed_or_landless_administrative_or_theocratic = no
 							any_heir_title = {
 								exists = holder
 							}
@@ -295,7 +336,7 @@
 								has_trait = disputed_heritage
 								any_secret = {
 									type = secret_disputed_heritage
-									is_known_by = scope:actor
+									is_known_by = scope:puppet_or_actor
 								}
 								has_trait = bastard
 							}
@@ -329,51 +370,49 @@
 					multiply = 0
 				}
 			}
+			if = {
+				limit = { scope:is_puppet_action ?= yes }
+				multiply = 0
+			}
 		}
 	}
 	
 	auto_accept = yes
 
-	ai_potential = {
-		is_at_war = no
-		NOT = {
-			has_trait = forgiving
-		}
-		is_dynast = yes
-	}
-	
 	ai_targets = {
 		ai_recipients = dynasty
 		max = 20
 	}
 	
 	ai_frequency_by_tier = {
-                barony = 0
-                county = 96
-                duchy = 48
-                kingdom = 12
-                empire = 12
-                hegemony = 12
-        }
+		barony = 0
+		county = 96
+		duchy = 48
+		kingdom = 12
+		empire = 12
+		hegemony = 12
+	}
 	
 	ai_will_do = {
 		base = 0
+		
 		modifier = {
 			add = -100
-			scope:actor = {
+			scope:puppet_or_actor = {
 				OR = {
 					legitimacy_level = 0
 					legitimacy_level = 1
 				}
 			}
-			scope:recipient = { is_primary_heir_of = scope:actor }
+			scope:recipient = { is_primary_heir_of = scope:puppet_or_actor }
 		}
+		
 		modifier = {
 			add = 100
 			scope:recipient = {
 				OR = {
-					has_relation_rival = scope:actor
-					has_relation_nemesis = scope:actor
+					has_relation_rival = scope:puppet_or_actor
+					has_relation_nemesis = scope:puppet_or_actor
 				}
 			}
 		}
@@ -381,7 +420,7 @@
 		modifier = {
 			add = 100
 			scope:recipient = {
-				is_primary_heir_of = scope:actor
+				is_primary_heir_of = scope:puppet_or_actor
 				OR = {
 					has_trait = inbred
 					has_trait = intellect_bad_3
@@ -394,7 +433,7 @@
 			add = 5
 			ai_vengefulness >= medium_positive_ai_value
 			scope:recipient = {
-				is_heir_of = scope:actor
+				is_heir_of = scope:puppet_or_actor
 			}
 			OR = {
 				AND = {
@@ -402,7 +441,7 @@
 						has_trait = incestuous
 					}
 					NOT = { is_incestuous_trigger = yes }
-					trait_is_criminal_in_faith_trigger = { TRAIT = trait:incestuous FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_rite_trigger = { TRAIT = trait:incestuous RITE = scope:puppet_or_actor.rite GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -418,7 +457,7 @@
 						has_trait = adulterer
 						has_trait = fornicator
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = trait:adulterer FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_rite_trigger = { TRAIT = trait:adulterer RITE = scope:puppet_or_actor.rite GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -428,25 +467,21 @@
 						has_trait = adulterer
 						has_trait = fornicator
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = trait:fornicator FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_rite_trigger = { TRAIT = trait:fornicator RITE = scope:puppet_or_actor.rite GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
 						has_trait = deviant
 					}
-					NOT = {
-						is_deviant_trigger = yes
-					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = trait:deviant FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					is_deviant_trigger = no
+					trait_is_criminal_in_rite_trigger = { TRAIT = trait:deviant RITE = scope:puppet_or_actor.rite GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
 						has_trait = witch
 					}
-					NOT = {
-						is_witch_trigger = yes
-					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = trait:witch FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					is_witch_trigger = no
+					trait_is_criminal_in_rite_trigger = { TRAIT = trait:witch RITE = scope:puppet_or_actor.rite GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -458,29 +493,29 @@
 							type = secret_homosexual
 						}
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = trait:sodomite FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_rite_trigger = { TRAIT = trait:sodomite RITE = scope:puppet_or_actor.rite GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
 						has_trait = cannibal
 					}
-					NOT = {
-						is_cannibal_trigger = yes
-					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = trait:cannibal FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					is_cannibal_trigger = no
+					trait_is_criminal_in_rite_trigger = { TRAIT = trait:cannibal RITE = scope:puppet_or_actor.rite GENDER_CHARACTER = scope:recipient }
 				}
 			}
 		}
+
 		# Unity modifiers
 		evaluate_action_decreasing_house_unity = {
 			VALUE = 100
 		}
+		
 		modifier = {
 			factor = 0
 			scope:recipient = {
 				OR = {
-					has_relation_friend = scope:actor
-					has_relation_best_friend = scope:actor
+					has_relation_friend = scope:puppet_or_actor
+					has_relation_best_friend = scope:puppet_or_actor
 				}
 			}
 		}
@@ -502,13 +537,24 @@ disinherit_children_interaction = {
 	desc = disinherit_children_interaction_desc
 	use_diplomatic_range = no
 
+	is_available = {
+		trigger_if = {
+			limit = { is_ai = yes }
+			is_dynast = yes
+			NOT = {
+				has_trait = forgiving
+			}
+			is_at_war = no
+		}
+	}
+
 	is_shown = {
 		# DLC checking
 		has_fp2_dlc_trigger = yes
 		# Standard check
-		NOT = { scope:recipient = scope:actor }
+		scope:recipient != scope:puppet_or_actor
 
-		scope:actor.dynasty = {
+		scope:puppet_or_actor.dynasty ?= {
 			this = scope:recipient.dynasty
 			has_dynasty_perk = fp2_coterie_legacy_5
 		}
@@ -520,11 +566,11 @@ disinherit_children_interaction = {
 	}
 
 	is_valid = {
-		scope:actor = { is_parent_of = scope:recipient }
+		scope:puppet_or_actor = { is_parent_of = scope:recipient }
 
 
 		custom_description = {
-			scope:actor.culture = {
+			scope:puppet_or_actor.culture = {
 				NOT = { has_cultural_parameter = cannot_disherit }
 			}
 			text = "mystical_ancestors_disinherit"
@@ -532,28 +578,29 @@ disinherit_children_interaction = {
 	}
 
 	is_valid_showing_failures_only = {
-		scope:actor = {
+		scope:puppet_or_actor = {
 			prestige >= major_prestige_value
 		}
-		scope:recipient = { NOT = { has_strong_hook = scope:actor } }
+		scope:recipient = { NOT = { has_strong_hook = scope:puppet_or_actor } }
 		trigger_if = {
 			limit = {
 				scope:recipient = {
 					NOR = {
-						is_child_of = scope:actor
-						is_grandchild_of = scope:actor
-						is_great_grandchild_of = scope:actor
+						is_child_of = scope:puppet_or_actor
+						is_grandchild_of = scope:puppet_or_actor
+						is_great_grandchild_of = scope:puppet_or_actor
 					}
 				}
 			}
 			custom_description = {
-				scope:recipient.top_liege = scope:actor.top_liege
+				scope:recipient.top_liege = scope:puppet_or_actor.top_liege
+				subject = scope:puppet_or_actor
 				text = "same_realm_as"
 			}
 		}
 		custom_tooltip = {
 			text = cannot_take_overt_hostile_actions_against_diarch.tt
-			NOT = { scope:recipient ?= scope:actor.diarch }
+			NOT = { scope:recipient ?= scope:puppet_or_actor.diarch }
 		}
 	}
 
@@ -564,10 +611,16 @@ disinherit_children_interaction = {
 	}
 
 	on_accept = {
-		scope:actor = {
-			stress_impact = {
-				forgiving = minor_stress_impact_gain
-				compassionate = minor_stress_impact_gain
+		scope:puppet_or_actor = {
+			# Only get stressed/SP penalties if you don't have the parameter
+			if = {
+				limit = {
+					NOT = { sp_hostile_schemes_except_murder_no_stress_or_fulfillment_trigger = yes }
+				}
+				stress_and_fulfillment_impact = {
+					forgiving = minor_stress_impact_gain
+					compassionate = minor_stress_impact_gain
+				}
 			}
 			if = {
 				limit = {
@@ -592,19 +645,41 @@ disinherit_children_interaction = {
 						}
 					}
 				}
-				add_tyranny = massive_tyranny_value
+			add_tyranny = massive_tyranny_value
 			}
 			
 			hidden_effect = {
 				send_interface_toast = {
 					title = disinherit_interaction_notification
 					type = event_toast_effect_neutral
-					left_icon = scope:actor
+					left_icon = scope:puppet_or_actor
 					right_icon = scope:recipient
 
 					scope:recipient = {
 						show_as_tooltip = {
-							disinherit_effect = { DISINHERITOR = scope:actor }
+							disinherit_effect = { DISINHERITOR = scope:puppet_or_actor }
+						}
+					}
+				}
+			}
+		}
+		hidden_effect = {
+			if = {
+				limit = {
+					scope:is_puppet_action ?= yes
+				}
+				scope:actor = {
+					send_interface_toast = {
+						type = event_toast_effect_neutral
+						title = disinherit_interaction_notification
+
+						left_icon = scope:puppet_or_actor
+						right_icon = scope:recipient
+
+						scope:recipient = {
+							show_as_tooltip = {
+								disinherit_effect = { DISINHERITOR = scope:puppet_or_actor }
+							}
 						}
 					}
 				}
@@ -612,16 +687,17 @@ disinherit_children_interaction = {
 		}
 
 		scope:recipient = {
-			disinherit_effect = { DISINHERITOR = scope:actor }
+			disinherit_effect = { DISINHERITOR = scope:puppet_or_actor }
 		}
+
 		# If we're a clan this interaction affects unity
 		add_clan_unity_interaction_effect = {
-			CHARACTER = scope:actor
+			CHARACTER = scope:puppet_or_actor
 			TARGET = scope:recipient
 			VALUE = minor_unity_loss
 			DESC = clan_unity_disinheritance.desc
 			REVERSE_NON_HOUSE_TARGET = no
-		}
+		}		
 	}
 
 	cost = {
@@ -631,7 +707,7 @@ disinherit_children_interaction = {
 				if = {
 					limit = {
 						scope:recipient = {
-							is_landed_or_landless_administrative = yes
+							is_landed_or_landless_administrative_or_theocratic = yes
 						}
 					}
 					add = massive_prestige_value
@@ -639,7 +715,7 @@ disinherit_children_interaction = {
 				if = {
 					limit = {
 						scope:recipient = {
-							is_landed_or_landless_administrative = no
+							is_landed_or_landless_administrative_or_theocratic = no
 							any_heir_title = {
 								exists = holder
 							}
@@ -673,18 +749,14 @@ disinherit_children_interaction = {
 					multiply = 0
 				}
 			}
+			if = {
+				limit = { scope:is_puppet_action ?= yes }
+				multiply = 0
+			}
 		}
 	}
 
 	auto_accept = yes
-
-	ai_potential = {
-		is_at_war = no
-		NOT = {
-			has_trait = forgiving
-		}
-		is_dynast = yes
-	}
 
 	ai_targets = {
 		ai_recipients = dynasty
@@ -692,14 +764,13 @@ disinherit_children_interaction = {
 	}
 
 	ai_frequency_by_tier = {
-                barony = 0
-                county = 96
-                duchy = 48
-                kingdom = 12
-                empire = 12
-                hegemony = 12
-        }
-
+		barony = 0
+		county = 96
+		duchy = 48
+		kingdom = 12
+		empire = 12
+		hegemony = 12
+	}
 
 	ai_will_do = {
 		base = 0
@@ -708,8 +779,8 @@ disinherit_children_interaction = {
 			add = 100
 			scope:recipient = {
 				OR = {
-					has_relation_rival = scope:actor
-					has_relation_nemesis = scope:actor
+					has_relation_rival = scope:puppet_or_actor
+					has_relation_nemesis = scope:puppet_or_actor
 				}
 			}
 		}
@@ -717,7 +788,7 @@ disinherit_children_interaction = {
 		modifier = {
 			add = 100
 			scope:recipient = {
-				is_primary_heir_of = scope:actor
+				is_primary_heir_of = scope:puppet_or_actor
 				OR = {
 					has_trait = inbred
 					has_trait = intellect_bad_3
@@ -730,7 +801,7 @@ disinherit_children_interaction = {
 			add = 5
 			ai_vengefulness >= medium_positive_ai_value
 			scope:recipient = {
-				is_heir_of = scope:actor
+				is_heir_of = scope:puppet_or_actor
 			}
 			OR = {
 				AND = {
@@ -738,7 +809,7 @@ disinherit_children_interaction = {
 						has_trait = incestuous
 					}
 					NOT = { is_incestuous_trigger = yes }
-					trait_is_criminal_in_faith_trigger = { TRAIT = trait:incestuous FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_rite_trigger = { TRAIT = trait:incestuous RITE = scope:puppet_or_actor.rite GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -754,7 +825,7 @@ disinherit_children_interaction = {
 						has_trait = adulterer
 						has_trait = fornicator
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = trait:adulterer FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_rite_trigger = { TRAIT = trait:adulterer RITE = scope:puppet_or_actor.rite GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -764,25 +835,21 @@ disinherit_children_interaction = {
 						has_trait = adulterer
 						has_trait = fornicator
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = trait:fornicator FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_rite_trigger = { TRAIT = trait:fornicator RITE = scope:puppet_or_actor.rite GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
 						has_trait = deviant
 					}
-					NOT = {
-						is_deviant_trigger = yes
-					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = trait:deviant FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					is_deviant_trigger = no
+					trait_is_criminal_in_rite_trigger = { TRAIT = trait:deviant RITE = scope:puppet_or_actor.rite GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
 						has_trait = witch
 					}
-					NOT = {
-						is_witch_trigger = yes
-					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = trait:witch FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					is_witch_trigger = no
+					trait_is_criminal_in_rite_trigger = { TRAIT = trait:witch RITE = scope:puppet_or_actor.rite GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
@@ -794,29 +861,29 @@ disinherit_children_interaction = {
 							type = secret_homosexual
 						}
 					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = trait:sodomite FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					trait_is_criminal_in_rite_trigger = { TRAIT = trait:sodomite RITE = scope:puppet_or_actor.rite GENDER_CHARACTER = scope:recipient }
 				}
 				AND = {
 					scope:recipient = {
 						has_trait = cannibal
 					}
-					NOT = {
-						is_cannibal_trigger = yes
-					}
-					trait_is_criminal_in_faith_trigger = { TRAIT = trait:cannibal FAITH = scope:actor.faith GENDER_CHARACTER = scope:recipient }
+					is_cannibal_trigger = no
+					trait_is_criminal_in_rite_trigger = { TRAIT = trait:cannibal RITE = scope:puppet_or_actor.rite GENDER_CHARACTER = scope:recipient }
 				}
 			}
 		}
+
 		# Unity modifiers
 		evaluate_action_decreasing_house_unity = {
 			VALUE = 100
 		}
+
 		modifier = {
 			factor = 0
 			scope:recipient = {
 				OR = {
-					has_relation_friend = scope:actor
-					has_relation_best_friend = scope:actor
+					has_relation_friend = scope:puppet_or_actor
+					has_relation_best_friend = scope:puppet_or_actor
 				}
 			}
 		}
@@ -843,6 +910,7 @@ demand_artifact_interaction = {
 
 	target_type = artifact
 	target_filter = recipient_artifacts_claimable
+	show_all_targets = no
 
 	greeting = negative
 	notification_text = DEMAND_ARTIFACT_PROPOSAL
@@ -874,22 +942,33 @@ demand_artifact_interaction = {
 		adult = yes
 	}
 	ai_frequency_by_tier = {
-                barony = 0
-                county = 0
-                duchy = 72
-                kingdom = 36
-                empire = 36
-                hegemony = 36
-        }
+		barony = 0
+		county = 0
+		duchy = 72
+		kingdom = 36
+		empire = 36
+		hegemony = 36
+	}
+
+	is_available = {
+		trigger_if = {
+			limit = { is_ai = yes }
+			has_outstanding_artifact_claims = yes
+			is_at_war = no
+			ai_greed >= low_negative_ai_value
+			is_adult = yes
+		}
+	}
 
 	is_shown = {
-		scope:recipient != scope:actor
+		scope:recipient != scope:puppet_or_actor
+
 		custom_description = {
 			text = "demand_artifact_interaction_valid_tt_1"
 			scope:recipient = {
 				# needs to have an artifact we can claim
 				any_character_artifact = {
-					can_be_claimed_by = scope:actor
+					can_be_claimed_by = scope:puppet_or_actor
 					NOT = { has_variable = is_tribute_mission_artifact }
 				}
 			}
@@ -903,15 +982,15 @@ demand_artifact_interaction = {
 				NOT = {
 					involved_activity ?= { #do not give out anything during coronation
 						has_activity_type = activity_coronation
-						activity_host = scope:recipient
+						activity_host ?= scope:recipient
 					}
 				}
-			}	
+			}
 		}
 
-		scope:actor = {
+		scope:puppet_or_actor ?= {
 			OR = {
-				is_ai = no
+				scope:actor = { is_ai = no }
 				max_military_strength >= {
 					value = {
 						value = scope:recipient.max_military_strength
@@ -922,33 +1001,35 @@ demand_artifact_interaction = {
 			}
 		}
 	}
+
 	is_highlighted = {
 		always = yes
 	}
 
 	is_valid_showing_failures_only = {
-		scope:actor = {
+		
+		scope:puppet_or_actor = {
 			NOT = {
 				is_at_war_with = scope:recipient
 			}
 		}
-		
+
 		trigger_if = {
 			limit = {
-				scope:actor = {
+				scope:puppet_or_actor = {
 					has_variable = demanded_this_artifact_interaction_recently
 				}
 			}
 			custom_description = {
 				text = "demand_artifact_interaction_is_valid_tt_2"
 				exists = scope:demanded_artifact
-				scope:actor = {
+				scope:puppet_or_actor = {
 					has_variable = demanded_this_artifact_interaction_recently
 					var:demanded_this_artifact_interaction_recently = scope:demanded_artifact
 				}
 			}
 		}
-		scope:actor = { is_imprisoned = no }
+		scope:puppet_or_actor = { is_imprisoned = no }
 	}
 
 	on_accept = {
@@ -959,7 +1040,7 @@ demand_artifact_interaction = {
 			limit = {
 				exists = scope:demanded_artifact
 			}
-			scope:actor = {
+			scope:puppet_or_actor = {
 				set_variable = {
 					name = demanded_this_artifact_interaction_recently
 					value = scope:demanded_artifact
@@ -967,19 +1048,19 @@ demand_artifact_interaction = {
 				}
 			}
 		}
-		scope:actor = {
+		scope:puppet_or_actor = {
 			send_interface_toast = {
 				type = event_toast_effect_neutral
 				title = demand_artifact_interaction_notification
 				left_icon = scope:recipient
 				right_icon = scope:target
 				scope:target = {
-					set_owner = scope:actor
+					set_owner = scope:puppet_or_actor
 				}
 
 				scope:recipient = {
 					add_opinion = {
-						target = scope:actor
+						target = scope:puppet_or_actor
 						modifier = insult_opinion
 						opinion = -60
 					}
@@ -987,12 +1068,26 @@ demand_artifact_interaction = {
 				if = {
 					limit = {
 						scope:recipient = {
-							can_set_relation_potential_rival_trigger = { CHARACTER = scope:actor }
+							can_set_relation_potential_rival_trigger = { CHARACTER = scope:puppet_or_actor }
 						}
 					}
 					scope:recipient = {
-						set_relation_potential_rival = scope:actor
+						set_relation_potential_rival = scope:puppet_or_actor
 					}
+				}
+			}
+		}
+		if = {
+			limit = {
+				scope:is_puppet_action ?= yes
+				scope:actor != scope:recipient
+			}
+			scope:actor = {
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = demand_artifact_interaction_notification_puppeteer
+					left_icon = scope:puppet_or_actor
+					right_icon = scope:recipient
 				}
 			}
 		}
@@ -1002,7 +1097,7 @@ demand_artifact_interaction = {
 					is_ai = yes
 				}
 			}
-			scope:actor = {
+			scope:puppet_or_actor = {
 				add_opinion = {
 					target = scope:recipient
 					modifier = pleased_opinion
@@ -1010,8 +1105,9 @@ demand_artifact_interaction = {
 				}
 			}
 		}
+
 		add_clan_unity_interaction_effect = {
-			CHARACTER = scope:actor
+			CHARACTER = scope:puppet_or_actor
 			TARGET = scope:recipient
 			VALUE = minor_unity_loss
 			DESC = clan_unity_demanded_artifact.desc
@@ -1022,19 +1118,19 @@ demand_artifact_interaction = {
 	auto_accept = {
 		custom_description = {
 			text = "spending_hook"
-			subject = scope:actor
+			subject = scope:puppet_or_actor
 			object = scope:recipient
 			scope:hook = yes
-			scope:actor = { has_strong_hook = scope:recipient }
+			scope:puppet_or_actor = { has_strong_hook = scope:recipient }
 		}
 	}
-	
+
 	send_option = {
 		is_shown = {
-			NOT = { scope:actor = scope:recipient }
+			scope:puppet_or_actor != scope:recipient
 		}
 		is_valid = {
-			scope:actor = {
+			scope:puppet_or_actor = {
 				has_usable_hook = scope:recipient
 			}
 		}
@@ -1042,12 +1138,12 @@ demand_artifact_interaction = {
 		localization = GENERIC_SPEND_A_HOOK
 	}
 	should_use_extra_icon = {
-		scope:actor = { has_usable_hook = scope:recipient }
+		scope:puppet_or_actor = { has_usable_hook = scope:recipient }
 	}
 	extra_icon = "gfx/interface/icons/character_interactions/hook_icon.dds"
 
 	send_options_exclusive = no
-	
+
 	ai_accept = {
 		base = 0
 		modifier = {
@@ -1076,12 +1172,12 @@ demand_artifact_interaction = {
 		}
 		modifier = {
 			add = 70
-			scope:actor.max_military_strength > scope:recipient.max_military_strength
+			scope:puppet_or_actor.max_military_strength > scope:recipient.max_military_strength
 			desc = ARTIFACT_MILITARY_STRONGER_REASON
 		}
 		modifier = {
 			add = -70
-			scope:actor.max_military_strength < scope:recipient.max_military_strength
+			scope:puppet_or_actor.max_military_strength < scope:recipient.max_military_strength
 			desc = ARTIFACT_MILITARY_WEAKER_REASON
 		}
 		modifier = {
@@ -1100,14 +1196,14 @@ demand_artifact_interaction = {
 		}
 		modifier = {
 			add = -50
-			scope:actor = {
+			scope:puppet_or_actor = {
 				has_relation_rival = scope:recipient
 			}
 			desc = ARTIFACT_RIVAL_REASON
 		}
 		modifier = {
 			add = -80
-			scope:actor = {
+			scope:puppet_or_actor = {
 				has_relation_nemesis = scope:recipient
 			}
 			desc = ARTIFACT_NEMESIS_REASON
@@ -1115,7 +1211,7 @@ demand_artifact_interaction = {
 		modifier = {
 			add = 50
 			scope:recipient = {
-				target_is_liege_or_above = scope:actor
+				target_is_liege_or_above = scope:puppet_or_actor
 			}
 			desc = ARTIFACT_LIEGE_REASON
 		}
@@ -1124,15 +1220,9 @@ demand_artifact_interaction = {
 			add = 100
 			desc = SCHEME_WEAK_HOOK_USED
 		}
+
 		# Unity modifiers
 		evaluate_action_decreasing_house_unity = { VALUE = 100 }
-	}
-	
-	ai_potential = {
-		is_adult = yes
-		is_at_war = no
-		ai_greed >= low_negative_ai_value
-		has_outstanding_artifact_claims = yes
 	}
 
 	on_decline = {
@@ -1143,7 +1233,7 @@ demand_artifact_interaction = {
 			limit = {
 				exists = scope:demanded_artifact
 			}
-			scope:actor = {
+			scope:puppet_or_actor = {
 				set_variable = {
 					name = demanded_this_artifact_interaction_recently
 					value = scope:demanded_artifact
@@ -1151,7 +1241,7 @@ demand_artifact_interaction = {
 				}
 			}
 		}
-		scope:actor = {
+		scope:puppet_or_actor = {
 			send_interface_toast = {
 				type = event_toast_effect_bad
 				title = demand_artifact_interaction_notification
@@ -1161,10 +1251,25 @@ demand_artifact_interaction = {
 
 				scope:recipient = {
 					add_opinion = {
-						target = scope:actor
+						target = scope:puppet_or_actor
 						modifier = insult_opinion
 						opinion = -60
 					}
+				}
+			}
+		}
+		if = {
+			limit = {
+				scope:is_puppet_action ?= yes
+				scope:actor != scope:recipient
+			}
+			scope:actor = {
+				send_interface_toast = {
+					type = event_toast_effect_bad
+					title = demand_artifact_interaction_notification_puppeteer
+					left_icon = scope:puppet_or_actor
+					right_icon = scope:recipient
+					custom_tooltip = demand_artifact_interaction_notification_refused_puppeteer
 				}
 			}
 		}
@@ -1174,7 +1279,7 @@ demand_artifact_interaction = {
 					is_ai = yes
 				}
 			}
-			scope:actor = {
+			scope:puppet_or_actor = {
 				add_opinion = {
 					target = scope:recipient
 					modifier = refusal_opinion
@@ -1183,18 +1288,18 @@ demand_artifact_interaction = {
 			}
 		}
 	}
-	
+
 	ai_min_reply_days = 7
 	ai_max_reply_days = 14
-	
+
 	ai_will_do = {
 		base = 100
-		
+
 		modifier = { # The AI will only use a Hook if they couldn't otherwise do this
 			scope:hook = yes
 			add = -1
 		}
-		
+
 		modifier = {
 			add = 50
 			has_relation_rival = scope:recipient
@@ -1219,20 +1324,22 @@ demand_artifact_interaction = {
 		}
 		modifier = { # An Intimidated character is very unlikely to raise their hand
 			add = -25
-			scope:actor = {
+			scope:puppet_or_actor = {
 				has_dread_level_towards = {
 					target = scope:recipient
 					level = 1
 				}
 			}
 		}
+
 		# Unity modifiers
 		evaluate_action_decreasing_house_unity = {
-			VALUE = 100
-		}
+				VALUE = 100
+			}
+
 		modifier = { # A Cowed character will never take this interaction
 			factor = 0
-			scope:actor = {
+			scope:puppet_or_actor = {
 				has_dread_level_towards = {
 					target = scope:recipient
 					level = 2
@@ -1244,7 +1351,7 @@ demand_artifact_interaction = {
 			scope:recipient = {
 				is_ai = no
 			}
-			scope:actor = {
+			scope:puppet_or_actor = {
 				OR = {
 					has_relation_friend = scope:recipient
 					has_relation_lover = scope:recipient
@@ -1260,7 +1367,7 @@ demand_artifact_interaction = {
 			scope:recipient = {
 				is_ai = no
 			}
-			scope:actor = {
+			scope:puppet_or_actor = {
 				has_opinion_modifier = {
 					target = scope:recipient
 					modifier = refusal_opinion
@@ -1269,10 +1376,10 @@ demand_artifact_interaction = {
 		}
 		modifier = { # Only the House Head will demand house claimed artifacts from existing House members
 			factor = 0
-			exists = scope:actor.house.house_head
+			exists = scope:puppet_or_actor.house.house_head
 			exists = scope:recipient.house
-			scope:actor.house.house_head = scope:actor
-			scope:actor.house = scope:recipient.house
+			scope:puppet_or_actor.house.house_head = scope:puppet_or_actor
+			scope:puppet_or_actor.house = scope:recipient.house
 			
 			NOT = {
 				any_personal_claimed_artifact = {
@@ -1281,7 +1388,7 @@ demand_artifact_interaction = {
 			}
 		}
 		modifier = {
-			scope:actor = {
+			scope:puppet_or_actor = {
 				opinion = {
 					target = scope:recipient
 					value >= medium_positive_opinion
@@ -1293,14 +1400,14 @@ demand_artifact_interaction = {
 		modifier = {
 			scope:recipient = {
 				OR = {
-					has_relation_friend = scope:actor
-					has_relation_lover = scope:actor
+					has_relation_friend = scope:puppet_or_actor
+					has_relation_lover = scope:puppet_or_actor
 				}
 			}
 			factor = 0
 		}
 		modifier = {
-			scope:actor = {
+			scope:puppet_or_actor = {
 				has_royal_court = no
 			}
 			scope:target = {
@@ -1406,7 +1513,7 @@ demand_artifact_interaction = {
 									rarity = common
 								}
 							}
-						}	
+						}
 					}
 					AND = {
 						scope:target = {
@@ -1451,7 +1558,7 @@ demand_artifact_interaction = {
 									rarity = common
 								}
 							}
-						}	
+						}
 					}
 					AND = {
 						scope:target = {

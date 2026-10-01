@@ -77,7 +77,7 @@ supernatural_ev1.01 = {
 		# Declining costs the host something small -- an invitation refused is still an invitation
 		# they extended, and they took a risk writing it down at all.
 		scope:host = { add_opinion = { target = root modifier = disappointed_opinion opinion = -10 } }
-		stress_impact = { base = minor_stress_impact_gain }
+		stress_and_fulfillment_impact = { base = minor_stress_impact_gain }
 
 		ai_chance = {
 			base = 40
@@ -138,7 +138,7 @@ supernatural_ev1.03 = {
 
 	option = { # Greet the guests with warmth and camaraderie.
 		name = supernatural_ev1.03.a
-		stress_impact = {
+		stress_and_fulfillment_impact = {
 			shy = medium_stress_gain
 			gregarious = minor_stress_loss
 			paranoid = medium_stress_gain
@@ -155,7 +155,7 @@ supernatural_ev1.03 = {
 	}
 	option = { # Exude an air of quiet authority.
 		name = supernatural_ev1.03.b
-		stress_impact = {
+		stress_and_fulfillment_impact = {
 			deceitful = minor_stress_loss
 			paranoid = minor_stress_loss
 			honest = minor_stress_gain
@@ -219,6 +219,7 @@ supernatural_ev1.04 = {
 				location = root.location
 				culture = root.culture
 				faith = root.faith
+				rite = root.rite
 				gender = male
 				template = spn_skilled_hunter_template
 				save_scope_as = hunter0
@@ -248,10 +249,11 @@ supernatural_ev1.04 = {
 			}
 		}
 		add_dread = medium_dread_gain
-		stress_impact = {
+		stress_and_fulfillment_impact = {
 			vengeful = medium_stress_loss
 			sadistic = medium_stress_loss
 		}
+		spn_creature_act_fulfillment_effect = { ACT = kill } # 2.36: the creature's own Rite weighs the kill
 		scope:hunter0 = {
 			death = {
 				death_reason = spn_death_drained
@@ -281,17 +283,21 @@ supernatural_ev1.05 = {
 		is_alive = yes
 	}
 	immediate = {
-		scope:hunter0 = {
-			death = {
-				death_reason = spn_death_drained
-				killer = scope:aowner
+		# 2.36 -- 1.04.b has already drained him before it fires this event. Only kill him if he somehow is not dead.
+		if = {
+			limit = { scope:hunter0 = { is_alive = yes } }
+			scope:hunter0 = {
+				death = {
+					death_reason = spn_death_drained
+					killer = scope:aowner
+				}
 			}
 		}
 	}
 
 	option = { # An appropriate end for such insolence.
 		name = supernatural_ev1.05.a
-		stress_impact = {
+		stress_and_fulfillment_impact = {
 			sadistic = medium_stress_loss
 			compassionate = major_stress_gain
 			forgiving = medium_stress_gain
@@ -309,7 +315,7 @@ supernatural_ev1.05 = {
 	}
 	option = { # A necessary act to ensure the safety of all.
 		name = supernatural_ev1.05.b
-		stress_impact = {
+		stress_and_fulfillment_impact = {
 			callous = medium_stress_loss
 		}
 		ai_chance = {
@@ -319,7 +325,7 @@ supernatural_ev1.05 = {
 	}
 	option = { # Let this serve as a lesson to others.
 		name = supernatural_ev1.05.c
-		stress_impact = {
+		stress_and_fulfillment_impact = {
 			sadistic = minor_stress_loss
 		}
 		ai_chance = {
@@ -425,7 +431,7 @@ supernatural_ev1.07 = {
 		# 2.33 -- the two keys were the wrong way round. This option is "Respect their presence" --
 		# deferring to an Original. Deference costs an ARROGANT character and comes easily to a
 		# HUMBLE one, and the block said the opposite.
-		stress_impact = {
+		stress_and_fulfillment_impact = {
 			arrogant = minor_stress_gain
 			humble = minor_stress_loss
 		}
@@ -445,7 +451,7 @@ supernatural_ev1.07 = {
 		trigger = {
 			has_st_embrace_the_night_intent_trigger = yes
 		}
-		stress_impact = {
+		stress_and_fulfillment_impact = {
 			greedy = medium_stress_loss
 			compassionate = minor_stress_gain
 		}
@@ -543,6 +549,7 @@ supernatural_ev1.08 = {
 		remove_short_term_gold = { 5 15 }
 		# Standing rule: the irreversible step goes last, after every value that reads the
 		# pre-change state has been banked.
+		spn_creature_act_fulfillment_effect = { ACT = kill } # 2.36: the creature's own Rite weighs the kill
 		scope:local_courtier = {
 			death = { death_reason = spn_death_drained killer = root }
 		}
@@ -823,6 +830,7 @@ supernatural_ev1.10 = { #The Catacombs Below
 				age = { 25 55 }
 				culture = root.location.culture  # Matches player character’s culture (optional)
 				faith = root.location.faith
+				rite = root.location.rite
 				location = root.location  # Places them in the feeding location
 				save_scope_as = tavern_owner  # Save for use in the portrait
 			}
@@ -937,6 +945,7 @@ supernatural_ev1.11 = { #The Catacombs Below: Part 2
                 location = root.location
                 culture = root.culture
                 faith = root.faith
+                rite = root.rite
                 gender = male
                 template = spn_skilled_hunter_template
                 save_scope_as = hunter
@@ -955,6 +964,7 @@ supernatural_ev1.11 = { #The Catacombs Below: Part 2
         random_list = {
             60 = { # Chance of killing the hunter
                 custom_tooltip = supernatural_ev1.11.a_win_tt
+                spn_creature_act_fulfillment_effect = { ACT = kill } # 2.36: the creature's own Rite weighs the kill
                 scope:hunter = {
                     death = {
                         death_reason = spn_death_drained
@@ -1182,7 +1192,7 @@ supernatural_ev1.12 = { #A Moment of Desire
                     opinion = 20
                 }
             }
-            stress_impact = {
+            stress_and_fulfillment_impact = {
                 rakish = medium_stress_impact_loss
                 chaste = medium_stress_impact_gain
             }
@@ -1206,7 +1216,7 @@ supernatural_ev1.12 = { #A Moment of Desire
                 modifier = supernatural_focused_attention_modifier
                 years = 5
             }
-            stress_impact = {
+            stress_and_fulfillment_impact = {
                 lustful = medium_stress_impact_gain
             }
         }
@@ -1371,6 +1381,7 @@ supernatural_ev1.15 = { # Tavern Gossip
             location = root.location
             culture = root.culture
             faith = root.faith
+            rite = root.rite
 			gender_female_chance = 0
             save_scope_as = tavern_drunk
         }
@@ -1381,6 +1392,7 @@ supernatural_ev1.15 = { # Tavern Gossip
             culture = root.culture
 			gender_female_chance = 50
             faith = root.faith
+            rite = root.rite
             save_scope_as = tavern_guest
         }
     }
@@ -1575,7 +1587,7 @@ supernatural_ev1.17 = { #A Moment of Solace
 			has_trait = supernatural_vampire
 		}
         custom_tooltip = supernatural_ev1.17.a_tt
-		stress_impact = {
+		stress_and_fulfillment_impact = {
 			base = minor_stress_impact_loss #-15
 			supernatural_vampire = -25
 		}
@@ -1590,7 +1602,7 @@ supernatural_ev1.17 = { #A Moment of Solace
 			has_trait = supernatural_hybrid
 		}
         custom_tooltip = supernatural_ev1.17.b_tt
-		stress_impact = {
+		stress_and_fulfillment_impact = {
 			base = minor_stress_impact_loss #-15
 			supernatural_hybrid = -35
 		}
@@ -1631,6 +1643,7 @@ supernatural_ev1.18 = { #A Test of Restraint
             location = root.location
             culture = root.culture
             faith = root.faith
+            rite = root.rite
             gender_female_chance = 50
             save_scope_as = wounded_victim
             trait = wounded_1
@@ -1639,6 +1652,7 @@ supernatural_ev1.18 = { #A Test of Restraint
             location = root.location
             culture = root.culture
             faith = root.faith
+            rite = root.rite
             gender_female_chance = 50
             save_scope_as = aggressor
         }
@@ -1658,7 +1672,7 @@ supernatural_ev1.18 = { #A Test of Restraint
             track = vampirism
             value = { 3 15 }
         }
-		stress_impact = {
+		stress_and_fulfillment_impact = {
 			base = minor_stress_impact_gain #-15
 			supernatural_vampire = 12
 		}
@@ -1678,7 +1692,7 @@ supernatural_ev1.18 = { #A Test of Restraint
             track = hybrid_vampirism
             value = { 3 15 }
         }
-		stress_impact = {
+		stress_and_fulfillment_impact = {
 			base = minor_stress_impact_gain #-15
 			supernatural_hybrid = 8
 		}
@@ -1712,6 +1726,7 @@ supernatural_ev1.19 = { # A Moment of Respect - Ev1.19
             location = root.location
             culture = root.culture
             faith = root.faith
+            rite = root.rite
             gender = male
             age = { 25 50 }
             save_scope_as = deceased_body
@@ -1779,7 +1794,7 @@ supernatural_ev1.20 = { #Whispers In The Dark
             50 = { # Success: Gain information
                 custom_tooltip = supernatural_ev1.20.a_success_tt
                 vf_feeding_chance_change_effect = { VALUE = 8 }
-				stress_impact = {
+				stress_and_fulfillment_impact = {
 					base = minor_stress_impact_loss #-15
 				}
                 add_intrigue_lifestyle_xp = { 100 300 }
@@ -1810,7 +1825,7 @@ supernatural_ev1.20 = { #Whispers In The Dark
         	modifier = { add = -15 has_trait = paranoid }
         }
         vf_feeding_chance_change_effect = { VALUE = -5 }
-		stress_impact = {
+		stress_and_fulfillment_impact = {
 			base = 25 #-15
 		}
     }
@@ -2115,6 +2130,7 @@ supernatural_ev1.23 = { # The Crimson Decision
 			limit = { exists = scope:activity  scope:activity.activity_location ?= { exists = county } }
 			spn_mark_menace_effect = { COUNTY = scope:activity.activity_location.county CULPRIT = root KIND = vampire SEVERITY = kill }
 		}
+		spn_creature_act_fulfillment_effect = { ACT = kill } # 2.36: the creature's own Rite weighs the kill
 		scope:vf_human = { death = { death_reason = spn_death_drained killer = root } }
 	}
 
@@ -2131,9 +2147,9 @@ supernatural_ev1.23 = { # The Crimson Decision
 		root = {
 			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = 10 } }
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = 10 } }
-			stress_impact = { base = minor_stress_impact_loss }
+			stress_and_fulfillment_impact = { base = minor_stress_impact_loss }
 		}
-		vf_mark_fed_on_effect = { VICTIM = scope:vf_human } # 2.35 W2: modifier + a prowl mark on the county
+		vf_mark_fed_on_effect = { VICTIM = scope:vf_human } # 2.35 W2: the victim's modifier; 2.36: a mark only if somebody talks
 	}
 
 	option = { # Take a small taste and step back.
@@ -2154,7 +2170,7 @@ supernatural_ev1.23 = { # The Crimson Decision
 			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 2 6 } } }
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 2 6 } } }
 		}
-		vf_mark_fed_on_effect = { VICTIM = scope:vf_human } # 2.35 W2: modifier + a prowl mark on the county
+		vf_mark_fed_on_effect = { VICTIM = scope:vf_human } # 2.35 W2: the victim's modifier; 2.36: a mark only if somebody talks
 	}
 
 	option = { # Use the hidden escape route.
@@ -2189,7 +2205,7 @@ supernatural_ev1.23 = { # The Crimson Decision
 			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 4 8 } } }
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 4 8 } } }
 		}
-		vf_mark_fed_on_effect = { VICTIM = scope:vf_human } # 2.35 W2: modifier + a prowl mark on the county
+		vf_mark_fed_on_effect = { VICTIM = scope:vf_human } # 2.35 W2: the victim's modifier; 2.36: a mark only if somebody talks
 	}
 
 	option = { # A wealthy target yields more than just blood.
@@ -2209,7 +2225,7 @@ supernatural_ev1.23 = { # The Crimson Decision
 			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 4 8 } } }
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 4 8 } } }
 		}
-		vf_mark_fed_on_effect = { VICTIM = scope:vf_human } # 2.35 W2: modifier + a prowl mark on the county
+		vf_mark_fed_on_effect = { VICTIM = scope:vf_human } # 2.35 W2: the victim's modifier; 2.36: a mark only if somebody talks
 	}
 
 	# ===== BOTCHED FEED (P2-C: Silence / Flee / Compel) =====
@@ -2217,7 +2233,7 @@ supernatural_ev1.23 = { # The Crimson Decision
 		name = supernatural_ev1.23.botched_silence
 		trigger = { has_character_flag = vf_feeding_botched }
 		custom_tooltip = supernatural_ev1.23.botched_silence_tt
-		stress_impact = { base = medium_stress_impact_gain sadistic = minor_stress_impact_loss callous = minor_stress_impact_gain compassionate = major_stress_impact_gain just = medium_stress_impact_gain }
+		stress_and_fulfillment_impact = { base = medium_stress_impact_gain sadistic = minor_stress_impact_loss callous = minor_stress_impact_gain compassionate = major_stress_impact_gain just = medium_stress_impact_gain }
 		# 2.35 PART TWO (§7.4) -- was an unconditionally clean kill, which made this the strictly correct play
 		# every time. It is a roll now, on the same dressing value the rest of the cover-up family uses:
 		# succeed and it is one quiet body with no mark, fail and there are two bodies and two marks, because
@@ -2237,11 +2253,12 @@ supernatural_ev1.23 = { # The Crimson Decision
 		name = supernatural_ev1.23.botched_flee
 		trigger = { has_character_flag = vf_feeding_botched }
 		custom_tooltip = supernatural_ev1.23.botched_flee_tt
-		stress_impact = { base = minor_stress_impact_gain }
+		stress_and_fulfillment_impact = { base = minor_stress_impact_gain }
 		root = {
 			if = { limit = { has_trait = supernatural_vampire NOT = { has_trait = spn_known_vampire } } random = { chance = 70 spn_give_vampire_secret_or_trait_effect = yes } }
 			else_if = { limit = { has_trait = supernatural_hybrid NOT = { has_trait = spn_known_hybrid } } random = { chance = 70 spn_give_hybrid_secret_or_trait_effect = yes } }
 			vf_local_hunter_notices_effect = yes
+			vf_witness_talks_effect = yes # 2.36: they got away, and they are telling people (vf_mark_fed_on_effect)
 		}
 		ai_chance = { base = 35 modifier = { add = 25 has_trait = craven } }
 	}
@@ -2261,6 +2278,7 @@ supernatural_ev1.23 = { # The Crimson Decision
 				if = { limit = { has_trait = supernatural_vampire NOT = { has_trait = spn_known_vampire } } random = { chance = 60 spn_give_vampire_secret_or_trait_effect = yes } }
 				else_if = { limit = { has_trait = supernatural_hybrid NOT = { has_trait = spn_known_hybrid } } random = { chance = 60 spn_give_hybrid_secret_or_trait_effect = yes } }
 				vf_local_hunter_notices_effect = yes
+				vf_witness_talks_effect = yes # 2.36: it did not take, and they are telling people (vf_mark_fed_on_effect)
 			}
 			remove_character_flag = vf_compelled_clean
 		}
@@ -2292,7 +2310,7 @@ supernatural_ev1.24 = { # Reveling in the Night - Embrace the Night Intent
 		custom_tooltip = supernatural_ev1.24.a_tt
 		root = {
 			add_prestige = medium_prestige_gain
-			stress_impact = { base = minor_stress_impact_loss arrogant = -10 temperate = minor_stress_impact_gain }
+			stress_and_fulfillment_impact = { base = minor_stress_impact_loss arrogant = -10 temperate = minor_stress_impact_gain }
 			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 2 6 } } }
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 2 6 } } }
 		}
@@ -2304,7 +2322,7 @@ supernatural_ev1.24 = { # Reveling in the Night - Embrace the Night Intent
 		custom_tooltip = supernatural_ev1.24.b_tt
 		root = {
 			add_prestige = minor_prestige_gain
-			stress_impact = { base = minor_stress_impact_loss paranoid = minor_stress_impact_loss }
+			stress_and_fulfillment_impact = { base = minor_stress_impact_loss paranoid = minor_stress_impact_loss }
 		}
 		ai_chance = { base = 40 modifier = { add = 25 has_trait = paranoid } modifier = { add = 15 has_trait = shy } }
 	}
@@ -2325,7 +2343,7 @@ supernatural_ev1.25 = { # The Bleeding House
 
 	immediate = {
 		hidden_effect = {
-			create_character = { location = root.location culture = root.culture faith = root.faith gender_female_chance = 30 save_scope_as = vf_physician }
+			create_character = { location = root.location culture = root.culture faith = root.faith rite = root.rite gender_female_chance = 30 save_scope_as = vf_physician }
 		}
 	}
 
@@ -2336,7 +2354,7 @@ supernatural_ev1.25 = { # The Bleeding House
 		root = {
 			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 4 8 } } }
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 4 8 } } }
-			stress_impact = { base = minor_stress_impact_loss }
+			stress_and_fulfillment_impact = { base = minor_stress_impact_loss }
 		}
 		ai_chance = { base = 60 }
 	}
@@ -2344,6 +2362,7 @@ supernatural_ev1.25 = { # The Bleeding House
 	option = { # Feed on a sedated patient.
 		name = supernatural_ev1.25.b
 		custom_tooltip = supernatural_ev1.25.b_tt
+		root = { spn_creature_act_fulfillment_effect = { ACT = feed } } # 2.36: no trail, but the soul knows
 		root = {
 			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 8 14 } } }
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 8 14 } } }
@@ -2389,7 +2408,7 @@ supernatural_ev1.26 = { # The Drunk's Ramblings
 			if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = { 3 6 } } }
 			else_if = { limit = { has_trait = supernatural_hybrid } add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { 3 6 } } }
 		}
-		vf_mark_fed_on_effect = { VICTIM = scope:vf_drunkard } # 2.35 W2: modifier + a prowl mark on the county
+		vf_mark_fed_on_effect = { VICTIM = scope:vf_drunkard } # 2.35 W2: the victim's modifier; 2.36: a mark only if somebody talks
 		ai_chance = { base = 50 }
 	}
 }

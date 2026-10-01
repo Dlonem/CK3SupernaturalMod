@@ -63,7 +63,7 @@
 					use_hook = scope:recipient
 				}
 				
-				stress_impact = {
+				stress_and_fulfillment_impact = {
 					deceitful = medium_stress_impact_loss
 				}
 				scope:recipient = {
@@ -367,7 +367,7 @@
 						}
 						scope:actor = {
 							add_stress = major_stress_loss
-							stress_impact = {
+							stress_and_fulfillment_impact = {
 								sadistic = medium_stress_loss
 								compassionate = medium_stress_gain
 							}
@@ -457,6 +457,7 @@
 						}
 						scope:recipient = {
 							set_character_faith = scope:actor.faith
+							set_character_rite = scope:actor.rite
 						}
 						scope:actor = {
 						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -35 } }
@@ -1804,6 +1805,12 @@ spn_compulsion = {
 		if = {
 			limit = { scope:recipient = { exists = location } }
 			scope:recipient.location.county ?= { save_scope_as = spn_body_county }
+		}
+		# 2.36 -- End Your Life is a kill: the vampire's own Rite weighs it (zz_spn_fulfillment_effects.txt). Here, before the
+		# death inside the toast below, and outside that toast so a player gets the faith's own toast, not one nested in it.
+		if = {
+			limit = { scope:compel_mortal_suicide = yes }
+			scope:actor = { spn_creature_act_fulfillment_effect = { ACT = kill } }
 		}
 		# Drive all visible effects through a toast so both sides render correctly
 		scope:actor = {

@@ -16,6 +16,10 @@ every released version stays available. The files here are the same files the Wo
 
 Take the archive from the [latest release](https://github.com/Dlonem/CK3SupernaturalMod/releases/latest).
 
+2.36 and later are built for CK3 1.20. On CK3 1.19 (for example, to keep playing A Game of Thrones until it is
+updated for 1.20), take [v2.35a](https://github.com/Dlonem/CK3SupernaturalMod/releases/tag/v2.35a) instead, the last
+version built for 1.19.
+
 If what you downloaded is **Source code (zip)**, everything sits one folder deeper — open
 `CK3SupernaturalMod-<version>/` first and take the two items out of it. The rest of what is in there is
 repository housekeeping and the game does not want it.

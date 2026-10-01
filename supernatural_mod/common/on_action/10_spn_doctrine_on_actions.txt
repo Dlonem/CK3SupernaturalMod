@@ -1,13 +1,53 @@
-﻿#Used to assign all criminal doctrines on game start
+﻿# Supernatural -- when the doctrine assignment runs.
 #
-# The work lives in a SCRIPTED EFFECT, not inline here, and that is deliberate. A second mod that
-# wants a different answer -- the AGOT compatibility patch does, because AGOT has no rf_pagan -- can
-# then override one scripted effect instead of redefining this on_action. Two on_action definitions
-# with an `effect` block each make the engine log
+# The work lives in a SCRIPTED EFFECT (common/scripted_effects/zz_spn_doctrine_effects.txt), not inline here,
+# and that is deliberate. A second mod that wants a different answer -- the AGOT compatibility patch does,
+# because AGOT has no rf_pagan -- can then override one scripted effect instead of redefining this on_action.
+# Two on_action definitions with an `effect` block each make the engine log
 #     "There is more than one 'effect' defined using most recent: <file>"
 # every single load, and the loser is silently discarded. One indirection removes both problems.
+#
+# CK3 1.20: runs at three moments, because Rites are no longer fixed at game start.
+#   * game start (on_game_start, before the lobby, so no player gets a "Rite updated" message for it): the stance is
+#     SET on every Rite, as 2.35a did and as vanilla's own game_start.txt sets doctrines;
+#   * when a character founds a Rite (on_rite_created; root is the founder): empty groups are FILLED;
+#   * once a year, for Rites that vanilla script creates mid-game: empty groups are FILLED.
+# After game start nothing is ever overwritten, so a Rite that has a stance keeps it.
+
 spn_assign_all_religions_immortal_doctrines = {
 	effect = {
 		spn_assign_immortal_doctrines_effect = yes
+	}
+}
+
+on_game_start = {
+	on_actions = {
+		spn_assign_all_religions_immortal_doctrines
+	}
+}
+
+spn_fill_doctrines_on_rite_created = {
+	effect = {
+		spn_fill_supernatural_doctrines_own_rite_effect = yes
+	}
+}
+
+on_rite_created = {
+	on_actions = {
+		spn_fill_doctrines_on_rite_created
+	}
+}
+
+# The yearly net fills Rites directly (spn_fill_every_rite_supernatural_doctrines_effect), not through the game-start
+# effect a compatibility patch may override -- see zz_spn_doctrine_effects.txt.
+spn_fill_doctrines_yearly = {
+	effect = {
+		spn_fill_every_rite_supernatural_doctrines_effect = yes
+	}
+}
+
+yearly_global_pulse = {
+	on_actions = {
+		spn_fill_doctrines_yearly
 	}
 }

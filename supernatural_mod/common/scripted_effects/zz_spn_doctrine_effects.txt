@@ -1,65 +1,122 @@
-﻿# Supernatural -- the immortality doctrine assignment.
+﻿# Supernatural -- giving every Rite its Supernatural doctrines.
 #
 # Split out of common/on_action/10_spn_doctrine_on_actions.txt on 21 Aug 2026 so that a compatibility
-# patch can override THIS one effect instead of redefining the on_action. Two on_action declarations
+# patch can override a scripted effect instead of redefining the on_action. Two on_action declarations
 # that each carry an `effect` block make the engine log
 #     "There is more than one 'effect' defined using most recent: <file>"
 # on every load, and the loser is discarded silently. One indirection removes both problems.
 #
-# The rule: a faith in the pagan religion family SHUNS vampirism, lycanthropy and hybrids; every other
-# faith makes them crimes. Hunters are welcome everywhere.
+# CK3 1.20: doctrines live on RITES now, and one Faith can hold several Rites (Christianity alone has nine at
+# the 867 start). Faith-scope add_doctrine only reaches the Faith's MAIN rite -- vanilla says so in
+# pam_investiture_council_effects.txt ("add_doctrine hits only the main rite") and walks every_faith_rite
+# for the rest. So every Rite of every Faith of every Religion is walked.
+#
+# THE RULE is unchanged (spn_supernatural_doctrines_rite_rule_effect, below): a Rite whose Religion is in the pagan
+# family SHUNS vampirism, lycanthropy and hybrids; every other Rite makes them crimes. Hunters are accepted everywhere.
+#
+# TWO WAYS OF APPLYING IT:
+#   SET  -- game start only. The stance is imposed, exactly as 2.35a's faith-level version did after the lobby, and
+#           exactly as vanilla 1.20 itself imposes a doctrine at game start (game_start.txt: every_faith_rite +
+#           change_rite_doctrine). It has to be imposed rather than filled because a Rite may already hold SOME
+#           doctrine in a group the moment the game loads -- whether the engine pre-fills a group no Rite named is
+#           not something the files can settle -- and a filled-only start would then leave pagans at Criminal and
+#           hunters Criminal everywhere. Nobody has chosen anything at game start, so imposing overrides no one.
+#   FILL -- when a Rite is founded, and once a year (10_spn_doctrine_on_actions.txt). Only a group with NO doctrine is
+#           filled, so a Rite whose founder picked a stance, or a later change, keeps it. This is the safety net for
+#           Rites that appear mid-game from vanilla script (the Great Schism moves Rites, heresies found new ones).
+#
+# FOR A COMPATIBILITY PATCH: override spn_supernatural_doctrines_rite_rule_effect only (rite scope, keeps the $OP$
+# parameter). All three moments then follow the patch's rule. The AGOT patch up to 1.1.3b overrides
+# spn_assign_immortal_doctrines_effect with a 1.19, faith-level rule; that still only runs at game start, because
+# the once-a-year net calls spn_fill_every_rite_supernatural_doctrines_effect directly -- an old patch cannot reset
+# every main Rite's stance every January.
 
+# Game start.
 spn_assign_immortal_doctrines_effect = {
 	every_religion_global = {
-		limit = {
-			is_in_family = rf_pagan
-		}
 		every_faith = {
-			if = {
-				limit = { NOT = { has_doctrine = spn_doctrine_vampirism_shunned } }
-				add_doctrine = spn_doctrine_vampirism_shunned
-			}
-
-			if = {
-				limit = { NOT = { has_doctrine = spn_doctrine_lycanthropy_shunned } }
-				add_doctrine = spn_doctrine_lycanthropy_shunned
-			}
-
-			if = {
-				limit = { NOT = { has_doctrine = spn_doctrine_hybrid_shunned } }
-				add_doctrine = spn_doctrine_hybrid_shunned
-			}
-
-			if = {
-				limit = { NOT = { has_doctrine = spn_doctrine_hunter_accepted } }
-				add_doctrine = spn_doctrine_hunter_accepted
+			every_faith_rite = {
+				spn_supernatural_doctrines_rite_rule_effect = { OP = set }
 			}
 		}
 	}
+}
+
+# Founding and the yearly net: every Rite, empty groups only.
+spn_fill_every_rite_supernatural_doctrines_effect = {
 	every_religion_global = {
-		limit = {
-			NOT = { is_in_family = rf_pagan }
-		}
 		every_faith = {
-			if = {
-				limit = { NOT = { has_doctrine = spn_doctrine_vampirism_crime } }
-				add_doctrine = spn_doctrine_vampirism_crime
-			}
-
-			if = {
-				limit = { NOT = { has_doctrine = spn_doctrine_lycanthropy_crime } }
-				add_doctrine = spn_doctrine_lycanthropy_crime
-			}
-
-			if = {
-				limit = { NOT = { has_doctrine = spn_doctrine_hybrid_crime } }
-				add_doctrine = spn_doctrine_hybrid_crime
-			}
-
-			if = {
-				limit = { NOT = { has_doctrine = spn_doctrine_hunter_accepted } }
-				add_doctrine = spn_doctrine_hunter_accepted
+			every_faith_rite = {
+				spn_fill_supernatural_doctrines_rite_effect = yes
 			}
 		}
+	}
+}
+
+# Rite scope. Fills whichever of the four Supernatural doctrine groups this Rite has no doctrine in.
+spn_fill_supernatural_doctrines_rite_effect = {
+	spn_supernatural_doctrines_rite_rule_effect = { OP = fill }
+}
+
+# Rite scope. THE RULE. OP = set | fill.
+spn_supernatural_doctrines_rite_rule_effect = {
+	if = {
+		limit = {
+			faith.religion = { is_in_family = rf_pagan }
+		}
+		spn_$OP$_one_supernatural_doctrine_group_effect = { GROUP = vampirism STANCE = shunned }
+		spn_$OP$_one_supernatural_doctrine_group_effect = { GROUP = lycanthropy STANCE = shunned }
+		spn_$OP$_one_supernatural_doctrine_group_effect = { GROUP = hybrid STANCE = shunned }
+		spn_$OP$_one_supernatural_doctrine_group_effect = { GROUP = hunter STANCE = accepted }
+	}
+	else = {
+		spn_$OP$_one_supernatural_doctrine_group_effect = { GROUP = vampirism STANCE = crime }
+		spn_$OP$_one_supernatural_doctrine_group_effect = { GROUP = lycanthropy STANCE = crime }
+		spn_$OP$_one_supernatural_doctrine_group_effect = { GROUP = hybrid STANCE = crime }
+		spn_$OP$_one_supernatural_doctrine_group_effect = { GROUP = hunter STANCE = accepted }
+	}
+}
+
+# Rite scope. GROUP = vampirism | lycanthropy | hybrid | hunter, STANCE = crime | shunned | accepted | virtuous.
+spn_set_one_supernatural_doctrine_group_effect = {
+	if = {
+		limit = { NOT = { rite_has_doctrine = spn_doctrine_$GROUP$_$STANCE$ } }
+		if = {
+			# The group holds another stance: swap it (vanilla game_start.txt's own call).
+			limit = {
+				OR = {
+					rite_has_doctrine = spn_doctrine_$GROUP$_crime
+					rite_has_doctrine = spn_doctrine_$GROUP$_shunned
+					rite_has_doctrine = spn_doctrine_$GROUP$_accepted
+					rite_has_doctrine = spn_doctrine_$GROUP$_virtuous
+				}
+			}
+			change_rite_doctrine = spn_doctrine_$GROUP$_$STANCE$
+		}
+		else = {
+			# The group is empty: add it (vanilla religion_on_actions.txt's call for a doctrine a Rite does not have).
+			add_rite_doctrine = spn_doctrine_$GROUP$_$STANCE$
+		}
+	}
+}
+
+spn_fill_one_supernatural_doctrine_group_effect = {
+	if = {
+		limit = {
+			NOR = {
+				rite_has_doctrine = spn_doctrine_$GROUP$_crime
+				rite_has_doctrine = spn_doctrine_$GROUP$_shunned
+				rite_has_doctrine = spn_doctrine_$GROUP$_accepted
+				rite_has_doctrine = spn_doctrine_$GROUP$_virtuous
+			}
+		}
+		add_rite_doctrine = spn_doctrine_$GROUP$_$STANCE$
+	}
+}
+
+# Character scope (the founder, from on_rite_created). Fills the Rite they now hold.
+spn_fill_supernatural_doctrines_own_rite_effect = {
+	rite ?= {
+		spn_fill_supernatural_doctrines_rite_effect = yes
 	}
 }

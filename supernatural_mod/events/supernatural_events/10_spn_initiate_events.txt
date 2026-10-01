@@ -426,7 +426,14 @@ spn_initiate.2001 { #Initiate Hybrid
 		remove_trait = spn_known_werewolf
 		spn_former_werewolf_effect = yes
 		remove_character_flag = immune_to_disease
-		remove_character_flag = spn_has_conferred_sire
+		# 2.36 -- the old werewolf sire goes, but not one a confer interaction assigned for this very turning
+		# (the four hybrid confer sites mark that for a day). Stripping it unconditionally meant a hybrid made by
+		# interaction never had its maker named (spn_write_hybrid_turning_memory_effect needs the flag).
+		if = {
+			limit = { NOT = { has_character_flag = spn_sire_just_conferred } }
+			remove_character_flag = spn_has_conferred_sire
+		}
+		remove_character_flag = spn_sire_just_conferred
 		remove_character_flag = spn_has_mother_sire
 		remove_character_flag = spn_has_father_sire
 

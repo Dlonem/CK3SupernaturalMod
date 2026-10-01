@@ -465,6 +465,7 @@ spn_hunt_defender_won_effect = {
 		# conclusion never runs: the host dying invalidates the activity.
 		scope:spn_hunt_county ?= { spn_hunt_refusal_effect = yes }
 		# No outcome flag: the host's death invalidates the activity, so nothing would ever read it.
+		spn_creature_act_fulfillment_effect = { ACT = kill } # 2.36: the creature's own Rite weighs the kill
 		if = {
 			limit = { has_trait = supernatural_werewolf }
 			scope:spn_hunter = { death = { death_reason = spn_death_clawed killer = scope:spn_defender } }
@@ -599,6 +600,10 @@ spn_hunt_hunter_won_effect = {
 # kill event and the conclusion's safety net run exactly the same line and can never drift apart.
 # Hunter-kill reasons are public and are not menace marks.
 spn_hunt_perform_the_kill_effect = {
+	# 2.36 -- the hunter's own Rite weighs the slaying by the creature's kind: righteous where that kind is outlawed,
+	# sacrilege where it is revered (zz_spn_fulfillment_effects.txt). Before the death, so the traits are still here.
+	save_scope_as = spn_fulfillment_slain
+	scope:spn_hunter ?= { spn_slew_creature_fulfillment_effect = { CREATURE = scope:spn_fulfillment_slain } }
 	if = {
 		limit = { has_trait = supernatural_hybrid }
 		death = { death_reason = spn_death_beheaded_as_hybrid killer = scope:spn_hunter }

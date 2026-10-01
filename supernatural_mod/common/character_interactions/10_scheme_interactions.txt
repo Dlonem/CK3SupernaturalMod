@@ -9,9 +9,18 @@ start_abduct = {
 
 	scheme = abduct
 	ignores_pending_interaction_block = yes
-	
+
+	is_available = {
+		trigger_if = {
+			limit = { is_ai = yes }
+			is_diarch = yes
+			liege ?= { has_diarchy_active_parameter = diarchy_is_co_rulership }
+			ai_diarch_would_maim_execute_superior_if_got_chance_trigger = { LIEGE = liege }
+		}
+	}
+
 	is_shown = {
-		scope:actor = {
+		scope:puppet_or_actor ?= {
 			OR = {
 				has_perk = kidnapper_perk  # Scheme unlocked by the Kidnapper Perk
 				domicile ?= { has_domicile_parameter = camp_unlocks_abduct_scheme }
@@ -29,11 +38,11 @@ start_abduct = {
 		}
 
 		NOR = {
-			scope:recipient = scope:actor
-			scope:recipient = { is_imprisoned_by = scope:actor }
+			scope:recipient = scope:puppet_or_actor
+			scope:recipient = { is_imprisoned_by = scope:puppet_or_actor }
 		}
 		#exists = scope:recipient.court_owner
-		
+
 		NAND = { # Game Rules!
 			has_game_rule = no_players_multiplayer_murder_schemes
 			scope:actor = {
@@ -43,7 +52,7 @@ start_abduct = {
 				is_ai = no
 			}
 		}
-		
+
 		NAND = {
 			has_game_rule = no_player_families_multiplayer_murder_schemes
 			scope:actor = {
@@ -55,7 +64,7 @@ start_abduct = {
 					any_close_family_member = {
 						AND = {
 							is_ai = no
-							NOT = { this = scope:actor }
+							this != scope:actor
 						}
 					}
 				}
@@ -64,24 +73,31 @@ start_abduct = {
 	}
 
 	is_valid_showing_failures_only = {
-		scope:actor = {
+		scope:puppet_or_actor = {
 			can_start_scheme = {
 				type = abduct
 				target_character = scope:recipient
 			}
 		}
-		scope:recipient = { NOT = { has_strong_hook = scope:actor } }
+		scope:recipient = { NOT = { has_strong_hook = scope:puppet_or_actor } }
 		#limit range for landless adventurers
 		trigger_if = {
 			limit = {
-				scope:actor = {
-					is_landless_adventurer = yes
+				scope:puppet_or_actor = {
+					has_government = landless_adventurer_government
 				}
 			}
 			#Has to be used instead of diplo range checks in laamp to landed interactions
 			ep3_laamp_diplo_range_trigger = {
 				TARGET = scope:recipient
-				LAAMP = scope:actor
+				LAAMP = scope:puppet_or_actor
+			}
+		}
+		trigger_if = {
+			limit = { scope:puppet_or_actor = { has_variable = no_scheming_allowed_var } }
+			custom_tooltip = {
+				text = no_scheming_allowed_var_tt
+				scope:puppet_or_actor.var:no_scheming_allowed_var != scope:recipient
 			}
 		}
 	}
@@ -89,7 +105,7 @@ start_abduct = {
 	desc = {
 		triggered_desc = {
 			trigger = {
-				scope:actor = {
+				scope:puppet_or_actor = {
 					can_start_scheme = {
 						type = abduct
 						target_character = scope:recipient
@@ -124,20 +140,37 @@ start_abduct = {
 		current_description = start_abduct.tt.agent_focus_secrecy
 	}
 
-	on_accept = {
-		scope:actor = {
-			stress_impact = {
-				compassionate = medium_stress_impact_gain
-				honest = minor_stress_impact_gain
-				just = minor_stress_impact_gain
+	on_send = {
+		scope:puppet_or_actor = {
+			if = {
+				limit = {
+					OR = {
+						has_character_modifier = pam_granted_indulgences_modifier
+						has_character_modifier = pam_granted_indulgences_modifier_small
+					}
+				}
+				change_spiritual_fulfillment = medium_spiritual_fulfillment_loss
 			}
 		}
-		scope:actor = {
+	}
+
+	on_accept = {
+		scope:puppet_or_actor = {  # Only get stressed/SP penalties if you don't have the parameter
+			if = {
+				limit = {
+					NOT = { sp_hostile_schemes_except_murder_no_stress_or_fulfillment_trigger = yes }
+				}
+				stress_and_fulfillment_impact = {
+					compassionate = medium_stress_impact_gain
+					honest = minor_stress_impact_gain
+					just = minor_stress_impact_gain
+				}
+			}
 			send_interface_toast = {
 				type = event_toast_effect_neutral
 				title = start_abduct_notification
 
-				left_icon = scope:actor					
+				left_icon = scope:puppet_or_actor
 				right_icon = scope:recipient
 
 				# Success.
@@ -209,16 +242,33 @@ start_abduct = {
 				}
 			}
 		}
+		if = {
+			limit = {
+				scope:is_puppet_action ?= yes
+				scope:actor != scope:recipient
+			}
+			scope:actor = {
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = start_abduct_notification_puppeteer
+					left_icon = scope:puppet_or_actor
+					right_icon = scope:recipient
+				}
+			}
+		}
+		scope:puppet_or_actor = { save_scope_as = owner }
+		scope:recipient = { save_scope_as = target}
+		abduction_rivalry_progress_tooltip_forecast_effect = yes
 	}
 
 	ai_targets = { ai_recipients = liege }
-	ai_frequency = 60
-
-	ai_potential = {
-		liege ?= { has_diarchy_active_parameter = diarchy_is_co_rulership }
-		is_diarch = yes
-		is_ruler = yes
-		ai_diarch_would_maim_execute_superior_if_got_chance_trigger = { LIEGE = liege }
+	ai_frequency_by_tier = {
+		barony = 0
+		county = 60
+		duchy = 60
+		kingdom = 60
+		empire = 0
+		hegemony = 0
 	}
 
 	ai_will_do = {
@@ -285,7 +335,15 @@ start_abduct = {
 			}
 			always = yes
 		}
+		#Promised to abstain from sin
+		modifier = {
+			OR = {
+				has_character_modifier = pam_granted_indulgences_modifier
+				has_character_modifier = pam_granted_indulgences_modifier_small
+			}
+			factor = 0.1
+		}
 	}
-	
+
 	auto_accept = yes
 }

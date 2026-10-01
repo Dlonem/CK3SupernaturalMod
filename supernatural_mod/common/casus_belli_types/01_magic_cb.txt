@@ -313,14 +313,14 @@
 
 		scope:attacker = {
 			add_prestige = mongol_invasion_cb_prestige_white_peace
-			stress_impact = {
+			stress_and_fulfillment_impact = {
 				ambitious = medium_stress_impact_gain
 				arrogant = medium_stress_impact_gain
 			}
 		}
 
 		scope:defender = {
-			stress_impact = {
+			stress_and_fulfillment_impact = {
 				arrogant = medium_stress_impact_gain
 			}
 		}
@@ -881,53 +881,48 @@ against_the_witch_war = {
 					is_ai = yes
 				}
 			}
+			# CK3 1.20: doctrines live on Rites; Faith-scope add_doctrine only reaches each Faith's main Rite.
+			# Same three steps as before, applied to every Rite: accepted -> virtuous, shunned -> accepted, crime -> shunned.
 			every_religion_global = {
 				every_faith = {
-					limit = {
-						has_doctrine = doctrine_witchcraft_accepted
+					every_faith_rite = {
+						limit = { rite_has_doctrine = doctrine_witchcraft_accepted }
+						change_rite_doctrine = doctrine_witchcraft_virtuous
 					}
-					hidden_effect = {
-						remove_doctrine = doctrine_witchcraft_accepted
-					}
-					add_doctrine = doctrine_witchcraft_virtuous
-				}
-				every_faith = {
-					limit = {
-						has_doctrine = doctrine_witchcraft_shunned
-					}
-					hidden_effect = {
-						remove_doctrine = doctrine_witchcraft_shunned
-						every_faith_character = {
-							limit = {
-								any_secret = { type = secret_witch }
-							}
-							random_secret = {
-								limit = { secret_type = secret_witch }
-								remove_secret = yes
-							}
-							if = {
-								limit = {
-									NOT = { has_trait = witch }
-									# 2.31c -- this writes the trait RAW, so it is the one witch door that does not
-									# pass through give_witch_secret_or_trait_effect2 and its gate. An AI winning
-									# this war converts every character of every shunning faith at once, which
-									# with the AGOT patch loaded meant dragons and the walking dead among them.
-									spn_is_valid_supernatural_target = yes
+					every_faith_rite = {
+						limit = { rite_has_doctrine = doctrine_witchcraft_shunned }
+						save_temporary_scope_as = spn_witch_war_rite
+						hidden_effect = {
+							faith = {
+								every_faith_character = {
+									limit = {
+										rite = scope:spn_witch_war_rite
+										any_secret = { type = secret_witch }
+									}
+									random_secret = {
+										limit = { secret_type = secret_witch }
+										remove_secret = yes
+									}
+									if = {
+										limit = {
+											NOT = { has_trait = witch }
+											# 2.31c -- this writes the trait RAW, so it is the one witch door that does not
+											# pass through give_witch_secret_or_trait_effect2 and its gate. An AI winning
+											# this war converts every character of every shunning faith at once, which
+											# with the AGOT patch loaded meant dragons and the walking dead among them.
+											spn_is_valid_supernatural_target = yes
+										}
+										add_trait = witch
+									}
 								}
-								add_trait = witch
 							}
 						}
+						change_rite_doctrine = doctrine_witchcraft_accepted
 					}
-					add_doctrine = doctrine_witchcraft_accepted
-				}
-				every_faith = {
-					limit = {
-						has_doctrine = doctrine_witchcraft_crime
+					every_faith_rite = {
+						limit = { rite_has_doctrine = doctrine_witchcraft_crime }
+						change_rite_doctrine = doctrine_witchcraft_shunned
 					}
-					hidden_effect = {
-						remove_doctrine = doctrine_witchcraft_crime
-					}
-					add_doctrine = doctrine_witchcraft_shunned
 				}
 			}
 		}

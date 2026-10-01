@@ -13,8 +13,10 @@
 #   the count carries no `years` on its change_variable branch, so a count can outlive its modifier by up to five
 #   years -- the hunt gates on the MODIFIER, so nothing reads a stale count except the notification threshold.
 #
-# Writers (all of them -- §3.2): W1 the on_death hook (zz_spn_menace_on_actions.txt), W2 vf_mark_fed_on_effect
-# (20_spn_secret_effects.txt), W3 the feed's kill option (supernatural_ev1.23), W4 the werewolf border hunt
+# Writers (all of them -- §3.2): W1 the on_death hook (zz_spn_menace_on_actions.txt), W2 vf_witness_talks_effect
+# (20_spn_secret_effects.txt -- since 2.36 a feed marks only when somebody talks: the botched feed's Flee, a failed
+# Compel, or now and then after a clean feed; it used to be every surviving feed), W3 the feed's kill option
+# (supernatural_ev1.23), W4 the werewolf border hunt
 # (spn_gain_power.4026), and 2.35's W5 spn_compel_leaves_a_trace_effect (zz_spn_consequence_effects.txt) --
 # the compulsion, at low odds, because Thomas wants every supernatural action to be able to cost you
 # something and none of them to cost you much. Nothing else records who did it, and nothing spawns a culprit.
@@ -158,30 +160,35 @@ spn_open_menace_trail_effect = {
 		spn_menace_drain_$KIND$_$SEVERITY$_effect = yes
 		# The lord finds out on the third INCIDENT (§4). Never the culprit himself -- a vampire count preying on
 		# his own county does not need a letter about it.
+		# 2.36 -- the count is read only once there is one: a feeding option's tooltip walks this effect without running
+		# the set_variable above, and the bare comparison logged three errors on every redraw (port120.py S28).
 		if = {
-			limit = {
-				var:spn_menace_count >= 3
-				NOT = { has_variable = spn_menace_notified }
-				exists = holder
-				NOT = { holder = $CULPRIT$ }
-			}
-			set_variable = { name = spn_menace_notified value = yes years = 5 }
-			save_scope_as = spn_menace_county
-			holder = {
-				trigger_event = { id = spn_hunt.0001 days = { 3 10 } }
-			}
-			# 2.35 PART TWO (§7.1) -- THE MAN ASKING QUESTIONS. The third mark is the moment a trail stops
-			# being weather and becomes a thing somebody is following. The player learns that by being told
-			# a priest has started writing names down, once per character, ever.
-			$CULPRIT$ = {
-				if = {
-					limit = {
-						is_ai = no
-						is_alive = yes
-						NOT = { has_character_flag = spn_taught_asking }
+			limit = { has_variable = spn_menace_count }
+			if = {
+				limit = {
+					var:spn_menace_count >= 3
+					NOT = { has_variable = spn_menace_notified }
+					exists = holder
+					NOT = { holder = $CULPRIT$ }
+				}
+				set_variable = { name = spn_menace_notified value = yes years = 5 }
+				save_scope_as = spn_menace_county
+				holder = {
+					trigger_event = { id = spn_hunt.0001 days = { 3 10 } }
+				}
+				# 2.35 PART TWO (§7.1) -- THE MAN ASKING QUESTIONS. The third mark is the moment a trail stops
+				# being weather and becomes a thing somebody is following. The player learns that by being told
+				# a priest has started writing names down, once per character, ever.
+				$CULPRIT$ = {
+					if = {
+						limit = {
+							is_ai = no
+							is_alive = yes
+							NOT = { has_character_flag = spn_taught_asking }
+						}
+						add_character_flag = spn_taught_asking
+						trigger_event = { id = spn_hunt.0502 days = { 4 12 } }
 					}
-					add_character_flag = spn_taught_asking
-					trigger_event = { id = spn_hunt.0502 days = { 4 12 } }
 				}
 			}
 		}
@@ -199,6 +206,9 @@ spn_open_menace_trail_effect = {
 				NOT = { has_character_flag = spn_taught_first_body }
 			}
 			add_character_flag = spn_taught_first_body
+			# 2.36 -- a body, or somebody talking? The event reads this for its title and text.
+			set_variable = { name = spn_first_mark_kind value = flag:$SEVERITY$ days = 30 }
+			set_variable = { name = spn_first_mark_what value = flag:$KIND$ days = 30 }
 			trigger_event = { id = spn_hunt.0500 days = { 3 8 } }
 		}
 		spn_menace_teach_$SEVERITY$_effect = yes
@@ -217,7 +227,8 @@ spn_menace_teach_kill_effect = {
 
 # WHAT THE OLD WOMAN TOLD YOU. Thomas: "whomever turned me into a werewolf didn't teach me much about it."
 # A creature with no maker and no wolf who clawed him is one nobody ever explained any of this to, and the first
-# time he takes someone and leaves them breathing is when the world finally does.
+# time he takes someone and leaves them breathing is when the world finally does. 2.36: called from the feed itself
+# (vf_mark_fed_on_effect) as well as from a prowl trail, since a clean feed no longer opens one.
 spn_menace_teach_prowl_effect = {
 	if = {
 		limit = {

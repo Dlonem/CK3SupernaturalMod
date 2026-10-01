@@ -1,0 +1,185 @@
+﻿# Supernatural 2.36 -- Spiritual Fulfillment (CK3 1.20): a creature's own Rite weighs what it does, it only condemns
+# what it knows, and a creature is only hurt by that as much as it still cares.
+#
+# THE RULE. Thomas, 1 Oct 2026, after the first 1.20 boot: "when you become like a supernatural, your religion doesn't
+# prioritize you, so it's basically just you at that point. So then you don't care as much about religion unless it
+# fits the confines of your life ... people who are more religiously inclined will have that affect them more."
+# And the same day, after feeding as a hidden vampire under the Roman Rite cost him fulfillment every time: "only
+# having the fulfillment happen if you possess the known traits of vamp, wolf, hybrid since that's what would hurt
+# fulfillment since 'technically' the supernatural traits are hidden".
+#
+#   Rite holds the kind CRIMINAL  -> the act is a sin, for a creature KNOWN for what it is (spn_known_vampire,
+#                                    _werewolf, _hybrid): fulfillment falls. A creature still hidden lives as its
+#                                    faith's own and is not charged. That is the line the doctrines already draw: the
+#                                    sin is the known trait, never the hidden one (10_spn_doctrine_types.txt).
+#   Rite holds the kind VIRTUOUS  -> the act is devotion: fulfillment rises, known or not. A creature has nothing to
+#                                    hide from a Rite that reveres its kind, and there it seldom gets the known trait:
+#                                    the turning withholds it (spn_recently_became_*), and after that only a botched
+#                                    feed (supernatural_ev1.23, vampires and hybrids) or an old secret coming out gives
+#                                    it. Gating devotion on it would all but switch devotion off.
+#   Shunned or Accepted           -> the Rite has no view of the act itself. Nothing moves.
+#
+# HOW MUCH IT HURTS is mostly not decided here. change_spiritual_fulfillment goes through the character's own
+# fulfillment multipliers, so the size in zz_spn_fulfillment_values.txt is only the base:
+#   * vanilla: zealous +100% loss / +25% gain, cynical -75% loss / -25% gain, plus the other religious traits;
+#   * Supernatural: once known, a creature cares less about a Rite that outlaws its kind, -25% gain and loss (-10% if
+#     the Rite only shuns it). That is a rite_modifier on the KNOWN trait (10_spn_traits.txt), so it follows the Rite
+#     live: convert, or the Rite changes its doctrine, and it updates without any script. A hidden creature keeps its
+#     faith as fully as anyone.
+# Checked against the 1 Oct save: a zealous character's event gains land on multiples of 1.25 and a cynic's on 0.75, so
+# the multipliers do apply to change_spiritual_fulfillment.
+#
+# A CYNIC IS NEVER CHARGED. The one thing decided here: a cynical character skips every loss in this file outright
+# (spn_weighs_loss_trigger). The multipliers alone would cancel to zero for a known cynic under an outlawing Rite (-75%
+# -25%), but other modifiers can push that total either side of -100% (indulgences, a monastic founder's -33%, the PAM
+# dynasty perk), and the player would still get a red toast for a change of nothing. Gains still reach a cynic, at his
+# -25%.
+#
+# WHAT IS NOT DONE HERE: a standing penalty for simply being a known creature. That can't be scaled to how much a
+# character cares (a sin's weight is the same for everyone who holds the trait), so the Criminal doctrines keep the
+# known traits as sins at weight 1: the faithful still judge them for it (opinion, the sin's piety drain), but the
+# soul-weight lives in the acts. 10_spn_doctrine_types.txt.
+#
+# THE MOMENTS. Every one sits where the character acts, so it weighs the one who did it -- never the culprit a county
+# ends up blaming (spn_mark_menace_effect records who the county believes did it, who may be framed, and paying the hush
+# money writes no mark at all; neither should change anyone's soul). Where the act is an event option, the change shows
+# in that option's tooltip before the player picks it -- and for a hidden creature under a Rite that outlaws its kind,
+# nothing shows, because nothing happens.
+#   feed -- vf_mark_fed_on_effect (20_spn_secret_effects.txt), the wrapper every surviving feed goes through, and
+#           supernatural_ev1.25.b (a sedated patient), which never called it.
+#   kill -- at each kill by fang or claw, just before the death: supernatural_ev1.04.b, 1.08.a, 1.11.a, 1.23.a;
+#           spn_gain_power.4014 and .4025; a creature's final stand against a hunter (spn_hunt_defender_won_effect);
+#           and End Your Life, the compelled death (spn_compulsion). NOT through on_death: it can't tell a
+#           creature's kill from a poisoning or a duel, and most feeding victims are not in the killer's province.
+#           Murders that only cover the tracks ("silence the witness", death_murder) are not the creature's nature at
+#           work and are not weighed.
+#   make -- the turning-memory writers (zz_spn_memory_effects.txt): whoever made the new vampire, werewolf or hybrid,
+#           judged by the maker's own kind.
+#   slay -- whoever puts a creature down, judged by the CREATURE's kind: righteous where that kind is outlawed,
+#           sacrilege where it is revered. The hunt's kill (spn_hunt_perform_the_kill_effect -- only when the hunter
+#           actually kills, not when he takes the creature prisoner), the two attack events in spn_hunters_events, and
+#           the hunter's arrow in spn_gain_power.4024. NOT gated on a known trait, the slain's or the slayer's: a
+#           slaying is the creature unmasked, not a secret anyone keeps -- it dies as what it is (a stake, a silver
+#           arrow) and the hunt pays out in the open.
+# Not weighed: becoming a creature. A turning, a potion, a ruler-designer vampire and a born werewolf all come through
+# the same four doors in 10_spn_initiate_events.txt, and only some of them leave a maker behind, so there is no honest
+# way to tell a fall from a birth at every door.
+#
+# STILL MOVES FOR A HIDDEN CREATURE, ON PURPOSE: vanilla's own stress_and_fulfillment_impact (port120.py S19). When an
+# option goes against a trait the character's faith counts as a virtue (compassionate, just, ...), 1.20 turns part of
+# that stress into a fulfillment loss (SPIRITUAL_FULFILLMENT_FOR_STRESS_DIVIDE_FACTOR, 00_defines.txt) -- for everyone,
+# mortals included. It answers who the character is, not what it is, and Supernatural's options carry it exactly as
+# vanilla's do.
+#
+# Demons have no Supernatural doctrine and witchcraft is vanilla's doctrine (vanilla weighs witches itself), so neither
+# is weighed here.
+#
+# Every change is gated on is_playable_character: change_spiritual_fulfillment errors on anyone else (vanilla says so in
+# spiritual_counsel_interaction.txt). A player sees why in a toast; the AI just changes.
+
+# Character scope: the creature who acted. ACT = feed | kill | make.
+# A hybrid answers to the hybrid doctrine, whichever half did it, and is known as a hybrid (spn_initiate.2001 takes the
+# werewolf's known trait and secret away when it makes one).
+spn_creature_act_fulfillment_effect = {
+	if = {
+		limit = { has_trait = supernatural_hybrid }
+		spn_rite_weighs_fulfillment_effect = { GROUP = hybrid KNOWN = spn_known_hybrid ACT = $ACT$ }
+	}
+	else_if = {
+		limit = { has_trait = supernatural_vampire }
+		spn_rite_weighs_fulfillment_effect = { GROUP = vampirism KNOWN = spn_known_vampire ACT = $ACT$ }
+	}
+	else_if = {
+		limit = { has_trait = supernatural_werewolf }
+		spn_rite_weighs_fulfillment_effect = { GROUP = lycanthropy KNOWN = spn_known_werewolf ACT = $ACT$ }
+	}
+}
+
+# Character scope. GROUP = vampirism | lycanthropy | hybrid, KNOWN = that kind's known trait, ACT = feed | kill | make.
+# Devotion needs nothing more than the Rite. A sin needs the Rite AND the known trait: a Rite only condemns what it knows.
+spn_rite_weighs_fulfillment_effect = {
+	if = {
+		limit = {
+			is_playable_character = yes
+			rite ?= { rite_has_doctrine = spn_doctrine_$GROUP$_virtuous }
+		}
+		spn_fulfillment_toast_effect = {
+			VALUE = spn_fulfillment_$ACT$_value
+			TITLE = spn_fulfillment_$ACT$_virtue_toast
+			TYPE = event_toast_effect_good
+		}
+	}
+	else_if = {
+		limit = {
+			has_trait = $KNOWN$
+			spn_weighs_loss_trigger = yes
+			rite ?= { rite_has_doctrine = spn_doctrine_$GROUP$_crime }
+		}
+		spn_fulfillment_toast_effect = {
+			VALUE = spn_fulfillment_$ACT$_loss
+			TITLE = spn_fulfillment_$ACT$_sin_toast
+			TYPE = event_toast_effect_bad
+		}
+	}
+}
+
+# Character scope: whoever put the creature down. CREATURE = the creature, still alive (called before the death, so its
+# traits are there to read). The slayer does not have to be a hunter yet: in spn_hunters_events the kill is what makes
+# him one. No known-trait gate here; see "slay" in the header.
+spn_slew_creature_fulfillment_effect = {
+	if = {
+		limit = { $CREATURE$ = { has_trait = supernatural_hybrid } }
+		spn_rite_weighs_slaying_effect = { GROUP = hybrid }
+	}
+	else_if = {
+		limit = { $CREATURE$ = { has_trait = supernatural_vampire } }
+		spn_rite_weighs_slaying_effect = { GROUP = vampirism }
+	}
+	else_if = {
+		limit = { $CREATURE$ = { has_trait = supernatural_werewolf } }
+		spn_rite_weighs_slaying_effect = { GROUP = lycanthropy }
+	}
+}
+
+# Slayer scope. GROUP = the slain creature's kind. The slayer's own Rite decides what the slaying was.
+spn_rite_weighs_slaying_effect = {
+	if = {
+		limit = {
+			is_playable_character = yes
+			rite ?= { rite_has_doctrine = spn_doctrine_$GROUP$_crime }
+		}
+		spn_fulfillment_toast_effect = {
+			VALUE = spn_fulfillment_slay_value
+			TITLE = spn_fulfillment_slay_virtue_toast
+			TYPE = event_toast_effect_good
+		}
+	}
+	else_if = {
+		limit = {
+			spn_weighs_loss_trigger = yes
+			rite ?= { rite_has_doctrine = spn_doctrine_$GROUP$_virtuous }
+		}
+		spn_fulfillment_toast_effect = {
+			VALUE = spn_fulfillment_slay_loss
+			TITLE = spn_fulfillment_slay_sin_toast
+			TYPE = event_toast_effect_bad
+		}
+	}
+}
+
+# Character scope. VALUE = a signed script value. The toast is vanilla's own pattern for a fulfillment change the
+# player would otherwise never see the reason for (army_on_actions.txt, pam_on_actions.txt).
+spn_fulfillment_toast_effect = {
+	if = {
+		limit = { is_ai = no }
+		send_interface_toast = {
+			type = $TYPE$
+			title = $TITLE$
+			left_icon = this
+			change_spiritual_fulfillment = $VALUE$
+		}
+	}
+	else = {
+		change_spiritual_fulfillment = $VALUE$
+	}
+}
