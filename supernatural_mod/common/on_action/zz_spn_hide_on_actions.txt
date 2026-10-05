@@ -1,0 +1,637 @@
+﻿# Supernatural 2.37 -- "The Six Hides": every hook (WORK-ORDER-2.37 §19.1). Each is an APPEND through `on_actions = { }`,
+# which merges across files (the idiom of zz_spn_menace_on_actions.txt), so no vanilla on_action is copied or shadowed.
+# Each starts with the cheapest test that is false almost everywhere.
+#
+# No scripted trigger may live in this folder (2.35d: the parser stops at it); every trigger used here is in
+# common/scripted_triggers/zz_spn_hide_triggers.txt.
+
+# ==================================================================================================
+# DEATH (§8.0) -- the one on_death hook, all its jobs in order. Root is about to die; never read death_reason here.
+# Gated per step by its own rule, so one shared hook cannot let one rule switch off the other's bookkeeping.
+# ==================================================================================================
+on_death = {
+	on_actions = {
+		spn_hide_on_death
+	}
+}
+
+spn_hide_on_death = {
+	trigger = {
+		OR = {
+			spn_is_wolf_trigger = yes
+			spn_is_champion_trigger = yes
+			has_trait = spn_true_alpha
+			exists = var:spn_pack
+			exists = var:spn_hide_wolf_hide
+			has_trait = ww_infected_wound # 2.37e: step 0
+		}
+	}
+	effect = {
+		save_scope_as = spn_dying
+		# 0. One who dies in the wound's fever comes off his sire's list (the Gathering's Fevered rule; 2.37e, the
+		#    death outcome never runs spn_clear_wound_incubation_state).
+		if = {
+			limit = {
+				has_trait = ww_infected_wound
+				var:spn_conferred_sire ?= { is_alive = yes }
+			}
+			var:spn_conferred_sire = {
+				if = {
+					limit = { is_target_in_variable_list = { name = spn_my_fevered target = scope:spn_dying } }
+					remove_list_variable = { name = spn_my_fevered target = scope:spn_dying }
+				}
+			}
+		}
+		# 1. Whoever kills a wolf is marked for life: never a True Alpha (§16). Either rule.
+		if = {
+			limit = {
+				spn_is_wolf_trigger = yes
+				scope:killer ?= { is_alive = yes } # 2.37e: ?= (no short-circuit beside an exists)
+			}
+			scope:killer = { add_character_flag = spn_killed_a_wolf }
+		}
+		# 2. A pack's alpha: the killer goes onto the story for on_owner_death to read (§13.6). Packs rule.
+		if = {
+			limit = {
+				spn_packs_on_trigger = yes
+				spn_is_alpha_trigger = yes
+				exists = scope:killer
+			}
+			var:spn_pack = { set_variable = { name = spn_pack_killer value = scope:killer } }
+		}
+		# 3. A champion: the hide moves now, before vanilla inheritance (§8). Hides rule.
+		if = {
+			limit = {
+				spn_hides_on_trigger = yes
+				spn_is_champion_trigger = yes
+			}
+			spn_hide_exit_effect = { REASON = flag:death }
+		}
+		# 4. A member leaves the pack; an alpha's succession is the story's on_owner_death. Packs rule.
+		if = {
+			limit = {
+				spn_packs_on_trigger = yes
+				exists = var:spn_pack
+			}
+			spn_pack_remove_member_effect = { WHO = scope:spn_dying REASON = flag:death }
+		}
+		# 5. The True Alpha dies: the century still runs, but nobody "lives" now. Either rule.
+		if = {
+			limit = { global_var:spn_ta_living ?= scope:spn_dying }
+			remove_global_variable = spn_ta_living
+		}
+		# 6. The wolf a lost hide was reserved for (§9.5) dies: the hide goes back to waiting. Hides rule.
+		if = {
+			limit = {
+				spn_hides_on_trigger = yes
+				exists = var:spn_hide_wolf_hide
+			}
+			if = {
+				limit = { var:spn_hide_wolf_hide = flag:silverback }
+				if = {
+					limit = { global_var:spn_hide_silverback_reserved ?= scope:spn_dying }
+					spn_hide_rewait_effect = { HIDE = silverback }
+				}
+			}
+			if = {
+				limit = { var:spn_hide_wolf_hide = flag:timber }
+				if = {
+					limit = { global_var:spn_hide_timber_reserved ?= scope:spn_dying }
+					spn_hide_rewait_effect = { HIDE = timber }
+				}
+			}
+			if = {
+				limit = { var:spn_hide_wolf_hide = flag:tundra }
+				if = {
+					limit = { global_var:spn_hide_tundra_reserved ?= scope:spn_dying }
+					spn_hide_rewait_effect = { HIDE = tundra }
+				}
+			}
+			if = {
+				limit = { var:spn_hide_wolf_hide = flag:graybeard }
+				if = {
+					limit = { global_var:spn_hide_graybeard_reserved ?= scope:spn_dying }
+					spn_hide_rewait_effect = { HIDE = graybeard }
+				}
+			}
+			if = {
+				limit = { var:spn_hide_wolf_hide = flag:midnight }
+				if = {
+					limit = { global_var:spn_hide_midnight_reserved ?= scope:spn_dying }
+					spn_hide_rewait_effect = { HIDE = midnight }
+				}
+			}
+			if = {
+				limit = { var:spn_hide_wolf_hide = flag:alpha }
+				if = {
+					limit = { global_var:spn_hide_alpha_reserved ?= scope:spn_dying }
+					spn_hide_rewait_effect = { HIDE = alpha }
+				}
+			}
+			remove_variable = spn_hide_wolf_hide
+		}
+	}
+}
+
+# ==================================================================================================
+# OWNER CHANGE (§5.3, §8 `soul`, §9.1). Root = the artifact; scope:owner, scope:old_owner, scope:old_holy_site
+# (inventory_on_actions.txt:2-8).
+# ==================================================================================================
+on_artifact_changed_owner = {
+	on_actions = {
+		spn_hide_owner_changed
+	}
+}
+
+spn_hide_owner_changed = {
+	trigger = {
+		has_variable = spn_hide
+	}
+	effect = {
+		save_scope_as = spn_moved_hide
+		# Out of a shrine into someone's hands, by any route (vanilla's siege theft, our own takes, the Church's
+		# reverse, the zealot sweep): the marker goes. Idempotent with the holy-site hook.
+		if = {
+			limit = {
+				exists = var:spn_hide_shrine_county
+				exists = scope:owner
+			}
+			spn_hide_shrine_left_effect = yes
+		}
+		spn_hide_save_champion_effect = yes
+		# 2.37o: the idle count (the yearly net) runs only while the hide stays idle. In a player's hands, its
+		# champion's or a shrine's, it starts again from nothing.
+		if = {
+			limit = {
+				exists = var:spn_hide_idle_since
+				spn_hide_lies_idle_trigger = no
+			}
+			remove_variable = spn_hide_idle_since
+		}
+		# Witchcraft's soul transfer (§8 `soul`): every artifact moves to the new body and the player goes with it.
+		# The hide follows the soul, not the husk.
+		if = {
+			limit = {
+				exists = scope:owner
+				exists = scope:old_owner
+				exists = scope:spn_hide_champ
+				scope:owner = { has_character_flag = just_soul_transfered_flag }
+				scope:old_owner = scope:spn_hide_champ
+			}
+			scope:old_owner = { spn_hide_exit_effect = { REASON = flag:soul } }
+			# The exit ran on the husk after the hide had already moved, so it could not free the hide: free it here.
+			# If the new body is chosen, the champion effect guards it again.
+			scope:spn_moved_hide = {
+				if = {
+					limit = { has_variable = artifact_prevent_transfer }
+					remove_variable = artifact_prevent_transfer
+				}
+			}
+			scope:owner = {
+				if = {
+					limit = { spn_can_bear_hide_trigger = yes }
+					spn_hide_make_champion_dispatch_effect = { ARTIFACT = scope:spn_moved_hide }
+				}
+				else = {
+					spn_hide_start_check_effect = yes
+				}
+			}
+		}
+		# The hide cannot leave a living champion: anything that moved it is undone (§5.3).
+		else_if = {
+			limit = {
+				exists = scope:spn_hide_champ
+				scope:spn_hide_champ = { is_alive = yes }
+				NOT = { scope:owner ?= scope:spn_hide_champ }
+			}
+			set_owner = {
+				target = scope:spn_hide_champ
+				history = {
+					type = given
+					recipient = scope:spn_hide_champ
+				}
+			}
+			equip_artifact_to_owner_replace = yes
+		}
+		else = {
+			# A hide passing from one pack's wolf to another pack's wolf is a feud (§17.5).
+			if = {
+				limit = {
+					exists = scope:owner
+					exists = scope:old_owner
+					scope:owner = { exists = var:spn_pack }
+					scope:old_owner = { exists = var:spn_pack }
+				}
+				if = {
+					limit = { NOT = { scope:owner.var:spn_pack = scope:old_owner.var:spn_pack } }
+					scope:owner.var:spn_pack.story_owner = { save_scope_as = spn_mv_a }
+					scope:old_owner.var:spn_pack.story_owner = { save_scope_as = spn_mv_b }
+					spn_hide_feud_effect = { A = scope:spn_mv_b B = scope:spn_mv_a }
+				}
+			}
+			scope:owner ?= { spn_hide_start_check_effect = yes }
+		}
+	}
+}
+
+# ==================================================================================================
+# CLAIMS (§5.4). Root = the claimant; scope:artifact; scope:owner. A hide worn by its own champion carries none.
+# ==================================================================================================
+on_artifact_claim_gained = {
+	on_actions = {
+		spn_hide_claim_gained
+	}
+}
+
+spn_hide_claim_gained = {
+	trigger = {
+		scope:artifact ?= { has_variable = spn_hide }
+	}
+	effect = {
+		scope:artifact = {
+			if = {
+				limit = { spn_hide_worn_by_champion_trigger = yes }
+				spn_hide_strip_claims_effect = yes
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# SHRINES (§9.1). Root = the artifact; scope:holy_site (now), scope:old_holy_site (before). "Out" runs before
+# "Into": a shrine-to-shrine move has both, and the other order would delete the new marker.
+# ==================================================================================================
+on_artifact_changed_holy_site_owner = {
+	on_actions = {
+		spn_hide_holy_site_changed
+	}
+}
+
+spn_hide_holy_site_changed = {
+	trigger = {
+		has_variable = spn_hide
+	}
+	effect = {
+		save_scope_as = spn_shrine_hide
+		if = {
+			limit = { exists = scope:old_holy_site }
+			spn_hide_shrine_left_effect = yes
+		}
+		# Not before seeding is done: seeding places its own markers and sets spn_hides_seeded as its last step. 2.37o:
+		# nor in seeding's own wake (spn_hides_seeding, one day): this hook runs after the effect that fired it.
+		if = {
+			limit = {
+				exists = scope:holy_site
+				exists = global_var:spn_hides_seeded
+				NOT = { exists = global_var:spn_hides_seeding }
+			}
+			scope:holy_site.holy_site_county = { save_scope_as = spn_shrine_county }
+			spn_hide_shrine_entered_effect = { COUNTY = scope:spn_shrine_county FAITH = scope:spn_shrine_county.holder.faith }
+			spn_hide_word_travels_effect = yes
+		}
+	}
+}
+
+# ==================================================================================================
+# BROKEN (§8.2). Root = the artifact; scope:owner. Vanilla destroys it afterwards for a living owner only
+# (artifact.0021); an enshrined hide has none, so it is destroyed here or it would survive while recorded lost.
+# ==================================================================================================
+on_artifact_broken_through_effect = {
+	on_actions = {
+		spn_hide_broken
+	}
+}
+
+on_artifact_broken_through_decay = {
+	on_actions = {
+		spn_hide_broken
+	}
+}
+
+# 2.37i: through an event, as vanilla's own handler on this hook is (artifact.0021). In a siege vanilla destroys the
+# artifact before this hook runs (damage_artifact_in_battle_effect: add_durability, then destroy_artifact), and a trigger
+# here read the destroyed artifact and logged an error (Thomas's 4 Oct run: 18 in 75 years). An event whose scope is
+# gone is dropped by the engine without a word (artifact.0021: no error on the same hook in the same log); a hide lost
+# that way is caught by the yearly net.
+spn_hide_broken = {
+	events = {
+		spn_hide.0003
+	}
+}
+
+# ==================================================================================================
+# GAME START AND THE YEARLY NET (§5.12)
+# ==================================================================================================
+on_game_start_after_lobby = {
+	on_actions = {
+		spn_hide_game_start
+	}
+}
+
+# A day later, after vanilla's own relics (historical_artifacts.0050 runs from the same on_action).
+spn_hide_game_start = {
+	trigger = {
+		NOT = { exists = global_var:spn_hides_seeded }
+	}
+	events = {
+		delay = { days = 1 }
+		spn_hide.0002
+	}
+}
+
+yearly_global_pulse = {
+	on_actions = {
+		spn_hide_yearly_net
+		spn_hide_yearly_seed
+		spn_hide_yearly_bond
+	}
+}
+
+# 2.37 -- the Bond's yearly growth and the tongue (spn_hide_yearly_bond_effect).
+spn_hide_yearly_bond = {
+	trigger = {
+		spn_hides_on_trigger = yes
+		exists = global_var:spn_hides_seeded
+	}
+	effect = {
+		spn_hide_yearly_bond_effect = yes
+	}
+}
+
+spn_hide_yearly_net = {
+	trigger = {
+		spn_hides_on_trigger = yes
+		exists = global_var:spn_hides_seeded
+	}
+	effect = {
+		spn_hide_yearly_net_effect = yes
+	}
+}
+
+# An older save, opened under 2.37 for the first time: seed now (§23).
+spn_hide_yearly_seed = {
+	trigger = {
+		NOT = { exists = global_var:spn_hides_seeded }
+	}
+	events = {
+		spn_hide.0002
+	}
+}
+
+# ==================================================================================================
+# WAR (§12.2, §12.5)
+# ==================================================================================================
+on_war_started = {
+	on_actions = {
+		spn_hide_war_started
+	}
+}
+
+on_join_war_as_secondary = {
+	on_actions = {
+		spn_hide_war_started
+	}
+}
+
+# scope:war is set by both hooks. Six globals at most; nothing else is walked.
+spn_hide_war_started = {
+	trigger = {
+		exists = scope:war
+		OR = {
+			global_var:spn_hide_champion_silverback ?= { is_alive = yes }
+			global_var:spn_hide_champion_timber ?= { is_alive = yes }
+			global_var:spn_hide_champion_tundra ?= { is_alive = yes }
+			global_var:spn_hide_champion_graybeard ?= { is_alive = yes }
+			global_var:spn_hide_champion_midnight ?= { is_alive = yes }
+			global_var:spn_hide_champion_alpha ?= { is_alive = yes }
+		}
+	}
+	effect = {
+		global_var:spn_hide_champion_silverback ?= {
+			if = {
+				limit = { spn_hide_war_prompt_valid_trigger = yes }
+				spn_hide_war_prompt_effect = yes
+			}
+		}
+		global_var:spn_hide_champion_timber ?= {
+			if = {
+				limit = { spn_hide_war_prompt_valid_trigger = yes }
+				spn_hide_war_prompt_effect = yes
+			}
+		}
+		global_var:spn_hide_champion_tundra ?= {
+			if = {
+				limit = { spn_hide_war_prompt_valid_trigger = yes }
+				spn_hide_war_prompt_effect = yes
+			}
+		}
+		global_var:spn_hide_champion_graybeard ?= {
+			if = {
+				limit = { spn_hide_war_prompt_valid_trigger = yes }
+				spn_hide_war_prompt_effect = yes
+			}
+		}
+		global_var:spn_hide_champion_midnight ?= {
+			if = {
+				limit = { spn_hide_war_prompt_valid_trigger = yes }
+				spn_hide_war_prompt_effect = yes
+			}
+		}
+		global_var:spn_hide_champion_alpha ?= {
+			if = {
+				limit = { spn_hide_war_prompt_valid_trigger = yes }
+				spn_hide_war_prompt_effect = yes
+			}
+		}
+	}
+}
+
+on_combat_end_winner = {
+	on_actions = {
+		spn_hide_combat_end
+	}
+}
+
+on_combat_end_loser = {
+	on_actions = {
+		spn_hide_combat_end
+	}
+}
+
+# Root = the side. Both sides' hooks fire; the first does everything and the second finds nothing left.
+spn_hide_combat_end = {
+	trigger = {
+		OR = {
+			global_var:spn_hide_champion_silverback ?= { spn_hide_in_this_battle_trigger = yes }
+			global_var:spn_hide_champion_timber ?= { spn_hide_in_this_battle_trigger = yes }
+			global_var:spn_hide_champion_tundra ?= { spn_hide_in_this_battle_trigger = yes }
+			global_var:spn_hide_champion_graybeard ?= { spn_hide_in_this_battle_trigger = yes }
+			global_var:spn_hide_champion_midnight ?= { spn_hide_in_this_battle_trigger = yes }
+			global_var:spn_hide_champion_alpha ?= { spn_hide_in_this_battle_trigger = yes }
+		}
+	}
+	effect = {
+		save_scope_as = spn_battle_side
+		global_var:spn_hide_champion_silverback ?= {
+			if = {
+				limit = { spn_hide_in_this_battle_trigger = yes }
+				add_to_list = spn_battle_champs
+			}
+		}
+		global_var:spn_hide_champion_timber ?= {
+			if = {
+				limit = { spn_hide_in_this_battle_trigger = yes }
+				add_to_list = spn_battle_champs
+			}
+		}
+		global_var:spn_hide_champion_tundra ?= {
+			if = {
+				limit = { spn_hide_in_this_battle_trigger = yes }
+				add_to_list = spn_battle_champs
+			}
+		}
+		global_var:spn_hide_champion_graybeard ?= {
+			if = {
+				limit = { spn_hide_in_this_battle_trigger = yes }
+				add_to_list = spn_battle_champs
+			}
+		}
+		global_var:spn_hide_champion_midnight ?= {
+			if = {
+				limit = { spn_hide_in_this_battle_trigger = yes }
+				add_to_list = spn_battle_champs
+			}
+		}
+		global_var:spn_hide_champion_alpha ?= {
+			if = {
+				limit = { spn_hide_in_this_battle_trigger = yes }
+				add_to_list = spn_battle_champs
+			}
+		}
+		spn_hide_battle_aftermath_effect = yes
+	}
+}
+
+# ==================================================================================================
+# SHRINES BY FORCE (§9.2)
+# ==================================================================================================
+on_siege_completion = {
+	on_actions = {
+		spn_hide_siege
+	}
+}
+
+# Root = the occupant; scope:county. A day later, so vanilla's own siege.0032 (any occupant) has had its turn: if it
+# took or broke the hide, A Hide in the Shrine finds nothing and does not fire.
+spn_hide_siege = {
+	trigger = {
+		scope:county ?= { spn_county_keeps_a_hide_trigger = yes }
+	}
+	effect = {
+		spn_hide_siege_effect = yes
+	}
+}
+
+pilgrimage_destination_events = {
+	on_actions = {
+		spn_hide_pilgrimage
+	}
+}
+
+# Root = the pilgrim; scope:activity.
+spn_hide_pilgrimage = {
+	trigger = {
+		spn_is_wolf_trigger = yes
+		# Once a pilgrimage: the hook fires on every pulse at the site, and a pilgrim caught once does not try again.
+		NOT = { has_character_flag = spn_hide_relic_tried }
+		NOT = { has_character_flag = spn_hide_shrine_thief }
+		scope:activity ?= { activity_location.county ?= { spn_county_keeps_a_hide_trigger = yes } }
+	}
+	effect = {
+		add_character_flag = { flag = spn_hide_relic_tried months = 6 }
+		spn_hide_pilgrimage_effect = yes
+	}
+}
+
+# ==================================================================================================
+# THE HUNT (§9.5). hunt_outcome_end_events fires for the host on day 35 of every hunt (hunt.txt:5029-5031);
+# hunt_end_events is defined but nothing in 1.20 calls it. Neither trigger reads the white-animal story, and neither
+# reads hunt_success: it is set by an outcome event fired from this same on_action, so it is not there yet.
+# ==================================================================================================
+hunt_outcome_end_events = {
+	on_actions = {
+		spn_hide_hunt_outcome
+	}
+}
+
+spn_hide_hunt_outcome = {
+	trigger = {
+		exists = var:spn_hide_wolf_hide
+		scope:activity ?= { has_activity_option = { category = special_type option = hunt_type_legendary } }
+		# 2.37e: and it is a wolf being hunted. Vanilla can hand the same player a second white animal (bp3_roaming.0120,
+		# mpo_nerge.1031); killing that one must not pay the hide. The hunt copies the county's animal_type at its start
+		# (hunt.txt:5466-5492), and the wake's sighting set it to flag:wolf.
+		scope:activity ?= { var:animal_type ?= flag:wolf }
+	}
+	effect = {
+		scope:activity = {
+			set_variable = { name = spn_hide_wolf_hide value = root.var:spn_hide_wolf_hide }
+		}
+		add_character_flag = { flag = spn_hide_outcome_pending years = 1 } # 2.37e: was 10 days (see spn_hide.0301)
+	}
+	events = {
+		delay = { days = 3 }
+		spn_hide.0301
+	}
+}
+
+# A werewolf on an ordinary hunt catches a scent while a hide is lost (§9.5). Players on days 7 and 14.
+hunt_random_pulse = {
+	on_actions = {
+		spn_hide_hunt_pulse
+	}
+}
+
+spn_hide_hunt_pulse = {
+	trigger = {
+		OR = {
+			exists = global_var:spn_hide_silverback_lost
+			exists = global_var:spn_hide_timber_lost
+			exists = global_var:spn_hide_tundra_lost
+			exists = global_var:spn_hide_graybeard_lost
+			exists = global_var:spn_hide_midnight_lost
+			exists = global_var:spn_hide_alpha_lost
+		}
+		is_ai = no
+		spn_is_wolf_trigger = yes
+		NOT = { has_character_flag = spn_hide_scent_seen }
+	}
+	events = {
+		spn_hide.0304
+	}
+}
+
+# ==================================================================================================
+# THE GATHERING'S POOL (§14.2): The Run, host only, at most one a week. The st_default_event_selection shape.
+# ==================================================================================================
+spn_gathering_pulse = {
+	random_events = {
+		# 2.37 (Thomas, 3 Oct): 70 -> 35 and eight more events. The Run is three weekly pulses, so about two Run events a
+		# Gathering instead of one, and none of them twice (spn_run_seen_*, gathering_events.py).
+		chance_of_no_event = 35
+		100 = spn_gathering.0200
+		100 = spn_gathering.0201
+		100 = spn_gathering.0202
+		100 = spn_gathering.0203
+		100 = spn_gathering.0204
+		100 = spn_gathering.0205
+		100 = spn_gathering.0206
+		100 = spn_gathering.0207
+		100 = spn_gathering.0208
+		100 = spn_gathering.0209
+		100 = spn_gathering.0210
+		100 = spn_gathering.0211
+		100 = spn_gathering.0212
+		100 = spn_gathering.0213
+	}
+}

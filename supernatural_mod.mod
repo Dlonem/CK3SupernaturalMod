@@ -1,4 +1,4 @@
-version="2.36"
+version="2.37"
 picture="thumbnail.png"
 tags={
 	"Alternative History"

@@ -193,3 +193,392 @@ spn_debug_events.0200 = {
 
 	option = { name = spn_debug_events.0200.a }
 }
+
+
+# ==================================================================================================
+# 2.37 -- THE SIX HIDES, the boot test's tools (WORK-ORDER-2.37 §24). Console: event spn_debug_events.0300
+# ==================================================================================================
+# .0300 -- give me a hide (each option creates one in my inventory; the weekly check takes it from there).
+spn_debug_events.0300 = {
+	type = character_event
+	title = spn_debug_events.0300.t
+	desc = spn_debug_events.0300.desc
+	orphan = yes
+	theme = dread
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0300.silverback
+		hidden_effect = { spn_debug_give_hide_effect = { HIDE = silverback } } # 2.37: the one in the world if there is one (no tooltip walk)
+	}
+	option = {
+		name = spn_debug_events.0300.timber
+		hidden_effect = { spn_debug_give_hide_effect = { HIDE = timber } } # 2.37: the one in the world if there is one (no tooltip walk)
+	}
+	option = {
+		name = spn_debug_events.0300.tundra
+		hidden_effect = { spn_debug_give_hide_effect = { HIDE = tundra } } # 2.37: the one in the world if there is one (no tooltip walk)
+	}
+	option = {
+		name = spn_debug_events.0300.graybeard
+		hidden_effect = { spn_debug_give_hide_effect = { HIDE = graybeard } } # 2.37: the one in the world if there is one (no tooltip walk)
+	}
+	option = {
+		name = spn_debug_events.0300.midnight
+		hidden_effect = { spn_debug_give_hide_effect = { HIDE = midnight } } # 2.37: the one in the world if there is one (no tooltip walk)
+	}
+	option = {
+		name = spn_debug_events.0300.alpha
+		hidden_effect = { spn_debug_give_hide_effect = { HIDE = alpha } } # 2.37: the one in the world if there is one (no tooltip walk)
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0301 -- make me the champion of a hide I hold, at Bond 0 / 50 / 100.
+spn_debug_events.0301 = {
+	type = character_event
+	title = spn_debug_events.0301.t
+	desc = spn_debug_events.0301.desc
+	orphan = yes
+	theme = dread
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0301.b0
+		random_character_artifact = {
+			limit = { has_variable = spn_hide }
+			save_scope_as = spn_dbg_hide
+		}
+		if = {
+			limit = {
+				exists = scope:spn_dbg_hide
+				spn_is_champion_trigger = no
+			}
+			scope:spn_dbg_hide = { equip_artifact_to_owner_replace = yes }
+			spn_hide_make_champion_dispatch_effect = { ARTIFACT = scope:spn_dbg_hide }
+			spn_debug_set_bond_effect = { TO = 0 }
+		}
+	}
+	option = {
+		name = spn_debug_events.0301.b50
+		random_character_artifact = {
+			limit = { has_variable = spn_hide }
+			save_scope_as = spn_dbg_hide
+		}
+		if = {
+			limit = {
+				exists = scope:spn_dbg_hide
+				spn_is_champion_trigger = no
+			}
+			scope:spn_dbg_hide = { equip_artifact_to_owner_replace = yes }
+			spn_hide_make_champion_dispatch_effect = { ARTIFACT = scope:spn_dbg_hide }
+			spn_debug_set_bond_effect = { TO = 50 }
+		}
+	}
+	option = {
+		name = spn_debug_events.0301.b100
+		random_character_artifact = {
+			limit = { has_variable = spn_hide }
+			save_scope_as = spn_dbg_hide
+		}
+		if = {
+			limit = {
+				exists = scope:spn_dbg_hide
+				spn_is_champion_trigger = no
+			}
+			scope:spn_dbg_hide = { equip_artifact_to_owner_replace = yes }
+			spn_hide_make_champion_dispatch_effect = { ARTIFACT = scope:spn_dbg_hide }
+			spn_debug_set_bond_effect = { TO = 100 }
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0302 -- set my Hide Bond.
+spn_debug_events.0302 = {
+	type = character_event
+	title = spn_debug_events.0302.t
+	desc = spn_debug_events.0302.desc
+	orphan = yes
+	theme = dread
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0302.b20
+		spn_debug_set_bond_effect = { TO = 20 }
+	}
+	option = {
+		name = spn_debug_events.0302.b40
+		spn_debug_set_bond_effect = { TO = 40 }
+	}
+	option = {
+		name = spn_debug_events.0302.b60
+		spn_debug_set_bond_effect = { TO = 60 }
+	}
+	option = {
+		name = spn_debug_events.0302.b80
+		spn_debug_set_bond_effect = { TO = 80 }
+	}
+	option = {
+		name = spn_debug_events.0302.b100
+		spn_debug_set_bond_effect = { TO = 100 }
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0303 -- wake the first lost hide for me now (the Tale's listener rule puts me first in line).
+spn_debug_events.0303 = {
+	type = character_event
+	title = spn_debug_events.0303.t
+	desc = spn_debug_events.0303.desc
+	orphan = yes
+	theme = dread
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0303.a
+		hidden_effect = { # 2.37e: the tooltip would walk the wake's world search every frame
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_dbg_woke }
+				exists = global_var:spn_hide_silverback_lost
+			}
+			if = {
+				limit = { exists = global_var:spn_hide_silverback_reserved }
+				remove_global_variable = spn_hide_silverback_reserved
+			}
+			set_global_variable = { name = spn_hide_silverback_heard_by value = root }
+			spn_hide_wake_effect = { HIDE = silverback }
+			save_scope_value_as = { name = spn_dbg_woke value = yes }
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_dbg_woke }
+				exists = global_var:spn_hide_timber_lost
+			}
+			if = {
+				limit = { exists = global_var:spn_hide_timber_reserved }
+				remove_global_variable = spn_hide_timber_reserved
+			}
+			set_global_variable = { name = spn_hide_timber_heard_by value = root }
+			spn_hide_wake_effect = { HIDE = timber }
+			save_scope_value_as = { name = spn_dbg_woke value = yes }
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_dbg_woke }
+				exists = global_var:spn_hide_tundra_lost
+			}
+			if = {
+				limit = { exists = global_var:spn_hide_tundra_reserved }
+				remove_global_variable = spn_hide_tundra_reserved
+			}
+			set_global_variable = { name = spn_hide_tundra_heard_by value = root }
+			spn_hide_wake_effect = { HIDE = tundra }
+			save_scope_value_as = { name = spn_dbg_woke value = yes }
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_dbg_woke }
+				exists = global_var:spn_hide_graybeard_lost
+			}
+			if = {
+				limit = { exists = global_var:spn_hide_graybeard_reserved }
+				remove_global_variable = spn_hide_graybeard_reserved
+			}
+			set_global_variable = { name = spn_hide_graybeard_heard_by value = root }
+			spn_hide_wake_effect = { HIDE = graybeard }
+			save_scope_value_as = { name = spn_dbg_woke value = yes }
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_dbg_woke }
+				exists = global_var:spn_hide_midnight_lost
+			}
+			if = {
+				limit = { exists = global_var:spn_hide_midnight_reserved }
+				remove_global_variable = spn_hide_midnight_reserved
+			}
+			set_global_variable = { name = spn_hide_midnight_heard_by value = root }
+			spn_hide_wake_effect = { HIDE = midnight }
+			save_scope_value_as = { name = spn_dbg_woke value = yes }
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_dbg_woke }
+				exists = global_var:spn_hide_alpha_lost
+			}
+			if = {
+				limit = { exists = global_var:spn_hide_alpha_reserved }
+				remove_global_variable = spn_hide_alpha_reserved
+			}
+			set_global_variable = { name = spn_hide_alpha_heard_by value = root }
+			spn_hide_wake_effect = { HIDE = alpha }
+			save_scope_value_as = { name = spn_dbg_woke value = yes }
+		}
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0304 -- found a pack with three generated wolves at my court.
+spn_debug_events.0304 = {
+	type = character_event
+	title = spn_debug_events.0304.t
+	desc = spn_debug_events.0304.desc
+	orphan = yes
+	theme = dread
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0304.a
+		if = {
+			limit = {
+				spn_is_wolf_trigger = yes
+				NOT = { has_variable = spn_pack }
+			}
+			spn_pack_found_effect = yes
+			if = {
+				limit = { exists = scope:spn_new_pack } # 2.37: the tooltip builder reads inside hidden_effect
+			hidden_effect = {
+				while = {
+					count = 3
+					create_character = {
+						location = root.location
+						culture = root.culture
+						faith = root.faith
+						gender_female_chance = 50
+						age = { 18 40 }
+						save_scope_as = spn_dbg_pup
+					}
+					scope:spn_dbg_pup = { add_trait = supernatural_werewolf }
+					add_courtier = scope:spn_dbg_pup
+					spn_pack_add_member_effect = { WHO = scope:spn_dbg_pup PACK = scope:spn_new_pack }
+				}
+			}
+			}
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0305 -- open the Werewolf Gathering's planner (no effect can start an activity).
+spn_debug_events.0305 = {
+	type = character_event
+	title = spn_debug_events.0305.t
+	desc = spn_debug_events.0305.desc
+	orphan = yes
+	theme = dread
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0305.a
+		open_view_data = {
+			view = activity_list_detail_host_window
+			data = activity_type:werewolf_gathering
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0306 -- give the nearest AI wolf a hide that does not exist yet.
+spn_debug_events.0306 = {
+	type = character_event
+	title = spn_debug_events.0306.t
+	desc = spn_debug_events.0306.desc
+	orphan = yes
+	theme = dread
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0306.a
+		hidden_effect = { # 2.37e: no tooltip walk of the world or of the create
+			ordered_living_character = {
+				limit = {
+					is_ai = yes
+					spn_can_bear_hide_trigger = yes
+					spn_is_champion_trigger = no
+					in_diplomatic_range = root
+				}
+				order_by = {
+					value = 0
+					subtract = "location.squared_distance(root.location)"
+				}
+				save_scope_as = spn_dbg_wolf
+			}
+			if = {
+				limit = { exists = scope:spn_dbg_wolf }
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_dbg_given }
+				NOT = { exists = global_var:spn_hide_champion_silverback }
+				NOT = { any_artifact = { var:spn_hide ?= flag:silverback } }
+			}
+			spn_hide_create_effect = { HIDE = silverback OWNER = scope:spn_dbg_wolf }
+			save_scope_value_as = { name = spn_dbg_given value = yes }
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_dbg_given }
+				NOT = { exists = global_var:spn_hide_champion_timber }
+				NOT = { any_artifact = { var:spn_hide ?= flag:timber } }
+			}
+			spn_hide_create_effect = { HIDE = timber OWNER = scope:spn_dbg_wolf }
+			save_scope_value_as = { name = spn_dbg_given value = yes }
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_dbg_given }
+				NOT = { exists = global_var:spn_hide_champion_tundra }
+				NOT = { any_artifact = { var:spn_hide ?= flag:tundra } }
+			}
+			spn_hide_create_effect = { HIDE = tundra OWNER = scope:spn_dbg_wolf }
+			save_scope_value_as = { name = spn_dbg_given value = yes }
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_dbg_given }
+				NOT = { exists = global_var:spn_hide_champion_graybeard }
+				NOT = { any_artifact = { var:spn_hide ?= flag:graybeard } }
+			}
+			spn_hide_create_effect = { HIDE = graybeard OWNER = scope:spn_dbg_wolf }
+			save_scope_value_as = { name = spn_dbg_given value = yes }
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_dbg_given }
+				NOT = { exists = global_var:spn_hide_champion_midnight }
+				NOT = { any_artifact = { var:spn_hide ?= flag:midnight } }
+			}
+			spn_hide_create_effect = { HIDE = midnight OWNER = scope:spn_dbg_wolf }
+			save_scope_value_as = { name = spn_dbg_given value = yes }
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_dbg_given }
+				NOT = { exists = global_var:spn_hide_champion_alpha }
+				NOT = { any_artifact = { var:spn_hide ?= flag:alpha } }
+			}
+			spn_hide_create_effect = { HIDE = alpha OWNER = scope:spn_dbg_wolf }
+			save_scope_value_as = { name = spn_dbg_given value = yes }
+		}
+			}
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0307 -- move my Werewolf Gathering on (2.37b). A Gathering started before the Run's on_enter_phase existed sits in
+# "waiting for the Run" for good; this makes the waiting phase start. Harmless on a Gathering that is not stuck: it
+# only brings the current phase's next step forward.
+spn_debug_events.0307 = {
+	type = character_event
+	title = spn_debug_events.0307.t
+	desc = spn_debug_events.0307.desc
+	orphan = yes
+	theme = dread
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0307.a
+		involved_activity ?= {
+			if = {
+				limit = { has_activity_type = werewolf_gathering }
+				progress_activity_phase_after = { days = 1 }
+			}
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}

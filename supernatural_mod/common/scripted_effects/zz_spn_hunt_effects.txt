@@ -428,12 +428,29 @@ spn_hunt_fight_effect = {
 				# the creature's track: up to +60
 				modifier = { add = { value = spn_hunt_creature_track_value multiply = 0.6 } always = yes }
 				modifier = { add = 15 is_shapeshifted_trigger = yes }
+				# 2.37 -- Evolved (the Unification) counts as the wolf form when he is not in it (§7.2).
+				modifier = {
+					add = 15
+					has_character_modifier = spn_evolved_modifier
+					is_shapeshifted_trigger = no
+				}
 				modifier = { add = 10 has_trait = supernatural_hybrid }
 				modifier = { add = 10 has_character_flag = spn_forewarned }
 				# kit, daylight, the county's men, guests -- everything the hunter brought, off the creature's side
 				modifier = {
 					add = { value = scope:spn_hunt_activity.var:spn_hunt_fight_bonus multiply = -1 }
 					scope:spn_hunt_activity = { exists = var:spn_hunt_fight_bonus }
+				}
+				# 2.37 -- HIDE STRENGTH (§7.2), after every add: weight modifiers apply in order. A young champion
+				# stands at about 58% against an ordinary hunter, a maxed one about 68%, and 78% against the best.
+				modifier = {
+					factor = { value = spn_hide_strength_value }
+					spn_is_champion_trigger = yes
+				}
+				modifier = {
+					factor = 1.25
+					has_trait = spn_true_alpha
+					spn_is_champion_trigger = no
 				}
 				min = 10
 				spn_hunt_defender_won_effect = yes
@@ -456,6 +473,16 @@ spn_hunt_fight_effect = {
 # memory and XP. The creature's kind picks the death reason and the on_death hook (W1) marks the county with it.
 spn_hunt_defender_won_effect = {
 	spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 15 AMOUNT_MAX = 30 }
+	# 2.37 -- beating a hunter feeds the hide (§6.4, §11.1). Once a hunt: the card comes through here too, so its +10
+	# is this one, not a second.
+	if = {
+		limit = {
+			spn_is_champion_trigger = yes
+			scope:spn_hunt_activity = { NOT = { has_variable = spn_hunt_hide_bond_paid } }
+		}
+		scope:spn_hunt_activity = { set_variable = { name = spn_hunt_hide_bond_paid value = yes } }
+		spn_hide_add_bond_effect = { VALUE = spn_hide_bond_hunter_value }
+	}
 	if = {
 		limit = { scope:spn_hunt_activity = { has_variable = spn_hunt_final_stand } }
 		spn_write_confrontation_memory_effect = { TYPE = spn_killed_the_hunter_memory }
@@ -500,6 +527,11 @@ spn_hunt_hunter_won_effect = {
 	save_scope_value_as = { name = spn_hunt_defender_track value = spn_hunt_creature_track_value }
 	scope:spn_hunt_activity = {
 		set_variable = { name = spn_hunt_slain_track value = scope:spn_hunt_defender_track }
+		# 2.37 -- banked before the death: What the Hunt Was Worth pays double for a champion (§11.3).
+		if = {
+			limit = { scope:spn_defender = { spn_is_champion_trigger = yes } }
+			set_variable = { name = spn_hunt_defender_was_champion value = yes }
+		}
 		# 2.35 PART TWO -- demon and witch branches ADDED, and they are not cosmetic: the conclusion pays the
 		# county restore off this flag, so without them a slain witch would have handed her county a
 		# vampire's +5 control and a slain demon the same. Demons first, because a demon can also be a witch
@@ -754,6 +786,15 @@ spn_hunt_conclude_effect = {
 						multiply = { value = 2 add = { value = scope:spn_hunt_activity.var:spn_hunt_slain_track divide = 50 } }
 					}
 					add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 15 35 } }
+					# 2.37 -- something old: a champion is worth twice (§11.3).
+					if = {
+						limit = { scope:spn_hunt_activity = { has_variable = spn_hunt_defender_was_champion } }
+						add_prestige = {
+							value = minor_prestige_value
+							multiply = { value = 2 add = { value = scope:spn_hunt_activity.var:spn_hunt_slain_track divide = 50 } }
+						}
+						add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 15 35 } }
+					}
 				}
 			}
 			# 2.35a -- AND HE GETS PAID. Thomas: "There was no opportunity to get some extra money out of it.

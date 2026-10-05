@@ -1610,6 +1610,10 @@ spn_hunt.0200 = {
 		# 2.35 -- not while you are standing in the room you came to feed in. There is nowhere in it to go.
 		trigger = { NOT = { involved_activity ?= { has_activity_type = vampire_feeding } } }
 		custom_tooltip = spn_hunt.0200.b.tt
+		if = {
+			limit = { has_trait = spn_champion_timber }
+			custom_tooltip = spn_hunt.0200.b.timber_tt
+		}
 		duel = {
 			skill = intrigue
 			target = scope:spn_hunter
@@ -1618,6 +1622,7 @@ spn_hunt.0200 = {
 				desc = spn_hunt.0200.b.hidden_tt
 				compare_modifier = { value = scope:duel_value multiplier = 2 min = -45 }
 				modifier = { add = 10 has_character_flag = spn_forewarned }
+				modifier = { add = 20 has_trait = spn_champion_timber } # 2.37 (§11.5)
 				min = 5
 				spn_hunt_set_outcome_effect = { OUTCOME = fled }
 				# 2.35 -- outwitting a hunter is how a creature learns to keep doing it. Smaller than the
@@ -1663,6 +1668,10 @@ spn_hunt.0200 = {
 		name = spn_hunt.0200.g
 		trigger = { spn_redirect_has_bigger_fish_trigger = yes }
 		custom_tooltip = spn_hunt.0200.g.tt
+		if = {
+			limit = { has_trait = spn_champion_tundra }
+			custom_tooltip = spn_hunt.0200.g.tundra_tt
+		}
 		duel = {
 			skill = diplomacy
 			target = scope:spn_hunter
@@ -1671,6 +1680,7 @@ spn_hunt.0200 = {
 				desc = spn_hunt.0200.g.taken_tt
 				compare_modifier = { value = scope:duel_value multiplier = 2 min = -45 }
 				modifier = { add = 10 has_trait = deceitful }
+				modifier = { add = 20 has_trait = spn_champion_tundra } # 2.37 (§11.5)
 				min = 5
 				spn_hunt_set_outcome_effect = { OUTCOME = fled }
 				spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 5 AMOUNT_MAX = 12 }
@@ -1762,11 +1772,22 @@ spn_hunt.0200 = {
 				has_trait = supernatural_werewolf
 				has_trait = supernatural_hybrid
 			}
-			is_shapeshifted_trigger = no
+			# 2.37 -- a champion already in his wolf form may take it when the card is ready (§11.1).
+			OR = {
+				is_shapeshifted_trigger = no
+				AND = {
+					spn_is_champion_trigger = yes
+					NOT = { has_character_flag = spn_hide_card_spent }
+				}
+			}
 		}
 		custom_tooltip = spn_hunt.0200.f.tt
-		add_character_modifier = { modifier = POD_werewolf_form_lupus_modifier days = 30 }
-		add_character_flag = { flag = POD_bald_look_flag days = 30 }
+		# 2.37 -- never a second form on top of one he already wears, and never cut a permanent form to 30 days.
+		if = {
+			limit = { is_shapeshifted_trigger = no }
+			add_character_modifier = { modifier = POD_werewolf_form_lupus_modifier days = 30 }
+			add_character_flag = { flag = POD_bald_look_flag days = 30 }
+		}
 		# Seen. The hunter, and everyone who rode with him. A creature already known as what it is has no
 		# secret left to lose here, and random_secret simply matches nothing.
 		hidden_effect = {
@@ -1792,9 +1813,39 @@ spn_hunt.0200 = {
 				}
 			}
 		}
-		spn_hunt_fight_effect = { DEFENDER = root }
+		# 2.37 -- THE CARD (§11.1). The hide does not miss: no fight. spn_hunt_defender_won_effect with the final stand
+		# set banks the memory, the XP and the county's count, weighs the rite, and kills the hunter last.
+		if = {
+			limit = {
+				spn_is_champion_trigger = yes
+				NOT = { has_character_flag = spn_hide_card_spent }
+			}
+			custom_tooltip = spn_hunt.0200.f.card_tt
+			# 2.37e: hidden. The tooltip builder does not set the final stand, so it previewed the other branch (the
+			# hunter beaten and spared) under a line that says he dies.
+			hidden_effect = {
+				if = {
+					limit = { spn_hide_bond_value >= 100 }
+					add_character_flag = { flag = spn_hide_card_spent years = 7 }
+				}
+				else = {
+					add_character_flag = { flag = spn_hide_card_spent years = 10 }
+				}
+				scope:spn_hunt_activity = { set_variable = { name = spn_hunt_final_stand value = yes } }
+				save_scope_as = spn_defender
+				spn_hunt_defender_won_effect = yes
+			}
+		}
+		else = {
+			spn_hunt_fight_effect = { DEFENDER = root }
+		}
 		ai_chance = {
 			base = 45
+			modifier = {
+				add = 200
+				spn_is_champion_trigger = yes
+				NOT = { has_character_flag = spn_hide_card_spent }
+			}
 			modifier = { add = 30 has_trait = wrathful }
 			modifier = { add = 25 has_trait = brave }
 			modifier = { add = 20 has_trait = arrogant }
@@ -1862,6 +1913,27 @@ spn_hunt.0200 = {
 			modifier = { add = 15 has_trait = calm }
 			modifier = { add = -20 has_trait = wrathful }
 			modifier = { add = -15 has_trait = generous }
+		}
+	}
+	# 2.37 -- [Champion] stands over me (§6.5). Silverback's champion answers for the one he guards; the fight is his.
+	option = {
+		name = spn_hunt.0200.h
+		trigger = {
+			var:spn_silverback_guard ?= {
+				is_alive = yes
+				is_imprisoned = no
+				has_trait = spn_champion_silverback
+				NOT = { this = scope:spn_hunter }
+			}
+		}
+		custom_tooltip = spn_hunt.0200.h.tt
+		save_scope_as = spn_guarded
+		var:spn_silverback_guard = { save_scope_as = spn_defender }
+		scope:spn_hunter = { spn_hunt_compute_fight_bonus_effect = yes }
+		spn_hunt_fight_effect = { DEFENDER = scope:spn_defender }
+		scope:spn_defender = { trigger_event = spn_hide.0370 }
+		ai_chance = {
+			base = 50
 		}
 	}
 }

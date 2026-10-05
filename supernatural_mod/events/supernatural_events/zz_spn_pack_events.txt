@@ -1,0 +1,497 @@
+﻿namespace = spn_pack
+
+# Supernatural 2.37 -- the Pack's events (WORK-ORDER-2.37 §13, §16, §17). Loc: event_localization/spn_pack_l_english.yml.
+
+# .0010 -- You Lead a Pack. The founder.
+spn_pack.0010 = {
+	type = character_event
+	title = spn_pack.0010.t
+	desc = spn_pack.0010.desc
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = personality_bold }
+	option = {
+		name = spn_pack.0010.a
+	}
+}
+
+# .0011 -- An Invitation. The new wolf, three days after he turned; his maker's pack asks.
+spn_pack.0011 = {
+	type = character_event
+	title = spn_pack.0011.t
+	desc = spn_pack.0011.desc
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = interested }
+	right_portrait = { character = scope:spn_inv_alpha animation = personality_bold }
+	trigger = {
+		is_alive = yes
+		spn_is_wolf_trigger = yes
+		NOT = { exists = var:spn_pack }
+		scope:spn_inv_pack ?= { spn_pack_has_room_trigger = yes }
+		scope:spn_inv_alpha = {
+			is_alive = yes
+			var:spn_pack ?= scope:spn_inv_pack
+		}
+	}
+	option = {
+		name = spn_pack.0011.a
+		spn_pack_add_member_effect = { WHO = root PACK = scope:spn_inv_pack }
+		ai_chance = {
+			base = 50
+			modifier = { add = 50 has_relation_ww_clawed_by = scope:spn_inv_alpha }
+			modifier = { add = 50 is_close_family_of = scope:spn_inv_alpha }
+			modifier = { add = 20 has_trait = gregarious }
+			modifier = { add = -30 has_trait = shy }
+			modifier = { add = -30 has_trait = paranoid }
+		}
+	}
+	option = {
+		name = spn_pack.0011.b
+		ai_chance = {
+			base = 20
+			modifier = { add = 30 has_trait = shy }
+			modifier = { add = 20 has_trait = paranoid }
+		}
+	}
+}
+
+# .0012 -- Leaving. The alpha, when a wolf walks away.
+spn_pack.0012 = {
+	type = character_event
+	title = spn_pack.0012.t
+	desc = spn_pack.0012.desc
+	theme = hunting
+	left_portrait = { character = root animation = disappointed }
+	right_portrait = { character = scope:spn_rem_who animation = personality_bold }
+	trigger = {
+		exists = scope:spn_rem_who
+	}
+	option = {
+		name = spn_pack.0012.a
+	}
+}
+
+# .0013 -- A New Alpha. Every player in the pack.
+spn_pack.0013 = {
+	type = character_event
+	title = spn_pack.0013.t
+	desc = {
+		first_valid = {
+			# 2.37o: a pack joined to another by the Unification (spn_pack_unify_effect).
+			triggered_desc = {
+				trigger = { exists = scope:spn_sa_joined }
+				desc = spn_pack.0013.desc_joined
+			}
+			triggered_desc = {
+				trigger = { scope:spn_sa_new = root }
+				desc = spn_pack.0013.desc_me
+			}
+			desc = spn_pack.0013.desc
+		}
+	}
+	theme = hunting
+	left_portrait = { character = root animation = interested }
+	right_portrait = { character = scope:spn_sa_new animation = personality_bold }
+	option = {
+		name = spn_pack.0013.a
+	}
+}
+
+# .0014 -- (hidden) carried through the fever by a pack at a Gathering (2.37b): he wakes in it. Fired a day after the
+# turn by spn_complete_wound_turn, so spn_initiate.1001 has made him a wolf first. scope:spn_carry_pack = the pack.
+spn_pack.0014 = {
+	hidden = yes
+	trigger = {
+		is_alive = yes
+		spn_packs_on_trigger = yes
+		spn_is_wolf_trigger = yes
+		NOT = { exists = var:spn_pack }
+		scope:spn_carry_pack ?= { spn_pack_has_room_trigger = yes }
+	}
+	immediate = {
+		spn_pack_add_member_effect = { WHO = root PACK = scope:spn_carry_pack }
+		if = {
+			limit = { is_ai = no }
+			scope:spn_carry_pack.story_owner = { save_scope_as = spn_carry_alpha }
+			trigger_event = spn_pack.0015
+		}
+	}
+}
+
+# .0015 -- You Wake Among Wolves (2.37b). The player who was carried.
+spn_pack.0015 = {
+	type = character_event
+	title = spn_pack.0015.t
+	desc = spn_pack.0015.desc
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = stunned }
+	right_portrait = { character = scope:spn_carry_alpha animation = personality_bold }
+	option = {
+		name = spn_pack.0015.a
+		custom_tooltip = spn_pack.0015.a.tt
+	}
+}
+
+# .0020 / .0021 -- The Challenge. The outcome, to each side who is a player.
+spn_pack.0020 = {
+	type = character_event
+	title = spn_pack.0020.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_clash_winner = root }
+				desc = spn_pack.0020.desc_won
+			}
+			desc = spn_pack.0020.desc_lost
+		}
+	}
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = rage }
+	right_portrait = { character = scope:spn_ch_b animation = anger }
+	option = {
+		name = spn_pack.0020.a
+	}
+}
+
+spn_pack.0021 = {
+	type = character_event
+	title = spn_pack.0021.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_clash_winner = root }
+				desc = spn_pack.0021.desc_won
+			}
+			desc = spn_pack.0021.desc_lost
+		}
+	}
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = rage }
+	right_portrait = { character = scope:spn_ch_a animation = anger }
+	option = {
+		name = spn_pack.0021.a
+	}
+}
+
+# ==================================================================================================
+# THE YEARLY MOMENT (§17.4)
+# ==================================================================================================
+# .0100 -- Another Pack's Scent.
+spn_pack.0100 = {
+	type = character_event
+	title = spn_pack.0100.t
+	desc = spn_pack.0100.desc
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = interested }
+	right_portrait = { character = scope:spn_mo_other animation = personality_bold }
+	trigger = {
+		is_alive = yes
+		scope:spn_mo_other = { is_alive = yes }
+	}
+	option = {
+		name = spn_pack.0100.a
+		custom_tooltip = spn_pack.0100.a.tt
+		spn_pack_scent_rival_effect = yes
+		ai_chance = { base = 50 }
+	}
+	option = {
+		name = spn_pack.0100.b
+		custom_tooltip = spn_pack.0100.b.tt
+		spn_pack_scent_truce_effect = yes
+		ai_chance = { base = 50 }
+	}
+}
+
+# .0101 -- A Wolf Asks to Run With You.
+spn_pack.0101 = {
+	type = character_event
+	title = spn_pack.0101.t
+	desc = spn_pack.0101.desc
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = interested }
+	right_portrait = { character = scope:spn_mo_asker animation = personality_rational }
+	trigger = {
+		is_alive = yes
+		scope:spn_mo_asker = { is_alive = yes }
+	}
+	option = {
+		name = spn_pack.0101.a
+		# 2.37o: re-checked when clicked: you still lead the pack, it has room, and the wolf still runs with the other
+		# (the review of 4 Oct, F13).
+		if = {
+			limit = {
+				exists = scope:spn_mo_pack
+				exists = scope:spn_mo_other_pack
+				var:spn_pack ?= scope:spn_mo_pack
+				spn_is_alpha_trigger = yes
+				scope:spn_mo_pack = { spn_pack_has_room_trigger = yes }
+				scope:spn_mo_asker = {
+					is_alive = yes
+					spn_is_alpha_trigger = no
+					var:spn_pack ?= scope:spn_mo_other_pack
+				}
+			}
+			custom_tooltip = spn_pack.0101.a.tt
+			spn_pack_take_asker_effect = yes
+		}
+		else = {
+			custom_tooltip = spn_moment_passed_tt
+		}
+		ai_chance = { base = 50 }
+	}
+	option = {
+		name = spn_pack.0101.b
+		ai_chance = { base = 50 }
+	}
+}
+
+# .0102 -- Young Wolves Fight.
+spn_pack.0102 = {
+	type = character_event
+	title = spn_pack.0102.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_mo_fight_friends }
+				desc = spn_pack.0102.desc_friends
+			}
+			triggered_desc = {
+				trigger = { scope:spn_clash_winner = scope:spn_mo_ours }
+				desc = spn_pack.0102.desc_won
+			}
+			desc = spn_pack.0102.desc_lost
+		}
+	}
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = scope:spn_mo_ours animation = rage }
+	right_portrait = { character = scope:spn_mo_theirs animation = anger }
+	option = {
+		name = spn_pack.0102.a
+	}
+}
+
+# .0103 -- Kindred.
+spn_pack.0103 = {
+	type = character_event
+	title = spn_pack.0103.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_mo_kin_lovers }
+				desc = spn_pack.0103.desc_lovers
+			}
+			desc = spn_pack.0103.desc_friends
+		}
+	}
+	theme = friendly
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = happiness }
+	right_portrait = { character = scope:spn_kin_other animation = happiness }
+	immediate = {
+		if = {
+			limit = { scope:spn_mo_kin_a = root }
+			scope:spn_mo_kin_b = { save_scope_as = spn_kin_other }
+		}
+		else = {
+			scope:spn_mo_kin_a = { save_scope_as = spn_kin_other }
+		}
+	}
+	option = {
+		name = spn_pack.0103.a
+	}
+}
+
+# .0104 -- A Hide Seen.
+spn_pack.0104 = {
+	type = character_event
+	title = spn_pack.0104.t
+	desc = {
+		desc = spn_pack.0104.desc
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_waf_kind ?= flag:shrine }
+				desc = spn_pack.0104.shrine
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_waf_kind ?= flag:held
+					scope:spn_waf_holder ?= root
+				}
+				desc = spn_pack.0104.held_mine
+			}
+			triggered_desc = {
+				trigger = { scope:spn_waf_kind ?= flag:held }
+				desc = spn_pack.0104.held
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_waf_kind ?= flag:lost
+					scope:spn_waf_lost ?= flag:silverback
+				}
+				desc = spn_pack.0104.lost_silverback
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_waf_kind ?= flag:lost
+					scope:spn_waf_lost ?= flag:timber
+				}
+				desc = spn_pack.0104.lost_timber
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_waf_kind ?= flag:lost
+					scope:spn_waf_lost ?= flag:tundra
+				}
+				desc = spn_pack.0104.lost_tundra
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_waf_kind ?= flag:lost
+					scope:spn_waf_lost ?= flag:graybeard
+				}
+				desc = spn_pack.0104.lost_graybeard
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_waf_kind ?= flag:lost
+					scope:spn_waf_lost ?= flag:midnight
+				}
+				desc = spn_pack.0104.lost_midnight
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_waf_kind ?= flag:lost
+					scope:spn_waf_lost ?= flag:alpha
+				}
+				desc = spn_pack.0104.lost_alpha
+			}
+			triggered_desc = {
+				trigger = { scope:spn_waf_kind ?= flag:true_alpha }
+				desc = spn_pack.0104.true_alpha
+			}
+			desc = spn_pack.0104.nothing
+		}
+	}
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = interested }
+	artifact = {
+		target = scope:spn_waf_hide
+		position = lower_right_portrait
+		trigger = { exists = scope:spn_waf_hide }
+	}
+	option = {
+		name = spn_pack.0104.a
+	}
+}
+
+# .0200 -- A Feud Over a Hide. Each alpha who is a player.
+spn_pack.0200 = {
+	type = character_event
+	title = spn_pack.0200.t
+	desc = spn_pack.0200.desc
+	theme = unfriendly
+	left_portrait = { character = root animation = anger }
+	right_portrait = { character = scope:spn_feud_other animation = anger }
+	immediate = {
+		if = {
+			limit = { scope:spn_fe_a = root }
+			scope:spn_fe_b = { save_scope_as = spn_feud_other }
+		}
+		else = {
+			scope:spn_fe_a = { save_scope_as = spn_feud_other }
+		}
+	}
+	option = {
+		name = spn_pack.0200.a
+	}
+}
+
+# ==================================================================================================
+# THE TRUE ALPHA (§16)
+# ==================================================================================================
+# .0300 -- The True Alpha. The globals and the trait first, then the choice.
+spn_pack.0300 = {
+	type = character_event
+	title = spn_pack.0300.t
+	desc = spn_pack.0300.desc
+	theme = dread
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = personality_bold }
+	right_portrait = { character = scope:spn_ta_old_alpha animation = worry }
+	trigger = {
+		is_alive = yes
+		NOT = { exists = global_var:spn_ta_century }
+		exists = scope:spn_ta_pack
+		var:spn_pack ?= scope:spn_ta_pack
+		spn_true_alpha_candidate_trigger = { PACK = scope:spn_ta_pack }
+	}
+	immediate = {
+		set_global_variable = { name = spn_ta_century value = yes years = 100 }
+		set_global_variable = { name = spn_ta_living value = root }
+		add_trait = spn_true_alpha
+		scope:spn_ta_pack.story_owner = { save_scope_as = spn_ta_old_alpha }
+		spn_true_alpha_rises_effect = yes
+	}
+	option = {
+		name = spn_pack.0300.a
+		# 2.37o: re-checked when clicked: he still runs in that pack and does not lead it yet (the review of 4 Oct, F13).
+		if = {
+			limit = {
+				var:spn_pack ?= scope:spn_ta_pack
+				spn_is_alpha_trigger = no
+			}
+			custom_tooltip = spn_pack.0300.a.tt
+			scope:spn_ta_pack = { spn_pack_set_alpha_effect = { NEW = root } }
+			scope:spn_ta_old_alpha = {
+				add_opinion = { target = root modifier = spn_true_alpha_rose_opinion }
+			}
+		}
+		else = {
+			custom_tooltip = spn_moment_passed_tt
+		}
+		ai_chance = {
+			base = 60
+			modifier = { add = 20 has_trait = just }
+		}
+	}
+	option = {
+		name = spn_pack.0300.b
+		if = {
+			limit = {
+				var:spn_pack ?= scope:spn_ta_pack
+				spn_is_alpha_trigger = no
+			}
+			custom_tooltip = spn_pack.0300.b.tt
+			spn_true_alpha_found_own_effect = yes
+		}
+		else = {
+			custom_tooltip = spn_moment_passed_tt
+		}
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = ambitious }
+		}
+	}
+}
+
+# .0301 -- A Wolf with Red Eyes. Player wolves in range of him.
+spn_pack.0301 = {
+	type = character_event
+	title = spn_pack.0301.t
+	desc = spn_pack.0301.desc
+	theme = dread
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = fear }
+	right_portrait = { character = scope:spn_ta animation = menacing }
+	option = {
+		name = spn_pack.0301.a
+	}
+}

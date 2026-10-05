@@ -466,7 +466,7 @@ spn_demon_birth_chance = {
 		}
 		add = 75
 	}
-	else = { #One Demon parent, one Human -> even odds
+	else = { #One Demon parent, one Human (or, since 2.37, a werewolf or hybrid) -> even odds
 		add = 50
 	}
 
@@ -1203,6 +1203,28 @@ spn_hunt_success_chance_value = {
 			NOT = { var:spn_hunt_culprit.location.county ?= activity_location.county }
 		}
 		add = { value = -25 desc = spn_hunt_sc_gone }
+	}
+	# 2.37 -- the hide (§11.3). Something old is harder to find; Timber's champion alone in the woods, harder still.
+	if = {
+		limit = { var:spn_hunt_culprit ?= { spn_is_champion_trigger = yes } }
+		add = { value = -15 desc = spn_hunt_sc_hide }
+		if = {
+			limit = {
+				var:spn_hunt_culprit = {
+					has_trait = spn_champion_timber
+					NOT = { has_variable = spn_pack }
+				}
+			}
+			add = { value = -10 desc = spn_hunt_sc_alone_in_the_woods }
+		}
+	}
+	# 2.37 -- a hunter who keeps a hide knows the smell (What Came Out of Him, §11.4).
+	if = {
+		limit = {
+			activity_host ?= { any_character_artifact = { has_variable = spn_hide } }
+			var:spn_hunt_culprit ?= { spn_is_wolf_trigger = yes }
+		}
+		add = { value = 10 desc = spn_hunt_sc_trophy }
 	}
 	if = {
 		limit = { exists = var:spn_hunt_chance_event }

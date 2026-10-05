@@ -187,3 +187,27 @@ spn_menace_on_death = {
 		}
 	}
 }
+
+# 2.37 -- REPAIR. Before 2.37 a trail could record its own county as the culprit (spn_mark_menace_effect above). That
+# culprit is taken off, once a year; nothing else on the trail changes.
+yearly_global_pulse = {
+	on_actions = {
+		spn_menace_repair_culprits
+	}
+}
+
+spn_menace_repair_culprits = {
+	effect = {
+		every_in_global_list = {
+			variable = spn_menace_counties
+			limit = {
+				trigger_if = {
+					limit = { exists = var:spn_menace_culprit }
+					is_target_in_global_variable_list = { name = spn_menace_counties target = var:spn_menace_culprit }
+				}
+				trigger_else = { always = no }
+			}
+			remove_variable = spn_menace_culprit
+		}
+	}
+}

@@ -1,0 +1,1067 @@
+﻿# Supernatural 2.37 -- "The Six Hides" triggers (WORK-ORDER-2.37 §4.11).
+# Never put a scripted trigger in common/on_action/ (2.35d: the parser stops at it).
+
+# ---- Who is what ----
+spn_is_champion_trigger = {
+	has_trait_with_flag = spn_hide_champion
+}
+
+spn_is_champion_of_trigger = {
+	has_trait = spn_champion_$HIDE$
+}
+
+# Werewolf or hybrid. Never a vampire, hunter, witch or demon.
+spn_is_wolf_trigger = {
+	OR = {
+		has_trait = supernatural_werewolf
+		has_trait = supernatural_hybrid
+	}
+}
+
+# Who a hide can take: an adult wolf, and the species gate (zz_spn_species_triggers.txt). A born pup waits.
+spn_can_bear_hide_trigger = {
+	spn_is_wolf_trigger = yes
+	is_adult = yes
+	spn_is_valid_supernatural_target = yes
+}
+
+# Will this hide take this wolf (§5.8, 2.37b)? Root = the wolf; scope:spn_fit_hide = the hide's flag. Two routes:
+#  1. one trait the hide looks for, and more of those than of the traits it turns from (Thomas, 3 Oct: "even for at
+#     least 1 trait"). Alpha still takes only a leader.
+#  2. the score: half the wolf's track plus the traits, 40 (spn_hide_fit_value). A wolf deep in the blood can still be
+#     chosen with no matching trait, and the Circle's +20 / +40 still counts here.
+# Every place that asks "would it take him" reads this; the score alone is for ranking who it goes looking for.
+spn_hide_accepts_wolf_trigger = {
+	OR = {
+		spn_hide_fit_value >= spn_hide_fit_bar_wolf_value
+		AND = {
+			spn_hide_liked_count_value >= 1
+			spn_hide_liked_count_value > spn_hide_hated_count_value
+			spn_hide_leader_ok_trigger = yes
+		}
+	}
+}
+
+# Alpha only chooses a leader (design §3.4): a pack's alpha, a duke or more, or with the Packs rule Off a True Werewolf
+# or a full wolf. Every other hide: always. Root = the candidate; scope:spn_fit_hide = the hide's flag.
+spn_hide_leader_ok_trigger = {
+	trigger_if = {
+		limit = { scope:spn_fit_hide = flag:alpha }
+		OR = {
+			spn_is_alpha_trigger = yes
+			highest_held_title_tier >= tier_duchy
+			AND = {
+				has_game_rule = spn_packs_off
+				OR = {
+					has_trait = spn_true_werewolf
+					spn_hide_lyc_full_trigger = yes
+				}
+			}
+		}
+	}
+	trigger_else = { always = yes }
+}
+
+# A mortal a hide may choose (§5.11): no creature trait, no hunter trait, not a witch, a valid target.
+# spn_has_supernatural_trait covers demon, vampire, werewolf and hybrid only (10_spn_triggers.txt:1-8), and
+# spn_initiate.1001 would take a witch (its witch line is commented out), so the witch test lives here.
+spn_is_hide_mortal_trigger = {
+	spn_has_supernatural_trait = no
+	spn_has_hunter_trait = no
+	is_witch_trigger = no
+	spn_is_valid_supernatural_target = yes
+}
+
+spn_owns_hide_trigger = {
+	any_character_artifact = { has_variable = spn_hide }
+}
+
+# The game rules. has_game_rule takes the OPTION name.
+spn_hides_on_trigger = {
+	NOT = { has_game_rule = spn_hides_off }
+}
+# 2.37i: read as "not Off", like the hides' rule. A save from before 2.37 has no setting for this rule stored; written
+# this way it reads On there whatever the engine fills in, and the other reads of this rule (spn_packs_off, the Alpha
+# hide's leader test) already agree with that.
+spn_packs_on_trigger = {
+	NOT = { has_game_rule = spn_packs_off }
+}
+
+# ---- Artifact scope ----
+spn_hide_is_worn_trigger = {
+	is_equipped = yes
+}
+
+# "Worn", for claims (§5.4): equipped AND its owner carries this hide's champion trait. A wolf who has just put a
+# hide on but has not been chosen yet does not strip claims.
+spn_hide_worn_by_champion_trigger = {
+	is_equipped = yes
+	OR = {
+		AND = {
+			var:spn_hide ?= flag:silverback
+			artifact_owner ?= { has_trait = spn_champion_silverback }
+		}
+		AND = {
+			var:spn_hide ?= flag:timber
+			artifact_owner ?= { has_trait = spn_champion_timber }
+		}
+		AND = {
+			var:spn_hide ?= flag:tundra
+			artifact_owner ?= { has_trait = spn_champion_tundra }
+		}
+		AND = {
+			var:spn_hide ?= flag:graybeard
+			artifact_owner ?= { has_trait = spn_champion_graybeard }
+		}
+		AND = {
+			var:spn_hide ?= flag:midnight
+			artifact_owner ?= { has_trait = spn_champion_midnight }
+		}
+		AND = {
+			var:spn_hide ?= flag:alpha
+			artifact_owner ?= { has_trait = spn_champion_alpha }
+		}
+	}
+}
+
+# ---- The Pack (§13) ----
+spn_in_pack_trigger = {
+	exists = var:spn_pack
+}
+
+# The story's owner is the alpha.
+spn_is_alpha_trigger = {
+	trigger_if = {
+		limit = { exists = var:spn_pack }
+		var:spn_pack = { story_owner = prev }
+	}
+	trigger_else = { always = no }
+}
+
+# Lycanthropy (hybrids: hybrid lycanthropy) at 100: Alpha's fit with the Packs rule Off (§5.6, §9.5). Read only on the
+# trait he carries: has_trait_xp on a trait he lacks is never asked.
+spn_hide_lyc_full_trigger = {
+	trigger_if = {
+		limit = { has_trait = supernatural_werewolf }
+		has_trait_xp = { trait = supernatural_werewolf track = lycanthropy value >= 100 }
+	}
+	trigger_else_if = {
+		limit = { has_trait = supernatural_hybrid }
+		has_trait_xp = { trait = supernatural_hybrid track = hybrid_lycanthropy value >= 100 }
+	}
+	trigger_else = { always = no }
+}
+
+# Story scope.
+spn_pack_has_room_trigger = {
+	trigger_if = {
+		limit = { exists = var:spn_pack_size }
+		var:spn_pack_size < spn_pack_cap_value
+	}
+}
+
+# Can $HOST$ plausibly know what this wolf is? The wolf version of spn_host_knows_supernatural_trigger
+# (10_spn_triggers.txt:137). Evaluated in the CANDIDATE's scope.
+spn_host_knows_wolf_trigger = {
+	OR = {
+		has_trait = spn_known_werewolf
+		has_trait = spn_known_hybrid
+		any_secret = {
+			type = spn_secret_werewolf
+			is_known_by = $HOST$
+		}
+		any_secret = {
+			type = spn_secret_hybrid
+			is_known_by = $HOST$
+		}
+		is_spouse_of = $HOST$
+		is_close_family_of = $HOST$
+		has_relation_ww_clawed = $HOST$
+		has_relation_ww_clawed_by = $HOST$
+		has_relation_spn_pack_mate = $HOST$
+		# Same pack. trigger_if, not AND: CK3 does not short-circuit AND siblings, so an unguarded cross-scope var
+		# read would error on every wolf outside a pack (the Long Night's rule 4).
+		trigger_if = {
+			limit = {
+				exists = var:spn_pack
+				$HOST$ = { exists = var:spn_pack }
+			}
+			var:spn_pack = $HOST$.var:spn_pack
+		}
+		trigger_else = { always = no }
+	}
+}
+
+# Built behind one line so priority 3 can be switched off if it slips (§26). Ships `always = yes`.
+spn_pack_politics_built_trigger = {
+	always = yes
+}
+
+# The membership mirror (§4.7): only if the boot shows a member who is not the alpha cannot see the pack.
+spn_pack_use_mirrors_trigger = {
+	always = no
+}
+
+# ---- War (§12) ----
+# An enemy champion $CHAMP$ may clash with. Root = the foe. The ONE rule both the feat's block (§12.3) and the clash's
+# target (§12.4) use, so they can never disagree.
+spn_hide_clash_foe_trigger = {
+	is_alive = yes
+	spn_is_champion_trigger = yes
+	# 2.37e: a champion who holds the wolf back is not drawn into the clash (the player text: "The hide does not fight
+	# in your battles... nobody sees anything"). Both sides, like the feats.
+	has_character_flag = spn_hide_wolf_runs
+	spn_can_be_battle_taken_trigger = yes
+	NOT = { is_target_in_variable_list = { name = spn_clash_done_with target = $CHAMP$ } }
+}
+
+# ---- The ringing (§18) ----
+# Witchcraft's magic sense asks this where it used to ask for the perk: a champion hears magic too.
+spn_senses_magic_trigger = {
+	OR = {
+		has_perk = magical_senses_perk
+		spn_is_champion_trigger = yes
+	}
+}
+
+# ---- The bite (§10) ----
+# Root = the fevered. A hide he holds, one in his liege's or court owner's hands while he is in that court, or the
+# wolf who bit him is a champion.
+spn_hide_near_trigger = {
+	OR = {
+		spn_owns_hide_trigger = yes
+		court_owner ?= { spn_owns_hide_trigger = yes }
+		var:spn_conferred_sire ?= { spn_is_champion_trigger = yes }
+	}
+}
+
+# ---- War hooks (§12.2, §12.5) ----
+# Champion scope; scope:war set by on_war_started / on_join_war_as_secondary.
+spn_hide_war_prompt_valid_trigger = {
+	is_alive = yes
+	NOT = { has_character_flag = spn_hide_war_dont_ask }
+	NOT = { has_character_flag = spn_hide_war_prompted }
+	# 2.37 (Thomas, 3 Oct: the prompt came back again and again): once per war. Allies join a war over weeks
+	# (on_join_war_as_secondary), and the 3-day flag only covered the first few days of it.
+	NOT = { is_target_in_variable_list = { name = spn_hide_war_asked target = scope:war } }
+	OR = {
+		is_participant_in_war = scope:war
+		# His lord's war is his only when he holds no land: a knight or a courtier goes where his lord goes. A landed
+		# vassal is asked about the wars he is in; vanilla never calls vassals into a liege's war
+		# (00_war_and_peace_triggers.txt:167), so his lord's wars stay his own choice through Let the Wolf Run.
+		AND = {
+			is_landed = no
+			liege_or_court_owner ?= { is_participant_in_war = scope:war }
+		}
+	}
+}
+
+# Champion scope; ROOT = the combat side (on_combat_end_winner/loser). He made a pick in this battle (feat or clash, which
+# write the battle's place), or carries Let It Take Me and stands where it was fought.
+spn_hide_in_this_battle_trigger = {
+	OR = {
+		var:spn_feat_province ?= root.combat.location
+		AND = {
+			has_character_modifier = spn_let_it_take_me_modifier
+			has_character_flag = spn_hide_wolf_runs # 2.37o: held back, he is not in it (the review of 4 Oct, F5)
+			location ?= root.combat.location
+		}
+	}
+}
+
+spn_hide_men_saw_valid_trigger = {
+	is_ai = no
+	spn_is_champion_trigger = no
+	NOT = { has_character_flag = spn_hide_men_saw }
+}
+
+# ---- Shrines (§9.1) ----
+# County scope: a hide is enshrined here (the map marker is the cheap test).
+spn_county_keeps_a_hide_trigger = {
+	OR = {
+		has_county_modifier = spn_hide_relic_kept_silverback_modifier
+		has_county_modifier = spn_hide_relic_kept_timber_modifier
+		has_county_modifier = spn_hide_relic_kept_tundra_modifier
+		has_county_modifier = spn_hide_relic_kept_graybeard_modifier
+		has_county_modifier = spn_hide_relic_kept_midnight_modifier
+		has_county_modifier = spn_hide_relic_kept_alpha_modifier
+	}
+}
+
+# Artifact scope: has this hide refused $WHO$?
+spn_hide_refused_trigger = {
+	OR = {
+		AND = {
+			var:spn_hide = flag:silverback
+			$WHO$ = { has_character_flag = spn_hide_refused_silverback }
+		}
+		AND = {
+			var:spn_hide = flag:timber
+			$WHO$ = { has_character_flag = spn_hide_refused_timber }
+		}
+		AND = {
+			var:spn_hide = flag:tundra
+			$WHO$ = { has_character_flag = spn_hide_refused_tundra }
+		}
+		AND = {
+			var:spn_hide = flag:graybeard
+			$WHO$ = { has_character_flag = spn_hide_refused_graybeard }
+		}
+		AND = {
+			var:spn_hide = flag:midnight
+			$WHO$ = { has_character_flag = spn_hide_refused_midnight }
+		}
+		AND = {
+			var:spn_hide = flag:alpha
+			$WHO$ = { has_character_flag = spn_hide_refused_alpha }
+		}
+	}
+}
+
+# ---- Pack politics (§13.5, §16, §17) ----
+# A pack's True Alpha candidate (§16). PACK = the story.
+spn_true_alpha_candidate_trigger = {
+	is_alive = yes
+	is_adult = yes
+	NOT = { this = $PACK$.story_owner }
+	NOT = { has_trait = spn_true_alpha }
+	NOT = { has_character_flag = spn_killed_a_wolf }
+	spn_pack_standing_value >= 100
+	calc_true_if = {
+		amount >= 2
+		has_trait = just
+		has_trait = honest
+		has_trait = compassionate
+		has_trait = brave
+		has_trait = diligent
+	}
+}
+
+# 2.37o: a wolf of PACK who would ask to run with NEW_ALPHA's pack, for a reason (the review of 4 Oct, F8: it was any
+# wolf, his own alpha's loyal son included). Not a loyal wolf, not his own alpha's close kin; and fickle, or he thinks
+# little of his own alpha, or much of the other one.
+spn_pack_moment_asker_trigger = {
+	spn_pack_moment_member_trigger = { PACK = $PACK$ }
+	NOT = { has_trait = loyal }
+	NOT = { is_close_family_of = $PACK$.story_owner }
+	OR = {
+		has_trait = fickle
+		opinion = {
+			target = $PACK$.story_owner
+			value <= -10
+		}
+		opinion = {
+			target = $NEW_ALPHA$
+			value >= 30
+		}
+	}
+}
+
+# Another pack's alpha, near enough for a moment (§17.4). Root = an entry of spn_packs.
+spn_pack_moment_other_trigger = {
+	is_alive = yes
+	NOT = { this = $ALPHA$ }
+	exists = var:spn_pack
+	in_diplomatic_range = $ALPHA$
+}
+
+# A young wolf of PACK who can take part in a moment: alive, adult, not its alpha. 2.37i: never a player -- the moment
+# acts on him with no choice (A Wolf Asks to Run With You moved him to another pack at -15 standing; Young Wolves Fight
+# wounded him). A player's part in a moment is as an alpha, who is asked.
+spn_pack_moment_member_trigger = {
+	is_alive = yes
+	is_adult = yes
+	NOT = { this = $PACK$.story_owner }
+	is_imprisoned = no
+	is_ai = yes
+}
+
+# ALPHA takes ASKER in (the Invite's weights read the other way round, §17.3). Root = anyone.
+spn_pack_accepts_asker_trigger = {
+	$ALPHA$ = {
+		opinion = {
+			target = $ASKER$
+			value >= 0
+		}
+	}
+	$ASKER$ = { spn_pack_standing_value >= 25 }
+}
+
+# Two wolves who may Challenge each other (§13.5 is_shown). Root = the actor; TARGET = the recipient.
+spn_pack_challenge_shown_trigger = {
+	spn_is_wolf_trigger = yes
+	is_adult = yes
+	$TARGET$ = {
+		spn_is_wolf_trigger = yes
+		is_adult = yes
+		# 2.37e: only a wolf he knows is one. Its one caller is the Challenge interaction, so the challenger is
+		# scope:actor (never prev: the trigger is pasted text and prev would move inside it).
+		spn_host_knows_wolf_trigger = { HOST = scope:actor }
+	}
+	OR = {
+		has_relation_rival = $TARGET$
+		has_relation_potential_rival = $TARGET$
+		has_perk = the_prowl_perk
+		has_perk = wolf_challenge_perk
+		AND = {
+			spn_pack_standing_value >= 25
+			trigger_if = {
+				limit = {
+					exists = var:spn_pack
+					$TARGET$ = { exists = var:spn_pack }
+				}
+				var:spn_pack = $TARGET$.var:spn_pack
+			}
+			trigger_else = { always = no }
+		}
+	}
+}
+
+# ---- 2.37o: a hide lying idle (the yearly net, step 1; spn_hide_owner_changed) ----
+# Artifact scope = a hide. Not in a shrine, held by an AI who is not its champion -- a mortal, a wolf it refused, a
+# champion holding it as a spare -- and not a hunter's trophy. A player's hide is never idle: he decides.
+spn_hide_lies_idle_trigger = {
+	NOT = { exists = var:spn_hide_shrine_county }
+	# Worn means a wolf is trying it on and the hide is deciding (the weekly check); a champion wears his own.
+	is_equipped = no
+	artifact_owner ?= {
+		is_ai = yes
+		NOT = { has_trait = supernatural_hunter }
+		# prev is the hide: the scope this trigger was called in, one step out.
+		NOT = { var:spn_champion_of ?= prev.var:spn_hide }
+		# A wolf pup who inherited it keeps it until he is grown and it can choose him.
+		NOT = {
+			AND = {
+				spn_is_wolf_trigger = yes
+				is_adult = no
+			}
+		}
+	}
+}
+
+# ---- The Hunt (§11.2) ----
+# Root = a PROVINCE (is_location_valid, province_score); scope:host = the hunter. An AI hunter does not ride on a known
+# champion whose card is ready unless he means it. A player is never stopped.
+spn_hide_ai_hunter_deterred_trigger = {
+	scope:host = { is_ai = yes }
+	county ?= {
+		var:spn_menace_culprit ?= {
+			spn_is_champion_trigger = yes
+			OR = {
+				has_trait = spn_known_werewolf
+				has_trait = spn_known_hybrid
+			}
+			NOT = { has_character_flag = spn_hide_card_spent }
+			NOT = { spn_hunter_means_it_trigger = { HUNTER = scope:host } }
+		}
+	}
+}
+
+# Root = the culprit; HUNTER = the hunter. Monster hunting 75 AND a reason: a zealous, vengeful or brave man; a rival
+# or nemesis; a man whose family or trainer the culprit killed; or a name the world tells stories about. Used only
+# with a province as root (the culprit is read back from it for the killer test).
+spn_hunter_means_it_trigger = {
+	$HUNTER$ = {
+		trigger_if = {
+			limit = { has_trait = supernatural_hunter }
+			has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 75 }
+		}
+		trigger_else = { always = no }
+		OR = {
+			has_trait = zealous
+			has_trait = vengeful
+			has_trait = brave
+			has_relation_rival = prev
+			has_relation_nemesis = prev
+			spn_hunter_reputation_value >= 3
+			var:spn_hunter_trainer ?= { killer ?= root.county.var:spn_menace_culprit }
+			any_close_family_member = {
+				even_if_dead = yes
+				is_alive = no
+				killer ?= root.county.var:spn_menace_culprit
+			}
+		}
+	}
+}
+
+# ---- Word at the Fire (§14.4) ----
+# Artifact scope: WHO does not know where this hide is now -- he never heard, or the holder or the shrine changed.
+# Two pointers of one type each (a holder; a county), so nothing compares a character with a title.
+spn_hide_fact_lacked_trigger = {
+	OR = {
+		AND = {
+			var:spn_hide = flag:silverback
+			trigger_if = {
+				limit = { exists = var:spn_hide_shrine_county }
+				trigger_if = {
+					limit = { $WHO$ = { exists = var:spn_knows_shrine_silverback } }
+					NOT = { var:spn_hide_shrine_county = $WHO$.var:spn_knows_shrine_silverback }
+				}
+				trigger_else = { always = yes }
+			}
+			trigger_else = {
+				trigger_if = {
+					limit = { $WHO$ = { exists = var:spn_knows_hide_silverback } }
+					NOT = { artifact_owner ?= $WHO$.var:spn_knows_hide_silverback }
+				}
+				trigger_else = { always = yes }
+			}
+		}
+		AND = {
+			var:spn_hide = flag:timber
+			trigger_if = {
+				limit = { exists = var:spn_hide_shrine_county }
+				trigger_if = {
+					limit = { $WHO$ = { exists = var:spn_knows_shrine_timber } }
+					NOT = { var:spn_hide_shrine_county = $WHO$.var:spn_knows_shrine_timber }
+				}
+				trigger_else = { always = yes }
+			}
+			trigger_else = {
+				trigger_if = {
+					limit = { $WHO$ = { exists = var:spn_knows_hide_timber } }
+					NOT = { artifact_owner ?= $WHO$.var:spn_knows_hide_timber }
+				}
+				trigger_else = { always = yes }
+			}
+		}
+		AND = {
+			var:spn_hide = flag:tundra
+			trigger_if = {
+				limit = { exists = var:spn_hide_shrine_county }
+				trigger_if = {
+					limit = { $WHO$ = { exists = var:spn_knows_shrine_tundra } }
+					NOT = { var:spn_hide_shrine_county = $WHO$.var:spn_knows_shrine_tundra }
+				}
+				trigger_else = { always = yes }
+			}
+			trigger_else = {
+				trigger_if = {
+					limit = { $WHO$ = { exists = var:spn_knows_hide_tundra } }
+					NOT = { artifact_owner ?= $WHO$.var:spn_knows_hide_tundra }
+				}
+				trigger_else = { always = yes }
+			}
+		}
+		AND = {
+			var:spn_hide = flag:graybeard
+			trigger_if = {
+				limit = { exists = var:spn_hide_shrine_county }
+				trigger_if = {
+					limit = { $WHO$ = { exists = var:spn_knows_shrine_graybeard } }
+					NOT = { var:spn_hide_shrine_county = $WHO$.var:spn_knows_shrine_graybeard }
+				}
+				trigger_else = { always = yes }
+			}
+			trigger_else = {
+				trigger_if = {
+					limit = { $WHO$ = { exists = var:spn_knows_hide_graybeard } }
+					NOT = { artifact_owner ?= $WHO$.var:spn_knows_hide_graybeard }
+				}
+				trigger_else = { always = yes }
+			}
+		}
+		AND = {
+			var:spn_hide = flag:midnight
+			trigger_if = {
+				limit = { exists = var:spn_hide_shrine_county }
+				trigger_if = {
+					limit = { $WHO$ = { exists = var:spn_knows_shrine_midnight } }
+					NOT = { var:spn_hide_shrine_county = $WHO$.var:spn_knows_shrine_midnight }
+				}
+				trigger_else = { always = yes }
+			}
+			trigger_else = {
+				trigger_if = {
+					limit = { $WHO$ = { exists = var:spn_knows_hide_midnight } }
+					NOT = { artifact_owner ?= $WHO$.var:spn_knows_hide_midnight }
+				}
+				trigger_else = { always = yes }
+			}
+		}
+		AND = {
+			var:spn_hide = flag:alpha
+			trigger_if = {
+				limit = { exists = var:spn_hide_shrine_county }
+				trigger_if = {
+					limit = { $WHO$ = { exists = var:spn_knows_shrine_alpha } }
+					NOT = { var:spn_hide_shrine_county = $WHO$.var:spn_knows_shrine_alpha }
+				}
+				trigger_else = { always = yes }
+			}
+			trigger_else = {
+				trigger_if = {
+					limit = { $WHO$ = { exists = var:spn_knows_hide_alpha } }
+					NOT = { artifact_owner ?= $WHO$.var:spn_knows_hide_alpha }
+				}
+				trigger_else = { always = yes }
+			}
+		}
+	}
+}
+
+# A lost hide he has not heard is lost.
+spn_hide_lost_fact_lacked_trigger = {
+	OR = {
+		AND = {
+			exists = global_var:spn_hide_silverback_lost
+			NOT = { exists = var:spn_knows_lost_silverback }
+		}
+		AND = {
+			exists = global_var:spn_hide_timber_lost
+			NOT = { exists = var:spn_knows_lost_timber }
+		}
+		AND = {
+			exists = global_var:spn_hide_tundra_lost
+			NOT = { exists = var:spn_knows_lost_tundra }
+		}
+		AND = {
+			exists = global_var:spn_hide_graybeard_lost
+			NOT = { exists = var:spn_knows_lost_graybeard }
+		}
+		AND = {
+			exists = global_var:spn_hide_midnight_lost
+			NOT = { exists = var:spn_knows_lost_midnight }
+		}
+		AND = {
+			exists = global_var:spn_hide_alpha_lost
+			NOT = { exists = var:spn_knows_lost_alpha }
+		}
+	}
+}
+
+# Pack Standing 50 -- or, with the Packs rule Off, lycanthropy 50 (§14.4).
+spn_hide_claim_ready_trigger = {
+	trigger_if = {
+		limit = { spn_packs_on_trigger = yes }
+		spn_pack_standing_value >= 50
+	}
+	trigger_else = {
+		spn_hunt_creature_track_value >= 50
+	}
+}
+
+# 2.37b -- the Fevered at the Gathering. Root = the candidate.
+spn_gathering_fevered_ok_trigger = {
+	is_alive = yes
+	is_adult = yes
+	is_imprisoned = no
+	has_trait = ww_infected_wound
+}
+
+# Can $HOST$ plausibly know this one is in the wound's fever? Root = the candidate. He gave it, his pack gave it, or
+# the sick one is his spouse, close family or courtier. Cross-scope reads behind trigger_if (no short-circuit in AND).
+spn_host_knows_fevered_trigger = {
+	OR = {
+		var:spn_conferred_sire ?= $HOST$
+		is_spouse_of = $HOST$
+		is_close_family_of = $HOST$
+		is_courtier_of = $HOST$
+		trigger_if = {
+			limit = {
+				exists = var:spn_conferred_sire
+				$HOST$ = { exists = var:spn_pack }
+			}
+			var:spn_conferred_sire = { var:spn_pack ?= $HOST$.var:spn_pack }
+		}
+		trigger_else = { always = no }
+	}
+}
+
+# ---- The Werewolf Gathering (§14) ----
+# Artifact scope: a hide its owner is the champion of (in his off window it is still his; §5.3 would send it back).
+# scope:spn_ci_holder = the owner (saved by the Circle while it walks the attendees).
+spn_hide_owner_is_its_champion_trigger = {
+	OR = {
+		AND = {
+			var:spn_hide ?= flag:silverback
+			global_var:spn_hide_champion_silverback ?= scope:spn_ci_holder
+		}
+		AND = {
+			var:spn_hide ?= flag:timber
+			global_var:spn_hide_champion_timber ?= scope:spn_ci_holder
+		}
+		AND = {
+			var:spn_hide ?= flag:tundra
+			global_var:spn_hide_champion_tundra ?= scope:spn_ci_holder
+		}
+		AND = {
+			var:spn_hide ?= flag:graybeard
+			global_var:spn_hide_champion_graybeard ?= scope:spn_ci_holder
+		}
+		AND = {
+			var:spn_hide ?= flag:midnight
+			global_var:spn_hide_champion_midnight ?= scope:spn_ci_holder
+		}
+		AND = {
+			var:spn_hide ?= flag:alpha
+			global_var:spn_hide_champion_alpha ?= scope:spn_ci_holder
+		}
+	}
+}
+
+# An attendee The Choosing may take (§14.4). Root = the attendee; scope:spn_ch_hide, scope:spn_fit_hide, scope:spn_in_circle.
+spn_gathering_choosable_trigger = {
+	spn_can_bear_hide_trigger = yes
+	spn_is_champion_trigger = no
+	NOT = { scope:spn_ch_hide = { spn_hide_refused_trigger = { WHO = prev } } }
+	spn_hide_accepts_wolf_trigger = yes
+}
+
+# Root = an attendee who came to Challenge the Alpha and may: the host's own pack, its Second (or anyone once the
+# Second has lost to the alpha within two years), at Pack Standing 50 (§13.5).
+spn_gathering_challenger_trigger = {
+	NOT = { this = scope:host }
+	has_activity_intent = spn_challenge_the_alpha_intent
+	is_imprisoned = no
+	spn_pack_standing_value >= 50
+	# 2.37i: as the Challenge interaction, neither wolf may already be badly hurt.
+	NOR = {
+		has_trait_rank = { trait = wounded rank = 2 }
+		has_trait_rank = { trait = wounded rank = 3 }
+	}
+	scope:host = {
+		NOR = {
+			has_trait_rank = { trait = wounded rank = 2 }
+			has_trait_rank = { trait = wounded rank = 3 }
+		}
+	}
+	trigger_if = {
+		limit = {
+			exists = var:spn_pack
+			scope:host = { exists = var:spn_pack }
+		}
+		var:spn_pack = scope:host.var:spn_pack
+		OR = {
+			var:spn_pack.var:spn_pack_second ?= this
+			var:spn_pack = { exists = var:spn_second_lost_to_alpha }
+		}
+		# 2.37o: an AI wolf still has his reason at the fire (Thomas, 4 Oct: never for no reason). A player has his own.
+		trigger_if = {
+			limit = { is_ai = yes }
+			spn_ai_alpha_challenge_cause_trigger = { ALPHA = scope:host }
+		}
+	}
+	trigger_else = { always = no }
+}
+
+# The Gathering's county is not the host's own realm.
+spn_gathering_abroad_trigger = {
+	scope:spn_run_county = {
+		trigger_if = {
+			limit = { exists = holder }
+			NOT = { holder.top_liege = scope:host.top_liege }
+		}
+		trigger_else = { always = yes }
+	}
+}
+
+# Root = an attendee: not in PACK (in another pack or none).
+spn_gathering_not_in_pack_trigger = {
+	trigger_if = {
+		limit = { exists = var:spn_pack }
+		NOT = { var:spn_pack = $PACK$ }
+	}
+	trigger_else = { always = yes }
+}
+
+# An unreserved lost hide exists (The Old Wolf's Tale).
+spn_hide_tale_ready_trigger = {
+	OR = {
+		AND = {
+			exists = global_var:spn_hide_silverback_lost
+			NOT = { exists = global_var:spn_hide_silverback_reserved }
+		}
+		AND = {
+			exists = global_var:spn_hide_timber_lost
+			NOT = { exists = global_var:spn_hide_timber_reserved }
+		}
+		AND = {
+			exists = global_var:spn_hide_tundra_lost
+			NOT = { exists = global_var:spn_hide_tundra_reserved }
+		}
+		AND = {
+			exists = global_var:spn_hide_graybeard_lost
+			NOT = { exists = global_var:spn_hide_graybeard_reserved }
+		}
+		AND = {
+			exists = global_var:spn_hide_midnight_lost
+			NOT = { exists = global_var:spn_hide_midnight_reserved }
+		}
+		AND = {
+			exists = global_var:spn_hide_alpha_lost
+			NOT = { exists = global_var:spn_hide_alpha_reserved }
+		}
+	}
+}
+
+# Root = an attendee who could be the host's partner in the Unification (§15): his spouse, the alpha of another pack,
+# neither pack unified, the two together within the cap, and a third wolf here to stand as elder.
+spn_unification_partner_trigger = {
+	trigger_if = {
+		limit = {
+			spn_is_alpha_trigger = yes
+			$HOST$ = { spn_is_alpha_trigger = yes }
+		}
+		is_spouse_of = $HOST$
+		NOT = { var:spn_pack = $HOST$.var:spn_pack }
+		NOT = { var:spn_pack = { exists = var:spn_pack_unified } }
+		NOT = { $HOST$.var:spn_pack = { exists = var:spn_pack_unified } }
+		custom_tooltip = {
+			text = spn_unification_too_many_tt
+			var:spn_pack.var:spn_pack_size <= {
+				value = spn_pack_cap_value
+				subtract = $HOST$.var:spn_pack.var:spn_pack_size
+			}
+		}
+		# A third wolf to stand as elder: the host, the partner and one more.
+		custom_tooltip = {
+			text = spn_unification_no_elder_tt
+			scope:activity = {
+				any_attending_character = {
+					count >= 3
+					spn_is_wolf_trigger = yes
+				}
+			}
+		}
+	}
+	trigger_else = { always = no }
+}
+
+# Two attendees of different packs or faiths: kindred blood (§14.2, §17.6). Root = one; OTHER = the other.
+spn_gathering_kindred_blood_trigger = {
+	OR = {
+		NOT = { faith = $OTHER$.faith }
+		trigger_if = {
+			limit = {
+				exists = var:spn_pack
+				$OTHER$ = { exists = var:spn_pack }
+			}
+			NOT = { var:spn_pack = $OTHER$.var:spn_pack }
+		}
+		trigger_else = { always = no }
+	}
+}
+
+# ---- The field (§12.3) ----
+# An ordinary enemy knight a champion may kill. Never a champion (the clash is for them), never a hunter (the
+# counterplay). Root = the knight.
+spn_hide_feat_victim_trigger = {
+	is_alive = yes
+	prowess <= $CHAMP$.prowess_for_combat_event_opponent
+	spn_is_champion_trigger = no
+	spn_has_hunter_trait = no
+}
+
+# ---- Moving between packs (§17.3) ----
+# Root = a wolf in a pack: WHO is not in the same pack (in another, or none).
+spn_gathering_not_in_pack_trigger_for = {
+	trigger_if = {
+		limit = {
+			exists = var:spn_pack
+			$WHO$ = { exists = var:spn_pack }
+		}
+		NOT = { var:spn_pack = $WHO$.var:spn_pack }
+	}
+	trigger_else = { always = yes }
+}
+
+# ==================================================================================================
+# 2.37o: WHY A WOLF CHALLENGES (Thomas, 4 Oct). Root = the would-be challenger. Read by the Challenge interaction's
+# ai_will_do, the Challenge the Alpha intent's ai_will_do, the fire's challenger test (AI challengers only), and the
+# lines that tell a player why he was challenged. Nothing here reads prev, root or a saved scope.
+# ==================================================================================================
+
+# He would win: his share of the clash at least EDGE to one, by the clash's own weights. Exactly
+#   (65 + d + X_me) M_me >= EDGE x (65 - d + X_foe) M_foe,   d = clamp(my prowess - foe prowess, +-25),
+# rearranged so the foe-dependent clamp sits on the right. The chance is A^2 / (A^2 + B^2): EDGE 0.8 is about 39%,
+# 1 is 50%, 1.15 is 57%, 1.3 is 63%.
+spn_ai_clash_edge_trigger = {
+	spn_ai_clash_own_weight_value >= {
+		value = 65
+		add = $FOE$.spn_ai_clash_x_value
+		subtract = {
+			value = prowess
+			subtract = $FOE$.prowess
+			min = -25
+			max = 25
+		}
+		multiply = $FOE$.spn_ai_clash_mult_value
+		multiply = $EDGE$
+		subtract = {
+			value = {
+				value = prowess
+				subtract = $FOE$.prowess
+				min = -25
+				max = 25
+			}
+			multiply = spn_ai_clash_mult_value
+		}
+	}
+}
+
+# WHO runs in his pack.
+spn_ai_same_pack_trigger = {
+	trigger_if = {
+		limit = {
+			exists = var:spn_pack
+			$WHO$ = { exists = var:spn_pack }
+		}
+		var:spn_pack = $WHO$.var:spn_pack
+	}
+	trigger_else = { always = no }
+}
+
+# Never against his mate, his lover or his friend (aliases: soulmate is a lover, best friend a friend).
+spn_ai_challenge_not_close_trigger = {
+	NOR = {
+		is_spouse_of = $FOE$
+		has_relation_lover = $FOE$
+		has_relation_friend = $FOE$
+	}
+}
+
+# A cruel wolf: the vices a pack would not follow.
+spn_ai_cruel_wolf_trigger = {
+	OR = {
+		has_trait = sadistic
+		has_trait = callous
+		has_trait = arbitrary
+		has_trait = deceitful
+		has_trait = kinslayer_1
+		has_trait = kinslayer_2
+		has_trait = kinslayer_3
+	}
+}
+
+# A feud: a rival or nemesis (nemesis is a rival alias), a grudge, or real hatred.
+spn_ai_feud_trigger = {
+	OR = {
+		has_relation_rival = $FOE$
+		has_relation_grudge = $FOE$
+		opinion = {
+			target = $FOE$
+			value <= -40
+		}
+	}
+}
+
+# Two or more of the pack (the alpha aside) think ill of ALPHA. Root = a wolf of that pack.
+spn_ai_pack_turned_trigger = {
+	var:spn_pack ?= {
+		any_in_list = {
+			variable = spn_pack_members
+			count >= 2
+			NOT = { this = $ALPHA$ }
+			opinion = {
+				target = $ALPHA$
+				value <= -15
+			}
+		}
+	}
+}
+
+# TOO WEAK FOR THE PACK. His own alpha, and one of: he would beat him (57%); the alpha's body is failing (a champion's
+# never does); the pack holds the alpha lower than him by 15 (refusing and losing fights costs standing); a craven
+# alpha; or an alpha whose name the hunters know, over a pack that still hides.
+spn_ai_alpha_weak_trigger = {
+	spn_ai_same_pack_trigger = { WHO = $ALPHA$ }
+	OR = {
+		spn_ai_clash_edge_trigger = { FOE = $ALPHA$ EDGE = 1.15 }
+		$ALPHA$ = {
+			OR = {
+				has_trait = infirm
+				has_trait = incapable
+				has_trait = blind
+			}
+		}
+		spn_pack_standing_value >= {
+			value = $ALPHA$.spn_pack_standing_value
+			add = 15
+		}
+		AND = {
+			$ALPHA$ = { has_trait = craven }
+			NOT = { has_trait = craven }
+		}
+		AND = {
+			$ALPHA$ = {
+				OR = {
+					has_trait = spn_known_werewolf
+					has_trait = spn_known_hybrid
+				}
+			}
+			NOR = {
+				has_trait = spn_known_werewolf
+				has_trait = spn_known_hybrid
+			}
+		}
+	}
+}
+
+# CRUEL, AND AT ODDS WITH THE BETTER OF THE PACK. His own alpha has one of the vices, he has none, and: the alpha's vice is the one
+# his own nature stands against (compassionate against sadistic or callous, just against arbitrary, honest against
+# deceitful); or he has come to dislike the alpha (-20); or two of the pack have.
+spn_ai_alpha_cruel_trigger = {
+	spn_ai_same_pack_trigger = { WHO = $ALPHA$ }
+	spn_ai_cruel_wolf_trigger = no
+	$ALPHA$ = { spn_ai_cruel_wolf_trigger = yes }
+	OR = {
+		AND = {
+			has_trait = compassionate
+			$ALPHA$ = {
+				OR = {
+					has_trait = sadistic
+					has_trait = callous
+				}
+			}
+		}
+		AND = {
+			has_trait = just
+			$ALPHA$ = { has_trait = arbitrary }
+		}
+		AND = {
+			has_trait = honest
+			$ALPHA$ = { has_trait = deceitful }
+		}
+		opinion = {
+			target = $ALPHA$
+			value <= -20
+		}
+		spn_ai_pack_turned_trigger = { ALPHA = $ALPHA$ }
+	}
+}
+
+# THE WHOLE TEST FOR AN ALPHA. His own: too weak or cruel. Another pack's, or a lone wolf's: only a feud (beating
+# another pack's alpha takes nothing from that pack).
+spn_ai_alpha_challenge_cause_trigger = {
+	spn_ai_challenge_not_close_trigger = { FOE = $ALPHA$ }
+	trigger_if = {
+		limit = { spn_ai_same_pack_trigger = { WHO = $ALPHA$ } }
+		OR = {
+			spn_ai_alpha_weak_trigger = { ALPHA = $ALPHA$ }
+			spn_ai_alpha_cruel_trigger = { ALPHA = $ALPHA$ }
+		}
+	}
+	trigger_else = {
+		spn_ai_feud_trigger = { FOE = $ALPHA$ }
+	}
+}
+
+# Climbing his own pack: a wolf of it who stands as high as he does or higher, whom he would beat. A win over him is
+# worth the +15 (the Challenge pays only against a wolf who stood near the winner), and he has room to climb.
+spn_ai_climb_trigger = {
+	spn_is_alpha_trigger = no # the alpha has nowhere to climb; losing would hand his pack away
+	spn_ai_same_pack_trigger = { WHO = $FOE$ }
+	spn_pack_standing_value < 90
+	spn_pack_standing_value <= $FOE$.spn_pack_standing_value
+	spn_ai_clash_edge_trigger = { FOE = $FOE$ EDGE = 1.15 }
+}
+
+# THE WHOLE TEST FOR ANY OTHER WOLF: a feud, or climbing his own pack.
+spn_ai_wolf_challenge_cause_trigger = {
+	spn_ai_challenge_not_close_trigger = { FOE = $FOE$ }
+	OR = {
+		spn_ai_feud_trigger = { FOE = $FOE$ }
+		spn_ai_climb_trigger = { FOE = $FOE$ }
+	}
+}

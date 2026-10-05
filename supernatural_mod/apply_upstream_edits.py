@@ -288,6 +288,208 @@ E("common/character_interactions/00_magic_interactions.txt",
 # translation and is left alone on purpose -- fix that one line by hand.
 LOC_FIX = [("localization/%s/event_localization/witch_ep4_l_%s.yml" % (l, l)) for l in
            ("english","french","german","korean","polish","simp_chinese","spanish")]
+# ---- 2.37 "The Six Hides" -- the ringing (WORK-ORDER-2.37 §18) ---------------------------------------------
+# Seven of the eight magical_senses_perk tests in send_message_4_magic_sense_effect become spn_senses_magic_trigger (the
+# legendary-mage branch's own test is left alone); magic_ev.4 gains the champion's text and Follow the ringing;
+# magic_ev.44 gains Go after them.
+E('common/scripted_effects/00_variety_magic_effects.txt',
+"""				location = {
+					every_character_in_location = {
+						limit = {
+							has_perk = magical_senses_perk
+""",
+"""				location = {
+					every_character_in_location = {
+						limit = {
+							spn_senses_magic_trigger = yes # 2.37 (Supernatural): a hide's champion hears magic too
+""")
+E('common/scripted_effects/00_variety_magic_effects.txt',
+"""				every_vassal = {
+					limit = {
+						has_perk = magical_senses_perk
+""",
+"""				every_vassal = {
+					limit = {
+						spn_senses_magic_trigger = yes # 2.37 (Supernatural): a hide's champion hears magic too
+""")
+E('common/scripted_effects/00_variety_magic_effects.txt',
+"""					every_courtier_or_guest = {
+						limit = {
+							has_perk = magical_senses_perk
+							NOT = { THIS = scope:magic_user }
+""",
+"""					every_courtier_or_guest = {
+						limit = {
+							spn_senses_magic_trigger = yes # 2.37 (Supernatural): a hide's champion hears magic too
+							NOT = { THIS = scope:magic_user }
+""")
+E('common/scripted_effects/00_variety_magic_effects.txt',
+"""					liege = {
+						if = {
+							limit = {
+								has_perk = magical_senses_perk
+""",
+"""					liege = {
+						if = {
+							limit = {
+								spn_senses_magic_trigger = yes # 2.37 (Supernatural): a hide's champion hears magic too
+""")
+E('common/scripted_effects/00_variety_magic_effects.txt',
+"""						every_courtier_or_guest = {
+							limit = {
+								has_perk = magical_senses_perk
+""",
+"""						every_courtier_or_guest = {
+							limit = {
+								spn_senses_magic_trigger = yes # 2.37 (Supernatural): a hide's champion hears magic too
+""")
+E('common/scripted_effects/00_variety_magic_effects.txt',
+"""					every_neighboring_realm_same_rank_owner = {
+						limit = {
+							has_perk = magical_senses_perk
+""",
+"""					every_neighboring_realm_same_rank_owner = {
+						limit = {
+							spn_senses_magic_trigger = yes # 2.37 (Supernatural): a hide's champion hears magic too
+""")
+E('common/scripted_effects/00_variety_magic_effects.txt',
+"""						every_neighboring_realm_same_rank_owner = {
+							limit = {
+								has_perk = magical_senses_perk
+""",
+"""						every_neighboring_realm_same_rank_owner = {
+							limit = {
+								spn_senses_magic_trigger = yes # 2.37 (Supernatural): a hide's champion hears magic too
+""")
+E('events/ev1.txt',
+"""#for magic sense
+magic_ev.4 = {
+	title = ev4.0.title
+	desc = ev4.0.desc
+	theme =  mental_health
+""",
+"""#for magic sense
+magic_ev.4 = {
+	# 2.37 (Supernatural): a hide's champion hears it as The Ringing.
+	title = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { spn_is_champion_trigger = yes }
+				desc = spn_ev4.0.title
+			}
+			desc = ev4.0.title
+		}
+	}
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { spn_is_champion_trigger = yes }
+				desc = spn_ev4.0.desc
+			}
+			desc = ev4.0.desc
+		}
+	}
+	theme =  mental_health
+""")
+E('events/ev1.txt',
+"""			trigger_event = magic_ev2.53
+		}
+		
+		ai_chance = {
+			base = 10
+		}
+	}
+""",
+"""			trigger_event = magic_ev2.53
+		}
+		
+		ai_chance = {
+			base = 10
+		}
+	}
+	# 2.37 (Supernatural): Follow the ringing. A champion goes after a caster who is none of his own (never his liege,
+	# spouse, close family, friend, lover or courtier), once a year. Magic Tracking names the caster.
+	option = {
+		name = spn_ev4.0.ring
+		trigger = {
+			spn_is_champion_trigger = yes
+			NOT = { has_character_flag = spn_hide_chased_ringing }
+			exists = scope:magic_user
+			NOT = { scope:magic_user = ROOT }
+			NOT = { liege ?= scope:magic_user }
+			scope:magic_user = {
+				NOT = { has_strong_hook = ROOT }
+				NOR = {
+					is_spouse_of = ROOT
+					is_close_family_of = ROOT
+					has_relation_friend = ROOT
+					has_relation_lover = ROOT
+					is_courtier_of = ROOT
+				}
+			}
+		}
+		custom_tooltip = spn_ev4.0.ring.tt
+		add_character_flag = { flag = spn_hide_chased_ringing years = 1 }
+		trigger_event = magic_ev.44
+		ai_chance = {
+			base = 0
+			modifier = {
+				add = 40
+				scope:magic_user = { has_relation_rival = ROOT }
+			}
+			modifier = {
+				add = 40
+				faith = { faith_hostility_level = { target = scope:magic_user.faith value >= faith_hostile_level } }
+			}
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = vengeful }
+		}
+	}
+""")
+E('events/ev1.txt',
+"""		clear_saved_scope = magic_user
+		ai_chance = {
+			base = 1
+		}
+	}
+	option = {
+		name = ev4b.0.c
+""",
+"""		clear_saved_scope = magic_user
+		ai_chance = {
+			base = 1
+		}
+	}
+	# 2.37 (Supernatural): Go after them. Creature against caster; never a death (the hide's rule C5).
+	option = {
+		name = spn_ev4b.0.go
+		trigger = {
+			spn_is_champion_trigger = yes
+			exists = scope:magic_user
+			NOT = { scope:magic_user = ROOT }
+		}
+		custom_tooltip = spn_ev4b.0.go.tt
+		save_scope_as = spn_ring_champion
+		spn_clash_lean_tooltip_effect = { A = ROOT B = scope:magic_user FORM = no }
+		spn_creature_clash_effect = {
+			A = ROOT
+			B = scope:magic_user
+			THEN = spn_hide_ringing_after_effect
+			FORM = no
+		}
+		clear_saved_scope = magic_user
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = -30 has_trait = craven }
+		}
+	}
+	option = {
+		name = ev4b.0.c
+""")
+
+
 def apply_loc_fix():
     for path in LOC_FIX:
         if not os.path.exists(path): print("MISSING FILE", path); continue

@@ -1,0 +1,134 @@
+﻿# Supernatural 2.37 -- the hide on the field (WORK-ORDER-2.37 §12.3, §12.4).
+#
+# The Beast on the Field (knight) and The Wolf at the Head of the Army (commander): a champion whose wolf runs kills
+# ordinary enemy knights, a few a battle. Champion against champion: the clash, once a pair, before any feat.
+#
+# THE TRADE-OFF, stated plainly (the 2.33 header's): base = 100000 is AGOT's "must win when valid" idiom. While the
+# budget lasts, a champion draws none of knight_killed, knight_wounded or the berserker events -- the hide keeps him
+# on his feet. The budget is small (2 to 6 picks) and per battle, and it is cleared when the battle ends.
+#
+# AGOT: spn_can_be_battle_taken_trigger is the mod's existing hook, which the compatibility patch already narrows for
+# dragonriders. No new hook, no second override.
+
+spn_hide_feat_knight = {
+	type = knight
+
+	is_valid = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+		has_character_flag = spn_hide_wolf_runs
+		spn_can_be_battle_taken_trigger = yes
+		# The budget: no variable means the battle's first pick.
+		trigger_if = {
+			limit = { has_variable = spn_feat_budget }
+			var:spn_feat_budget > 0
+		}
+		scope:combat_side.enemy_side = {
+			any_side_knight = { spn_hide_feat_victim_trigger = { CHAMP = root } }
+		}
+		# The clash with an enemy champion always comes first (§12.4), so no feat kills a champion outright.
+		NOT = {
+			scope:combat_side.enemy_side = {
+				OR = {
+					side_commander ?= { spn_hide_clash_foe_trigger = { CHAMP = root } }
+					any_side_knight = { spn_hide_clash_foe_trigger = { CHAMP = root } }
+				}
+			}
+		}
+	}
+
+	chance = {
+		base = 100000
+	}
+
+	effect = {
+		spn_hide_feat_effect = yes
+	}
+}
+
+spn_hide_feat_commander = {
+	type = commander
+
+	is_valid = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+		has_character_flag = spn_hide_wolf_runs
+		spn_can_be_battle_taken_trigger = yes
+		# The budget: no variable means the battle's first pick.
+		trigger_if = {
+			limit = { has_variable = spn_feat_budget }
+			var:spn_feat_budget > 0
+		}
+		scope:combat_side.enemy_side = {
+			any_side_knight = { spn_hide_feat_victim_trigger = { CHAMP = root } }
+		}
+		# The clash with an enemy champion always comes first (§12.4), so no feat kills a champion outright.
+		NOT = {
+			scope:combat_side.enemy_side = {
+				OR = {
+					side_commander ?= { spn_hide_clash_foe_trigger = { CHAMP = root } }
+					any_side_knight = { spn_hide_clash_foe_trigger = { CHAMP = root } }
+				}
+			}
+		}
+	}
+
+	chance = {
+		base = 100000
+	}
+
+	effect = {
+		spn_hide_feat_effect = yes
+	}
+}
+
+spn_hide_champion_clash_knight = {
+	type = knight
+
+	is_valid = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+		has_character_flag = spn_hide_wolf_runs # 2.37e: held back, no clash (as the feats)
+		spn_can_be_battle_taken_trigger = yes
+		scope:combat_side.enemy_side = {
+			OR = {
+				side_commander ?= { spn_hide_clash_foe_trigger = { CHAMP = root } }
+				any_side_knight = { spn_hide_clash_foe_trigger = { CHAMP = root } }
+			}
+		}
+	}
+
+	chance = {
+		base = 100000
+	}
+
+	effect = {
+		spn_hide_field_clash_effect = yes
+	}
+}
+
+spn_hide_champion_clash_commander = {
+	type = commander
+
+	is_valid = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+		has_character_flag = spn_hide_wolf_runs # 2.37e: held back, no clash (as the feats)
+		spn_can_be_battle_taken_trigger = yes
+		scope:combat_side.enemy_side = {
+			OR = {
+				side_commander ?= { spn_hide_clash_foe_trigger = { CHAMP = root } }
+				any_side_knight = { spn_hide_clash_foe_trigger = { CHAMP = root } }
+			}
+		}
+	}
+
+	chance = {
+		base = 100000
+	}
+
+	effect = {
+		spn_hide_field_clash_effect = yes
+	}
+}
+

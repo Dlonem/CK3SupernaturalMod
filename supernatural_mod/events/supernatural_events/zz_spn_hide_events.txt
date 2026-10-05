@@ -1,0 +1,3287 @@
+﻿namespace = spn_hide
+
+# Supernatural 2.37 -- "The Six Hides": the hide's events (WORK-ORDER-2.37 §19). Event titles in comments; loc in
+# localization/english/event_localization/spn_hide_l_english.yml. The voice is the mod's own
+# (RULE-supernatural-event-writing-voice.md) and the six approved samples (design §11.1) are verbatim.
+#
+# Every delayed event re-checks the world in its trigger: a delay can outlive what it was about. Saved scopes go first,
+# `exists = scope:<x>`, because an artifact can be destroyed in between.
+
+# ==================================================================================================
+# .0001 -- (hidden) the weekly hide check (§5.5). One chain per holder; the only timer besides the pack's year.
+# ==================================================================================================
+spn_hide.0001 = {
+	hidden = yes
+	trigger = {
+		is_alive = yes
+		spn_hides_on_trigger = yes
+		OR = {
+			spn_owns_hide_trigger = yes
+			spn_is_champion_trigger = yes
+		}
+	}
+	immediate = {
+		# The chain re-fires itself, and a triggered event inherits every saved scope of the one that fired it. Clear
+		# what an earlier pass, the Choosing or a death left behind, or one old offer would block every later case.
+		if = {
+			limit = { exists = scope:spn_offered_hide }
+			clear_saved_scope = spn_offered_hide
+		}
+		if = {
+			limit = { exists = scope:spn_off_hide }
+			clear_saved_scope = spn_off_hide
+		}
+		if = {
+			limit = { exists = scope:spn_in_circle }
+			clear_saved_scope = spn_in_circle
+		}
+		if = {
+			limit = { exists = scope:spn_exit_hide }
+			clear_saved_scope = spn_exit_hide
+		}
+		save_scope_as = spn_wk
+		add_character_flag = { flag = spn_hide_check_pending days = 8 }
+		# First, for a champion: still a wolf? Still holding his hide?
+		if = {
+			limit = { spn_is_champion_trigger = yes }
+			if = {
+				limit = { NOT = { exists = var:spn_champion_of } }
+				spn_hide_heal_champion_var_effect = yes
+			}
+			if = {
+				limit = { spn_can_bear_hide_trigger = no }
+				spn_hide_exit_effect = { REASON = flag:lost_blood }
+			}
+			else_if = {
+				limit = {
+					NOT = { any_character_artifact = { var:spn_hide ?= scope:spn_wk.var:spn_champion_of } }
+				}
+				if = {
+					limit = {
+						NOT = { any_artifact = { var:spn_hide ?= scope:spn_wk.var:spn_champion_of } }
+					}
+					spn_hide_exit_effect = { REASON = flag:lost }
+				}
+				else = {
+					spn_hide_exit_effect = { REASON = flag:lost_blood }
+				}
+			}
+		}
+		every_character_artifact = {
+			limit = { has_variable = spn_hide }
+			save_scope_as = spn_wk_hide
+			scope:spn_wk = { spn_hide_weekly_case_effect = yes }
+		}
+		if = {
+			limit = {
+				OR = {
+					spn_owns_hide_trigger = yes
+					spn_is_champion_trigger = yes
+				}
+			}
+			trigger_event = { id = spn_hide.0001 days = 7 }
+		}
+		else = {
+			remove_character_flag = spn_hide_check_pending
+		}
+	}
+}
+
+# ==================================================================================================
+# .0002 -- (hidden, no root) seeding at game start, and once for an older save (§5.12). By the game rule.
+# ==================================================================================================
+spn_hide.0002 = {
+	scope = none
+	hidden = yes
+	trigger = {
+		NOT = { exists = global_var:spn_hides_seeded }
+	}
+	immediate = {
+		# 2.37o: the holy-site hook runs at the end of this immediate, after spn_hides_seeded below is set. This keeps
+		# it from telling every player wolf where every shrine is on day one (the review of 4 Oct, N3).
+		set_global_variable = { name = spn_hides_seeding value = yes days = 1 }
+		if = {
+			limit = { has_game_rule = spn_hides_off }
+		}
+		else_if = {
+			limit = { has_game_rule = spn_hides_lost }
+			spn_hide_record_lost_effect = { HIDE = silverback }
+			spn_hide_record_lost_effect = { HIDE = timber }
+			spn_hide_record_lost_effect = { HIDE = tundra }
+			spn_hide_record_lost_effect = { HIDE = graybeard }
+			spn_hide_record_lost_effect = { HIDE = midnight }
+			spn_hide_record_lost_effect = { HIDE = alpha }
+		}
+		else_if = {
+			limit = { has_game_rule = spn_hides_awakened }
+			spn_hide_seed_one_effect = { HIDE = silverback CHAMPION = yes SHRINE = yes }
+			spn_hide_seed_one_effect = { HIDE = timber CHAMPION = yes SHRINE = yes }
+			spn_hide_seed_one_effect = { HIDE = tundra CHAMPION = yes SHRINE = yes }
+			spn_hide_seed_one_effect = { HIDE = graybeard CHAMPION = yes SHRINE = yes }
+			spn_hide_seed_one_effect = { HIDE = midnight CHAMPION = yes SHRINE = yes }
+			spn_hide_record_lost_effect = { HIDE = alpha }
+		}
+		else = {
+			# Scattered (default): Alpha lost; ONE of the other five to the best-fitting AI wolf if one exists; the
+			# rest in shrines (design T8).
+			random_list = {
+				1 = { save_scope_value_as = { name = spn_seed_wolf_hide value = flag:silverback } }
+				1 = { save_scope_value_as = { name = spn_seed_wolf_hide value = flag:timber } }
+				1 = { save_scope_value_as = { name = spn_seed_wolf_hide value = flag:tundra } }
+				1 = { save_scope_value_as = { name = spn_seed_wolf_hide value = flag:graybeard } }
+				1 = { save_scope_value_as = { name = spn_seed_wolf_hide value = flag:midnight } }
+			}
+			if = {
+				limit = { scope:spn_seed_wolf_hide = flag:silverback }
+				spn_hide_seed_one_effect = { HIDE = silverback CHAMPION = yes SHRINE = yes }
+			}
+			else = {
+				spn_hide_seed_one_effect = { HIDE = silverback CHAMPION = no SHRINE = yes }
+			}
+			if = {
+				limit = { scope:spn_seed_wolf_hide = flag:timber }
+				spn_hide_seed_one_effect = { HIDE = timber CHAMPION = yes SHRINE = yes }
+			}
+			else = {
+				spn_hide_seed_one_effect = { HIDE = timber CHAMPION = no SHRINE = yes }
+			}
+			if = {
+				limit = { scope:spn_seed_wolf_hide = flag:tundra }
+				spn_hide_seed_one_effect = { HIDE = tundra CHAMPION = yes SHRINE = yes }
+			}
+			else = {
+				spn_hide_seed_one_effect = { HIDE = tundra CHAMPION = no SHRINE = yes }
+			}
+			if = {
+				limit = { scope:spn_seed_wolf_hide = flag:graybeard }
+				spn_hide_seed_one_effect = { HIDE = graybeard CHAMPION = yes SHRINE = yes }
+			}
+			else = {
+				spn_hide_seed_one_effect = { HIDE = graybeard CHAMPION = no SHRINE = yes }
+			}
+			if = {
+				limit = { scope:spn_seed_wolf_hide = flag:midnight }
+				spn_hide_seed_one_effect = { HIDE = midnight CHAMPION = yes SHRINE = yes }
+			}
+			else = {
+				spn_hide_seed_one_effect = { HIDE = midnight CHAMPION = no SHRINE = yes }
+			}
+			spn_hide_record_lost_effect = { HIDE = alpha }
+		}
+		set_global_variable = { name = spn_hides_seeded value = yes }
+	}
+}
+
+# ==================================================================================================
+# .0003 -- (hidden, artifact scope) a hide broken through to nothing (§8.2), from on_artifact_broken_through_effect and
+# _decay. Root = the artifact; scope:owner. 2.37i: an event rather than the on_action's own effect (see the on_action).
+# ==================================================================================================
+spn_hide.0003 = {
+	scope = artifact
+	hidden = yes
+	trigger = {
+		has_variable = spn_hide
+	}
+	immediate = {
+		save_scope_as = spn_broken_hide
+		spn_hide_save_champion_effect = yes
+		if = {
+			limit = { exists = scope:spn_hide_champ }
+			if = {
+				limit = { scope:owner ?= scope:spn_hide_champ }
+				scope:spn_hide_champ = { spn_hide_exit_effect = { REASON = flag:lost_blood } }
+			}
+		}
+		spn_hide_shrine_left_effect = yes
+		if = {
+			limit = { var:spn_hide = flag:silverback }
+			spn_hide_record_lost_effect = { HIDE = silverback }
+		}
+		if = {
+			limit = { var:spn_hide = flag:timber }
+			spn_hide_record_lost_effect = { HIDE = timber }
+		}
+		if = {
+			limit = { var:spn_hide = flag:tundra }
+			spn_hide_record_lost_effect = { HIDE = tundra }
+		}
+		if = {
+			limit = { var:spn_hide = flag:graybeard }
+			spn_hide_record_lost_effect = { HIDE = graybeard }
+		}
+		if = {
+			limit = { var:spn_hide = flag:midnight }
+			spn_hide_record_lost_effect = { HIDE = midnight }
+		}
+		if = {
+			limit = { var:spn_hide = flag:alpha }
+			spn_hide_record_lost_effect = { HIDE = alpha }
+		}
+		if = {
+			limit = { NOT = { scope:owner ?= { is_alive = yes } } }
+			destroy_artifact = this
+		}
+	}
+}
+
+# ==================================================================================================
+# .0009 -- (hidden) the hide decides (§5.8). The one place a hide rolls fit. From §5.5 case 3 and the fever (§10).
+# ==================================================================================================
+spn_hide.0009 = {
+	hidden = yes
+	trigger = {
+		is_alive = yes
+		spn_can_bear_hide_trigger = yes
+		spn_is_champion_trigger = no
+		OR = {
+			exists = scope:spn_offered_hide
+			exists = var:spn_hide_fever_hide
+		}
+	}
+	immediate = {
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_offered_hide }
+				exists = var:spn_hide_fever_hide
+			}
+			random_character_artifact = {
+				limit = { var:spn_hide ?= root.var:spn_hide_fever_hide }
+				save_scope_as = spn_offered_hide
+			}
+		}
+		if = {
+			limit = {
+				exists = scope:spn_offered_hide
+				scope:spn_offered_hide = {
+					artifact_owner ?= root
+					NOT = { spn_hide_refused_trigger = { WHO = root } }
+				}
+				OR = {
+					scope:spn_offered_hide = { is_equipped = yes }
+					has_character_flag = spn_hide_fever_bonus
+				}
+			}
+			spn_hide_save_flag_effect = { NAME = spn_fit_hide FROM = scope:spn_offered_hide.var:spn_hide }
+			if = {
+				limit = { spn_hide_accepts_wolf_trigger = yes }
+				trigger_event = spn_hide.0010
+			}
+			else = {
+				# Recorded here, where it decides: the button on It Will Not Have You does it too, but a window closed
+				# any other way must not leave the hide trying him again next week (3 Oct save: no flag after a refusal).
+				spn_hide_mark_refused_effect = { FROM = scope:spn_offered_hide.var:spn_hide YEARS = 5 }
+				trigger_event = spn_hide.0011
+			}
+		}
+		if = {
+			limit = { has_character_flag = spn_hide_takes_hold_pending }
+			remove_character_flag = spn_hide_takes_hold_pending
+		}
+		if = {
+			limit = { exists = var:spn_hide_fever_hide }
+			remove_variable = spn_hide_fever_hide
+		}
+	}
+}
+
+# ==================================================================================================
+# .0010 -- The Hide Takes Hold (§5.8). The approved sample is Silverback's.
+# ==================================================================================================
+spn_hide.0010 = {
+	type = character_event
+	title = spn_hide.0010.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:silverback }
+				desc = spn_hide.0010.desc_silverback
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:timber }
+				desc = spn_hide.0010.desc_timber
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:tundra }
+				desc = spn_hide.0010.desc_tundra
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:graybeard }
+				desc = spn_hide.0010.desc_graybeard
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:midnight }
+				desc = spn_hide.0010.desc_midnight
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:alpha }
+				desc = spn_hide.0010.desc_alpha
+			}
+			desc = spn_hide.0010.desc_silverback
+		}
+	}
+	theme = dread
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = shock }
+	artifact = {
+		target = scope:spn_offered_hide
+		position = lower_right_portrait
+		trigger = { exists = scope:spn_offered_hide }
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_offered_hide
+		scope:spn_offered_hide = { artifact_owner ?= root }
+		spn_is_champion_trigger = no
+	}
+	option = {
+		name = spn_hide.0010.a
+		custom_tooltip = spn_hide.0010.a.tt
+		spn_hide_make_champion_dispatch_effect = { ARTIFACT = scope:spn_offered_hide }
+	}
+}
+
+# ==================================================================================================
+# .0011 -- It Will Not Have You (§5.8). 2.37b: it says why. What the hide looks for, then which of three things went
+# wrong, read off scope:spn_fit_hide (saved by .0009 right before it fired this) with the same values the decision used.
+# ==================================================================================================
+spn_hide.0011 = {
+	type = character_event
+	title = spn_hide.0011.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:silverback }
+				desc = spn_hide.0011.desc_silverback
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:timber }
+				desc = spn_hide.0011.desc_timber
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:tundra }
+				desc = spn_hide.0011.desc_tundra
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:graybeard }
+				desc = spn_hide.0011.desc_graybeard
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:midnight }
+				desc = spn_hide.0011.desc_midnight
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:alpha }
+				desc = spn_hide.0011.desc_alpha
+			}
+			desc = spn_hide.0011.desc_silverback
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:silverback }
+				desc = spn_hide.0011.wants_silverback
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:timber }
+				desc = spn_hide.0011.wants_timber
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:tundra }
+				desc = spn_hide.0011.wants_tundra
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:graybeard }
+				desc = spn_hide.0011.wants_graybeard
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:midnight }
+				desc = spn_hide.0011.wants_midnight
+			}
+			triggered_desc = {
+				trigger = { scope:spn_offered_hide.var:spn_hide = flag:alpha }
+				desc = spn_hide.0011.wants_alpha
+			}
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = { spn_hide_liked_count_value = 0 }
+				desc = spn_hide.0011.why_none
+			}
+			triggered_desc = {
+				trigger = { spn_hide_liked_count_value <= spn_hide_hated_count_value }
+				desc = spn_hide.0011.why_outweighed
+			}
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					spn_hide_leader_ok_trigger = no
+					has_game_rule = spn_packs_off
+				}
+				desc = spn_hide.0011.why_leader_nopacks
+			}
+			triggered_desc = {
+				trigger = { spn_hide_leader_ok_trigger = no }
+				desc = spn_hide.0011.why_leader
+			}
+		}
+	}
+	theme = dread
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = shame }
+	artifact = {
+		target = scope:spn_offered_hide
+		position = lower_right_portrait
+		trigger = { exists = scope:spn_offered_hide }
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_offered_hide
+		scope:spn_offered_hide = { artifact_owner ?= root }
+	}
+	option = {
+		name = spn_hide.0011.a
+		custom_tooltip = spn_hide.0011.a.tt
+		scope:spn_offered_hide = {
+			if = {
+				limit = { is_equipped = yes }
+				unequip_artifact_from_owner = yes
+			}
+		}
+		spn_hide_mark_refused_effect = { FROM = scope:spn_offered_hide.var:spn_hide YEARS = 5 }
+		stress_and_fulfillment_impact = {
+			base = minor_stress_impact_gain
+		}
+	}
+}
+
+# ==================================================================================================
+# .0012 -- Two Wolves (§5.10). A player champion holding a second hide. Jack's choice: he keeps one.
+# ==================================================================================================
+spn_hide.0012 = {
+	type = character_event
+	title = spn_hide.0012.t
+	desc = spn_hide.0012.desc
+	theme = dread
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = stress }
+	artifact = {
+		target = scope:spn_offered_hide
+		position = lower_right_portrait
+		trigger = { exists = scope:spn_offered_hide }
+	}
+	artifact = {
+		target = scope:spn_kept_hide
+		position = lower_left_portrait
+		trigger = { exists = scope:spn_kept_hide }
+	}
+	trigger = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+		exists = scope:spn_offered_hide
+		scope:spn_offered_hide = { artifact_owner ?= root }
+		# 2.37e: ?= -- fired 3 days on, and he may have stopped being a champion since (no short-circuit in AND).
+		NOT = { root.var:spn_champion_of ?= scope:spn_offered_hide.var:spn_hide }
+		any_character_artifact = { var:spn_hide ?= root.var:spn_champion_of }
+	}
+	immediate = {
+		random_character_artifact = {
+			limit = { var:spn_hide ?= root.var:spn_champion_of }
+			save_scope_as = spn_kept_hide
+		}
+	}
+	# Keep the one he has.
+	option = {
+		name = spn_hide.0012.a
+		custom_tooltip = spn_hide.0012.a.tt
+		scope:spn_offered_hide = {
+			if = {
+				limit = { is_equipped = yes }
+				unequip_artifact_from_owner = yes
+			}
+		}
+		spn_hide_mark_refused_effect = { FROM = scope:spn_offered_hide.var:spn_hide YEARS = 5 }
+		scope:spn_kept_hide = {
+			if = {
+				limit = { is_equipped = no }
+				equip_artifact_to_owner_replace = yes
+			}
+		}
+		spn_hide_add_bond_effect = { VALUE = spn_hide_bond_two_wolves_value }
+		ai_chance = { base = 50 }
+	}
+	# Take the new one. First the old one's history is banked and its trait freed, then the new one is made his.
+	option = {
+		name = spn_hide.0012.b
+		custom_tooltip = spn_hide.0012.b.tt
+		# 2.37e: hidden. Built before the exit runs, its tooltip showed him still the old hide's champion.
+		hidden_effect = {
+			spn_hide_exit_effect = { REASON = flag:two_wolves }
+			scope:spn_kept_hide = {
+				if = {
+					limit = { is_equipped = yes }
+					unequip_artifact_from_owner = yes
+				}
+			}
+			spn_hide_mark_refused_effect = { FROM = scope:spn_kept_hide.var:spn_hide YEARS = 5 }
+			spn_hide_make_champion_dispatch_effect = { ARTIFACT = scope:spn_offered_hide }
+			spn_hide_add_bond_effect = { VALUE = spn_hide_bond_two_wolves_value }
+		}
+		ai_chance = { base = 50 }
+	}
+}
+
+# ==================================================================================================
+# .0013 -- It Knows You (§5.11). A worthy mortal holding a hide. The approved sample.
+# ==================================================================================================
+spn_hide.0013 = {
+	type = character_event
+	title = spn_hide.0013.t
+	desc = spn_hide.0013.desc
+	theme = dread
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = fear }
+	trigger = {
+		is_alive = yes
+		is_adult = yes
+		spn_is_hide_mortal_trigger = yes
+		exists = scope:spn_offered_hide
+		scope:spn_offered_hide = {
+			artifact_owner ?= root
+			is_equipped = no
+			NOT = { spn_hide_refused_trigger = { WHO = root } }
+		}
+	}
+	option = {
+		name = spn_hide.0013.a
+		custom_tooltip = spn_hide.0013.a.tt
+		add_character_flag = spn_hide_chosen_werewolf
+		trigger_event = spn_initiate.1001
+		trigger_event = { id = spn_hide.0015 days = 3 }
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 15 has_trait = ambitious }
+			modifier = {
+				add = 50
+				has_trait = zealous
+				rite ?= { rite_has_doctrine = spn_doctrine_lycanthropy_virtuous }
+			}
+			modifier = {
+				add = -80
+				has_trait = zealous
+				rite ?= { rite_has_doctrine = spn_doctrine_lycanthropy_crime }
+			}
+			modifier = { add = -30 has_trait = craven }
+			modifier = { add = -20 has_trait = content }
+		}
+	}
+	option = {
+		name = spn_hide.0013.b
+		custom_tooltip = spn_hide.0013.b.tt
+		spn_hide_mark_refused_effect = { FROM = scope:spn_offered_hide.var:spn_hide YEARS = 10 }
+		ai_chance = { base = 50 }
+	}
+}
+
+# ==================================================================================================
+# .0014 -- It Will Not Be Put Aside (§5.7). A week after the hide came off. The approved sample is Silverback's.
+# ==================================================================================================
+spn_hide.0014 = {
+	type = character_event
+	title = spn_hide.0014.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_silverback }
+				desc = spn_hide.0014.desc_silverback
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_timber }
+				desc = spn_hide.0014.desc_timber
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_tundra }
+				desc = spn_hide.0014.desc_tundra
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_graybeard }
+				desc = spn_hide.0014.desc_graybeard
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_midnight }
+				desc = spn_hide.0014.desc_midnight
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_alpha }
+				desc = spn_hide.0014.desc_alpha
+			}
+			desc = spn_hide.0014.desc_silverback
+		}
+	}
+	theme = dread
+	override_background = { reference = bedchamber }
+	left_portrait = { character = root animation = worry }
+	trigger = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+		exists = scope:spn_off_hide
+		scope:spn_off_hide = {
+			artifact_owner ?= root
+			is_equipped = no
+		}
+		root.var:spn_champion_of ?= scope:spn_off_hide.var:spn_hide # 2.37e: ?=, fired 7 days on
+	}
+	option = {
+		name = spn_hide.0014.a
+		custom_tooltip = spn_hide.0014.a.tt
+		scope:spn_off_hide = { equip_artifact_to_owner_replace = yes }
+		spn_hide_add_bond_effect = { VALUE = spn_hide_bond_off_small_value }
+		if = {
+			limit = { has_character_flag = spn_hide_off_since }
+			remove_character_flag = spn_hide_off_since
+		}
+		ai_chance = { base = 100 }
+	}
+	option = {
+		name = spn_hide.0014.b
+		custom_tooltip = spn_hide.0014.b.tt
+		scope:spn_off_hide = { equip_artifact_to_owner_replace = yes }
+		spn_hide_add_bond_effect = { VALUE = spn_hide_bond_off_big_value }
+		stress_and_fulfillment_impact = {
+			base = minor_stress_impact_loss
+		}
+		if = {
+			limit = { has_character_flag = spn_hide_off_since }
+			remove_character_flag = spn_hide_off_since
+		}
+		ai_chance = { base = 0 }
+	}
+}
+
+# .0015 -- (hidden) three days after "I heed the call.": if the werewolf door took him, the hide takes him (§5.11).
+spn_hide.0015 = {
+	hidden = yes
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_offered_hide
+		scope:spn_offered_hide = { artifact_owner ?= root }
+	}
+	immediate = {
+		if = {
+			limit = {
+				has_trait = supernatural_werewolf
+				spn_is_champion_trigger = no
+			}
+			scope:spn_offered_hide = { equip_artifact_to_owner_replace = yes }
+			spn_hide_make_champion_dispatch_effect = { ARTIFACT = scope:spn_offered_hide }
+		}
+		else = {
+			remove_character_flag = spn_hide_chosen_werewolf
+		}
+	}
+}
+
+# .0016 -- (hidden) an AI champion now holds a second hide (§5.10).
+spn_hide.0016 = {
+	hidden = yes
+	trigger = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+		exists = scope:spn_offered_hide
+		scope:spn_offered_hide = { artifact_owner ?= root }
+	}
+	immediate = {
+		spn_hide_ai_two_wolves_effect = { ARTIFACT = scope:spn_offered_hide }
+	}
+}
+
+# ==================================================================================================
+# THE VOICE OF THE HIDE -- the six beats (§6.2). Banked by spn_hide_check_beat_effect before they fire; the trigger
+# re-checks that he is still a champion (the gifts pay only a champion). The fitting choice is the first option.
+# ==================================================================================================
+spn_hide.0100 = {
+	type = character_event
+	title = spn_hide.0100.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_silverback }
+				desc = spn_hide.0100.desc_silverback
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_timber }
+				desc = spn_hide.0100.desc_timber
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_tundra }
+				desc = spn_hide.0100.desc_tundra
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_graybeard }
+				desc = spn_hide.0100.desc_graybeard
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_midnight }
+				desc = spn_hide.0100.desc_midnight
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_alpha }
+				desc = spn_hide.0100.desc_alpha
+			}
+			desc = spn_hide.0100.desc_silverback
+		}
+	}
+	theme = dread
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = thinking }
+	trigger = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+		exists = scope:spn_beat_hide
+		var:spn_champion_of ?= scope:spn_beat_hide
+	}
+	option = {
+		name = spn_hide.0100.a
+		custom_tooltip = spn_hide.0100.a.tt
+		spn_hide_add_bond_effect = { VALUE = spn_hide_bond_beat_value }
+		ai_chance = {
+			base = 80
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = just
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = honest
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = compassionate
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = strong
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = shy
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = paranoid
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = vengeful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = wrathful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = calm
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = deceitful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = ambitious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = patient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = stubborn
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = arrogant
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = strong
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = wrathful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = impatient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = sadistic
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = ambitious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = diligent
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = just
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = arrogant
+			}
+		}
+	}
+	option = {
+		name = spn_hide.0100.b
+		custom_tooltip = spn_hide.0100.b.tt
+		ai_chance = {
+			base = 20
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = craven
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = deceitful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = sadistic
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = gregarious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = trusting
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = honest
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = impatient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = craven
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = paranoid
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = calm
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = patient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = compassionate
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = lazy
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = content
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = craven
+			}
+		}
+	}
+}
+
+spn_hide.0101 = {
+	type = character_event
+	title = spn_hide.0101.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_silverback }
+				desc = spn_hide.0101.desc_silverback
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_timber }
+				desc = spn_hide.0101.desc_timber
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_tundra }
+				desc = spn_hide.0101.desc_tundra
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_graybeard }
+				desc = spn_hide.0101.desc_graybeard
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_midnight }
+				desc = spn_hide.0101.desc_midnight
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_alpha }
+				desc = spn_hide.0101.desc_alpha
+			}
+			desc = spn_hide.0101.desc_silverback
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_last_champ }
+				desc = spn_hide.0101.named
+			}
+			desc = spn_hide.0101.unnamed
+		}
+	}
+	theme = dread
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = thinking }
+	trigger = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+		exists = scope:spn_beat_hide
+		var:spn_champion_of ?= scope:spn_beat_hide
+	}
+	immediate = {
+		if = {
+			limit = { has_trait = spn_champion_silverback }
+			global_var:spn_hide_silverback_last ?= {
+				if = {
+					limit = { NOT = { this = root } }
+					save_scope_as = spn_last_champ
+				}
+			}
+		}
+		if = {
+			limit = { has_trait = spn_champion_timber }
+			global_var:spn_hide_timber_last ?= {
+				if = {
+					limit = { NOT = { this = root } }
+					save_scope_as = spn_last_champ
+				}
+			}
+		}
+		if = {
+			limit = { has_trait = spn_champion_tundra }
+			global_var:spn_hide_tundra_last ?= {
+				if = {
+					limit = { NOT = { this = root } }
+					save_scope_as = spn_last_champ
+				}
+			}
+		}
+		if = {
+			limit = { has_trait = spn_champion_graybeard }
+			global_var:spn_hide_graybeard_last ?= {
+				if = {
+					limit = { NOT = { this = root } }
+					save_scope_as = spn_last_champ
+				}
+			}
+		}
+		if = {
+			limit = { has_trait = spn_champion_midnight }
+			global_var:spn_hide_midnight_last ?= {
+				if = {
+					limit = { NOT = { this = root } }
+					save_scope_as = spn_last_champ
+				}
+			}
+		}
+		if = {
+			limit = { has_trait = spn_champion_alpha }
+			global_var:spn_hide_alpha_last ?= {
+				if = {
+					limit = { NOT = { this = root } }
+					save_scope_as = spn_last_champ
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_hide.0101.a
+		custom_tooltip = spn_hide.0101.a.tt
+		spn_hide_add_bond_effect = { VALUE = spn_hide_bond_beat_value }
+		ai_chance = {
+			base = 80
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = just
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = honest
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = compassionate
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = strong
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = shy
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = paranoid
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = vengeful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = wrathful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = calm
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = deceitful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = ambitious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = patient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = stubborn
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = arrogant
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = strong
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = wrathful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = impatient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = sadistic
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = ambitious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = diligent
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = just
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = arrogant
+			}
+		}
+	}
+	option = {
+		name = spn_hide.0101.b
+		custom_tooltip = spn_hide.0101.b.tt
+		ai_chance = {
+			base = 20
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = craven
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = deceitful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = sadistic
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = gregarious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = trusting
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = honest
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = impatient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = craven
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = paranoid
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = calm
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = patient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = compassionate
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = lazy
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = content
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = craven
+			}
+		}
+	}
+}
+
+spn_hide.0102 = {
+	type = character_event
+	title = spn_hide.0102.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_silverback }
+				desc = spn_hide.0102.desc_silverback
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_timber }
+				desc = spn_hide.0102.desc_timber
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_tundra }
+				desc = spn_hide.0102.desc_tundra
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_graybeard }
+				desc = spn_hide.0102.desc_graybeard
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_midnight }
+				desc = spn_hide.0102.desc_midnight
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_alpha }
+				desc = spn_hide.0102.desc_alpha
+			}
+			desc = spn_hide.0102.desc_silverback
+		}
+	}
+	theme = dread
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = thinking }
+	trigger = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+		exists = scope:spn_beat_hide
+		var:spn_champion_of ?= scope:spn_beat_hide
+	}
+	option = {
+		name = spn_hide.0102.a
+		custom_tooltip = spn_hide.0102.a.tt
+		spn_hide_add_bond_effect = { VALUE = spn_hide_bond_beat_value }
+		ai_chance = {
+			base = 80
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = just
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = honest
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = compassionate
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = strong
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = shy
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = paranoid
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = vengeful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = wrathful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = calm
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = deceitful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = ambitious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = patient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = stubborn
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = arrogant
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = strong
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = wrathful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = impatient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = sadistic
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = ambitious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = diligent
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = just
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = arrogant
+			}
+		}
+	}
+	option = {
+		name = spn_hide.0102.b
+		custom_tooltip = spn_hide.0102.b.tt
+		ai_chance = {
+			base = 20
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = craven
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = deceitful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = sadistic
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = gregarious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = trusting
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = honest
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = impatient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = craven
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = paranoid
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = calm
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = patient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = compassionate
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = lazy
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = content
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = craven
+			}
+		}
+	}
+}
+
+spn_hide.0103 = {
+	type = character_event
+	title = spn_hide.0103.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_silverback }
+				desc = spn_hide.0103.desc_silverback
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_timber }
+				desc = spn_hide.0103.desc_timber
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_tundra }
+				desc = spn_hide.0103.desc_tundra
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_graybeard }
+				desc = spn_hide.0103.desc_graybeard
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_midnight }
+				desc = spn_hide.0103.desc_midnight
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_alpha }
+				desc = spn_hide.0103.desc_alpha
+			}
+			desc = spn_hide.0103.desc_silverback
+		}
+	}
+	theme = dread
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = thinking }
+	trigger = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+		exists = scope:spn_beat_hide
+		var:spn_champion_of ?= scope:spn_beat_hide
+	}
+	option = {
+		name = spn_hide.0103.a
+		custom_tooltip = spn_hide.0103.a.tt
+		spn_hide_add_bond_effect = { VALUE = spn_hide_bond_beat_value }
+		spn_hide_gift_effect = { FLAG = spn_hide_gift_first }
+		ai_chance = {
+			base = 80
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = just
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = honest
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = compassionate
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = strong
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = shy
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = paranoid
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = vengeful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = wrathful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = calm
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = deceitful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = ambitious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = patient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = stubborn
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = arrogant
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = strong
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = wrathful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = impatient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = sadistic
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = ambitious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = diligent
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = just
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = arrogant
+			}
+		}
+	}
+	option = {
+		name = spn_hide.0103.b
+		custom_tooltip = spn_hide.0103.b.tt
+		spn_hide_gift_effect = { FLAG = spn_hide_gift_first }
+		ai_chance = {
+			base = 20
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = craven
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = deceitful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = sadistic
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = gregarious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = trusting
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = honest
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = impatient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = craven
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = paranoid
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = calm
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = patient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = compassionate
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = lazy
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = content
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = craven
+			}
+		}
+	}
+}
+
+spn_hide.0104 = {
+	type = character_event
+	title = spn_hide.0104.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_silverback }
+				desc = spn_hide.0104.desc_silverback
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_timber }
+				desc = spn_hide.0104.desc_timber
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_tundra }
+				desc = spn_hide.0104.desc_tundra
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_graybeard }
+				desc = spn_hide.0104.desc_graybeard
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_midnight }
+				desc = spn_hide.0104.desc_midnight
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_alpha }
+				desc = spn_hide.0104.desc_alpha
+			}
+			desc = spn_hide.0104.desc_silverback
+		}
+	}
+	theme = dread
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = thinking }
+	trigger = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+		exists = scope:spn_beat_hide
+		var:spn_champion_of ?= scope:spn_beat_hide
+	}
+	option = {
+		name = spn_hide.0104.a
+		custom_tooltip = spn_hide.0104.a.tt
+		spn_hide_add_bond_effect = { VALUE = spn_hide_bond_beat_value }
+		if = {
+			limit = { has_trait = spn_champion_silverback }
+			if = {
+				limit = { NOT = { is_target_in_global_variable_list = { name = spn_hide_silverback_marks target = root.culture } } }
+				add_to_global_variable_list = { name = spn_hide_silverback_marks target = root.culture }
+			}
+			set_global_variable = {
+				name = spn_hide_silverback_legacy
+				value = {
+					value = spn_hide_bond_value
+					divide = 2
+				}
+			}
+			add_character_flag = spn_hide_left_mark_silverback
+		}
+		else_if = {
+			limit = { has_trait = spn_champion_timber }
+			if = {
+				limit = { NOT = { is_target_in_global_variable_list = { name = spn_hide_timber_marks target = root.culture } } }
+				add_to_global_variable_list = { name = spn_hide_timber_marks target = root.culture }
+			}
+			set_global_variable = {
+				name = spn_hide_timber_legacy
+				value = {
+					value = spn_hide_bond_value
+					divide = 2
+				}
+			}
+			add_character_flag = spn_hide_left_mark_timber
+		}
+		else_if = {
+			limit = { has_trait = spn_champion_tundra }
+			if = {
+				limit = { NOT = { is_target_in_global_variable_list = { name = spn_hide_tundra_marks target = root.culture } } }
+				add_to_global_variable_list = { name = spn_hide_tundra_marks target = root.culture }
+			}
+			set_global_variable = {
+				name = spn_hide_tundra_legacy
+				value = {
+					value = spn_hide_bond_value
+					divide = 2
+				}
+			}
+			add_character_flag = spn_hide_left_mark_tundra
+		}
+		else_if = {
+			limit = { has_trait = spn_champion_graybeard }
+			if = {
+				limit = { NOT = { is_target_in_global_variable_list = { name = spn_hide_graybeard_marks target = root.culture } } }
+				add_to_global_variable_list = { name = spn_hide_graybeard_marks target = root.culture }
+			}
+			set_global_variable = {
+				name = spn_hide_graybeard_legacy
+				value = {
+					value = spn_hide_bond_value
+					divide = 2
+				}
+			}
+			add_character_flag = spn_hide_left_mark_graybeard
+		}
+		else_if = {
+			limit = { has_trait = spn_champion_midnight }
+			if = {
+				limit = { NOT = { is_target_in_global_variable_list = { name = spn_hide_midnight_marks target = root.culture } } }
+				add_to_global_variable_list = { name = spn_hide_midnight_marks target = root.culture }
+			}
+			set_global_variable = {
+				name = spn_hide_midnight_legacy
+				value = {
+					value = spn_hide_bond_value
+					divide = 2
+				}
+			}
+			add_character_flag = spn_hide_left_mark_midnight
+		}
+		else_if = {
+			limit = { has_trait = spn_champion_alpha }
+			if = {
+				limit = { NOT = { is_target_in_global_variable_list = { name = spn_hide_alpha_marks target = root.culture } } }
+				add_to_global_variable_list = { name = spn_hide_alpha_marks target = root.culture }
+			}
+			set_global_variable = {
+				name = spn_hide_alpha_legacy
+				value = {
+					value = spn_hide_bond_value
+					divide = 2
+				}
+			}
+			add_character_flag = spn_hide_left_mark_alpha
+		}
+		ai_chance = {
+			base = 80
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = just
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = honest
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = compassionate
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = strong
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = shy
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = paranoid
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = vengeful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = wrathful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = calm
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = deceitful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = ambitious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = patient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = stubborn
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = arrogant
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = strong
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = wrathful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = impatient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = sadistic
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = ambitious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = diligent
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = just
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = arrogant
+			}
+		}
+	}
+	option = {
+		name = spn_hide.0104.b
+		custom_tooltip = spn_hide.0104.b.tt
+		ai_chance = {
+			base = 20
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = craven
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = deceitful
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_silverback
+				has_trait = sadistic
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = gregarious
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_timber
+				has_trait = trusting
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = honest
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_tundra
+				has_trait = impatient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = craven
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_graybeard
+				has_trait = paranoid
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = calm
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = patient
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = compassionate
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = lazy
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = content
+			}
+			modifier = {
+				add = 20
+				has_trait = spn_champion_alpha
+				has_trait = craven
+			}
+		}
+	}
+}
+
+spn_hide.0105 = {
+	type = character_event
+	title = spn_hide.0105.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_silverback }
+				desc = spn_hide.0105.desc_silverback
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_timber }
+				desc = spn_hide.0105.desc_timber
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_tundra }
+				desc = spn_hide.0105.desc_tundra
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_graybeard }
+				desc = spn_hide.0105.desc_graybeard
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_midnight }
+				desc = spn_hide.0105.desc_midnight
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_alpha }
+				desc = spn_hide.0105.desc_alpha
+			}
+			desc = spn_hide.0105.desc_silverback
+		}
+	}
+	theme = dread
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = personality_bold }
+	trigger = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+		exists = scope:spn_beat_hide
+		var:spn_champion_of ?= scope:spn_beat_hide
+	}
+	option = {
+		name = spn_hide.0105.a
+		custom_tooltip = spn_hide.0105.a.tt
+		spn_hide_gift_effect = { FLAG = spn_hide_gift_second }
+	}
+}
+
+# ==================================================================================================
+# .0200 -- The Wolf and the War (§12.2). Players only; the AI decides by the decisions' weights.
+# ==================================================================================================
+spn_hide.0200 = {
+	type = character_event
+	title = spn_hide.0200.t
+	desc = spn_hide.0200.desc
+	theme = war
+	left_portrait = { character = root animation = personality_bold }
+	trigger = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+	}
+	option = {
+		name = spn_hide.0200.a
+		custom_tooltip = spn_hide.0200.a.tt
+		if = {
+			limit = { NOT = { has_character_flag = spn_hide_wolf_runs } }
+			add_character_flag = spn_hide_wolf_runs
+		}
+	}
+	option = {
+		name = spn_hide.0200.b
+		custom_tooltip = spn_hide.0200.b.tt
+		if = {
+			limit = { has_character_flag = spn_hide_wolf_runs }
+			remove_character_flag = spn_hide_wolf_runs
+		}
+	}
+	option = {
+		name = spn_hide.0200.c
+		custom_tooltip = spn_hide.0200.c.tt
+		add_character_flag = spn_hide_war_dont_ask
+	}
+}
+
+# ==================================================================================================
+# .0201 -- What the Men Saw (§12.5). An ordinary player who was there. Written as someone who does not know what he
+# saw. The approved sample is the three-kill text; the count and whose knights they were are read, not assumed.
+# ==================================================================================================
+spn_hide.0201 = {
+	type = character_event
+	title = spn_hide.0201.t
+	# Three parts, so the approved text is exactly what a man sees after a clash and three kills: one beast or two;
+	# how many knights did not come back, and whose; the marshal.
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_men_saw_two }
+				desc = spn_hide.0201.open_two
+			}
+			desc = spn_hide.0201.open_one
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					OR = {
+						NOT = { exists = scope:spn_men_saw_kills }
+						scope:spn_men_saw_kills < 1
+						NOT = { exists = scope:spn_men_saw_victims }
+					}
+				}
+				desc = spn_hide.0201.kills_none
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_men_saw_kills = 1
+					has_character_flag = spn_hide_men_saw_ours
+				}
+				desc = spn_hide.0201.ours_1
+			}
+			triggered_desc = {
+				trigger = { scope:spn_men_saw_kills = 1 }
+				desc = spn_hide.0201.theirs_1
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_men_saw_kills = 2
+					has_character_flag = spn_hide_men_saw_ours
+				}
+				desc = spn_hide.0201.ours_2
+			}
+			triggered_desc = {
+				trigger = { scope:spn_men_saw_kills = 2 }
+				desc = spn_hide.0201.theirs_2
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_men_saw_kills = 3
+					has_character_flag = spn_hide_men_saw_ours
+				}
+				desc = spn_hide.0201.ours_3
+			}
+			triggered_desc = {
+				trigger = { scope:spn_men_saw_kills = 3 }
+				desc = spn_hide.0201.theirs_3
+			}
+			triggered_desc = {
+				trigger = { has_character_flag = spn_hide_men_saw_ours }
+				desc = spn_hide.0201.ours_many
+			}
+			desc = spn_hide.0201.theirs_many
+		}
+		desc = spn_hide.0201.close
+	}
+	theme = battle
+	override_background = { reference = battlefield }
+	left_portrait = { character = root animation = worry }
+	option = {
+		name = spn_hide.0201.a
+		if = {
+			limit = { has_character_flag = spn_hide_men_saw_ours }
+			remove_character_flag = spn_hide_men_saw_ours
+		}
+	}
+}
+
+# .0202 -- Two Wolves on One Field (§12.4). To a player champion who met another on the field.
+spn_hide.0202 = {
+	type = character_event
+	title = spn_hide.0202.t
+	desc = spn_hide.0202.desc
+	theme = battle
+	override_background = { reference = battlefield }
+	left_portrait = { character = root animation = rage }
+	right_portrait = { character = scope:spn_field_foe animation = anger }
+	trigger = {
+		is_alive = yes
+	}
+	option = {
+		name = spn_hide.0202.a
+	}
+}
+
+# .0221 -- Something Followed the Ringing (§18). To the caster a champion went after.
+spn_hide.0221 = {
+	type = character_event
+	title = spn_hide.0221.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_clash_winner ?= root }
+				desc = spn_hide.0221.desc_won
+			}
+			desc = spn_hide.0221.desc_lost
+		}
+	}
+	theme = dread
+	override_background = { reference = alley_night }
+	left_portrait = { character = root animation = fear }
+	right_portrait = { character = scope:spn_ring_champion animation = menacing }
+	trigger = {
+		is_alive = yes
+	}
+	option = {
+		name = spn_hide.0221.a
+	}
+}
+
+# ==================================================================================================
+# THE WHITE WOLF (§9.5)
+# ==================================================================================================
+# .0300 -- Something in Your Woods. A player who can hunt: vanilla's white-animal chase begins.
+spn_hide.0300 = {
+	type = character_event
+	title = spn_hide.0300.t
+	desc = spn_hide.0300.desc
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = interested }
+	option = {
+		name = spn_hide.0300.a
+		custom_tooltip = spn_hide.0300.a.tt
+	}
+}
+
+# .0301 -- (hidden) the white wolf's outcome, three days after the hunt's outcome on_action. It may read hunt_success
+# here, never in a trigger: it is set by an outcome event from the same on_action that scheduled this.
+spn_hide.0301 = {
+	hidden = yes
+	trigger = {
+		is_alive = yes
+		exists = var:spn_hide_wolf_hide
+	}
+	immediate = {
+		if = {
+			# 2.37e: a substitute animal (vanilla hunt.4019, var:legendary_proxy) is vanilla's plain Success: its white
+			# animal lives on (hunt.txt:5151-5157, 5222). So the hide is only paid on the Great Success, the real kill.
+			limit = {
+				scope:activity ?= {
+					var:hunt_success ?= flag:yes
+					NOT = { exists = var:legendary_proxy }
+				}
+			}
+			trigger_event = spn_hide.0305
+		}
+		else = {
+			trigger_event = spn_hide.0302
+		}
+		# spn_hide_outcome_pending stays until the answer: the yearly net would otherwise see a chase with no story and
+		# no flag between this and The Wolf That Was More Than a Wolf, and call it lapsed. A year at most (2.37e: it was 10
+		# days, shorter than an unanswered window can stay open; .0302 and .0305 remove it).
+	}
+}
+
+# .0302 -- It Is Still Out There. Vanilla moves the sighting on as it always does; the hide waits for him.
+spn_hide.0302 = {
+	type = character_event
+	title = spn_hide.0302.t
+	desc = spn_hide.0302.desc
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = disappointed }
+	immediate = {
+		if = {
+			limit = { has_character_flag = spn_hide_outcome_pending }
+			remove_character_flag = spn_hide_outcome_pending
+		}
+	}
+	option = {
+		name = spn_hide.0302.a
+	}
+}
+
+# .0303 -- It Came Out of the Trees. An AI, a landless wolf, or a player who cannot hunt: the hide is simply his.
+spn_hide.0303 = {
+	type = character_event
+	title = spn_hide.0303.t
+	desc = spn_hide.0303.desc
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = shock }
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_offered_hide
+		scope:spn_offered_hide = { artifact_owner ?= root }
+	}
+	option = {
+		name = spn_hide.0303.a
+		custom_tooltip = spn_hide.0303.a.tt
+		if = {
+			limit = { spn_can_bear_hide_trigger = yes }
+			scope:spn_offered_hide = { equip_artifact_to_owner_replace = yes }
+		}
+		ai_chance = { base = 100 }
+	}
+	option = {
+		name = spn_hide.0303.b
+		ai_chance = { base = 0 }
+	}
+}
+
+# .0304 -- A Scent You Know. A werewolf on an ordinary hunt, while a hide is lost.
+spn_hide.0304 = {
+	type = character_event
+	title = spn_hide.0304.t
+	desc = spn_hide.0304.desc
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = interested }
+	trigger = {
+		is_alive = yes
+		NOT = { has_character_flag = spn_hide_scent_seen }
+	}
+	immediate = {
+		add_character_flag = { flag = spn_hide_scent_seen years = 3 }
+	}
+	option = {
+		name = spn_hide.0304.a
+	}
+}
+
+# .0305 -- The Wolf That Was More Than a Wolf. The hide has already chosen him: no roll (§9.5). Vanilla gives its own
+# legendary trophy beside it: the trophy is the wolf, the hide is what it was.
+spn_hide.0305 = {
+	type = character_event
+	title = spn_hide.0305.t
+	desc = spn_hide.0305.desc
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = stunned }
+	trigger = {
+		is_alive = yes
+		exists = var:spn_hide_wolf_hide
+	}
+	option = {
+		name = spn_hide.0305.a
+		custom_tooltip = spn_hide.0305.a.tt
+		# 2.37e: hidden. The hide this makes does not exist while the tooltip is built, and every line after the create
+		# read it unset, every frame the window was open (the Found a Pack class).
+		hidden_effect = {
+			save_scope_as = spn_ww_winner
+			if = {
+				limit = { var:spn_hide_wolf_hide ?= flag:silverback }
+				if = {
+					limit = { exists = global_var:spn_hide_silverback_reserved }
+					remove_global_variable = spn_hide_silverback_reserved
+				}
+				spn_hide_create_effect = { HIDE = silverback OWNER = scope:spn_ww_winner }
+			}
+			if = {
+				limit = { var:spn_hide_wolf_hide ?= flag:timber }
+				if = {
+					limit = { exists = global_var:spn_hide_timber_reserved }
+					remove_global_variable = spn_hide_timber_reserved
+				}
+				spn_hide_create_effect = { HIDE = timber OWNER = scope:spn_ww_winner }
+			}
+			if = {
+				limit = { var:spn_hide_wolf_hide ?= flag:tundra }
+				if = {
+					limit = { exists = global_var:spn_hide_tundra_reserved }
+					remove_global_variable = spn_hide_tundra_reserved
+				}
+				spn_hide_create_effect = { HIDE = tundra OWNER = scope:spn_ww_winner }
+			}
+			if = {
+				limit = { var:spn_hide_wolf_hide ?= flag:graybeard }
+				if = {
+					limit = { exists = global_var:spn_hide_graybeard_reserved }
+					remove_global_variable = spn_hide_graybeard_reserved
+				}
+				spn_hide_create_effect = { HIDE = graybeard OWNER = scope:spn_ww_winner }
+			}
+			if = {
+				limit = { var:spn_hide_wolf_hide ?= flag:midnight }
+				if = {
+					limit = { exists = global_var:spn_hide_midnight_reserved }
+					remove_global_variable = spn_hide_midnight_reserved
+				}
+				spn_hide_create_effect = { HIDE = midnight OWNER = scope:spn_ww_winner }
+			}
+			if = {
+				limit = { var:spn_hide_wolf_hide ?= flag:alpha }
+				if = {
+					limit = { exists = global_var:spn_hide_alpha_reserved }
+					remove_global_variable = spn_hide_alpha_reserved
+				}
+				spn_hide_create_effect = { HIDE = alpha OWNER = scope:spn_ww_winner }
+			}
+			if = {
+				limit = { has_variable = spn_hide_wolf_hide }
+				remove_variable = spn_hide_wolf_hide
+			}
+			if = {
+				limit = { has_character_flag = spn_hide_outcome_pending }
+				remove_character_flag = spn_hide_outcome_pending
+			}
+			if = {
+				limit = {
+					exists = scope:spn_new_hide
+					spn_can_bear_hide_trigger = yes
+					spn_is_champion_trigger = no
+				}
+				scope:spn_new_hide = { equip_artifact_to_owner_replace = yes }
+				spn_hide_make_champion_dispatch_effect = { ARTIFACT = scope:spn_new_hide }
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# .0310 -- Word Travels (§9.1). A hide has gone into a shrine; every player wolf hears.
+# ==================================================================================================
+spn_hide.0310 = {
+	type = character_event
+	title = spn_hide.0310.t
+	desc = spn_hide.0310.desc
+	theme = faith
+	override_background = { reference = temple }
+	left_portrait = { character = root animation = interested }
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_wt_hide
+		exists = scope:spn_shrine_county
+	}
+	immediate = {
+		# 2.37f: the county's own faith names its clergy in the text (vanilla's HouseOfWorship / PriestNeuterPlural).
+		scope:spn_shrine_county = { faith = { save_scope_as = spn_shrine_faith } }
+	}
+	option = {
+		name = spn_hide.0310.a
+	}
+}
+
+# ==================================================================================================
+# .0320 -- What Came Out of Him (§11.4). The hunter who killed a champion holds a warm hide beside a body that is a man
+# again. Two days after the death.
+# ==================================================================================================
+spn_hide.0320 = {
+	type = character_event
+	title = spn_hide.0320.t
+	desc = spn_hide.0320.desc
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = shock }
+	artifact = {
+		target = scope:spn_exit_hide
+		position = lower_right_portrait
+		trigger = { exists = scope:spn_exit_hide }
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_exit_hide
+		scope:spn_exit_hide = { artifact_owner ?= root }
+	}
+	immediate = {
+		scope:spn_exit_hide = { save_scope_as = spn_trophy }
+		liege ?= { save_scope_as = spn_trophy_liege }
+		# The Church: the nearest holy site of his faith with a free relic slot (hidden when none qualifies).
+		faith = {
+			ordered_holy_site = {
+				limit = {
+					holy_site_artifact_count < 3
+					holy_site_county = {
+						exists = holder
+						holder = { spn_is_wolf_trigger = no }
+					}
+				}
+				order_by = {
+					holy_site_county = {
+						title_province = { value = "squared_distance(root.location)" }
+					}
+					multiply = -1
+				}
+				save_scope_as = spn_trophy_site
+			}
+		}
+	}
+	option = {
+		name = spn_hide.0320.a
+		custom_tooltip = spn_hide.0320.a.tt
+		add_prestige = medium_prestige_gain
+		if = {
+			limit = { NOT = { any_memory = { has_memory_type = spn_hide_trophy_memory } } }
+			create_character_memory = { type = spn_hide_trophy_memory }
+		}
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = greedy }
+			modifier = { add = 20 has_trait = arrogant }
+		}
+	}
+	option = {
+		name = spn_hide.0320.b
+		trigger = { exists = scope:spn_trophy_liege }
+		scope:spn_trophy = {
+			set_owner = {
+				target = scope:spn_trophy_liege
+				history = {
+					type = given
+					actor = root
+					recipient = scope:spn_trophy_liege
+				}
+			}
+		}
+		scope:spn_trophy_liege = { add_opinion = { target = root modifier = grateful_opinion opinion = 15 } }
+		ai_chance = {
+			base = 20
+			modifier = { add = 30 has_trait = loyal }
+		}
+	}
+	option = {
+		name = spn_hide.0320.c
+		trigger = { exists = scope:spn_trophy_site }
+		custom_tooltip = spn_hide.0320.c.tt
+		add_piety = medium_piety_gain
+		scope:spn_trophy_site.holy_site_county.holder = { save_scope_as = spn_trophy_keeper }
+		scope:spn_trophy = {
+			set_owner = {
+				target = scope:spn_trophy_keeper
+				history = {
+					type = given
+					actor = root
+					recipient = scope:spn_trophy_keeper
+				}
+			}
+			set_holy_site_owner = {
+				target = scope:spn_trophy_site
+				generate_history = no
+			}
+			equip_artifact_to_owner = yes
+			scope:spn_trophy_site.holy_site_county = { save_scope_as = spn_trophy_county }
+			spn_hide_shrine_entered_effect = { COUNTY = scope:spn_trophy_county FAITH = root.faith }
+		}
+		ai_chance = {
+			base = 20
+			modifier = {
+				add = 40
+				rite ?= { rite_has_doctrine = spn_doctrine_lycanthropy_crime }
+			}
+			modifier = { add = 20 has_trait = zealous }
+		}
+	}
+	option = {
+		name = spn_hide.0320.d
+		custom_tooltip = spn_hide.0320.d.tt
+		stress_and_fulfillment_impact = {
+			base = minor_stress_impact_gain
+		}
+		ai_chance = { base = 5 }
+	}
+}
+
+# ==================================================================================================
+# .0330 / .0331 -- The Unbinding (§8.1). The champion, and the caster.
+# ==================================================================================================
+spn_hide.0330 = {
+	type = character_event
+	title = spn_hide.0330.t
+	desc = spn_hide.0330.desc
+	theme = witchcraft
+	left_portrait = { character = root animation = pain }
+	right_portrait = { character = scope:spn_unbinder animation = personality_rational }
+	trigger = {
+		is_alive = yes
+	}
+	option = {
+		name = spn_hide.0330.a
+	}
+}
+
+spn_hide.0331 = {
+	type = character_event
+	title = spn_hide.0331.t
+	desc = spn_hide.0331.desc
+	theme = witchcraft
+	left_portrait = { character = root animation = personality_rational }
+	right_portrait = { character = scope:spn_unbound animation = pain }
+	trigger = {
+		is_alive = yes
+	}
+	option = {
+		name = spn_hide.0331.a
+	}
+}
+
+# ==================================================================================================
+# .0350 -- A Hide in the Shrine (§9.2). The wolf who took the county, a day after the siege: if vanilla's own siege
+# theft took or broke it first, this does not fire.
+# ==================================================================================================
+spn_hide.0350 = {
+	type = character_event
+	title = spn_hide.0350.t
+	desc = spn_hide.0350.desc
+	theme = war
+	override_background = { reference = temple }
+	left_portrait = { character = root animation = personality_bold }
+	artifact = {
+		target = scope:spn_siege_hide
+		position = lower_right_portrait
+		trigger = { exists = scope:spn_siege_hide }
+	}
+	trigger = {
+		is_alive = yes
+		spn_is_wolf_trigger = yes
+		exists = scope:spn_siege_hide
+		exists = scope:spn_siege_county
+		scope:spn_siege_hide = { var:spn_hide_shrine_county ?= scope:spn_siege_county }
+	}
+	immediate = {
+		scope:spn_siege_county = { faith = { save_scope_as = spn_siege_faith } } # 2.37f: for the text
+	}
+	option = {
+		name = spn_hide.0350.a
+		custom_tooltip = spn_hide.0350.a.tt
+		# 2.37e: an enshrined hide has no character owner (zz_spn_hide_templates.txt), so the actor is the county's holder,
+		# as vanilla's own siege theft names the barony's (00_ep1_artifact_effects.txt, siege_events.txt:1288).
+		scope:spn_siege_county.holder ?= { save_scope_as = spn_siege_keeper }
+		scope:spn_siege_hide = {
+			if = {
+				limit = { exists = scope:spn_siege_keeper }
+				set_owner = {
+					target = root
+					history = {
+						type = taken_in_siege
+						actor = scope:spn_siege_keeper
+						recipient = root
+						location = scope:spn_siege_county.title_province
+					}
+				}
+			}
+			else = {
+				set_owner = {
+					target = root
+					history = {
+						type = taken_in_siege
+						recipient = root
+						location = scope:spn_siege_county.title_province
+					}
+				}
+			}
+			spn_hide_shrine_left_effect = yes
+		}
+		spn_hide_start_check_effect = yes
+		ai_chance = {
+			base = 70
+			modifier = {
+				add = 20
+				spn_can_bear_hide_trigger = yes
+				spn_is_champion_trigger = no
+			}
+			# 2.37e: the AI's spn_hide_wants_<hide> (spn_hide_learn_where_effect), which only the decision read before.
+			modifier = {
+				add = 40
+				OR = {
+					AND = {
+						scope:spn_siege_hide.var:spn_hide = flag:silverback
+						exists = var:spn_hide_wants_silverback
+					}
+					AND = {
+						scope:spn_siege_hide.var:spn_hide = flag:timber
+						exists = var:spn_hide_wants_timber
+					}
+					AND = {
+						scope:spn_siege_hide.var:spn_hide = flag:tundra
+						exists = var:spn_hide_wants_tundra
+					}
+					AND = {
+						scope:spn_siege_hide.var:spn_hide = flag:graybeard
+						exists = var:spn_hide_wants_graybeard
+					}
+					AND = {
+						scope:spn_siege_hide.var:spn_hide = flag:midnight
+						exists = var:spn_hide_wants_midnight
+					}
+					AND = {
+						scope:spn_siege_hide.var:spn_hide = flag:alpha
+						exists = var:spn_hide_wants_alpha
+					}
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_hide.0350.b
+		ai_chance = {
+			base = 30
+			modifier = {
+				add = 30
+				has_trait = zealous
+				rite ?= { rite_has_doctrine = spn_doctrine_lycanthropy_crime }
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# .0360 -- The Relic at [Site] (§9.2). A wolf on pilgrimage stands in front of it.
+# ==================================================================================================
+spn_hide.0360 = {
+	type = character_event
+	title = spn_hide.0360.t
+	desc = spn_hide.0360.desc
+	theme = pilgrimage_destination
+	left_portrait = { character = root animation = scheme }
+	artifact = {
+		target = scope:spn_pilgrim_hide
+		position = lower_right_portrait
+		trigger = { exists = scope:spn_pilgrim_hide }
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_pilgrim_hide
+		exists = scope:spn_pilgrim_county
+		scope:spn_pilgrim_hide = { var:spn_hide_shrine_county ?= scope:spn_pilgrim_county }
+	}
+	immediate = {
+		scope:spn_pilgrim_county = { faith = { save_scope_as = spn_pilgrim_faith } } # 2.37f: for the text
+	}
+	option = {
+		name = spn_hide.0360.a
+		duel = {
+			skill = intrigue
+			value = 25
+			50 = {
+				desc = spn_hide.0360.a.success
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 3.5
+					min = -45
+				}
+				# 2.37e: the shrine's holder is the one robbed (an enshrined hide has no character owner).
+				scope:spn_pilgrim_county.holder ?= { save_scope_as = spn_pilgrim_keeper }
+				scope:spn_pilgrim_hide = {
+					if = {
+						limit = { exists = scope:spn_pilgrim_keeper }
+						set_owner = {
+							target = root
+							history = {
+								type = stolen
+								actor = scope:spn_pilgrim_keeper
+								recipient = root
+							}
+						}
+					}
+					else = {
+						set_owner = {
+							target = root
+							history = {
+								type = stolen
+								recipient = root
+							}
+						}
+					}
+					spn_hide_shrine_left_effect = yes
+				}
+				spn_hide_start_check_effect = yes
+			}
+			50 = {
+				desc = spn_hide.0360.a.failure
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -3.5
+					min = -45
+				}
+				add_character_flag = { flag = spn_hide_shrine_thief years = 5 }
+				scope:spn_pilgrim_county.holder ?= { add_opinion = { target = root modifier = spn_shrine_thief_opinion } }
+			}
+		}
+		ai_chance = {
+			base = 40
+			modifier = {
+				add = 30
+				spn_can_bear_hide_trigger = yes
+				spn_is_champion_trigger = no
+			}
+			modifier = { add = 20 has_trait = deceitful }
+			modifier = { add = -30 has_trait = honest }
+			# 2.37e: the AI's spn_hide_wants_<hide> (spn_hide_learn_where_effect), which only the decision read before.
+			modifier = {
+				add = 40
+				OR = {
+					AND = {
+						scope:spn_pilgrim_hide.var:spn_hide = flag:silverback
+						exists = var:spn_hide_wants_silverback
+					}
+					AND = {
+						scope:spn_pilgrim_hide.var:spn_hide = flag:timber
+						exists = var:spn_hide_wants_timber
+					}
+					AND = {
+						scope:spn_pilgrim_hide.var:spn_hide = flag:tundra
+						exists = var:spn_hide_wants_tundra
+					}
+					AND = {
+						scope:spn_pilgrim_hide.var:spn_hide = flag:graybeard
+						exists = var:spn_hide_wants_graybeard
+					}
+					AND = {
+						scope:spn_pilgrim_hide.var:spn_hide = flag:midnight
+						exists = var:spn_hide_wants_midnight
+					}
+					AND = {
+						scope:spn_pilgrim_hide.var:spn_hide = flag:alpha
+						exists = var:spn_hide_wants_alpha
+					}
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_hide.0360.b
+		ai_chance = { base = 50 }
+	}
+}
+
+# ==================================================================================================
+# .0370 -- [Champion] Answered for You (§6.5). Silverback's champion, when the one he guards called on him.
+# ==================================================================================================
+spn_hide.0370 = {
+	type = character_event
+	title = spn_hide.0370.t
+	desc = spn_hide.0370.desc
+	theme = hunting
+	left_portrait = { character = root animation = personality_bold }
+	right_portrait = { character = scope:spn_guarded animation = fear }
+	trigger = {
+		is_alive = yes
+	}
+	option = {
+		name = spn_hide.0370.a
+	}
+}
+# ==================================================================================================
+# .0380 -- Send for a Hide: which one (2.37). .0381 -- Word from the shrine.
+# ==================================================================================================
+spn_hide.0380 = {
+	type = character_event
+	title = spn_hide.0380.t
+	desc = spn_hide.0380.desc
+	theme = intrigue
+	left_portrait = { character = root animation = scheme }
+	trigger = {
+		is_alive = yes
+		NOT = { has_character_flag = spn_hide_errand_out }
+		NOT = { has_character_flag = spn_hide_shrine_thief }
+	}
+	immediate = {
+		var:spn_knows_shrine_silverback ?= { save_scope_as = spn_sf_county_silverback }
+		var:spn_knows_shrine_timber ?= { save_scope_as = spn_sf_county_timber }
+		var:spn_knows_shrine_tundra ?= { save_scope_as = spn_sf_county_tundra }
+		var:spn_knows_shrine_graybeard ?= { save_scope_as = spn_sf_county_graybeard }
+		var:spn_knows_shrine_midnight ?= { save_scope_as = spn_sf_county_midnight }
+		var:spn_knows_shrine_alpha ?= { save_scope_as = spn_sf_county_alpha }
+	}
+	option = {
+		name = spn_hide.0380.silverback
+		trigger = {
+			exists = var:spn_knows_shrine_silverback
+			var:spn_knows_shrine_silverback = {
+				has_county_modifier = spn_hide_relic_kept_silverback_modifier
+				NOT = { holder ?= root }
+				# 2.37o: and it still hangs there. The marker comes down only on 1 January, and a siege can destroy the
+				# hide in between; the gold is not taken for an errand to an empty shrine.
+				any_county_holy_site = {
+					any_holy_site_enshrined_artifact = { var:spn_hide ?= flag:silverback }
+				}
+			}
+		}
+		remove_short_term_gold = medium_gold_value
+		custom_tooltip = spn_hide.0380.go_tt
+		hidden_effect = {
+			set_variable = { name = spn_hide_errand_hide value = flag:silverback years = 3 }
+			set_variable = { name = spn_hide_errand_county value = var:spn_knows_shrine_silverback years = 3 }
+			add_character_flag = { flag = spn_hide_errand_out years = 3 }
+			spn_hide_errand_send_effect = { COUNTY = var:spn_knows_shrine_silverback }
+		}
+		ai_chance = {
+			base = 10
+			modifier = { add = 50 exists = var:spn_hide_wants_silverback }
+		}
+	}
+	option = {
+		name = spn_hide.0380.timber
+		trigger = {
+			exists = var:spn_knows_shrine_timber
+			var:spn_knows_shrine_timber = {
+				has_county_modifier = spn_hide_relic_kept_timber_modifier
+				NOT = { holder ?= root }
+				# 2.37o: and it still hangs there. The marker comes down only on 1 January, and a siege can destroy the
+				# hide in between; the gold is not taken for an errand to an empty shrine.
+				any_county_holy_site = {
+					any_holy_site_enshrined_artifact = { var:spn_hide ?= flag:timber }
+				}
+			}
+		}
+		remove_short_term_gold = medium_gold_value
+		custom_tooltip = spn_hide.0380.go_tt
+		hidden_effect = {
+			set_variable = { name = spn_hide_errand_hide value = flag:timber years = 3 }
+			set_variable = { name = spn_hide_errand_county value = var:spn_knows_shrine_timber years = 3 }
+			add_character_flag = { flag = spn_hide_errand_out years = 3 }
+			spn_hide_errand_send_effect = { COUNTY = var:spn_knows_shrine_timber }
+		}
+		ai_chance = {
+			base = 10
+			modifier = { add = 50 exists = var:spn_hide_wants_timber }
+		}
+	}
+	option = {
+		name = spn_hide.0380.tundra
+		trigger = {
+			exists = var:spn_knows_shrine_tundra
+			var:spn_knows_shrine_tundra = {
+				has_county_modifier = spn_hide_relic_kept_tundra_modifier
+				NOT = { holder ?= root }
+				# 2.37o: and it still hangs there. The marker comes down only on 1 January, and a siege can destroy the
+				# hide in between; the gold is not taken for an errand to an empty shrine.
+				any_county_holy_site = {
+					any_holy_site_enshrined_artifact = { var:spn_hide ?= flag:tundra }
+				}
+			}
+		}
+		remove_short_term_gold = medium_gold_value
+		custom_tooltip = spn_hide.0380.go_tt
+		hidden_effect = {
+			set_variable = { name = spn_hide_errand_hide value = flag:tundra years = 3 }
+			set_variable = { name = spn_hide_errand_county value = var:spn_knows_shrine_tundra years = 3 }
+			add_character_flag = { flag = spn_hide_errand_out years = 3 }
+			spn_hide_errand_send_effect = { COUNTY = var:spn_knows_shrine_tundra }
+		}
+		ai_chance = {
+			base = 10
+			modifier = { add = 50 exists = var:spn_hide_wants_tundra }
+		}
+	}
+	option = {
+		name = spn_hide.0380.graybeard
+		trigger = {
+			exists = var:spn_knows_shrine_graybeard
+			var:spn_knows_shrine_graybeard = {
+				has_county_modifier = spn_hide_relic_kept_graybeard_modifier
+				NOT = { holder ?= root }
+				# 2.37o: and it still hangs there. The marker comes down only on 1 January, and a siege can destroy the
+				# hide in between; the gold is not taken for an errand to an empty shrine.
+				any_county_holy_site = {
+					any_holy_site_enshrined_artifact = { var:spn_hide ?= flag:graybeard }
+				}
+			}
+		}
+		remove_short_term_gold = medium_gold_value
+		custom_tooltip = spn_hide.0380.go_tt
+		hidden_effect = {
+			set_variable = { name = spn_hide_errand_hide value = flag:graybeard years = 3 }
+			set_variable = { name = spn_hide_errand_county value = var:spn_knows_shrine_graybeard years = 3 }
+			add_character_flag = { flag = spn_hide_errand_out years = 3 }
+			spn_hide_errand_send_effect = { COUNTY = var:spn_knows_shrine_graybeard }
+		}
+		ai_chance = {
+			base = 10
+			modifier = { add = 50 exists = var:spn_hide_wants_graybeard }
+		}
+	}
+	option = {
+		name = spn_hide.0380.midnight
+		trigger = {
+			exists = var:spn_knows_shrine_midnight
+			var:spn_knows_shrine_midnight = {
+				has_county_modifier = spn_hide_relic_kept_midnight_modifier
+				NOT = { holder ?= root }
+				# 2.37o: and it still hangs there. The marker comes down only on 1 January, and a siege can destroy the
+				# hide in between; the gold is not taken for an errand to an empty shrine.
+				any_county_holy_site = {
+					any_holy_site_enshrined_artifact = { var:spn_hide ?= flag:midnight }
+				}
+			}
+		}
+		remove_short_term_gold = medium_gold_value
+		custom_tooltip = spn_hide.0380.go_tt
+		hidden_effect = {
+			set_variable = { name = spn_hide_errand_hide value = flag:midnight years = 3 }
+			set_variable = { name = spn_hide_errand_county value = var:spn_knows_shrine_midnight years = 3 }
+			add_character_flag = { flag = spn_hide_errand_out years = 3 }
+			spn_hide_errand_send_effect = { COUNTY = var:spn_knows_shrine_midnight }
+		}
+		ai_chance = {
+			base = 10
+			modifier = { add = 50 exists = var:spn_hide_wants_midnight }
+		}
+	}
+	option = {
+		name = spn_hide.0380.alpha
+		trigger = {
+			exists = var:spn_knows_shrine_alpha
+			var:spn_knows_shrine_alpha = {
+				has_county_modifier = spn_hide_relic_kept_alpha_modifier
+				NOT = { holder ?= root }
+				# 2.37o: and it still hangs there. The marker comes down only on 1 January, and a siege can destroy the
+				# hide in between; the gold is not taken for an errand to an empty shrine.
+				any_county_holy_site = {
+					any_holy_site_enshrined_artifact = { var:spn_hide ?= flag:alpha }
+				}
+			}
+		}
+		remove_short_term_gold = medium_gold_value
+		custom_tooltip = spn_hide.0380.go_tt
+		hidden_effect = {
+			set_variable = { name = spn_hide_errand_hide value = flag:alpha years = 3 }
+			set_variable = { name = spn_hide_errand_county value = var:spn_knows_shrine_alpha years = 3 }
+			add_character_flag = { flag = spn_hide_errand_out years = 3 }
+			spn_hide_errand_send_effect = { COUNTY = var:spn_knows_shrine_alpha }
+		}
+		ai_chance = {
+			base = 10
+			modifier = { add = 50 exists = var:spn_hide_wants_alpha }
+		}
+	}
+	option = {
+		name = spn_hide.0380.none
+		ai_chance = { base = 0 }
+	}
+}
+
+spn_hide.0381 = {
+	type = character_event
+	title = spn_hide.0381.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_errand_hide }
+				desc = spn_hide.0381.found
+			}
+			desc = spn_hide.0381.gone
+		}
+	}
+	theme = intrigue
+	left_portrait = { character = root animation = scheme }
+	artifact = {
+		target = scope:spn_errand_hide
+		position = lower_right_portrait
+		trigger = { exists = scope:spn_errand_hide }
+	}
+	trigger = {
+		is_alive = yes
+		exists = var:spn_hide_errand_county
+		exists = var:spn_hide_errand_hide
+	}
+	immediate = {
+		var:spn_hide_errand_county = { save_scope_as = spn_errand_county }
+		scope:spn_errand_county = { faith = { save_scope_as = spn_errand_faith } }
+		scope:spn_errand_county.holder ?= { save_scope_as = spn_errand_keeper }
+		# The hide where he was told it hangs, by the same road Take the Hide from the Shrine walks.
+		scope:spn_errand_county = {
+			random_county_holy_site = {
+				limit = {
+					any_holy_site_enshrined_artifact = {
+						has_variable = spn_hide
+						var:spn_hide = root.var:spn_hide_errand_hide
+					}
+				}
+				random_holy_site_enshrined_artifact = {
+					limit = {
+						has_variable = spn_hide
+						var:spn_hide = root.var:spn_hide_errand_hide
+					}
+					save_scope_as = spn_errand_hide
+				}
+			}
+		}
+		remove_variable = spn_hide_errand_county
+		remove_variable = spn_hide_errand_hide
+		remove_character_flag = spn_hide_errand_out
+	}
+	option = {
+		name = spn_hide.0381.a
+		trigger = { exists = scope:spn_errand_hide }
+		duel = {
+			skill = intrigue
+			value = 25
+			50 = {
+				desc = spn_hide.0381.a.success
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 3.5
+					min = -45
+				}
+				scope:spn_errand_hide = {
+					if = {
+						limit = { exists = scope:spn_errand_keeper }
+						set_owner = {
+							target = root
+							history = {
+								type = stolen
+								actor = scope:spn_errand_keeper
+								recipient = root
+							}
+						}
+					}
+					else = {
+						set_owner = {
+							target = root
+							history = {
+								type = stolen
+								recipient = root
+							}
+						}
+					}
+					spn_hide_shrine_left_effect = yes
+				}
+				spn_hide_start_check_effect = yes
+			}
+			50 = {
+				desc = spn_hide.0381.a.failure
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -3.5
+					min = -45
+				}
+				add_character_flag = { flag = spn_hide_shrine_thief years = 5 }
+				scope:spn_errand_keeper ?= { add_opinion = { target = root modifier = spn_shrine_thief_opinion } }
+			}
+		}
+		ai_chance = {
+			base = 60
+			modifier = { add = 20 has_trait = deceitful }
+			modifier = { add = -30 has_trait = honest }
+		}
+	}
+	option = {
+		name = spn_hide.0381.b
+		trigger = { exists = scope:spn_errand_hide }
+		ai_chance = {
+			base = 20
+			modifier = { add = 30 has_trait = honest }
+		}
+	}
+	option = {
+		name = spn_hide.0381.c
+		trigger = { NOT = { exists = scope:spn_errand_hide } }
+	}
+}
+

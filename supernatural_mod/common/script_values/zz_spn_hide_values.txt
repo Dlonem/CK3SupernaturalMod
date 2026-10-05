@@ -1,0 +1,482 @@
+﻿# Supernatural 2.37 -- "The Six Hides": every knob in one file (WORK-ORDER-2.37 §4.10).
+# Change a number here and nothing else needs to move.
+
+# ==================================================================================================
+# HIDE BOND -- the champion's track, 0-100, whichever hide he carries (0 for anyone else).
+# The string form is the one the mod already uses for trait XP (spn_hunt_creature_track_value).
+# ==================================================================================================
+spn_hide_bond_value = {
+	value = 0
+	if = {
+		limit = { has_trait = spn_champion_silverback }
+		value = "has_trait_xp(spn_champion_silverback|hide_bond)"
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_timber }
+		value = "has_trait_xp(spn_champion_timber|hide_bond)"
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_tundra }
+		value = "has_trait_xp(spn_champion_tundra|hide_bond)"
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_graybeard }
+		value = "has_trait_xp(spn_champion_graybeard|hide_bond)"
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_midnight }
+		value = "has_trait_xp(spn_champion_midnight|hide_bond)"
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_alpha }
+		value = "has_trait_xp(spn_champion_alpha|hide_bond)"
+	}
+}
+
+# ==================================================================================================
+# HIDE STRENGTH (§7.1, design §2.6) -- the multiplier on a champion's side of every creature fight.
+#   x1.5 at Hide Bond 0, rising evenly to x2.5 at 100; Silverback and Alpha +0.25 (the show's strongest and
+#   the leader's hide); a True Alpha who is also a champion +0.25; a True Alpha who is not x1.25.
+# His ballpark was "about 50% stronger than a werewolf on day one, 150% at full bond": this is that number.
+# Prowess cannot carry it (MAX_PROWESS 100, and a maxed werewolf is already near 65), so it lives here, in the
+# fights the mod owns: the Hunt, Challenge, the champions' clash on the field, the ringing's chase.
+# ==================================================================================================
+spn_hide_strength_value = {
+	value = 1
+	if = {
+		limit = { spn_is_champion_trigger = yes }
+		value = 1.5
+		add = { value = spn_hide_bond_value divide = 100 }
+		if = {
+			limit = {
+				OR = {
+					has_trait = spn_champion_silverback
+					has_trait = spn_champion_alpha
+				}
+			}
+			add = 0.25
+		}
+		if = {
+			limit = { has_trait = spn_true_alpha }
+			add = 0.25
+		}
+	}
+	else_if = {
+		limit = { has_trait = spn_true_alpha }
+		value = 1.25
+	}
+}
+
+# C7: a hybrid counts x1.6 in creature-against-creature fights only. The Hunt has its own hybrid term (+10).
+spn_clash_kind_factor_value = {
+	value = 1
+	if = {
+		limit = { has_trait = supernatural_hybrid }
+		value = 1.6
+	}
+}
+
+# ==================================================================================================
+# THE CLASH (§7.3). Root = one side; scope:spn_clash_foe = the other. The Hunt fight's own shape
+# (spn_hunt_fight_effect), then Hide Strength and the kind factor:
+#   50 + clamp(prowess - foe prowess, +-25) + creature track x 0.6 + 15 in wolf form + 10 a pack alpha
+# "In wolf form" is any of: shapeshifted, Evolved (§15), or scope:spn_clash_wolf_form (Challenge: "a brawl, no swords").
+# For a caster who is no wolf (the ringing's chase, §18), the creature track is its witch or demon floor.
+#
+# The chance is SQUARED (spn_clash_chance_a_value): a stronger creature wins more decisively than a hunter loses.
+# Worked (design §2.6-2.7), both in wolf form, lycanthropy 50 each: the hide's +20 prowess and x1.25 put the
+# champion past the +25 clamp, so he weighs (50 + 25 + 30 + 15) x 1.5 = 180 to an ordinary werewolf's
+# 50 - 25 + 30 + 15 = 70: 180^2 / (180^2 + 70^2) = 87%. At Bond 100 (x2.5): 300 to 70, 95%.
+# The design's other targets (champion vs a hybrid ~47% -> ~71% with C7's x1.6; champion vs champion at equal Bond:
+# Silverback ~70%, Alpha ~58%, the other four even, C8) depend on the two characters' prowess and tracks; the boot
+# checks them against real characters (§24).
+# ==================================================================================================
+spn_creature_clash_weight_value = {
+	value = 50
+	add = {
+		value = prowess
+		subtract = scope:spn_clash_foe.prowess
+		min = -25
+		max = 25
+	}
+	add = {
+		value = spn_hunt_creature_track_value
+		multiply = 0.6
+	}
+	if = {
+		limit = {
+			spn_is_wolf_trigger = yes
+			OR = {
+				exists = scope:spn_clash_wolf_form
+				is_shapeshifted_trigger = yes
+				has_character_modifier = spn_evolved_modifier
+			}
+		}
+		add = 15
+	}
+	if = {
+		limit = { spn_is_alpha_trigger = yes }
+		add = 10
+	}
+	multiply = spn_hide_strength_value
+	multiply = spn_clash_kind_factor_value
+	min = 1
+}
+
+# 100 x A^2 / (A^2 + B^2), from the two banked weights. Clamped so nothing is ever certain.
+spn_clash_chance_a_value = {
+	value = scope:spn_clash_wa
+	multiply = scope:spn_clash_wa
+	divide = {
+		value = scope:spn_clash_wa
+		multiply = scope:spn_clash_wa
+		add = {
+			value = scope:spn_clash_wb
+			multiply = scope:spn_clash_wb
+		}
+		min = 1
+	}
+	multiply = 100
+	min = 2
+	max = 98
+}
+
+# ==================================================================================================
+# FIT (§5.6) -- does the hide want him? Root = the candidate; scope:spn_fit_hide = the hide's flag.
+# Never shown as a number; It Will Not Have You says what it looked for. Bars: wolves 40, mortals 90.
+# 2.37b: for a wolf the bar is now the SECOND route. The first is spn_hide_accepts_wolf_trigger's trait rule: one trait
+# the hide likes, and more liked than hated. The score still ranks who a hide goes looking for, and still lets a wolf
+# deep in the blood be chosen with no matching trait at all.
+# ==================================================================================================
+spn_hide_fit_value = {
+	value = 0
+	if = {
+		limit = { scope:spn_fit_hide = flag:silverback }
+		if = { limit = { has_trait = brave } add = 15 }
+		if = { limit = { has_trait = just } add = 15 }
+		if = { limit = { has_trait = honest } add = 15 }
+		if = { limit = { has_trait = compassionate } add = 15 }
+		if = { limit = { has_trait = strong } add = 15 }
+		if = { limit = { has_trait = craven } add = -20 }
+		if = { limit = { has_trait = deceitful } add = -20 }
+		if = { limit = { has_trait = sadistic } add = -20 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:timber }
+		if = { limit = { has_trait = shy } add = 15 }
+		if = { limit = { has_trait = paranoid } add = 15 }
+		if = { limit = { has_trait = vengeful } add = 15 }
+		if = { limit = { has_trait = wrathful } add = 15 }
+		if = { limit = { has_trait = gregarious } add = -20 }
+		if = { limit = { has_trait = trusting } add = -20 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:tundra }
+		if = { limit = { has_trait = calm } add = 15 }
+		if = { limit = { has_trait = deceitful } add = 15 }
+		if = { limit = { has_trait = ambitious } add = 15 }
+		if = { limit = { has_trait = patient } add = 15 }
+		if = { limit = { has_trait = honest } add = -20 }
+		if = { limit = { has_trait = impatient } add = -20 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:graybeard }
+		if = { limit = { has_trait = brave } add = 15 }
+		if = { limit = { has_trait = stubborn } add = 15 }
+		if = { limit = { has_trait = arrogant } add = 15 }
+		if = { limit = { has_trait = strong } add = 15 }
+		if = { limit = { has_trait = craven } add = -20 }
+		if = { limit = { has_trait = paranoid } add = -20 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:midnight }
+		if = { limit = { has_trait = wrathful } add = 15 }
+		if = { limit = { has_trait = impatient } add = 15 }
+		if = { limit = { has_trait = brave } add = 15 }
+		if = { limit = { has_trait = sadistic } add = 15 }
+		if = { limit = { has_trait = calm } add = -20 }
+		if = { limit = { has_trait = patient } add = -20 }
+		if = { limit = { has_trait = compassionate } add = -20 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:alpha }
+		if = { limit = { has_trait = ambitious } add = 15 }
+		if = { limit = { has_trait = diligent } add = 15 }
+		if = { limit = { has_trait = just } add = 15 }
+		if = { limit = { has_trait = arrogant } add = 15 }
+		if = { limit = { has_trait = lazy } add = -20 }
+		if = { limit = { has_trait = content } add = -20 }
+		if = { limit = { has_trait = craven } add = -20 }
+	}
+	# What he is: a wolf's track (half of it), or a mortal's arm.
+	if = {
+		limit = { has_trait = supernatural_werewolf }
+		add = { value = "has_trait_xp(supernatural_werewolf|lycanthropy)" divide = 2 }
+	}
+	else_if = {
+		limit = { has_trait = supernatural_hybrid }
+		add = { value = "has_trait_xp(supernatural_hybrid|hybrid_lycanthropy)" divide = 2 }
+	}
+	else = {
+		add = prowess
+		add = martial
+	}
+	# The fever that a hide pulled him through (§10).
+	if = {
+		limit = { has_character_flag = spn_hide_fever_bonus }
+		add = 20
+	}
+	# In a Gathering's Circle (The Choosing saves the scope before it reads this, §14.4); more for a player (T14).
+	if = {
+		limit = { scope:spn_in_circle ?= yes }
+		add = 20
+		if = {
+			limit = { is_ai = no }
+			add = 20
+		}
+	}
+	# Alpha only chooses a leader (design §3.4, order §5.6, the same rule as §9.5): spn_hide_leader_ok_trigger.
+	if = {
+		limit = { scope:spn_fit_hide = flag:alpha }
+		if = {
+			limit = { has_trait = spn_true_alpha }
+			add = 30
+		}
+		if = {
+			limit = { spn_hide_leader_ok_trigger = no }
+			add = -1000
+		}
+	}
+}
+
+# How many of the traits this hide looks for he has, and how many of the ones it turns from (2.37b). Root = the
+# candidate; scope:spn_fit_hide = the hide's flag. One source with the fit above: data.py WANTS / WONT.
+# spn_hide_accepts_wolf_trigger reads these: one liked trait, more liked than hated, is enough (Thomas, 3 Oct).
+spn_hide_liked_count_value = {
+	value = 0
+	if = {
+		limit = { scope:spn_fit_hide = flag:silverback }
+		if = { limit = { has_trait = brave } add = 1 }
+		if = { limit = { has_trait = just } add = 1 }
+		if = { limit = { has_trait = honest } add = 1 }
+		if = { limit = { has_trait = compassionate } add = 1 }
+		if = { limit = { has_trait = strong } add = 1 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:timber }
+		if = { limit = { has_trait = shy } add = 1 }
+		if = { limit = { has_trait = paranoid } add = 1 }
+		if = { limit = { has_trait = vengeful } add = 1 }
+		if = { limit = { has_trait = wrathful } add = 1 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:tundra }
+		if = { limit = { has_trait = calm } add = 1 }
+		if = { limit = { has_trait = deceitful } add = 1 }
+		if = { limit = { has_trait = ambitious } add = 1 }
+		if = { limit = { has_trait = patient } add = 1 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:graybeard }
+		if = { limit = { has_trait = brave } add = 1 }
+		if = { limit = { has_trait = stubborn } add = 1 }
+		if = { limit = { has_trait = arrogant } add = 1 }
+		if = { limit = { has_trait = strong } add = 1 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:midnight }
+		if = { limit = { has_trait = wrathful } add = 1 }
+		if = { limit = { has_trait = impatient } add = 1 }
+		if = { limit = { has_trait = brave } add = 1 }
+		if = { limit = { has_trait = sadistic } add = 1 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:alpha }
+		if = { limit = { has_trait = ambitious } add = 1 }
+		if = { limit = { has_trait = diligent } add = 1 }
+		if = { limit = { has_trait = just } add = 1 }
+		if = { limit = { has_trait = arrogant } add = 1 }
+	}
+}
+
+spn_hide_hated_count_value = {
+	value = 0
+	if = {
+		limit = { scope:spn_fit_hide = flag:silverback }
+		if = { limit = { has_trait = craven } add = 1 }
+		if = { limit = { has_trait = deceitful } add = 1 }
+		if = { limit = { has_trait = sadistic } add = 1 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:timber }
+		if = { limit = { has_trait = gregarious } add = 1 }
+		if = { limit = { has_trait = trusting } add = 1 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:tundra }
+		if = { limit = { has_trait = honest } add = 1 }
+		if = { limit = { has_trait = impatient } add = 1 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:graybeard }
+		if = { limit = { has_trait = craven } add = 1 }
+		if = { limit = { has_trait = paranoid } add = 1 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:midnight }
+		if = { limit = { has_trait = calm } add = 1 }
+		if = { limit = { has_trait = patient } add = 1 }
+		if = { limit = { has_trait = compassionate } add = 1 }
+	}
+	else_if = {
+		limit = { scope:spn_fit_hide = flag:alpha }
+		if = { limit = { has_trait = lazy } add = 1 }
+		if = { limit = { has_trait = content } add = 1 }
+		if = { limit = { has_trait = craven } add = 1 }
+	}
+}
+
+spn_hide_fit_bar_wolf_value = 40
+spn_hide_fit_bar_mortal_value = 90
+# The worthy mortal's yearly chance once he passes the bar (so a lord who keeps a hide is asked in about his fourth
+# year, not his first).
+spn_hide_mortal_chance_value = 25
+# 2.37o: the years a hide lies idle with an AI who is not its champion (spn_hide_lies_idle_trigger) before it slips
+# away and is lost (the yearly net, step 4). A worthy mortal is asked long before this.
+spn_hide_idle_years_value = 10
+# The Choosing (§14.4): the chance the hide chooses at all, +10 with a player in the Circle.
+spn_choosing_chance_value = 60
+
+# ==================================================================================================
+# HIDE BOND XP (§6.4) and the war cap (§12.3)
+# ==================================================================================================
+spn_hide_bond_beat_value = 15
+spn_hide_bond_feat_value = 2
+spn_hide_bond_battle_cap_value = 6
+spn_feat_bond_year_cap_value = 20
+spn_hide_bond_hunter_value = 10
+spn_hide_bond_gathering_value = 5
+spn_hide_bond_two_wolves_value = 10
+spn_hide_bond_ringing_value = 5
+spn_hide_bond_off_small_value = -5
+spn_hide_bond_off_big_value = -10
+spn_hide_bond_year_value = 2       # 2.37: a year with the hide worn
+spn_hide_bond_year_pack_value = 5  # 2.37: ...running with a pack (+2, and +3 for the pack)
+spn_hide_bond_tongue_value = 25    # 2.37: the hide takes his tongue (spn_hide_tongue_effect)
+spn_hide_bond_old_stones_value = 2 # 2.37: The Old Stones (spn_gathering.0212), going in first
+
+# ==================================================================================================
+# TIMERS
+# ==================================================================================================
+spn_hide_card_years_value = 10
+spn_hide_card_years_bonded_value = 7
+# How long a lost hide waits before it goes looking (§9.5): 5-20 years, Alpha 15-40 ("Alpha longer", design §3.4).
+spn_hide_lost_wait_min_silverback_value = 5
+spn_hide_lost_wait_max_silverback_value = 20
+spn_hide_lost_wait_min_timber_value = 5
+spn_hide_lost_wait_max_timber_value = 20
+spn_hide_lost_wait_min_tundra_value = 5
+spn_hide_lost_wait_max_tundra_value = 20
+spn_hide_lost_wait_min_graybeard_value = 5
+spn_hide_lost_wait_max_graybeard_value = 20
+spn_hide_lost_wait_min_midnight_value = 5
+spn_hide_lost_wait_max_midnight_value = 20
+spn_hide_lost_wait_min_alpha_value = 15
+spn_hide_lost_wait_max_alpha_value = 40
+
+# The war reveal (§12.3): once per battle, the enemy commander may learn what he is. Timber hides better.
+spn_hide_war_reveal_chance_value = {
+	value = 25
+	if = {
+		limit = { has_trait = spn_champion_timber }
+		value = 10
+	}
+}
+
+# ==================================================================================================
+# THE PACK (§13)
+# ==================================================================================================
+spn_pack_cap_value = 25
+# What the pack modifier is scaled by: the member's cached pack size (already x2 in a True Alpha's pack, §16).
+spn_pack_scale_value = {
+	value = 0
+	if = {
+		limit = { exists = var:spn_pack_size_cached }
+		value = var:spn_pack_size_cached
+	}
+}
+spn_true_alpha_chance_value = 5
+spn_pack_moment_chance_value = 20
+
+# Pack Standing: the wolf_pack track, on the werewolf trait or the hybrid trait (0 for anyone else).
+spn_pack_standing_value = {
+	value = 0
+	if = {
+		limit = { has_trait = supernatural_werewolf }
+		value = "has_trait_xp(supernatural_werewolf|wolf_pack)"
+	}
+	else_if = {
+		limit = { has_trait = supernatural_hybrid }
+		value = "has_trait_xp(supernatural_hybrid|wolf_pack)"
+	}
+}
+
+# ==================================================================================================
+# THE FIELD (§12.3). The feat budget, set on the battle's first pick. Root = the champion.
+# ==================================================================================================
+spn_hide_feat_budget_value = {
+	value = 0
+	if = {
+		limit = { spn_hide_bond_value >= 100 }
+		add = { integer_range = { min = 4 max = 6 } }
+	}
+	else_if = {
+		limit = { spn_hide_bond_value >= 50 }
+		add = { integer_range = { min = 3 max = 5 } }
+	}
+	else = {
+		add = { integer_range = { min = 2 max = 4 } }
+	}
+	if = {
+		limit = { has_trait = spn_champion_midnight }
+		add = 1
+	}
+	if = {
+		limit = {
+			scope:combat_side.combat.location = {
+				OR = {
+					terrain = forest
+					terrain = taiga
+				}
+			}
+		}
+		add = 1
+	}
+	if = {
+		limit = { has_character_modifier = spn_let_it_take_me_modifier }
+		multiply = 2
+	}
+}
+
+# ==================================================================================================
+# 2.37o: THE AI'S READ OF A CHALLENGE. The clash's own weight (spn_creature_clash_weight_value) without the parts
+# that need the foe: both wolves fight in wolf form in a Challenge (+15 each), so the constant is 50 + 15 = 65.
+# Root = one wolf. Used only by spn_ai_clash_edge_trigger.
+# ==================================================================================================
+spn_ai_clash_x_value = {
+	value = spn_hunt_creature_track_value
+	multiply = 0.6
+	if = {
+		limit = { spn_is_alpha_trigger = yes }
+		add = 10
+	}
+}
+spn_ai_clash_mult_value = {
+	value = spn_hide_strength_value
+	multiply = spn_clash_kind_factor_value
+}
+spn_ai_clash_own_weight_value = {
+	value = 65
+	add = spn_ai_clash_x_value
+	multiply = spn_ai_clash_mult_value
+}

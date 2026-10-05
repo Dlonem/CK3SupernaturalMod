@@ -1,0 +1,146 @@
+﻿# Supernatural 2.37 -- the Pack's decisions (WORK-ORDER-2.37 §13.1, §13.2). Loc: zz_spn_hide_l_english.yml.
+
+spn_found_pack_decision = {
+	decision_group_type = supernatural # 2.37: the Supernatural Decisions group (zz_spn_decision_group_types.txt)
+	picture = {
+		reference = "gfx/interface/illustrations/decisions/decision_social.dds"
+	}
+	desc = spn_found_pack_decision_desc
+	selection_tooltip = spn_found_pack_decision_tooltip
+	confirm_text = spn_found_pack_decision_confirm
+	ai_check_interval = 12
+	cost = {
+		prestige = 50
+	}
+	is_shown = {
+		spn_packs_on_trigger = yes
+		spn_is_wolf_trigger = yes
+		is_adult = yes
+		NOT = { exists = var:spn_pack }
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_found_pack_standing_tt
+			OR = {
+				spn_is_champion_trigger = yes
+				spn_pack_standing_value >= 50
+				AND = {
+					OR = {
+						has_perk = pack_leader_perk
+						has_character_flag = spn_born_werewolf
+					}
+					spn_pack_standing_value >= 40
+				}
+			}
+		}
+	}
+	effect = {
+		spn_pack_found_effect = yes
+	}
+	ai_potential = {
+		is_adult = yes
+	}
+	ai_will_do = {
+		base = 10
+		modifier = {
+			add = 30
+			spn_is_champion_trigger = yes
+		}
+		modifier = { add = 20 has_trait = gregarious }
+		modifier = { add = 15 has_trait = ambitious }
+		modifier = {
+			add = 20
+			has_character_flag = spn_born_werewolf
+		}
+		modifier = { add = -30 has_trait = shy }
+		modifier = { add = -30 has_trait = paranoid }
+	}
+}
+
+spn_leave_pack_decision = {
+	decision_group_type = supernatural # 2.37: the Supernatural Decisions group (zz_spn_decision_group_types.txt)
+	picture = {
+		reference = "gfx/interface/illustrations/decisions/decision_misc.dds"
+	}
+	desc = spn_leave_pack_decision_desc
+	selection_tooltip = spn_leave_pack_decision_tooltip
+	confirm_text = spn_leave_pack_decision_confirm
+	ai_check_interval = 12
+	is_shown = {
+		exists = var:spn_pack
+		spn_is_alpha_trigger = no
+	}
+	effect = {
+		spn_pack_remove_member_effect = { WHO = root REASON = flag:left }
+	}
+	ai_potential = {
+		exists = var:spn_pack
+	}
+	ai_will_do = {
+		base = 0
+		# 2.37o (the review of 4 Oct, F15): a wolf leaves for a reason -- he and his alpha have no use for each other.
+		# Fickle makes it likelier, never the reason; with kin re-inviting him it made a leave-and-return loop.
+		# His alpha has no use for him (the alpha's own opinion of him; it read reverse_opinion, which is his of the alpha,
+		# the review of 4 Oct, P1).
+		modifier = {
+			add = 30
+			var:spn_pack ?= {
+				story_owner = {
+					opinion = {
+						target = root
+						value < -25
+					}
+				}
+			}
+		}
+		# He has no use for his alpha.
+		modifier = {
+			add = 30
+			opinion = {
+				target = var:spn_pack.story_owner
+				value <= -25
+			}
+		}
+		modifier = { add = 20 has_trait = fickle }
+		modifier = { add = -40 has_trait = loyal }
+		modifier = {
+			factor = 0
+			opinion = {
+				target = var:spn_pack.story_owner
+				value > -25
+			}
+			var:spn_pack ?= {
+				story_owner = {
+					opinion = {
+						target = root
+						value >= -25
+					}
+				}
+			}
+		}
+	}
+}
+
+spn_disband_pack_decision = {
+	decision_group_type = supernatural # 2.37: the Supernatural Decisions group (zz_spn_decision_group_types.txt)
+	picture = {
+		reference = "gfx/interface/illustrations/decisions/decision_misc.dds"
+	}
+	desc = spn_disband_pack_decision_desc
+	selection_tooltip = spn_disband_pack_decision_tooltip
+	confirm_text = spn_disband_pack_decision_confirm
+	ai_check_interval = 12
+	is_shown = {
+		spn_is_alpha_trigger = yes
+	}
+	effect = {
+		var:spn_pack = { spn_pack_break_effect = yes }
+	}
+	ai_potential = {
+		always = no
+	}
+	ai_will_do = {
+		base = 0
+	}
+}
+

@@ -1,0 +1,3786 @@
+﻿# Supernatural 2.37 -- "The Six Hides": the hide's effects (WORK-ORDER-2.37 §4.12, §5, §6, §7.3, §8, §9).
+#
+# STANDING RULES THAT SHAPE THIS FILE
+#  * Bank before anything irreversible: every value a later line reads is saved first; the death, the destroy and the
+#    removal of a trait are the last thing each effect does with what it read.
+#  * Never use `root` inside a scripted effect to mean "the character this effect is about": these are called from
+#    on_death, from events, from interactions and from each other, and root is whatever started the chain. Every
+#    effect saves its own subject first (save_scope_as) and reads that.
+#  * Six hides, six names. A hide is a flag on its artifact (var:spn_hide = flag:<hide>) and a champion carries the
+#    same flag (var:spn_champion_of), so dispatchers turn a flag into the HIDE parameter once and the per-hide effects
+#    read traits and globals by name.
+#  * Nothing iterates over the world except where it is said so, with why.
+
+# ==================================================================================================
+# A HIDE'S FLAG INTO A SAVED SCOPE VALUE (2.37b). save_scope_value_as takes a flag only as a literal (flag:x), the way
+# vanilla writes it 3,482 times. Handed a variable that holds one, it evaluates it as a number and fails: error.log
+# 3 Oct, "Value of wrong type in ... spn_hide.0009 ... Got value of type 'flag'". Everything after read a 'value', so
+# every scope:spn_fit_hide = flag:<hide> test was false and no hide ever counted a single trait. One literal per hide.
+# FROM = anything that holds a hide flag (scope:x.var:spn_hide, var:spn_champion_of); NAME = the scope to save it as.
+# ==================================================================================================
+spn_hide_save_flag_effect = {
+	if = {
+		limit = { $FROM$ = flag:silverback }
+		save_scope_value_as = { name = $NAME$ value = flag:silverback }
+	}
+	else_if = {
+		limit = { $FROM$ = flag:timber }
+		save_scope_value_as = { name = $NAME$ value = flag:timber }
+	}
+	else_if = {
+		limit = { $FROM$ = flag:tundra }
+		save_scope_value_as = { name = $NAME$ value = flag:tundra }
+	}
+	else_if = {
+		limit = { $FROM$ = flag:graybeard }
+		save_scope_value_as = { name = $NAME$ value = flag:graybeard }
+	}
+	else_if = {
+		limit = { $FROM$ = flag:midnight }
+		save_scope_value_as = { name = $NAME$ value = flag:midnight }
+	}
+	else_if = {
+		limit = { $FROM$ = flag:alpha }
+		save_scope_value_as = { name = $NAME$ value = flag:alpha }
+	}
+}
+
+# The same, as a refusal: the hide in FROM will not look at this character again for YEARS (§5.8). Recorded where the
+# hide decides (spn_hide.0009), not only on the event's button, so a closed window cannot lose it.
+spn_hide_mark_refused_effect = {
+	if = {
+		limit = { $FROM$ = flag:silverback }
+		add_character_flag = { flag = spn_hide_refused_silverback years = $YEARS$ }
+	}
+	else_if = {
+		limit = { $FROM$ = flag:timber }
+		add_character_flag = { flag = spn_hide_refused_timber years = $YEARS$ }
+	}
+	else_if = {
+		limit = { $FROM$ = flag:tundra }
+		add_character_flag = { flag = spn_hide_refused_tundra years = $YEARS$ }
+	}
+	else_if = {
+		limit = { $FROM$ = flag:graybeard }
+		add_character_flag = { flag = spn_hide_refused_graybeard years = $YEARS$ }
+	}
+	else_if = {
+		limit = { $FROM$ = flag:midnight }
+		add_character_flag = { flag = spn_hide_refused_midnight years = $YEARS$ }
+	}
+	else_if = {
+		limit = { $FROM$ = flag:alpha }
+		add_character_flag = { flag = spn_hide_refused_alpha years = $YEARS$ }
+	}
+}
+
+# ==================================================================================================
+# CREATION -- Witchcraft's own create_artifact shape (00_creating_artifact_effects.txt). OWNER = a character.
+# A hide that comes back after being lost reads the same global history, so it is the same hide.
+# ==================================================================================================
+spn_hide_create_effect = {
+	$OWNER$ = {
+		create_artifact = {
+			name = spn_hide_$HIDE$_name
+			description = spn_hide_$HIDE$_desc
+			template = spn_hide_template
+			type = spn_hide
+			visuals = pelt
+			modifier = spn_hide_$HIDE$_modifier
+			rarity = illustrious
+			decaying = no
+			history = { type = created_before_history }
+			save_scope_as = spn_new_hide
+		}
+	}
+	# 2.37 -- guarded: an event option that creates a hide (The Wolf That Was More Than a Wolf, the debug events) is walked
+	# for its tooltip without create_artifact running, and the bare read errored (the Found a Pack class).
+	if = {
+		limit = { exists = scope:spn_new_hide }
+		scope:spn_new_hide = {
+			set_variable = { name = spn_hide value = flag:$HIDE$ }
+		}
+		# Only a hide that was really made takes the hide off the lost record.
+		if = {
+			limit = { exists = global_var:spn_hide_$HIDE$_lost }
+			remove_global_variable = spn_hide_$HIDE$_lost
+		}
+		if = {
+			limit = { exists = global_var:spn_hide_$HIDE$_heard_by }
+			remove_global_variable = spn_hide_$HIDE$_heard_by
+		}
+	}
+	$OWNER$ = { spn_hide_start_check_effect = yes }
+}
+
+# Lost: the hide waits 5-20 years (Alpha 15-40, design §3.4) and then goes looking (§9.5). The history is in globals.
+spn_hide_record_lost_effect = {
+	set_global_variable = {
+		name = spn_hide_$HIDE$_lost
+		value = {
+			value = current_year
+			add = { integer_range = { min = spn_hide_lost_wait_min_$HIDE$_value max = spn_hide_lost_wait_max_$HIDE$_value } }
+		}
+	}
+	if = {
+		limit = { exists = global_var:spn_hide_$HIDE$_reserved }
+		remove_global_variable = spn_hide_$HIDE$_reserved
+	}
+}
+
+# A chase lapsed, nobody passed the bar, or the reserved wolf died: back to waiting, 2-5 years.
+spn_hide_rewait_effect = {
+	set_global_variable = {
+		name = spn_hide_$HIDE$_lost
+		value = {
+			value = current_year
+			add = { integer_range = { min = 2 max = 5 } }
+		}
+	}
+	if = {
+		limit = { exists = global_var:spn_hide_$HIDE$_reserved }
+		remove_global_variable = spn_hide_$HIDE$_reserved
+	}
+}
+
+# ==================================================================================================
+# THE WEEKLY CHECK's chain (§5.5). One per holder; the pending flag is the guard against two chains.
+# ==================================================================================================
+spn_hide_start_check_effect = {
+	if = {
+		limit = { NOT = { has_character_flag = spn_hide_check_pending } }
+		add_character_flag = { flag = spn_hide_check_pending days = 8 }
+		trigger_event = { id = spn_hide.0001 days = 1 }
+	}
+}
+
+# ==================================================================================================
+# CLAIMS (§5.4). Artifact scope. A hide worn by its own champion carries no claims; each stripped claimant whose pack
+# lost the hide is recorded as a feud (§17.5) -- never the owner's own house, never his own pack.
+# ==================================================================================================
+spn_hide_strip_claims_effect = {
+	save_scope_as = spn_strip_hide
+	artifact_owner ?= { save_scope_as = spn_strip_owner }
+	every_artifact_claimant = {
+		if = {
+			limit = {
+				spn_pack_politics_built_trigger = yes
+				exists = scope:spn_strip_owner
+				exists = var:spn_pack
+				scope:spn_strip_owner = { exists = var:spn_pack }
+			}
+			# Nested, not one limit: CK3 does not short-circuit AND siblings, and the cross-scope read below would
+			# error for a claimant or owner outside a pack.
+			if = {
+				limit = { NOT = { var:spn_pack = scope:spn_strip_owner.var:spn_pack } }
+				var:spn_pack.story_owner = { save_scope_as = spn_feud_a }
+				scope:spn_strip_owner.var:spn_pack.story_owner = { save_scope_as = spn_feud_b }
+				spn_hide_feud_effect = { A = scope:spn_feud_a B = scope:spn_feud_b }
+			}
+		}
+		remove_personal_artifact_claim = scope:spn_strip_hide
+	}
+	every_artifact_house_claimant = {
+		remove_house_artifact_claim = scope:spn_strip_hide
+	}
+}
+
+# ==================================================================================================
+# MAKING A CHAMPION (§5.9). Character scope; scope:spn_mc_hide = the artifact. Order matters: bank first.
+# Called through spn_hide_make_champion_dispatch_effect, which turns the artifact's flag into HIDE.
+# ==================================================================================================
+spn_hide_make_champion_dispatch_effect = {
+	$ARTIFACT$ = { save_scope_as = spn_mc_hide }
+	# 2.37o: a hide that takes a champion is not idle; its count starts again (the review of 4 Oct, P6).
+	scope:spn_mc_hide = {
+		if = {
+			limit = { exists = var:spn_hide_idle_since }
+			remove_variable = spn_hide_idle_since
+		}
+	}
+	if = {
+		limit = { scope:spn_mc_hide.var:spn_hide = flag:silverback }
+		spn_hide_make_champion_effect = { HIDE = silverback }
+	}
+	else_if = {
+		limit = { scope:spn_mc_hide.var:spn_hide = flag:timber }
+		spn_hide_make_champion_effect = { HIDE = timber }
+	}
+	else_if = {
+		limit = { scope:spn_mc_hide.var:spn_hide = flag:tundra }
+		spn_hide_make_champion_effect = { HIDE = tundra }
+	}
+	else_if = {
+		limit = { scope:spn_mc_hide.var:spn_hide = flag:graybeard }
+		spn_hide_make_champion_effect = { HIDE = graybeard }
+	}
+	else_if = {
+		limit = { scope:spn_mc_hide.var:spn_hide = flag:midnight }
+		spn_hide_make_champion_effect = { HIDE = midnight }
+	}
+	else_if = {
+		limit = { scope:spn_mc_hide.var:spn_hide = flag:alpha }
+		spn_hide_make_champion_effect = { HIDE = alpha }
+	}
+}
+
+spn_hide_make_champion_effect = {
+	save_scope_as = spn_mc_champ
+	# 1. One body, one hide: a champion of another hide is Two Wolves, never here.
+	if = {
+		limit = { spn_is_champion_trigger = no }
+		# 2. Read the history. The start is the hide's legacy (half the Bond of the last who left his mark), or three
+		#    quarters of his own kept Bond if he wore it before -- the higher of the two (design §2.3, "it remembers him").
+		save_scope_value_as = {
+			name = spn_mc_legacy
+			value = {
+				value = 0
+				if = {
+					limit = { exists = global_var:spn_hide_$HIDE$_legacy }
+					value = global_var:spn_hide_$HIDE$_legacy
+				}
+			}
+		}
+		save_scope_value_as = {
+			name = spn_mc_kept
+			value = {
+				value = 0
+				if = {
+					limit = { exists = var:spn_hide_bond_kept_$HIDE$ }
+					value = var:spn_hide_bond_kept_$HIDE$
+					multiply = 0.75
+				}
+			}
+		}
+		# 3. The trait and its starting Bond.
+		add_trait = spn_champion_$HIDE$
+		set_variable = { name = spn_champion_of value = flag:$HIDE$ }
+		if = {
+			limit = { scope:spn_mc_kept > scope:spn_mc_legacy }
+			add_trait_xp = { trait = spn_champion_$HIDE$ track = hide_bond value = scope:spn_mc_kept }
+		}
+		else_if = {
+			limit = { scope:spn_mc_legacy > 0 }
+			add_trait_xp = { trait = spn_champion_$HIDE$ track = hide_bond value = scope:spn_mc_legacy }
+		}
+		# 4. The tongues: every culture that left its mark on this hide.
+		every_in_global_list = {
+			variable = spn_hide_$HIDE$_marks
+			save_temporary_scope_as = spn_mc_tongue
+			scope:spn_mc_champ = {
+				# 2.37i: only a tongue he lacks (Thomas's 4 Oct run: "Already knows language").
+				if = {
+					limit = { NOT = { knows_language_of_culture = scope:spn_mc_tongue } }
+					learn_language_of_culture = scope:spn_mc_tongue
+				}
+			}
+		}
+		# 5. The world's record.
+		set_global_variable = { name = spn_hide_champion_$HIDE$ value = scope:spn_mc_champ }
+		if = {
+			limit = { NOT = { is_target_in_global_variable_list = { name = spn_hide_$HIDE$_champions target = scope:spn_mc_champ } } }
+			add_to_global_variable_list = { name = spn_hide_$HIDE$_champions target = scope:spn_mc_champ }
+		}
+		# 6. The guards: nothing vanilla moves an artifact carrying artifact_prevent_transfer, and it carries no claims.
+		scope:spn_mc_hide = {
+			set_variable = artifact_prevent_transfer
+			spn_hide_strip_claims_effect = yes
+		}
+		# 7. It is on him (_replace takes an occupied slot; plain equip fails on a full trinket row).
+		scope:spn_mc_hide = {
+			if = {
+				limit = { is_equipped = no }
+				equip_artifact_to_owner_replace = yes
+			}
+		}
+		spn_hide_start_check_effect = yes
+		if = {
+			limit = { has_character_flag = spn_hide_fever_bonus }
+			remove_character_flag = spn_hide_fever_bonus
+		}
+		# 7c. The pack learns it has a champion; Timber's runs alone outside one.
+		if = {
+			limit = { exists = var:spn_pack }
+			var:spn_pack = { spn_pack_refresh_effect = yes }
+		}
+		else_if = {
+			limit = { has_trait = spn_champion_timber }
+			remove_all_character_modifier_instances = spn_alone_in_the_woods_modifier
+			add_character_modifier = { modifier = spn_alone_in_the_woods_modifier years = 2 }
+		}
+		spn_hide_ageless_effect = yes # 2.37: an immortal champion's gift
+		spn_hide_keep_whole_effect = yes # 2.37i: and old age falls away from him (Thomas, 4 Oct)
+		# 8. The memory: the first time only (the 2.34 rules).
+		if = {
+			limit = { NOT = { any_memory = { has_memory_type = spn_hide_chosen_memory } } }
+			create_character_memory = { type = spn_hide_chosen_memory }
+		}
+		# 9. Everyone knows what a known wolf carries.
+		spn_hide_refresh_dread_effect = yes
+		# 10. Beat 1 goes through the beat check like every beat: banked before it is fired, so a high starting Bond
+		#     cannot schedule beat 2 beside it. Skipped if he has already seen it on this hide.
+		if = {
+			limit = {
+				trigger_if = {
+					limit = { exists = var:spn_hide_beat_$HIDE$ }
+					var:spn_hide_beat_$HIDE$ < 1
+				}
+			}
+			set_variable = { name = spn_hide_beat_$HIDE$ value = 1 }
+			add_character_flag = { flag = spn_hide_beat_cooldown years = 2 }
+			save_scope_value_as = { name = spn_beat_hide value = flag:$HIDE$ }
+			trigger_event = { id = spn_hide.0100 days = 14 }
+		}
+	}
+}
+
+# 2.37i (Thomas, 4 Oct: a 76-year-old Champion of Alpha was blind, incapable, infirm and losing his mind). A hide
+# keeps its champion whole. The vampire's own cleanup (spn_remove_negative_age_traits: infirm, clouded eyes, a
+# faltering heart, a withering mind, fragile bones, incapable) plus blindness, which clouded eyes become at their
+# worst (vanilla blind_on_max_level). Run when he is chosen, and yearly by spn_age_trait_cleanup with the vampires.
+spn_hide_keep_whole_effect = {
+	spn_remove_negative_age_traits = yes
+	if = {
+		limit = { has_trait = blind }
+		remove_trait = blind
+	}
+}
+
+spn_hide_refresh_dread_effect = {
+	if = {
+		limit = { has_character_modifier = spn_hide_known_dread_modifier }
+		remove_character_modifier = spn_hide_known_dread_modifier
+	}
+	if = {
+		limit = { has_character_modifier = spn_hide_known_dread_timber_modifier }
+		remove_character_modifier = spn_hide_known_dread_timber_modifier
+	}
+	if = {
+		limit = {
+			spn_is_champion_trigger = yes
+			OR = {
+				has_trait = spn_known_werewolf
+				has_trait = spn_known_hybrid
+			}
+		}
+		if = {
+			limit = { has_trait = spn_champion_timber }
+			add_character_modifier = { modifier = spn_hide_known_dread_timber_modifier years = 2 }
+		}
+		else = {
+			add_character_modifier = { modifier = spn_hide_known_dread_modifier years = 2 }
+		}
+	}
+}
+
+# ==================================================================================================
+# HIDE BOND (§6). Champion scope. Every gain and loss goes through here, so the beat check never misses one.
+# ==================================================================================================
+spn_hide_add_bond_effect = {
+	if = {
+		limit = { has_trait = spn_champion_silverback }
+		add_trait_xp = { trait = spn_champion_silverback track = hide_bond value = $VALUE$ }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_timber }
+		add_trait_xp = { trait = spn_champion_timber track = hide_bond value = $VALUE$ }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_tundra }
+		add_trait_xp = { trait = spn_champion_tundra track = hide_bond value = $VALUE$ }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_graybeard }
+		add_trait_xp = { trait = spn_champion_graybeard track = hide_bond value = $VALUE$ }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_midnight }
+		add_trait_xp = { trait = spn_champion_midnight track = hide_bond value = $VALUE$ }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_alpha }
+		add_trait_xp = { trait = spn_champion_alpha track = hide_bond value = $VALUE$ }
+	}
+	spn_hide_check_beat_effect = yes
+}
+
+# 2.37 (Thomas, 3 Oct: "they know Latin because the hide knows Latin"): at Hide Bond 25 the hide takes its champion's
+# tongue on its own, no question asked. Whoever wears it after him learns it (spn_hide_make_champion_effect step 4). The
+# list is the same one Leave My Mark, the seeding and the wake write, and a culture already in it is not added twice, so
+# this is safe to run on every gain and every year. Champion scope.
+spn_hide_tongue_effect = {
+	if = {
+		limit = {
+			spn_is_champion_trigger = yes
+			exists = culture
+			spn_hide_bond_value >= spn_hide_bond_tongue_value
+		}
+	if = {
+		limit = { has_trait = spn_champion_silverback }
+		spn_hide_tongue_one_effect = { HIDE = silverback }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_timber }
+		spn_hide_tongue_one_effect = { HIDE = timber }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_tundra }
+		spn_hide_tongue_one_effect = { HIDE = tundra }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_graybeard }
+		spn_hide_tongue_one_effect = { HIDE = graybeard }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_midnight }
+		spn_hide_tongue_one_effect = { HIDE = midnight }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_alpha }
+		spn_hide_tongue_one_effect = { HIDE = alpha }
+	}
+	}
+}
+
+spn_hide_tongue_one_effect = {
+	if = {
+		limit = { NOT = { is_target_in_global_variable_list = { name = spn_hide_$HIDE$_marks target = culture } } }
+		add_to_global_variable_list = { name = spn_hide_$HIDE$_marks target = culture }
+		if = {
+			limit = { is_ai = no }
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_hide_tongue_toast_t
+				left_icon = this
+				custom_tooltip = spn_hide_tongue_toast_tt
+			}
+		}
+	}
+}
+
+# 2.37 (Thomas, 3 Oct): the Bond grows a little every year the hide is worn, more in a pack, so a champion who never
+# goes to war still hears the hide. Each beat needs only +5 beyond the last beat's +15, and beats stay two years apart,
+# so a worn hide reaches full Bond in about 10-15 years without war. Global scope, once a year: six records at most.
+spn_hide_yearly_bond_effect = {
+	spn_hide_yearly_bond_one_effect = { HIDE = silverback }
+	spn_hide_yearly_bond_one_effect = { HIDE = timber }
+	spn_hide_yearly_bond_one_effect = { HIDE = tundra }
+	spn_hide_yearly_bond_one_effect = { HIDE = graybeard }
+	spn_hide_yearly_bond_one_effect = { HIDE = midnight }
+	spn_hide_yearly_bond_one_effect = { HIDE = alpha }
+}
+
+spn_hide_yearly_bond_one_effect = {
+	global_var:spn_hide_champion_$HIDE$ ?= {
+		if = {
+			limit = {
+				is_alive = yes
+				has_trait = spn_champion_$HIDE$
+			}
+			if = {
+				limit = {
+					any_character_artifact = {
+						var:spn_hide ?= flag:$HIDE$
+						spn_hide_worn_by_champion_trigger = yes
+					}
+				}
+				if = {
+					limit = {
+						spn_packs_on_trigger = yes
+						spn_in_pack_trigger = yes
+					}
+					spn_hide_add_bond_effect = { VALUE = spn_hide_bond_year_pack_value }
+				}
+				else = {
+					spn_hide_add_bond_effect = { VALUE = spn_hide_bond_year_value }
+				}
+			}
+			spn_hide_tongue_effect = yes
+		}
+	}
+}
+
+# §6.3. If the next beat's threshold is met and two years have passed since the last, bank the beat FIRST, then fire
+# it 7-30 days later. Falling below a threshold never undoes a beat; climbing back never repeats one.
+spn_hide_check_beat_effect = {
+	# 2.37: the tongue first (every Bond gain and the weekly check pass through here), so it is in the hide before any
+	# later beat says it is, an older save included.
+	spn_hide_tongue_effect = yes
+	if = {
+		limit = {
+			spn_is_champion_trigger = yes
+			NOT = { exists = var:spn_champion_of }
+		}
+		spn_hide_heal_champion_var_effect = yes
+	}
+	if = {
+		limit = {
+			spn_is_champion_trigger = yes
+			NOT = { has_character_flag = spn_hide_beat_cooldown }
+		}
+		if = {
+			limit = { has_trait = spn_champion_silverback }
+			save_scope_value_as = {
+				name = spn_beat_seen
+				value = {
+					value = 0
+					if = {
+						limit = { exists = var:spn_hide_beat_silverback }
+						value = var:spn_hide_beat_silverback
+					}
+				}
+			}
+		}
+		if = {
+			limit = { has_trait = spn_champion_timber }
+			save_scope_value_as = {
+				name = spn_beat_seen
+				value = {
+					value = 0
+					if = {
+						limit = { exists = var:spn_hide_beat_timber }
+						value = var:spn_hide_beat_timber
+					}
+				}
+			}
+		}
+		if = {
+			limit = { has_trait = spn_champion_tundra }
+			save_scope_value_as = {
+				name = spn_beat_seen
+				value = {
+					value = 0
+					if = {
+						limit = { exists = var:spn_hide_beat_tundra }
+						value = var:spn_hide_beat_tundra
+					}
+				}
+			}
+		}
+		if = {
+			limit = { has_trait = spn_champion_graybeard }
+			save_scope_value_as = {
+				name = spn_beat_seen
+				value = {
+					value = 0
+					if = {
+						limit = { exists = var:spn_hide_beat_graybeard }
+						value = var:spn_hide_beat_graybeard
+					}
+				}
+			}
+		}
+		if = {
+			limit = { has_trait = spn_champion_midnight }
+			save_scope_value_as = {
+				name = spn_beat_seen
+				value = {
+					value = 0
+					if = {
+						limit = { exists = var:spn_hide_beat_midnight }
+						value = var:spn_hide_beat_midnight
+					}
+				}
+			}
+		}
+		if = {
+			limit = { has_trait = spn_champion_alpha }
+			save_scope_value_as = {
+				name = spn_beat_seen
+				value = {
+					value = 0
+					if = {
+						limit = { exists = var:spn_hide_beat_alpha }
+						value = var:spn_hide_beat_alpha
+					}
+				}
+			}
+		}
+		save_scope_value_as = {
+			name = spn_beat_need
+			value = {
+				value = scope:spn_beat_seen
+				multiply = 20
+			}
+		}
+		if = {
+			limit = {
+				scope:spn_beat_seen < 6
+				spn_hide_bond_value >= scope:spn_beat_need
+			}
+			spn_hide_set_beat_effect = yes
+			add_character_flag = { flag = spn_hide_beat_cooldown years = 2 }
+			# The beat belongs to this hide: it does not fire for another one he may wear by then (Two Wolves).
+			spn_hide_save_flag_effect = { NAME = spn_beat_hide FROM = var:spn_champion_of }
+			if = {
+				limit = { scope:spn_beat_seen = 0 }
+				trigger_event = { id = spn_hide.0100 days = 14 }
+			}
+			else_if = {
+				limit = { scope:spn_beat_seen = 1 }
+				trigger_event = { id = spn_hide.0101 days = { 7 30 } }
+			}
+			else_if = {
+				limit = { scope:spn_beat_seen = 2 }
+				trigger_event = { id = spn_hide.0102 days = { 7 30 } }
+			}
+			else_if = {
+				limit = { scope:spn_beat_seen = 3 }
+				trigger_event = { id = spn_hide.0103 days = { 7 30 } }
+			}
+			else_if = {
+				limit = { scope:spn_beat_seen = 4 }
+				trigger_event = { id = spn_hide.0104 days = { 7 30 } }
+			}
+			else = {
+				trigger_event = { id = spn_hide.0105 days = { 7 30 } }
+			}
+		}
+	}
+}
+
+# Writes the next beat number for whichever hide he carries (the bank).
+spn_hide_set_beat_effect = {
+	if = {
+		limit = { has_trait = spn_champion_silverback }
+		set_variable = {
+			name = spn_hide_beat_silverback
+			value = {
+				value = scope:spn_beat_seen
+				add = 1
+			}
+		}
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_timber }
+		set_variable = {
+			name = spn_hide_beat_timber
+			value = {
+				value = scope:spn_beat_seen
+				add = 1
+			}
+		}
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_tundra }
+		set_variable = {
+			name = spn_hide_beat_tundra
+			value = {
+				value = scope:spn_beat_seen
+				add = 1
+			}
+		}
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_graybeard }
+		set_variable = {
+			name = spn_hide_beat_graybeard
+			value = {
+				value = scope:spn_beat_seen
+				add = 1
+			}
+		}
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_midnight }
+		set_variable = {
+			name = spn_hide_beat_midnight
+			value = {
+				value = scope:spn_beat_seen
+				add = 1
+			}
+		}
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_alpha }
+		set_variable = {
+			name = spn_hide_beat_alpha
+			value = {
+				value = scope:spn_beat_seen
+				add = 1
+			}
+		}
+	}
+}
+
+# The two gifts (§6.6, C1): a free perk point in his own wolf tree, once each in a life, whatever he wears.
+spn_hide_gift_effect = {
+	if = {
+		limit = { NOT = { has_character_flag = $FLAG$ } }
+		add_character_flag = $FLAG$
+		if = {
+			limit = { has_trait = supernatural_hybrid }
+			add_hybrid_lifestyle_perk_points = 1
+		}
+		else = {
+			add_werewolf_lifestyle_perk_points = 1
+		}
+	}
+}
+
+# ==================================================================================================
+# THE CLASH (§7.3). Creature against creature: Challenge, champion against champion, the ringing's chase.
+#   A, B   = the two sides
+#   THEN   = a scripted effect run after the roll; it reads scope:spn_clash_winner and scope:spn_clash_loser
+#   FORM   = yes when both count as in wolf form (Challenge: "a brawl, no swords"), else no
+# Both weights and the outcome are banked before THEN runs. The roll is hidden: no odds are printed (his rule against
+# telegraphed outcomes); spn_clash_lean_tooltip_effect says which way it leans in words.
+# ==================================================================================================
+spn_creature_clash_effect = {
+	# A second clash in the same event (a battle, the yearly moment) must not read the first one's outcome.
+	if = {
+		limit = { exists = scope:spn_clash_a_won }
+		clear_saved_scope = spn_clash_a_won
+	}
+	if = {
+		limit = { exists = scope:spn_clash_wolf_form }
+		clear_saved_scope = spn_clash_wolf_form
+	}
+	$A$ = { save_scope_as = spn_clash_a }
+	$B$ = { save_scope_as = spn_clash_b }
+	if = {
+		limit = { always = $FORM$ }
+		save_scope_value_as = { name = spn_clash_wolf_form value = yes }
+	}
+	scope:spn_clash_b = { save_scope_as = spn_clash_foe }
+	scope:spn_clash_a = {
+		save_scope_value_as = { name = spn_clash_wa value = spn_creature_clash_weight_value }
+	}
+	scope:spn_clash_a = { save_scope_as = spn_clash_foe }
+	scope:spn_clash_b = {
+		save_scope_value_as = { name = spn_clash_wb value = spn_creature_clash_weight_value }
+	}
+	hidden_effect = {
+		random = {
+			chance = spn_clash_chance_a_value
+			save_scope_value_as = { name = spn_clash_a_won value = yes }
+		}
+	}
+	# Hidden, all of it: in a tooltip the else branch would print as if B had already won.
+	hidden_effect = {
+		if = {
+			limit = { exists = scope:spn_clash_a_won }
+			scope:spn_clash_a = { save_scope_as = spn_clash_winner }
+			scope:spn_clash_b = { save_scope_as = spn_clash_loser }
+		}
+		else = {
+			scope:spn_clash_b = { save_scope_as = spn_clash_winner }
+			scope:spn_clash_a = { save_scope_as = spn_clash_loser }
+		}
+		$THEN$ = yes
+	}
+}
+
+# Words, not odds: the lean from A's side. Same weights the clash will use.
+spn_clash_lean_tooltip_effect = {
+	$A$ = { save_scope_as = spn_clash_a }
+	$B$ = { save_scope_as = spn_clash_b }
+	# 2.37e: FORM as the real clash has it (the Ringing fights out of the wolf's shape, FORM = no); it was always yes.
+	# The weight reads exists = scope:spn_clash_wolf_form, so it is cleared and set exactly as spn_creature_clash_effect does.
+	if = {
+		limit = { exists = scope:spn_clash_wolf_form }
+		clear_saved_scope = spn_clash_wolf_form
+	}
+	if = {
+		limit = { always = $FORM$ }
+		save_scope_value_as = { name = spn_clash_wolf_form value = yes }
+	}
+	scope:spn_clash_b = { save_scope_as = spn_clash_foe }
+	scope:spn_clash_a = { save_scope_value_as = { name = spn_clash_wa value = spn_creature_clash_weight_value } }
+	scope:spn_clash_a = { save_scope_as = spn_clash_foe }
+	scope:spn_clash_b = { save_scope_value_as = { name = spn_clash_wb value = spn_creature_clash_weight_value } }
+	if = {
+		limit = { spn_clash_chance_a_value >= 65 }
+		custom_tooltip = spn_clash_lean_strong_tt
+	}
+	else_if = {
+		limit = { spn_clash_chance_a_value <= 35 }
+		custom_tooltip = spn_clash_lean_weak_tt
+	}
+	else = {
+		custom_tooltip = spn_clash_lean_even_tt
+	}
+}
+
+# ==================================================================================================
+# HOW A HIDE LEAVES A CHAMPION (§8). Champion scope. REASON = flag:death | unbound | abandoned | two_wolves | soul |
+# lost_blood | lost. The only place the champion trait comes off.
+# ==================================================================================================
+spn_hide_exit_effect = {
+	save_scope_value_as = { name = spn_exit_reason value = $REASON$ }
+	if = {
+		limit = { NOT = { exists = var:spn_champion_of } }
+		spn_hide_heal_champion_var_effect = yes
+	}
+	if = {
+		limit = { var:spn_champion_of ?= flag:silverback }
+		spn_hide_exit_hide_effect = { HIDE = silverback }
+	}
+	else_if = {
+		limit = { var:spn_champion_of ?= flag:timber }
+		spn_hide_exit_hide_effect = { HIDE = timber }
+	}
+	else_if = {
+		limit = { var:spn_champion_of ?= flag:tundra }
+		spn_hide_exit_hide_effect = { HIDE = tundra }
+	}
+	else_if = {
+		limit = { var:spn_champion_of ?= flag:graybeard }
+		spn_hide_exit_hide_effect = { HIDE = graybeard }
+	}
+	else_if = {
+		limit = { var:spn_champion_of ?= flag:midnight }
+		spn_hide_exit_hide_effect = { HIDE = midnight }
+	}
+	else_if = {
+		limit = { var:spn_champion_of ?= flag:alpha }
+		spn_hide_exit_hide_effect = { HIDE = alpha }
+	}
+}
+
+# A champion trait with no var (a console add_trait, or a save from a build that crashed mid-effect): rebuild the var
+# from the trait. The trait is the identity; the var only mirrors it.
+spn_hide_heal_champion_var_effect = {
+	if = {
+		limit = { has_trait = spn_champion_silverback }
+		set_variable = { name = spn_champion_of value = flag:silverback }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_timber }
+		set_variable = { name = spn_champion_of value = flag:timber }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_tundra }
+		set_variable = { name = spn_champion_of value = flag:tundra }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_graybeard }
+		set_variable = { name = spn_champion_of value = flag:graybeard }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_midnight }
+		set_variable = { name = spn_champion_of value = flag:midnight }
+	}
+	else_if = {
+		limit = { has_trait = spn_champion_alpha }
+		set_variable = { name = spn_champion_of value = flag:alpha }
+	}
+}
+
+spn_hide_exit_hide_effect = {
+	save_scope_as = spn_exit_champ
+	# 1. Save the hide (it may already be gone: destroyed in the days it was off). A scope left from an earlier exit
+	#    in this chain must not stand in for it.
+	if = {
+		limit = { exists = scope:spn_exit_hide }
+		clear_saved_scope = spn_exit_hide
+	}
+	random_character_artifact = {
+		limit = { var:spn_hide ?= flag:$HIDE$ }
+		save_scope_as = spn_exit_hide
+	}
+	# 2. Bank: his Bond for "it remembers him", the legacy if he left his mark, and the last champion's name.
+	set_variable = { name = spn_hide_bond_kept_$HIDE$ value = spn_hide_bond_value }
+	if = {
+		limit = { has_character_flag = spn_hide_left_mark_$HIDE$ }
+		set_global_variable = {
+			name = spn_hide_$HIDE$_legacy
+			value = {
+				value = spn_hide_bond_value
+				divide = 2
+			}
+		}
+	}
+	set_global_variable = { name = spn_hide_$HIDE$_last value = scope:spn_exit_champ }
+	# 3. The guard off the artifact.
+	scope:spn_exit_hide ?= {
+		if = {
+			limit = { has_variable = artifact_prevent_transfer }
+			remove_variable = artifact_prevent_transfer
+		}
+	}
+	# 4. The trait off.
+	remove_trait = spn_champion_$HIDE$
+	remove_variable = spn_champion_of
+	# 5. The world's record -- only if it still points at him, so a stale champion's exit never erases a newer one.
+	if = {
+		limit = { global_var:spn_hide_champion_$HIDE$ ?= scope:spn_exit_champ }
+		remove_global_variable = spn_hide_champion_$HIDE$
+	}
+	# 6. Move the hide, by reason.
+	if = {
+		limit = { scope:spn_exit_reason = flag:death }
+		spn_hide_move_on_death_effect = { HIDE = $HIDE$ }
+	}
+	else_if = {
+		limit = { scope:spn_exit_reason = flag:lost }
+		# The weekly check sent this only after it found the hide nowhere in the world.
+		spn_hide_record_lost_effect = { HIDE = $HIDE$ }
+	}
+	# 2.37e: unbound, abandoned, lost blood: it comes off him and stays in his hands, unguarded. Unbound will also not
+	# look at him again for ten years: worn and unrefused, the weekly check offered it straight back within days and
+	# the mage's work bought nothing. A mortal who abandoned the blood no longer wears it either, so It Knows You (which
+	# needs it off) can find him. two_wolves: the event that sent it handles both hides. soul: it is on the new body.
+	else_if = {
+		limit = {
+			OR = {
+				scope:spn_exit_reason = flag:unbound
+				scope:spn_exit_reason = flag:abandoned
+				scope:spn_exit_reason = flag:lost_blood
+			}
+		}
+		scope:spn_exit_hide ?= {
+			if = {
+				limit = { is_equipped = yes }
+				unequip_artifact_from_owner = yes
+			}
+		}
+		if = {
+			limit = { scope:spn_exit_reason = flag:unbound }
+			add_character_flag = { flag = spn_hide_refused_$HIDE$ years = 10 }
+		}
+	}
+	# 7. Claims, for a death only, and only after the move and only if the hide still exists: his house, and his pack's
+	#    alpha if that is not himself. An unbound or abandoning champion keeps his own hide and must hold no claim on it.
+	if = {
+		limit = {
+			scope:spn_exit_reason = flag:death
+			exists = scope:spn_exit_hide
+		}
+		house ?= { add_house_artifact_claim = scope:spn_exit_hide }
+		# 2.37e: nested -- the story_owner read errored on every packless champion's death (no short-circuit).
+		if = {
+			limit = { exists = var:spn_pack }
+			if = {
+				limit = { NOT = { var:spn_pack.story_owner ?= scope:spn_exit_champ } }
+				var:spn_pack.story_owner ?= {
+					if = {
+						limit = { is_alive = yes }
+						add_personal_artifact_claim = scope:spn_exit_hide
+					}
+				}
+			}
+		}
+	}
+	# 8. The memory, for the living. A dead man's memories are written for nobody.
+	if = {
+		limit = {
+			NOT = { scope:spn_exit_reason = flag:death }
+			NOT = { any_memory = { has_memory_type = spn_hide_left_me_memory } }
+		}
+		create_character_memory = { type = spn_hide_left_me_memory }
+	}
+	# 9. The pack learns it has one champion fewer; Timber's gift and the ageless gift go with the hide.
+	if = {
+		limit = { has_character_modifier = spn_alone_in_the_woods_modifier }
+		remove_all_character_modifier_instances = spn_alone_in_the_woods_modifier
+	}
+	if = {
+		limit = { has_character_modifier = spn_hide_ageless_modifier }
+		remove_all_character_modifier_instances = spn_hide_ageless_modifier
+	}
+	if = {
+		limit = { exists = var:spn_pack }
+		var:spn_pack = { spn_pack_refresh_effect = yes }
+	}
+	# 10. What only a champion carries goes too. The card's timer and the gift flags stay: they are his, once a life.
+	spn_hide_refresh_dread_effect = yes
+	if = {
+		limit = { has_character_modifier = spn_let_it_take_me_modifier }
+		remove_character_modifier = spn_let_it_take_me_modifier
+	}
+	if = {
+		limit = { has_character_flag = spn_hide_wolf_runs }
+		remove_character_flag = spn_hide_wolf_runs
+	}
+	if = {
+		limit = { has_character_flag = spn_hide_off_since }
+		remove_character_flag = spn_hide_off_since
+	}
+}
+
+# §8 death row. Scope: the dying champion. The killer if he is alive and a person (the species gate keeps a dragon or
+# a wight from taking it); else the primary heir; else lost, which means destroyed -- bank, destroy, then record it
+# lost, or vanilla inheritance would hand the artifact on while the lost record makes a second one.
+spn_hide_move_on_death_effect = {
+	if = {
+		limit = { exists = scope:spn_exit_hide }
+		if = {
+			limit = {
+				scope:killer ?= { # 2.37e: ?= (most champions die with no killer)
+					is_alive = yes
+					NOT = { this = scope:spn_exit_champ }
+					spn_is_valid_supernatural_target = yes
+				}
+			}
+			scope:spn_exit_hide = {
+				set_owner = {
+					target = scope:killer
+					history = {
+						type = taken_in_battle
+						actor = scope:spn_exit_champ
+						recipient = scope:killer
+					}
+				}
+			}
+			scope:killer = { spn_hide_start_check_effect = yes }
+			# What follows the hide: the hunter's trophy event, or Two Wolves for a champion who killed a champion.
+			if = {
+				limit = { scope:killer = { has_trait = supernatural_hunter } }
+				scope:killer = {
+					save_scope_as = spn_trophy_hunter
+					trigger_event = { id = spn_hide.0320 days = 2 }
+				}
+			}
+			# Deferred, never inline: this runs inside the dead man's exit, and a second exit nested here would
+			# overwrite the scopes the first is still reading (its claims, its pack).
+			else_if = {
+				limit = { scope:killer = { spn_is_champion_trigger = yes } }
+				scope:spn_exit_hide = { save_scope_as = spn_offered_hide }
+				scope:killer = {
+					if = {
+						limit = { is_ai = no }
+						trigger_event = { id = spn_hide.0012 days = 3 }
+					}
+					else = {
+						trigger_event = { id = spn_hide.0016 days = 3 }
+					}
+				}
+			}
+		}
+		else_if = {
+			limit = { scope:spn_exit_champ.primary_heir ?= { is_alive = yes } }
+			scope:spn_exit_champ.primary_heir = { save_scope_as = spn_exit_heir }
+			scope:spn_exit_hide = {
+				set_owner = {
+					target = scope:spn_exit_heir
+					history = {
+						type = inherited
+						actor = scope:spn_exit_champ
+						recipient = scope:spn_exit_heir
+					}
+				}
+			}
+			scope:spn_exit_heir = { spn_hide_start_check_effect = yes }
+		}
+		else = {
+			destroy_artifact = scope:spn_exit_hide
+			clear_saved_scope = spn_exit_hide
+			spn_hide_record_lost_effect = { HIDE = $HIDE$ }
+		}
+	}
+	else = {
+		spn_hide_record_lost_effect = { HIDE = $HIDE$ }
+	}
+}
+
+# An AI champion who has come to hold a second hide (a clash on the field, a death; spn_hide.0016): he keeps the one
+# that fits him better and hands the other to the best-fitting wolf in his pack, else keeps it in his chest (§5.10).
+spn_hide_ai_two_wolves_effect = {
+	save_scope_as = spn_two_ai
+	$ARTIFACT$ = { save_scope_as = spn_two_new }
+	random_character_artifact = {
+		limit = { var:spn_hide ?= scope:spn_two_ai.var:spn_champion_of }
+		save_scope_as = spn_two_old
+	}
+	spn_hide_save_flag_effect = { NAME = spn_fit_hide FROM = var:spn_champion_of }
+	save_scope_value_as = { name = spn_two_fit_old value = spn_hide_fit_value }
+	spn_hide_save_flag_effect = { NAME = spn_fit_hide FROM = scope:spn_two_new.var:spn_hide }
+	save_scope_value_as = { name = spn_two_fit_new value = spn_hide_fit_value }
+	# Keep the better fit. Swapping: the exit banks the old one's history first, then the new one is made his.
+	if = {
+		limit = {
+			exists = scope:spn_two_old
+			scope:spn_two_fit_new > scope:spn_two_fit_old
+		}
+		spn_hide_exit_effect = { REASON = flag:two_wolves }
+		spn_hide_make_champion_dispatch_effect = { ARTIFACT = scope:spn_two_new }
+		scope:spn_two_old = { save_scope_as = spn_two_spare }
+	}
+	else = {
+		scope:spn_two_new = { save_scope_as = spn_two_spare }
+	}
+	# The one he put aside will not ask him again for five years; the one he kept grows (§5.10, as the player's choice).
+	spn_hide_mark_refused_effect = { FROM = scope:spn_two_spare.var:spn_hide YEARS = 5 }
+	spn_hide_add_bond_effect = { VALUE = spn_hide_bond_two_wolves_value }
+	# The spare goes to the best-fitting wolf in his pack (by standing, the pack's own ranking), else stays in his chest.
+	if = {
+		limit = {
+			exists = var:spn_pack
+			var:spn_pack = {
+				any_in_list = {
+					variable = spn_pack_members
+					NOT = { this = scope:spn_two_ai }
+					spn_can_bear_hide_trigger = yes
+					spn_is_champion_trigger = no
+					is_ai = yes # 2.37o: a player is not handed a hide with no word (the review of 4 Oct, F12)
+				}
+			}
+		}
+		var:spn_pack = {
+			ordered_in_list = {
+				variable = spn_pack_members
+				limit = {
+					NOT = { this = scope:spn_two_ai }
+					spn_can_bear_hide_trigger = yes
+					spn_is_champion_trigger = no
+					is_ai = yes # 2.37o: a player is not handed a hide with no word (the review of 4 Oct, F12)
+				}
+				order_by = spn_pack_standing_value
+				save_scope_as = spn_two_heir
+			}
+		}
+		scope:spn_two_spare = {
+			if = {
+				limit = { is_equipped = yes }
+				unequip_artifact_from_owner = yes
+			}
+			set_owner = {
+				target = scope:spn_two_heir
+				history = {
+					type = given
+					actor = scope:spn_two_ai
+					recipient = scope:spn_two_heir
+				}
+			}
+		}
+		scope:spn_two_heir = { spn_hide_start_check_effect = yes }
+	}
+	else = {
+		scope:spn_two_spare = {
+			if = {
+				limit = { is_equipped = yes }
+				unequip_artifact_from_owner = yes
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# SHRINES (§9.1). Artifact scope. Idempotent: whichever hook sees the hide leave a shrine runs it, and a second call
+# finds nothing to do.
+# ==================================================================================================
+spn_hide_shrine_left_effect = {
+	if = {
+		limit = { exists = var:spn_hide_shrine_county }
+		save_scope_as = spn_left_hide
+		var:spn_hide_shrine_county = {
+			if = {
+				limit = { scope:spn_left_hide.var:spn_hide = flag:silverback  has_county_modifier = spn_hide_relic_kept_silverback_modifier }
+				remove_county_modifier = spn_hide_relic_kept_silverback_modifier
+			}
+			if = {
+				limit = { scope:spn_left_hide.var:spn_hide = flag:timber  has_county_modifier = spn_hide_relic_kept_timber_modifier }
+				remove_county_modifier = spn_hide_relic_kept_timber_modifier
+			}
+			if = {
+				limit = { scope:spn_left_hide.var:spn_hide = flag:tundra  has_county_modifier = spn_hide_relic_kept_tundra_modifier }
+				remove_county_modifier = spn_hide_relic_kept_tundra_modifier
+			}
+			if = {
+				limit = { scope:spn_left_hide.var:spn_hide = flag:graybeard  has_county_modifier = spn_hide_relic_kept_graybeard_modifier }
+				remove_county_modifier = spn_hide_relic_kept_graybeard_modifier
+			}
+			if = {
+				limit = { scope:spn_left_hide.var:spn_hide = flag:midnight  has_county_modifier = spn_hide_relic_kept_midnight_modifier }
+				remove_county_modifier = spn_hide_relic_kept_midnight_modifier
+			}
+			if = {
+				limit = { scope:spn_left_hide.var:spn_hide = flag:alpha  has_county_modifier = spn_hide_relic_kept_alpha_modifier }
+				remove_county_modifier = spn_hide_relic_kept_alpha_modifier
+			}
+		}
+		remove_variable = spn_hide_shrine_county
+		if = {
+			limit = { var:spn_hide = flag:silverback }
+			set_artifact_description = spn_hide_silverback_desc
+		}
+		if = {
+			limit = { var:spn_hide = flag:timber }
+			set_artifact_description = spn_hide_timber_desc
+		}
+		if = {
+			limit = { var:spn_hide = flag:tundra }
+			set_artifact_description = spn_hide_tundra_desc
+		}
+		if = {
+			limit = { var:spn_hide = flag:graybeard }
+			set_artifact_description = spn_hide_graybeard_desc
+		}
+		if = {
+			limit = { var:spn_hide = flag:midnight }
+			set_artifact_description = spn_hide_midnight_desc
+		}
+		if = {
+			limit = { var:spn_hide = flag:alpha }
+			set_artifact_description = spn_hide_alpha_desc
+		}
+	}
+}
+
+# Into a shrine: the marker on the site's county, recorded on the hide; the St. Christopher reading under a Christian
+# faith. Artifact scope; COUNTY = the site's county; FAITH = the site's faith (may be unset).
+spn_hide_shrine_entered_effect = {
+	save_scope_as = spn_entered_hide
+	$COUNTY$ = { save_scope_as = spn_entered_county }
+	if = {
+		limit = {
+			exists = var:spn_hide_shrine_county
+			NOT = { var:spn_hide_shrine_county = scope:spn_entered_county }
+		}
+		spn_hide_shrine_left_effect = yes
+	}
+	if = {
+		limit = { NOT = { exists = var:spn_hide_shrine_county } }
+		set_variable = { name = spn_hide_shrine_county value = scope:spn_entered_county }
+		scope:spn_entered_county = {
+			if = {
+				limit = { scope:spn_entered_hide.var:spn_hide = flag:silverback }
+				add_county_modifier = spn_hide_relic_kept_silverback_modifier
+			}
+			if = {
+				limit = { scope:spn_entered_hide.var:spn_hide = flag:timber }
+				add_county_modifier = spn_hide_relic_kept_timber_modifier
+			}
+			if = {
+				limit = { scope:spn_entered_hide.var:spn_hide = flag:tundra }
+				add_county_modifier = spn_hide_relic_kept_tundra_modifier
+			}
+			if = {
+				limit = { scope:spn_entered_hide.var:spn_hide = flag:graybeard }
+				add_county_modifier = spn_hide_relic_kept_graybeard_modifier
+			}
+			if = {
+				limit = { scope:spn_entered_hide.var:spn_hide = flag:midnight }
+				add_county_modifier = spn_hide_relic_kept_midnight_modifier
+			}
+			if = {
+				limit = { scope:spn_entered_hide.var:spn_hide = flag:alpha }
+				add_county_modifier = spn_hide_relic_kept_alpha_modifier
+			}
+		}
+	}
+	if = {
+		limit = { $FAITH$ ?= { religion_tag = christianity_religion } }
+		if = {
+			limit = { var:spn_hide = flag:silverback }
+			set_artifact_description = spn_hide_silverback_desc_christopher
+		}
+		if = {
+			limit = { var:spn_hide = flag:timber }
+			set_artifact_description = spn_hide_timber_desc_christopher
+		}
+		if = {
+			limit = { var:spn_hide = flag:tundra }
+			set_artifact_description = spn_hide_tundra_desc_christopher
+		}
+		if = {
+			limit = { var:spn_hide = flag:graybeard }
+			set_artifact_description = spn_hide_graybeard_desc_christopher
+		}
+		if = {
+			limit = { var:spn_hide = flag:midnight }
+			set_artifact_description = spn_hide_midnight_desc_christopher
+		}
+		if = {
+			limit = { var:spn_hide = flag:alpha }
+			set_artifact_description = spn_hide_alpha_desc_christopher
+		}
+	}
+}
+
+# ==================================================================================================
+# THE WAR'S BOND (§12.3): +2 a kill, at most +6 a battle and +20 a year from war.
+# ==================================================================================================
+spn_hide_feat_bond_effect = {
+	if = {
+		limit = {
+			# trigger_if, not OR: a missing variable is never read.
+			trigger_if = {
+				limit = { exists = var:spn_feat_bond_this_battle }
+				var:spn_feat_bond_this_battle < spn_hide_bond_battle_cap_value
+			}
+			trigger_if = {
+				limit = { exists = var:spn_feat_bond_year }
+				var:spn_feat_bond_year < spn_feat_bond_year_cap_value
+			}
+		}
+		if = {
+			limit = { NOT = { exists = var:spn_feat_bond_this_battle } }
+			set_variable = { name = spn_feat_bond_this_battle value = 0 days = 60 }
+		}
+		if = {
+			limit = { NOT = { exists = var:spn_feat_bond_year } }
+			set_variable = { name = spn_feat_bond_year value = 0 years = 1 }
+		}
+		change_variable = { name = spn_feat_bond_this_battle add = spn_hide_bond_feat_value }
+		change_variable = { name = spn_feat_bond_year add = spn_hide_bond_feat_value }
+		spn_hide_add_bond_effect = { VALUE = spn_hide_bond_feat_value }
+	}
+}
+
+# ==================================================================================================
+# WHO IS THIS HIDE'S CHAMPION? Artifact scope -> scope:spn_hide_champ (if any).
+# ==================================================================================================
+spn_hide_save_champion_effect = {
+	if = {
+		limit = { var:spn_hide = flag:silverback  exists = global_var:spn_hide_champion_silverback }
+		global_var:spn_hide_champion_silverback = { save_scope_as = spn_hide_champ }
+	}
+	else_if = {
+		limit = { var:spn_hide = flag:timber  exists = global_var:spn_hide_champion_timber }
+		global_var:spn_hide_champion_timber = { save_scope_as = spn_hide_champ }
+	}
+	else_if = {
+		limit = { var:spn_hide = flag:tundra  exists = global_var:spn_hide_champion_tundra }
+		global_var:spn_hide_champion_tundra = { save_scope_as = spn_hide_champ }
+	}
+	else_if = {
+		limit = { var:spn_hide = flag:graybeard  exists = global_var:spn_hide_champion_graybeard }
+		global_var:spn_hide_champion_graybeard = { save_scope_as = spn_hide_champ }
+	}
+	else_if = {
+		limit = { var:spn_hide = flag:midnight  exists = global_var:spn_hide_champion_midnight }
+		global_var:spn_hide_champion_midnight = { save_scope_as = spn_hide_champ }
+	}
+	else_if = {
+		limit = { var:spn_hide = flag:alpha  exists = global_var:spn_hide_champion_alpha }
+		global_var:spn_hide_champion_alpha = { save_scope_as = spn_hide_champ }
+	}
+}
+
+# ==================================================================================================
+# WORD TRAVELS (§9.1). Artifact scope; scope:spn_shrine_county = where it was enshrined. Every player wolf hears; AI
+# wolves at Pack Standing 50 in the packs near the site want it and know where it is. Never a world walk: players,
+# then the members of the packs in spn_packs.
+# ==================================================================================================
+spn_hide_word_travels_effect = {
+	save_scope_as = spn_wt_hide
+	every_player = {
+		limit = { spn_is_wolf_trigger = yes }
+		# 2.37i: every player wolf knows where it is kept, so Send for a Hide can offer it; only the event is held to one
+		# a week (a second hide enshrined inside the week was neither told nor known).
+		spn_hide_learn_where_effect = { HIDE_SCOPE = scope:spn_wt_hide WHERE = scope:spn_shrine_county WANTS = yes }
+		if = {
+			limit = { NOT = { has_character_flag = spn_hide_word_travels_seen } }
+			add_character_flag = { flag = spn_hide_word_travels_seen days = 7 }
+			trigger_event = spn_hide.0310
+		}
+	}
+	if = {
+		limit = { scope:spn_shrine_county = { exists = holder } }
+		scope:spn_shrine_county.holder = { save_scope_as = spn_wt_holder }
+		every_in_global_list = {
+			variable = spn_packs
+			limit = { exists = var:spn_pack }
+			var:spn_pack = {
+				every_in_list = {
+					variable = spn_pack_members
+					limit = {
+						is_ai = yes
+						is_alive = yes
+						spn_pack_standing_value >= 50
+						in_diplomatic_range = scope:spn_wt_holder
+					}
+					spn_hide_learn_where_effect = { HIDE_SCOPE = scope:spn_wt_hide WHERE = scope:spn_shrine_county WANTS = yes }
+				}
+			}
+		}
+	}
+}
+
+# A wolf learns where a hide is (Word Travels, Word at the Fire, A Hide Seen). Character scope. WHERE = its holder or its
+# site's county. WANTS = yes for a shrine: a claim cannot reach a shrine, so the AI's Take the Hide from the Shrine,
+# siege and pilgrimage weights read spn_hide_wants_<hide> instead. The pointer is kept in two variables of one type
+# each -- spn_knows_hide_<hide> a holder, spn_knows_shrine_<hide> a county -- so "does he still know it?" never
+# compares a character with a title.
+spn_hide_learn_where_effect = {
+	if = {
+		limit = { $HIDE_SCOPE$.var:spn_hide = flag:silverback }
+		if = {
+			limit = { always = $WANTS$ }
+			set_variable = { name = spn_knows_shrine_silverback value = $WHERE$ years = 10 }
+			set_variable = { name = spn_hide_wants_silverback value = yes years = 10 }
+			if = {
+				limit = { exists = var:spn_knows_hide_silverback }
+				remove_variable = spn_knows_hide_silverback
+			}
+		}
+		else = {
+			set_variable = { name = spn_knows_hide_silverback value = $WHERE$ years = 10 }
+			if = {
+				limit = { exists = var:spn_knows_shrine_silverback }
+				remove_variable = spn_knows_shrine_silverback
+			}
+		}
+	}
+	else_if = {
+		limit = { $HIDE_SCOPE$.var:spn_hide = flag:timber }
+		if = {
+			limit = { always = $WANTS$ }
+			set_variable = { name = spn_knows_shrine_timber value = $WHERE$ years = 10 }
+			set_variable = { name = spn_hide_wants_timber value = yes years = 10 }
+			if = {
+				limit = { exists = var:spn_knows_hide_timber }
+				remove_variable = spn_knows_hide_timber
+			}
+		}
+		else = {
+			set_variable = { name = spn_knows_hide_timber value = $WHERE$ years = 10 }
+			if = {
+				limit = { exists = var:spn_knows_shrine_timber }
+				remove_variable = spn_knows_shrine_timber
+			}
+		}
+	}
+	else_if = {
+		limit = { $HIDE_SCOPE$.var:spn_hide = flag:tundra }
+		if = {
+			limit = { always = $WANTS$ }
+			set_variable = { name = spn_knows_shrine_tundra value = $WHERE$ years = 10 }
+			set_variable = { name = spn_hide_wants_tundra value = yes years = 10 }
+			if = {
+				limit = { exists = var:spn_knows_hide_tundra }
+				remove_variable = spn_knows_hide_tundra
+			}
+		}
+		else = {
+			set_variable = { name = spn_knows_hide_tundra value = $WHERE$ years = 10 }
+			if = {
+				limit = { exists = var:spn_knows_shrine_tundra }
+				remove_variable = spn_knows_shrine_tundra
+			}
+		}
+	}
+	else_if = {
+		limit = { $HIDE_SCOPE$.var:spn_hide = flag:graybeard }
+		if = {
+			limit = { always = $WANTS$ }
+			set_variable = { name = spn_knows_shrine_graybeard value = $WHERE$ years = 10 }
+			set_variable = { name = spn_hide_wants_graybeard value = yes years = 10 }
+			if = {
+				limit = { exists = var:spn_knows_hide_graybeard }
+				remove_variable = spn_knows_hide_graybeard
+			}
+		}
+		else = {
+			set_variable = { name = spn_knows_hide_graybeard value = $WHERE$ years = 10 }
+			if = {
+				limit = { exists = var:spn_knows_shrine_graybeard }
+				remove_variable = spn_knows_shrine_graybeard
+			}
+		}
+	}
+	else_if = {
+		limit = { $HIDE_SCOPE$.var:spn_hide = flag:midnight }
+		if = {
+			limit = { always = $WANTS$ }
+			set_variable = { name = spn_knows_shrine_midnight value = $WHERE$ years = 10 }
+			set_variable = { name = spn_hide_wants_midnight value = yes years = 10 }
+			if = {
+				limit = { exists = var:spn_knows_hide_midnight }
+				remove_variable = spn_knows_hide_midnight
+			}
+		}
+		else = {
+			set_variable = { name = spn_knows_hide_midnight value = $WHERE$ years = 10 }
+			if = {
+				limit = { exists = var:spn_knows_shrine_midnight }
+				remove_variable = spn_knows_shrine_midnight
+			}
+		}
+	}
+	else_if = {
+		limit = { $HIDE_SCOPE$.var:spn_hide = flag:alpha }
+		if = {
+			limit = { always = $WANTS$ }
+			set_variable = { name = spn_knows_shrine_alpha value = $WHERE$ years = 10 }
+			set_variable = { name = spn_hide_wants_alpha value = yes years = 10 }
+			if = {
+				limit = { exists = var:spn_knows_hide_alpha }
+				remove_variable = spn_knows_hide_alpha
+			}
+		}
+		else = {
+			set_variable = { name = spn_knows_hide_alpha value = $WHERE$ years = 10 }
+			if = {
+				limit = { exists = var:spn_knows_shrine_alpha }
+				remove_variable = spn_knows_shrine_alpha
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE AGELESS GIFT (2.37)
+# ==================================================================================================
+# spn_hide_ageless_modifier. Champion scope. An immortal champion wearing his hide has it;
+# anyone else loses it. Run when he becomes a champion, each year by the net, and when the hide leaves him.
+spn_hide_ageless_effect = {
+	if = {
+		limit = { has_character_modifier = spn_hide_ageless_modifier }
+		remove_all_character_modifier_instances = spn_hide_ageless_modifier
+	}
+	if = {
+		limit = {
+			is_alive = yes
+			is_immortal = yes
+			any_character_artifact = { spn_hide_worn_by_champion_trigger = yes }
+		}
+		add_character_modifier = { modifier = spn_hide_ageless_modifier years = 2 }
+	}
+}
+
+# ==================================================================================================
+# WAR (§12.2). Champion scope; scope:war set by the hook.
+# ==================================================================================================
+spn_hide_war_prompt_effect = {
+	add_character_flag = { flag = spn_hide_war_prompted days = 3 }
+	add_to_variable_list = { name = spn_hide_war_asked target = scope:war years = 20 } # 2.37: once per war
+	if = {
+		limit = { is_ai = no }
+		trigger_event = spn_hide.0200
+	}
+	else = {
+		spn_hide_ai_war_choice_effect = yes
+	}
+}
+
+# The AI decides by the decisions' weights (§21): an AI does not unmask itself.
+spn_hide_ai_war_choice_effect = {
+	random_list = {
+		50 = {
+			modifier = {
+				add = -40
+				NOR = {
+					has_trait = spn_known_werewolf
+					has_trait = spn_known_hybrid
+				}
+				rite ?= { rite_has_doctrine = spn_doctrine_lycanthropy_crime }
+			}
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = 20 has_trait = arrogant }
+			modifier = { add = 20 has_trait = spn_champion_midnight }
+			if = {
+				limit = { NOT = { has_character_flag = spn_hide_wolf_runs } }
+				add_character_flag = spn_hide_wolf_runs
+			}
+		}
+		50 = {
+			modifier = { add = 20 has_trait = paranoid }
+			modifier = { add = 20 has_trait = craven }
+			modifier = { add = 20 has_trait = deceitful }
+			modifier = { add = 15 has_trait = spn_champion_timber }
+			if = {
+				limit = { has_character_flag = spn_hide_wolf_runs }
+				remove_character_flag = spn_hide_wolf_runs
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# AFTER THE BATTLE (§12.5). Root = the side; list spn_battle_champs = the champions who fought here.
+# ==================================================================================================
+spn_hide_battle_aftermath_effect = {
+	# 1. Read first: was anything seen?
+	if = {
+		limit = {
+			any_in_list = {
+				list = spn_battle_champs
+				has_character_flag = spn_feat_seen
+			}
+		}
+		random_in_list = {
+			list = spn_battle_champs
+			limit = { has_character_flag = spn_feat_seen }
+			save_scope_as = spn_men_saw_champ
+		}
+		# What they saw, read before the cleanup: how many of the other side's knights he killed, and whether there were
+		# two beasts (a clash, or two champions seen).
+		save_scope_value_as = {
+			name = spn_men_saw_kills
+			value = {
+				value = 0
+				if = {
+					limit = { scope:spn_men_saw_champ = { exists = var:spn_feat_kills } }
+					add = scope:spn_men_saw_champ.var:spn_feat_kills
+				}
+			}
+		}
+		if = {
+			limit = {
+				OR = {
+					any_in_list = {
+						list = spn_battle_champs
+						has_variable_list = spn_clash_done_with
+					}
+					any_in_list = {
+						list = spn_battle_champs
+						count >= 2
+						has_character_flag = spn_feat_seen
+					}
+				}
+			}
+			save_scope_value_as = { name = spn_men_saw_two value = yes }
+		}
+		# 2. What the Men Saw: players on either side who are not champions. Those on the side that lost the knights are
+		# told it was their own.
+		if = {
+			limit = {
+				scope:spn_battle_side = {
+					OR = {
+						side_commander ?= scope:spn_men_saw_champ
+						side_primary_participant ?= scope:spn_men_saw_champ
+						any_side_knight = { this = scope:spn_men_saw_champ }
+					}
+				}
+			}
+			scope:spn_battle_side.enemy_side.side_primary_participant ?= { save_scope_as = spn_men_saw_victims }
+			scope:spn_battle_side = { spn_hide_men_saw_side_effect = { OURS = no } }
+			scope:spn_battle_side.enemy_side = { spn_hide_men_saw_side_effect = { OURS = yes } }
+		}
+		else = {
+			scope:spn_battle_side.side_primary_participant ?= { save_scope_as = spn_men_saw_victims }
+			scope:spn_battle_side = { spn_hide_men_saw_side_effect = { OURS = yes } }
+			scope:spn_battle_side.enemy_side = { spn_hide_men_saw_side_effect = { OURS = no } }
+		}
+	}
+	# Two Wolves on One Field, for every champion who clashed (the event names one of them).
+	every_in_list = {
+		list = spn_battle_champs
+		limit = {
+			is_alive = yes
+			has_variable_list = spn_clash_done_with
+		}
+		random_in_list = {
+			variable = spn_clash_done_with
+			save_scope_as = spn_field_foe
+		}
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_hide.0202
+		}
+	}
+	# 3. Clean up, so a second battle in the same province starts fresh.
+	every_in_list = {
+		list = spn_battle_champs
+		spn_hide_battle_cleanup_effect = yes
+	}
+}
+
+# Side scope.
+# Side scope. OURS = yes on the side whose knights he killed.
+spn_hide_men_saw_side_effect = {
+	side_primary_participant ?= {
+		if = {
+			limit = { spn_hide_men_saw_valid_trigger = yes }
+			spn_hide_men_saw_send_effect = { OURS = $OURS$ }
+		}
+	}
+	side_commander ?= {
+		if = {
+			limit = { spn_hide_men_saw_valid_trigger = yes }
+			spn_hide_men_saw_send_effect = { OURS = $OURS$ }
+		}
+	}
+	every_side_knight = {
+		limit = { spn_hide_men_saw_valid_trigger = yes }
+		spn_hide_men_saw_send_effect = { OURS = $OURS$ }
+	}
+}
+
+# A flag, not a saved scope, tells the event whose knights they were: one call sends to both sides.
+spn_hide_men_saw_send_effect = {
+	add_character_flag = { flag = spn_hide_men_saw days = 7 }
+	if = {
+		limit = { always = $OURS$ }
+		add_character_flag = { flag = spn_hide_men_saw_ours days = 7 }
+	}
+	else_if = {
+		limit = { has_character_flag = spn_hide_men_saw_ours }
+		remove_character_flag = spn_hide_men_saw_ours
+	}
+	trigger_event = spn_hide.0201
+}
+
+spn_hide_battle_cleanup_effect = {
+	if = {
+		limit = { exists = var:spn_feat_budget }
+		remove_variable = spn_feat_budget
+	}
+	if = {
+		limit = { exists = var:spn_feat_province }
+		remove_variable = spn_feat_province
+	}
+	if = {
+		limit = { exists = var:spn_feat_bond_this_battle }
+		remove_variable = spn_feat_bond_this_battle
+	}
+	if = {
+		limit = { has_character_flag = spn_feat_weighed }
+		remove_character_flag = spn_feat_weighed
+	}
+	if = {
+		limit = { has_character_flag = spn_feat_seen }
+		remove_character_flag = spn_feat_seen
+	}
+	if = {
+		limit = { has_character_flag = spn_feat_revealed }
+		remove_character_flag = spn_feat_revealed
+	}
+	if = {
+		limit = { exists = var:spn_feat_kills }
+		remove_variable = spn_feat_kills
+	}
+	if = {
+		limit = { has_variable_list = spn_clash_done_with }
+		clear_variable_list = spn_clash_done_with
+	}
+	# Midnight's Let It Take Me: the battle is over, and so is the frenzy. It costs him.
+	if = {
+		limit = { has_character_modifier = spn_let_it_take_me_modifier }
+		remove_character_modifier = spn_let_it_take_me_modifier
+		stress_and_fulfillment_impact = {
+			base = major_stress_impact_gain
+		}
+	}
+}
+
+# ==================================================================================================
+# A HIDE IN THE SHRINE (§9.2). Root = the occupant; scope:county. The wolf who takes it: the occupant, or the wolf
+# who commanded the siege for a mortal liege. Fired a day later, after vanilla's own siege.0032.
+# ==================================================================================================
+spn_hide_siege_effect = {
+	save_scope_as = spn_siege_occupant
+	if = {
+		limit = { spn_is_wolf_trigger = yes }
+		save_scope_as = spn_siege_wolf
+	}
+	# Or the wolf who commanded the siege for a mortal liege (§9.2): one of the occupant's armies in the province.
+	else_if = {
+		limit = {
+			scope:barony.title_province ?= {
+				any_army_in_location = {
+					army_owner ?= scope:spn_siege_occupant
+					army_commander ?= { spn_is_wolf_trigger = yes }
+				}
+			}
+		}
+		scope:barony.title_province = {
+			random_army_in_location = {
+				limit = {
+					army_owner ?= scope:spn_siege_occupant
+					army_commander ?= { spn_is_wolf_trigger = yes }
+				}
+				army_commander = { save_scope_as = spn_siege_wolf }
+			}
+		}
+	}
+	scope:county = {
+		every_county_holy_site = {
+			every_holy_site_enshrined_artifact = {
+				limit = { has_variable = spn_hide }
+				save_scope_as = spn_siege_hide
+			}
+		}
+	}
+	if = {
+		limit = {
+			exists = scope:spn_siege_wolf
+			exists = scope:spn_siege_hide
+		}
+		scope:county = { save_scope_as = spn_siege_county }
+		scope:spn_siege_wolf = { trigger_event = { id = spn_hide.0350 days = 1 } }
+	}
+}
+
+# ==================================================================================================
+# THE RELIC AT [SITE] (§9.2). Root = the wolf pilgrim; scope:activity.
+# ==================================================================================================
+spn_hide_pilgrimage_effect = {
+	scope:activity.activity_location.county = {
+		save_scope_as = spn_pilgrim_county
+		every_county_holy_site = {
+			every_holy_site_enshrined_artifact = {
+				limit = { has_variable = spn_hide }
+				save_scope_as = spn_pilgrim_hide
+			}
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_pilgrim_hide }
+		trigger_event = spn_hide.0360
+	}
+}
+
+# ==================================================================================================
+# SEEDING (§5.12) and the yearly net. No root: spn_hide.0002 is a scope-none event.
+# ==================================================================================================
+# One hide. CHAMPION = yes: an AI wolf if one fits. SHRINE = yes: else a shrine (or a treasury). Anything not placed is
+# recorded lost.
+spn_hide_seed_one_effect = {
+	if = {
+		limit = { always = $CHAMPION$ }
+		save_scope_value_as = { name = spn_fit_hide value = flag:$HIDE$ }
+		random_living_character = {
+			limit = {
+				is_ai = yes
+				has_trait = supernatural_werewolf
+				spn_can_bear_hide_trigger = yes
+				spn_is_champion_trigger = no
+				trigger_if = {
+					limit = { has_trait = supernatural_werewolf }
+					has_trait_xp = { trait = supernatural_werewolf track = lycanthropy value >= 50 }
+				}
+				trigger_else = { always = no }
+				spn_hide_accepts_wolf_trigger = yes
+			}
+			weight = {
+				base = 1
+				modifier = { add = spn_hide_fit_value }
+			}
+			save_scope_as = spn_seed_wolf
+		}
+		if = {
+			limit = { exists = scope:spn_seed_wolf }
+			spn_hide_create_effect = { HIDE = $HIDE$ OWNER = scope:spn_seed_wolf }
+			# Its first mark: the culture of the county it was placed in (§5.12).
+			scope:spn_seed_wolf.location.county ?= {
+				add_to_global_variable_list = { name = spn_hide_$HIDE$_marks target = culture }
+			}
+			scope:spn_seed_wolf = {
+				spn_hide_make_champion_dispatch_effect = { ARTIFACT = scope:spn_new_hide }
+			}
+			save_scope_value_as = { name = spn_seed_done value = yes }
+			clear_saved_scope = spn_seed_wolf
+		}
+	}
+	if = {
+		limit = {
+			NOT = { exists = scope:spn_seed_done }
+			always = $SHRINE$
+		}
+		spn_hide_seed_shrine_effect = { HIDE = $HIDE$ }
+	}
+	if = {
+		limit = { NOT = { exists = scope:spn_seed_done } }
+		spn_hide_record_lost_effect = { HIDE = $HIDE$ }
+	}
+	if = {
+		limit = { exists = scope:spn_seed_done }
+		clear_saved_scope = spn_seed_done
+	}
+}
+
+# Into a shrine by vanilla's own method (02_starting_holy_site_relics_effects.txt:1592-1599): created in the site
+# holder's inventory, then set_holy_site_owner + equip. Only holy sites with a free relic slot whose holder shares a
+# faith that holds the site; else the treasury of the highest-tier mortal ruler; else lost.
+spn_hide_seed_shrine_effect = {
+	every_religion_global = {
+		every_faith = {
+			save_temporary_scope_as = spn_seed_faith
+			every_holy_site = {
+				limit = {
+					holy_site_artifact_count < 3
+					holy_site_county = {
+						exists = holder
+						holder.faith = scope:spn_seed_faith
+						holder = { spn_is_hide_mortal_trigger = yes }
+					}
+				}
+				add_to_temporary_list = spn_seed_sites_$HIDE$
+			}
+		}
+	}
+	if = {
+		limit = {
+			any_in_list = {
+				list = spn_seed_sites_$HIDE$
+				holy_site_artifact_count < 3
+			}
+		}
+		# A list per hide, and the free slot tested again: an earlier hide may have filled this site.
+		random_in_list = {
+			list = spn_seed_sites_$HIDE$
+			limit = { holy_site_artifact_count < 3 }
+			save_scope_as = spn_seed_site
+		}
+		scope:spn_seed_site.holy_site_county = { save_scope_as = spn_seed_county }
+		scope:spn_seed_county.holder = { save_scope_as = spn_seed_holder }
+		spn_hide_create_effect = { HIDE = $HIDE$ OWNER = scope:spn_seed_holder }
+		scope:spn_new_hide = {
+			set_holy_site_owner = {
+				target = scope:spn_seed_site
+				generate_history = no
+			}
+			equip_artifact_to_owner = yes
+			spn_hide_shrine_entered_effect = { COUNTY = scope:spn_seed_county FAITH = scope:spn_seed_holder.faith }
+		}
+		add_to_global_variable_list = { name = spn_hide_$HIDE$_marks target = scope:spn_seed_county.culture }
+		save_scope_value_as = { name = spn_seed_done value = yes }
+	}
+	else = {
+		ordered_ruler = {
+			limit = { spn_is_hide_mortal_trigger = yes }
+			order_by = highest_held_title_tier
+			save_scope_as = spn_seed_holder
+		}
+		if = {
+			limit = { exists = scope:spn_seed_holder }
+			spn_hide_create_effect = { HIDE = $HIDE$ OWNER = scope:spn_seed_holder }
+			scope:spn_seed_holder.capital_county ?= {
+				add_to_global_variable_list = { name = spn_hide_$HIDE$_marks target = culture }
+			}
+			save_scope_value_as = { name = spn_seed_done value = yes }
+		}
+	}
+}
+
+# ==================================================================================================
+# A LOST HIDE WAKES (§9.5). No root. The Tale's listener first, if he passes; else a weighted pick among living wolves
+# who pass its bar (a world walk, once per wake, never per year). Nobody: a new wake date.
+# ==================================================================================================
+spn_hide_wake_effect = {
+	save_scope_value_as = { name = spn_fit_hide value = flag:$HIDE$ }
+	if = {
+		limit = {
+			global_var:spn_hide_$HIDE$_heard_by ?= {
+				is_alive = yes
+				spn_can_bear_hide_trigger = yes
+				spn_is_champion_trigger = no
+				NOT = { has_character_flag = spn_hide_refused_$HIDE$ }
+				spn_hide_accepts_wolf_trigger = yes
+			}
+		}
+		global_var:spn_hide_$HIDE$_heard_by = { save_scope_as = spn_wake_wolf }
+	}
+	else = {
+		random_living_character = {
+			limit = {
+				spn_can_bear_hide_trigger = yes
+				spn_is_champion_trigger = no
+				NOT = { has_character_flag = spn_hide_refused_$HIDE$ }
+				spn_hide_accepts_wolf_trigger = yes
+			}
+			weight = {
+				base = 1
+				modifier = { add = spn_hide_fit_value }
+			}
+			save_scope_as = spn_wake_wolf
+		}
+	}
+	if = {
+		limit = { exists = global_var:spn_hide_$HIDE$_heard_by }
+		remove_global_variable = spn_hide_$HIDE$_heard_by
+	}
+	if = {
+		limit = { NOT = { exists = scope:spn_wake_wolf } }
+		spn_hide_rewait_effect = { HIDE = $HIDE$ }
+	}
+	# A player who can hunt (the hunt's own is_shown, hunt.txt:2-3), not already chasing a white animal: the legendary
+	# wolf, vanilla's chase (story_cycle_hunt_mystical_animal) and vanilla's legendary hunt.
+	else_if = {
+		limit = {
+			scope:spn_wake_wolf = {
+				is_ai = no
+				highest_held_title_tier > tier_barony
+				exists = capital_county
+				NOT = { any_owned_story = { story_type = story_cycle_hunt_mystical_animal } }
+			}
+		}
+		scope:spn_wake_wolf = {
+			set_variable = { name = animal_type value = flag:wolf }
+			create_story = story_cycle_hunt_mystical_animal
+			random_owned_story = {
+				limit = { story_type = story_cycle_hunt_mystical_animal }
+				# The owner may be standing outside his realm; the legendary option needs a sub-realm county.
+				set_variable = { name = legendary_county value = scope:spn_wake_wolf.capital_county }
+				set_variable = { name = spn_hide_wolf value = flag:$HIDE$ }
+			}
+			# Stored on him too: the story can end on day 35, before anything after the hunt reads it.
+			set_variable = { name = spn_hide_wolf_hide value = flag:$HIDE$ }
+			capital_county = {
+				hunt_create_sighting_effect = { TYPE = legendary ANIMAL = flag:wolf OWNER = scope:spn_wake_wolf }
+			}
+			trigger_event = spn_hide.0300
+		}
+		set_global_variable = { name = spn_hide_$HIDE$_reserved value = scope:spn_wake_wolf years = 2 }
+	}
+	# An AI, a landless wolf, a player who cannot hunt or is already chasing one: It Came Out of the Trees.
+	else = {
+		spn_hide_create_effect = { HIDE = $HIDE$ OWNER = scope:spn_wake_wolf }
+		scope:spn_new_hide = { save_scope_as = spn_offered_hide }
+		scope:spn_wake_wolf = { trigger_event = spn_hide.0303 }
+	}
+	if = {
+		limit = { exists = scope:spn_wake_wolf }
+		clear_saved_scope = spn_wake_wolf
+	}
+}
+
+# The yearly net (§5.12). No root.
+spn_hide_yearly_net_effect = {
+	# 1. Every hide in the world: chains running, shrine hides kept whole.
+	every_artifact = {
+		limit = { has_variable = spn_hide }
+		add_to_temporary_list = spn_net_present
+		artifact_owner ?= { spn_hide_start_check_effect = yes }
+		if = {
+			limit = { exists = var:spn_hide_shrine_county }
+			add_durability = 25
+		}
+		# 2.37o: a hide does not lie idle in a chest (Thomas, 4 Oct: "make the hides in the world even better"; the 1141
+		# run's Graybeard sat with a mortal heir for good). The years it lies with an AI who is not its champion -- a
+		# mortal, a wolf it refused, a champion's spare -- and no hunter keeping a trophy, are counted here; after
+		# spn_hide_idle_years_value it slips away (step 4). A worthy mortal is asked long before (spn_hide.0013, about
+		# his fourth year). A player's hide is never touched (spn_hide_lies_idle_trigger).
+		if = {
+			limit = { spn_hide_lies_idle_trigger = yes }
+			if = {
+				limit = { NOT = { exists = var:spn_hide_idle_since } }
+				set_variable = { name = spn_hide_idle_since value = { value = current_year } } # a number, as record_lost's
+			}
+			else_if = {
+				limit = {
+					var:spn_hide_idle_since <= {
+						value = current_year
+						subtract = spn_hide_idle_years_value
+					}
+				}
+				add_to_temporary_list = spn_net_slipping
+			}
+		}
+		else_if = {
+			limit = { exists = var:spn_hide_idle_since }
+			remove_variable = spn_hide_idle_since
+		}
+	}
+	# 2. Champions: the dread, Timber's gift and the ageless gift refreshed; the pending check restarted.
+	global_var:spn_hide_champion_silverback ?= {
+		spn_hide_refresh_dread_effect = yes
+		spn_hide_start_check_effect = yes
+		spn_hide_ageless_effect = yes
+		if = {
+			limit = {
+				has_trait = spn_champion_timber
+				NOT = { exists = var:spn_pack }
+			}
+			remove_all_character_modifier_instances = spn_alone_in_the_woods_modifier
+			add_character_modifier = { modifier = spn_alone_in_the_woods_modifier years = 2 }
+		}
+	}
+	global_var:spn_hide_champion_timber ?= {
+		spn_hide_refresh_dread_effect = yes
+		spn_hide_start_check_effect = yes
+		spn_hide_ageless_effect = yes
+		if = {
+			limit = {
+				has_trait = spn_champion_timber
+				NOT = { exists = var:spn_pack }
+			}
+			remove_all_character_modifier_instances = spn_alone_in_the_woods_modifier
+			add_character_modifier = { modifier = spn_alone_in_the_woods_modifier years = 2 }
+		}
+	}
+	global_var:spn_hide_champion_tundra ?= {
+		spn_hide_refresh_dread_effect = yes
+		spn_hide_start_check_effect = yes
+		spn_hide_ageless_effect = yes
+		if = {
+			limit = {
+				has_trait = spn_champion_timber
+				NOT = { exists = var:spn_pack }
+			}
+			remove_all_character_modifier_instances = spn_alone_in_the_woods_modifier
+			add_character_modifier = { modifier = spn_alone_in_the_woods_modifier years = 2 }
+		}
+	}
+	global_var:spn_hide_champion_graybeard ?= {
+		spn_hide_refresh_dread_effect = yes
+		spn_hide_start_check_effect = yes
+		spn_hide_ageless_effect = yes
+		if = {
+			limit = {
+				has_trait = spn_champion_timber
+				NOT = { exists = var:spn_pack }
+			}
+			remove_all_character_modifier_instances = spn_alone_in_the_woods_modifier
+			add_character_modifier = { modifier = spn_alone_in_the_woods_modifier years = 2 }
+		}
+	}
+	global_var:spn_hide_champion_midnight ?= {
+		spn_hide_refresh_dread_effect = yes
+		spn_hide_start_check_effect = yes
+		spn_hide_ageless_effect = yes
+		if = {
+			limit = {
+				has_trait = spn_champion_timber
+				NOT = { exists = var:spn_pack }
+			}
+			remove_all_character_modifier_instances = spn_alone_in_the_woods_modifier
+			add_character_modifier = { modifier = spn_alone_in_the_woods_modifier years = 2 }
+		}
+	}
+	global_var:spn_hide_champion_alpha ?= {
+		spn_hide_refresh_dread_effect = yes
+		spn_hide_start_check_effect = yes
+		spn_hide_ageless_effect = yes
+		if = {
+			limit = {
+				has_trait = spn_champion_timber
+				NOT = { exists = var:spn_pack }
+			}
+			remove_all_character_modifier_instances = spn_alone_in_the_woods_modifier
+			add_character_modifier = { modifier = spn_alone_in_the_woods_modifier years = 2 }
+		}
+	}
+	# 3. Per hide: a reservation renewed or lapsed; a lost hide woken; a hide that vanished by a route nobody hooked
+	#    recorded lost.
+	spn_hide_net_one_effect = { HIDE = silverback }
+	spn_hide_net_one_effect = { HIDE = timber }
+	spn_hide_net_one_effect = { HIDE = tundra }
+	spn_hide_net_one_effect = { HIDE = graybeard }
+	spn_hide_net_one_effect = { HIDE = midnight }
+	spn_hide_net_one_effect = { HIDE = alpha }
+	# 4. 2.37o: one hide a year that has lain idle too long slips away. It is recorded lost and wakes again in 5 to 20
+	#    years (Alpha 15 to 40) for a wolf it fits (spn_hide_wake_effect: a wolf who heard of it at a fire is asked first).
+	#    Destroyed last, after every read of the year's list: no script may run on an artifact once it is destroyed.
+	if = {
+		limit = { any_in_list = { list = spn_net_slipping } }
+		random_in_list = {
+			list = spn_net_slipping
+			save_scope_as = spn_net_slip
+		}
+		if = {
+			limit = { scope:spn_net_slip.var:spn_hide ?= flag:silverback }
+			spn_hide_record_lost_effect = { HIDE = silverback }
+		}
+		if = {
+			limit = { scope:spn_net_slip.var:spn_hide ?= flag:timber }
+			spn_hide_record_lost_effect = { HIDE = timber }
+		}
+		if = {
+			limit = { scope:spn_net_slip.var:spn_hide ?= flag:tundra }
+			spn_hide_record_lost_effect = { HIDE = tundra }
+		}
+		if = {
+			limit = { scope:spn_net_slip.var:spn_hide ?= flag:graybeard }
+			spn_hide_record_lost_effect = { HIDE = graybeard }
+		}
+		if = {
+			limit = { scope:spn_net_slip.var:spn_hide ?= flag:midnight }
+			spn_hide_record_lost_effect = { HIDE = midnight }
+		}
+		if = {
+			limit = { scope:spn_net_slip.var:spn_hide ?= flag:alpha }
+			spn_hide_record_lost_effect = { HIDE = alpha }
+		}
+		destroy_artifact = scope:spn_net_slip
+	}
+}
+
+spn_hide_net_one_effect = {
+	# The reservation lives as long as the chase (§9.5).
+	if = {
+		limit = { exists = global_var:spn_hide_$HIDE$_reserved }
+		global_var:spn_hide_$HIDE$_reserved = { save_scope_as = spn_net_chaser }
+		if = {
+			limit = {
+				scope:spn_net_chaser = {
+					is_alive = yes
+					var:spn_hide_wolf_hide ?= flag:$HIDE$
+					OR = {
+						# 2.37e: the hide's own chase (its story carries spn_hide_wolf), not any white animal.
+						any_owned_story = {
+							story_type = story_cycle_hunt_mystical_animal
+							var:spn_hide_wolf ?= flag:$HIDE$
+						}
+						has_character_flag = spn_hide_outcome_pending
+					}
+				}
+			}
+			set_global_variable = { name = spn_hide_$HIDE$_reserved value = scope:spn_net_chaser years = 2 }
+		}
+		else = {
+			scope:spn_net_chaser = {
+				if = {
+					limit = { var:spn_hide_wolf_hide ?= flag:$HIDE$ }
+					remove_variable = spn_hide_wolf_hide
+				}
+			}
+			spn_hide_rewait_effect = { HIDE = $HIDE$ }
+		}
+		clear_saved_scope = spn_net_chaser
+	}
+	# A lost hide whose time has come, and nobody chasing it.
+	else_if = {
+		limit = {
+			exists = global_var:spn_hide_$HIDE$_lost
+			global_var:spn_hide_$HIDE$_lost <= current_year
+		}
+		spn_hide_wake_effect = { HIDE = $HIDE$ }
+	}
+	# Neither in the world nor lost nor worn: something destroyed it without a hook. It comes back the long way.
+	else_if = {
+		limit = {
+			NOT = { exists = global_var:spn_hide_$HIDE$_lost }
+			NOT = { any_in_list = { list = spn_net_present var:spn_hide = flag:$HIDE$ } }
+		}
+		global_var:spn_hide_champion_$HIDE$ ?= { spn_hide_exit_effect = { REASON = flag:lost_blood } }
+		spn_hide_record_lost_effect = { HIDE = $HIDE$ }
+	}
+	# 2.37i, made general in 2.37o: a shrine says it keeps a hide only while the hide is there. Every year, not only the
+	# year a hide vanished (a hide destroyed in a siege leaves no artifact to clear its own marker, and a marker an older
+	# build left behind was never cleared): without it Send for a Hide sells an errand to an empty shrine.
+	every_county = {
+		limit = { has_county_modifier = spn_hide_relic_kept_$HIDE$_modifier }
+		if = {
+			limit = {
+				NOT = {
+					any_county_holy_site = {
+						any_holy_site_enshrined_artifact = { var:spn_hide ?= flag:$HIDE$ }
+					}
+				}
+			}
+			remove_county_modifier = spn_hide_relic_kept_$HIDE$_modifier
+		}
+	}
+}
+
+# ==================================================================================================
+# THE WEEKLY CHECK, one hide (§5.5). Character scope = the holder (scope:spn_wk); scope:spn_wk_hide = the hide.
+# Called once per hide he owns from spn_hide.0001. At most one offer a week, and the guard is a TEMPORARY scope value
+# (spn_wk_offered, spn_wk_asked) set in this pass. 2.37b: it used to be "NOT = { exists = scope:spn_offered_hide }",
+# and the chain re-fires itself, so the saved scope of last week's offer rode along forever: the 3 Oct save's pending
+# spn_hide.0001 still carried Silverback weeks after It Will Not Have You, and Alpha, worn the whole time, was never
+# offered. A temporary scope is never handed to a triggered event. spn_offered_hide / spn_off_hide are still saved for
+# the event that reads them, right before it is fired.
+# ==================================================================================================
+spn_hide_weekly_case_effect = {
+	# Is he this hide's champion? Read once, in nested ifs (CK3 does not short-circuit AND siblings).
+	save_temporary_scope_value_as = { name = spn_wk_mine value = flag:no }
+	if = {
+		limit = { exists = var:spn_champion_of }
+		if = {
+			limit = { scope:spn_wk_hide.var:spn_hide = var:spn_champion_of }
+			save_temporary_scope_value_as = { name = spn_wk_mine value = flag:yes }
+		}
+	}
+	if = {
+		limit = { scope:spn_wk_mine = flag:yes }
+		# 1. His, worn: no claims, no transfer, the beat check.
+		if = {
+			limit = { scope:spn_wk_hide = { is_equipped = yes } }
+			scope:spn_wk_hide = {
+				if = {
+					limit = { NOT = { has_variable = artifact_prevent_transfer } }
+					set_variable = artifact_prevent_transfer
+				}
+				spn_hide_strip_claims_effect = yes
+			}
+			spn_hide_check_beat_effect = yes
+			if = {
+				limit = { has_character_flag = spn_hide_off_since }
+				remove_character_flag = spn_hide_off_since
+			}
+			# 2.37o: worn again, ageless again. The yearly net gives the gift only to a hide worn on 1 January, so one
+			# taken off over the new year left him without it for a year (the review of 4 Oct, N6).
+			if = {
+				limit = {
+					is_immortal = yes
+					NOT = { has_character_modifier = spn_hide_ageless_modifier }
+				}
+				spn_hide_ageless_effect = yes
+			}
+		}
+		# 2. His, off. A player is asked in a week; an AI champion never takes it off, so whatever took it off, it goes
+		# back on (§21).
+		else = {
+			if = {
+				limit = { is_ai = yes }
+				scope:spn_wk_hide = { equip_artifact_to_owner_replace = yes }
+			}
+			else_if = {
+				limit = {
+					NOT = { has_character_flag = spn_hide_off_since }
+					NOT = { exists = scope:spn_wk_asked }
+				}
+				add_character_flag = { flag = spn_hide_off_since days = 30 }
+				save_temporary_scope_value_as = { name = spn_wk_asked value = yes }
+				scope:spn_wk_hide = { save_scope_as = spn_off_hide }
+				trigger_event = { id = spn_hide.0014 days = 7 }
+			}
+		}
+	}
+	# 3. Not his, worn: a wolf has just put it on. The hide decides in a few days; a champion of another hide gets
+	# Two Wolves instead.
+	else_if = {
+		limit = {
+			scope:spn_wk_hide = {
+				is_equipped = yes
+				NOT = { spn_hide_refused_trigger = { WHO = scope:spn_wk } }
+			}
+			NOT = { has_character_flag = spn_hide_takes_hold_pending }
+			NOT = { exists = scope:spn_wk_offered }
+			spn_can_bear_hide_trigger = yes
+		}
+		add_character_flag = { flag = spn_hide_takes_hold_pending days = 10 }
+		save_temporary_scope_value_as = { name = spn_wk_offered value = yes }
+		scope:spn_wk_hide = { save_scope_as = spn_offered_hide }
+		if = {
+			limit = { spn_is_champion_trigger = yes }
+			if = {
+				limit = { is_ai = yes }
+				trigger_event = { id = spn_hide.0016 days = 3 }
+			}
+			else = {
+				trigger_event = { id = spn_hide.0012 days = 3 }
+			}
+		}
+		else = {
+			trigger_event = { id = spn_hide.0009 days = { 3 7 } }
+		}
+	}
+	# 4. Unworn, a mortal: once a year, a rare ask.
+	else_if = {
+		limit = {
+			scope:spn_wk_hide = {
+				is_equipped = no
+				NOT = { spn_hide_refused_trigger = { WHO = scope:spn_wk } }
+			}
+			spn_is_hide_mortal_trigger = yes
+			is_adult = yes
+			NOT = { has_character_flag = spn_hide_mortal_roll }
+			NOT = { exists = scope:spn_wk_offered }
+		}
+		add_character_flag = { flag = spn_hide_mortal_roll years = 1 }
+		spn_hide_save_flag_effect = { NAME = spn_fit_hide FROM = scope:spn_wk_hide.var:spn_hide }
+		if = {
+			limit = {
+				spn_hide_fit_value >= spn_hide_fit_bar_mortal_value
+			}
+			random = {
+				chance = spn_hide_mortal_chance_value
+				save_temporary_scope_value_as = { name = spn_wk_offered value = yes }
+				scope:spn_wk_hide = { save_scope_as = spn_offered_hide }
+				trigger_event = { id = spn_hide.0013 days = { 1 7 } }
+			}
+		}
+	}
+	# 5. Unworn, a wolf who is not its champion. A player chooses for himself (the inventory). An AI wolf who is not
+	# already a champion has it put on for him -- vanilla's own AI never will (can_benefit outranks ai_score) -- and then
+	# the hide decides, as in case 3.
+	else_if = {
+		limit = {
+			is_ai = yes
+			scope:spn_wk_hide = {
+				is_equipped = no
+				NOT = { spn_hide_refused_trigger = { WHO = scope:spn_wk } }
+			}
+			spn_can_bear_hide_trigger = yes
+			spn_is_champion_trigger = no
+			NOT = { has_character_flag = spn_hide_takes_hold_pending }
+			NOT = { exists = scope:spn_wk_offered }
+		}
+		scope:spn_wk_hide = { equip_artifact_to_owner_replace = yes }
+		add_character_flag = { flag = spn_hide_takes_hold_pending days = 10 }
+		save_temporary_scope_value_as = { name = spn_wk_offered value = yes }
+		scope:spn_wk_hide = { save_scope_as = spn_offered_hide }
+		trigger_event = { id = spn_hide.0009 days = { 3 7 } }
+	}
+}
+
+# ==================================================================================================
+# THE RINGING (§18): Go after them. The champion against the caster: never a death (C5). Run from magic_ev.44 with
+# scope:spn_ring_champion and scope:magic_user saved; the caster hears of it either way.
+# ==================================================================================================
+spn_hide_ringing_after_effect = {
+	if = {
+		limit = { scope:spn_clash_winner = scope:spn_ring_champion }
+		scope:spn_clash_loser = { increase_wounds_no_death_effect = { REASON = fight } }
+		scope:spn_ring_champion = { spn_hide_add_bond_effect = { VALUE = spn_hide_bond_ringing_value } }
+	}
+	else = {
+		scope:spn_ring_champion = { increase_wounds_no_death_effect = { REASON = fight } }
+	}
+	scope:magic_user ?= { trigger_event = spn_hide.0221 }
+}
+
+# 2.37 -- Send for a Hide (spn_hide.0380). Character scope. When word comes back depends only on how far the shrine is,
+# measured with vanilla's own distance values (00_distance_values.txt), so it works on any map. COUNTY is banked first:
+# the caller passes a var: path, and a parameter is pasted text.
+spn_hide_errand_send_effect = {
+	$COUNTY$ = { save_scope_as = spn_errand_to }
+	if = {
+		limit = {
+			location ?= {
+				squared_distance = {
+					target = scope:spn_errand_to.title_province
+					value <= squared_distance_large
+				}
+			}
+		}
+		trigger_event = { id = spn_hide.0381 days = { 45 90 } }
+	}
+	else_if = {
+		limit = {
+			location ?= {
+				squared_distance = {
+					target = scope:spn_errand_to.title_province
+					value <= squared_distance_huge
+				}
+			}
+		}
+		trigger_event = { id = spn_hide.0381 days = { 90 180 } }
+	}
+	else = {
+		trigger_event = { id = spn_hide.0381 days = { 180 365 } }
+	}
+}
+
+# Debug (§24): give me this hide. Character scope. 2.37 (Thomas, 3 Oct: a second Silverback sat in a shrine while he wore
+# the one the console made): if the hide is already in the world it is handed over -- out of its shrine or off its holder,
+# set_owner as vanilla's siege theft does (steal_artifact_in_siege_effect), and the owner hook clears the shrine marker --
+# so the world never holds two of one hide. A hide worn by its living champion is left alone (unbind him first). A lost
+# hide is made.
+spn_debug_give_hide_effect = {
+	save_scope_as = spn_dbg_taker
+	every_artifact = {
+		limit = { var:spn_hide ?= flag:$HIDE$ }
+		save_scope_as = spn_dbg_old_hide
+	}
+	if = {
+		limit = { NOT = { exists = scope:spn_dbg_old_hide } }
+		spn_hide_create_effect = { HIDE = $HIDE$ OWNER = scope:spn_dbg_taker }
+	}
+	else_if = {
+		limit = {
+			scope:spn_dbg_old_hide ?= { # ?=: a tooltip walk reads this limit without the loop having run
+				NOT = { artifact_owner ?= scope:spn_dbg_taker }
+				NOT = {
+					artifact_owner ?= {
+						is_alive = yes
+						var:spn_champion_of ?= flag:$HIDE$
+					}
+				}
+			}
+		}
+		scope:spn_dbg_old_hide ?= {
+			set_owner = {
+				target = scope:spn_dbg_taker
+				history = {
+					type = given
+					recipient = scope:spn_dbg_taker
+				}
+			}
+		}
+		scope:spn_dbg_taker = { spn_hide_start_check_effect = yes }
+	}
+	else = {
+		debug_log = "spn_debug_give_hide_effect: that hide is already yours or worn by its living champion"
+	}
+}
+
+# Debug (§24): set his Hide Bond to TO. Champion scope.
+spn_debug_set_bond_effect = {
+	if = {
+		limit = { has_trait = spn_champion_silverback }
+		add_trait_xp = {
+			trait = spn_champion_silverback
+			track = hide_bond
+			value = {
+				value = $TO$
+				subtract = spn_hide_bond_value
+			}
+		}
+	}
+	if = {
+		limit = { has_trait = spn_champion_timber }
+		add_trait_xp = {
+			trait = spn_champion_timber
+			track = hide_bond
+			value = {
+				value = $TO$
+				subtract = spn_hide_bond_value
+			}
+		}
+	}
+	if = {
+		limit = { has_trait = spn_champion_tundra }
+		add_trait_xp = {
+			trait = spn_champion_tundra
+			track = hide_bond
+			value = {
+				value = $TO$
+				subtract = spn_hide_bond_value
+			}
+		}
+	}
+	if = {
+		limit = { has_trait = spn_champion_graybeard }
+		add_trait_xp = {
+			trait = spn_champion_graybeard
+			track = hide_bond
+			value = {
+				value = $TO$
+				subtract = spn_hide_bond_value
+			}
+		}
+	}
+	if = {
+		limit = { has_trait = spn_champion_midnight }
+		add_trait_xp = {
+			trait = spn_champion_midnight
+			track = hide_bond
+			value = {
+				value = $TO$
+				subtract = spn_hide_bond_value
+			}
+		}
+	}
+	if = {
+		limit = { has_trait = spn_champion_alpha }
+		add_trait_xp = {
+			trait = spn_champion_alpha
+			track = hide_bond
+			value = {
+				value = $TO$
+				subtract = spn_hide_bond_value
+			}
+		}
+	}
+	spn_hide_check_beat_effect = yes
+}
+
+# ==================================================================================================
+# WORD AT THE FIRE (§14.4; also A Hide Seen, §17.4). Every hide in the world into one temporary list, once per event:
+# at most six entries, one walk.
+# ==================================================================================================
+spn_hide_collect_hides_effect = {
+	if = {
+		limit = { NOT = { exists = scope:spn_hides_collected } }
+		every_artifact = {
+			limit = { has_variable = spn_hide }
+			add_to_temporary_list = spn_all_hides
+		}
+		save_temporary_scope_value_as = { name = spn_hides_collected value = yes }
+	}
+}
+
+# Character scope = the one who listens. He learns ONE thing he lacked, in order: where a hide is (held or enshrined),
+# that a hide is lost, the True Alpha. SEND = yes: a player hears it as Word at the Fire. A wolf at standing 50
+# (lycanthropy 50 with the Packs rule Off) who learns who holds an unworn hide gets a claim on it (§5.4).
+spn_hide_word_at_fire_effect = {
+	save_scope_as = spn_waf_who
+	if = {
+		limit = { exists = scope:spn_waf_hide }
+		clear_saved_scope = spn_waf_hide
+	}
+	if = {
+		limit = { exists = scope:spn_waf_holder }
+		clear_saved_scope = spn_waf_holder
+	}
+	save_scope_value_as = { name = spn_waf_kind value = flag:nothing }
+	if = {
+		limit = {
+			any_in_list = {
+				list = spn_all_hides
+				spn_hide_fact_lacked_trigger = { WHO = scope:spn_waf_who }
+			}
+		}
+		random_in_list = {
+			list = spn_all_hides
+			limit = { spn_hide_fact_lacked_trigger = { WHO = scope:spn_waf_who } }
+			save_scope_as = spn_waf_hide
+		}
+		if = {
+			limit = { scope:spn_waf_hide = { exists = var:spn_hide_shrine_county } }
+			save_scope_value_as = { name = spn_waf_kind value = flag:shrine }
+			scope:spn_waf_hide.var:spn_hide_shrine_county = { save_scope_as = spn_waf_county }
+			spn_hide_learn_where_effect = { HIDE_SCOPE = scope:spn_waf_hide WHERE = scope:spn_waf_county WANTS = yes }
+		}
+		else_if = {
+			limit = { scope:spn_waf_hide = { exists = artifact_owner } }
+			save_scope_value_as = { name = spn_waf_kind value = flag:held }
+			scope:spn_waf_hide.artifact_owner = { save_scope_as = spn_waf_holder }
+			spn_hide_learn_where_effect = { HIDE_SCOPE = scope:spn_waf_hide WHERE = scope:spn_waf_holder WANTS = no }
+			if = {
+				limit = {
+					NOT = { scope:spn_waf_holder = scope:spn_waf_who }
+					scope:spn_waf_hide = { is_equipped = no }
+					spn_is_wolf_trigger = yes
+					spn_hide_claim_ready_trigger = yes
+				}
+				add_personal_artifact_claim = scope:spn_waf_hide
+			}
+		}
+	}
+	else_if = {
+		limit = { spn_hide_lost_fact_lacked_trigger = yes }
+		random_list = {
+			1 = {
+				trigger = {
+					exists = global_var:spn_hide_silverback_lost
+					NOT = { exists = var:spn_knows_lost_silverback }
+				}
+				set_variable = { name = spn_knows_lost_silverback value = yes years = 10 }
+				save_scope_value_as = { name = spn_waf_lost value = flag:silverback }
+			}
+			1 = {
+				trigger = {
+					exists = global_var:spn_hide_timber_lost
+					NOT = { exists = var:spn_knows_lost_timber }
+				}
+				set_variable = { name = spn_knows_lost_timber value = yes years = 10 }
+				save_scope_value_as = { name = spn_waf_lost value = flag:timber }
+			}
+			1 = {
+				trigger = {
+					exists = global_var:spn_hide_tundra_lost
+					NOT = { exists = var:spn_knows_lost_tundra }
+				}
+				set_variable = { name = spn_knows_lost_tundra value = yes years = 10 }
+				save_scope_value_as = { name = spn_waf_lost value = flag:tundra }
+			}
+			1 = {
+				trigger = {
+					exists = global_var:spn_hide_graybeard_lost
+					NOT = { exists = var:spn_knows_lost_graybeard }
+				}
+				set_variable = { name = spn_knows_lost_graybeard value = yes years = 10 }
+				save_scope_value_as = { name = spn_waf_lost value = flag:graybeard }
+			}
+			1 = {
+				trigger = {
+					exists = global_var:spn_hide_midnight_lost
+					NOT = { exists = var:spn_knows_lost_midnight }
+				}
+				set_variable = { name = spn_knows_lost_midnight value = yes years = 10 }
+				save_scope_value_as = { name = spn_waf_lost value = flag:midnight }
+			}
+			1 = {
+				trigger = {
+					exists = global_var:spn_hide_alpha_lost
+					NOT = { exists = var:spn_knows_lost_alpha }
+				}
+				set_variable = { name = spn_knows_lost_alpha value = yes years = 10 }
+				save_scope_value_as = { name = spn_waf_lost value = flag:alpha }
+			}
+		}
+		save_scope_value_as = { name = spn_waf_kind value = flag:lost }
+	}
+	else_if = {
+		limit = {
+			exists = global_var:spn_ta_living
+			NOT = { global_var:spn_ta_living = scope:spn_waf_who }
+			trigger_if = {
+				limit = { exists = var:spn_knows_true_alpha }
+				NOT = { var:spn_knows_true_alpha = global_var:spn_ta_living }
+			}
+			trigger_else = { always = yes }
+		}
+		set_variable = { name = spn_knows_true_alpha value = global_var:spn_ta_living years = 100 }
+		global_var:spn_ta_living = { save_scope_as = spn_waf_ta }
+		save_scope_value_as = { name = spn_waf_kind value = flag:true_alpha }
+	}
+	if = {
+		limit = {
+			always = $SEND$
+			is_ai = no
+		}
+		trigger_event = spn_gathering.0301
+	}
+}
+
+# ==================================================================================================
+# THE CHOOSING (§14.4). The chosen wolf gets the hide: set_owner, worn, and §5.9 directly -- it has already chosen,
+# so no later roll can refuse him. Character scope = the chosen; scope:spn_ch_hide, scope:spn_ch_holder.
+# ==================================================================================================
+spn_hide_choosing_give_effect = {
+	save_scope_as = spn_cg_wolf
+	if = {
+		limit = { NOT = { scope:spn_ch_hide.artifact_owner ?= scope:spn_cg_wolf } }
+		scope:spn_ch_hide = {
+			set_owner = {
+				target = scope:spn_cg_wolf
+				history = {
+					type = given
+					actor = scope:spn_ch_holder
+					recipient = scope:spn_cg_wolf
+				}
+			}
+		}
+	}
+	if = {
+		limit = {
+			spn_can_bear_hide_trigger = yes
+			spn_is_champion_trigger = no
+		}
+		spn_hide_make_champion_dispatch_effect = { ARTIFACT = scope:spn_ch_hide }
+	}
+}
+
+# The Choosing's challenge (let it go / challenge for it): the holder against the one it chose. Winner takes it.
+# 2.37o: the wolf it chose takes it as its champion. The holder who wins keeps it, but the hide still chooses whom it
+# serves: he is its champion only if it would have him (the review of 4 Oct, F2: winning undid its refusal, and Alpha's
+# leader rule).
+spn_hide_choosing_clash_after_effect = {
+	if = {
+		limit = { scope:spn_clash_winner = scope:spn_ch_chosen }
+		scope:spn_clash_winner = { spn_hide_choosing_give_effect = yes }
+	}
+	else = {
+		spn_hide_save_flag_effect = { NAME = spn_fit_hide FROM = scope:spn_ch_hide.var:spn_hide }
+		scope:spn_clash_winner = {
+			if = {
+				limit = {
+					NOT = { scope:spn_ch_hide = { spn_hide_refused_trigger = { WHO = scope:spn_clash_winner } } }
+					spn_hide_accepts_wolf_trigger = yes
+				}
+				spn_hide_choosing_give_effect = yes
+			}
+		}
+	}
+	scope:spn_clash_loser = { increase_wounds_no_death_effect = { REASON = fight } }
+}
+
+# 2.37o: a guest who came to Seek Another Pack joins the host's. Root = the seeker; scope:host, scope:spn_host_pack. Was
+# inline in the Circle; a player host's answer (spn_gathering.0309) runs it too.
+spn_gathering_seeker_joins_effect = {
+	save_scope_as = spn_seek_joiner
+	if = {
+		limit = { exists = var:spn_pack }
+		var:spn_pack.story_owner ?= { save_scope_as = spn_seek_old_alpha }
+		spn_pack_remove_member_effect = { WHO = scope:spn_seek_joiner REASON = flag:left }
+		if = {
+			limit = { exists = scope:spn_seek_old_alpha }
+			spn_pack_house_step_effect = {
+				A = scope:spn_seek_old_alpha
+				B = scope:host
+				VALUE = house_relation_damage_minor_value
+				REASON = spn_lured_away
+			}
+			clear_saved_scope = spn_seek_old_alpha
+		}
+	}
+	spn_pack_add_member_effect = { WHO = scope:spn_seek_joiner PACK = scope:spn_host_pack }
+}
+
+# ==================================================================================================
+# THE WEREWOLF GATHERING (§14). Host scope; scope:activity, scope:host.
+# ==================================================================================================
+# The Run's end: the drain and the trail fall on the Gathering's own county. Run a Rival's Land pays only abroad.
+spn_gathering_run_end_effect = {
+	scope:activity.activity_location.county ?= { save_scope_as = spn_run_county }
+	if = {
+		limit = { exists = scope:spn_run_county }
+		scope:spn_run_county = { spn_county_prosperity_change_effect = { VALUE = -1 } }
+		spn_mark_menace_effect = { COUNTY = scope:spn_run_county CULPRIT = scope:host KIND = werewolf SEVERITY = prowl }
+		if = {
+			limit = {
+				scope:host = { has_activity_intent = spn_run_a_rivals_land_intent }
+				spn_gathering_abroad_trigger = yes
+			}
+			scope:activity = { set_variable = { name = spn_ran_rival_land value = yes } }
+			# The Old Ones Gather: three champions in the host's pack, the drain half again.
+			if = {
+				limit = {
+					scope:host = {
+						trigger_if = {
+							limit = { exists = var:spn_pack }
+							var:spn_pack = { var:spn_pack_champ_count >= 3 }
+						}
+						trigger_else = { always = no }
+					}
+				}
+				random = {
+					chance = 50
+					scope:spn_run_county = { spn_county_prosperity_change_effect = { VALUE = -1 } }
+				}
+			}
+			scope:activity = {
+				every_attending_character = {
+					add_prestige = minor_prestige_gain
+					spn_pack_gain_standing_effect = { VALUE = 5 }
+				}
+			}
+		}
+	}
+}
+
+# The Circle (§14.4): The Choosing, Word at the Fire, Two Packs, the Tale, Two Hides in One Room, the Unification.
+spn_gathering_circle_effect = {
+	# --- The Choosing: a hide held unworn by someone present, not its own champion's.
+	scope:activity = {
+		every_attending_character = {
+			save_temporary_scope_as = spn_ci_holder
+			every_character_artifact = {
+				limit = {
+					has_variable = spn_hide
+					is_equipped = no
+					NOT = { spn_hide_owner_is_its_champion_trigger = yes }
+				}
+				add_to_temporary_list = spn_circle_hides
+			}
+		}
+	}
+	# 2.37e: once per hide (WO §27.3; it ran for one random hide). A wolf one hide has chosen is not weighed for the next
+	# in the same Circle (spn_circle_chosen), and the last hide's choice is cleared before each.
+	every_in_list = {
+		list = spn_circle_hides
+		save_scope_as = spn_ch_hide
+		if = {
+			limit = { exists = scope:spn_ch_chosen }
+			clear_saved_scope = spn_ch_chosen
+		}
+		scope:spn_ch_hide.artifact_owner = { save_scope_as = spn_ch_holder }
+		random = {
+			chance = {
+				value = spn_choosing_chance_value
+				if = {
+					limit = { scope:activity = { any_attending_character = { is_ai = no } } }
+					add = 10
+				}
+			}
+			# Temporary, and set back to no below (2.37b): a saved scope rode into The Choosing's event and from there
+			# into the chosen wolf's weekly chain, adding the Circle's +20 / +40 to every fit he was weighed at after.
+			save_temporary_scope_value_as = { name = spn_in_circle value = yes }
+			spn_hide_save_flag_effect = { NAME = spn_fit_hide FROM = scope:spn_ch_hide.var:spn_hide }
+			scope:activity = {
+				if = {
+					limit = {
+						any_attending_character = {
+							spn_gathering_choosable_trigger = yes
+							NOT = { is_in_list = spn_circle_chosen }
+						}
+					}
+					ordered_attending_character = {
+						limit = {
+							spn_gathering_choosable_trigger = yes
+							NOT = { is_in_list = spn_circle_chosen }
+						}
+						order_by = spn_hide_fit_value
+						save_scope_as = spn_ch_chosen
+						add_to_temporary_list = spn_circle_chosen
+					}
+				}
+			}
+			if = {
+				limit = { exists = scope:spn_ch_chosen }
+				scope:spn_ch_holder = { trigger_event = spn_gathering.0300 }
+			}
+			save_temporary_scope_value_as = { name = spn_in_circle value = no }
+		}
+	}
+	# --- Word at the Fire: every attendee learns one thing he lacked.
+	spn_hide_collect_hides_effect = yes
+	scope:activity = {
+		every_attending_character = {
+			spn_hide_word_at_fire_effect = { SEND = yes }
+		}
+	}
+	# --- Two Packs, One Fire: the host is an alpha, and another pack's alpha is here.
+	# 2.37e: an AI alpha only. The host's choices (a Blood Pact that is a real alliance between rulers, or a Challenge)
+	# act on the other alpha without asking him; a player must never be allied or fought without his answer.
+	if = {
+		limit = {
+			spn_packs_on_trigger = yes
+			spn_pack_politics_built_trigger = yes
+			scope:host = { spn_is_alpha_trigger = yes }
+			scope:activity = {
+				any_attending_character = {
+					spn_is_alpha_trigger = yes
+					is_ai = yes
+					NOT = { this = scope:host }
+				}
+			}
+		}
+		scope:activity = {
+			random_attending_character = {
+				limit = {
+					spn_is_alpha_trigger = yes
+					is_ai = yes
+					NOT = { this = scope:host }
+				}
+				save_scope_as = spn_tp_other
+			}
+		}
+		scope:host = { trigger_event = spn_gathering.0302 }
+	}
+	# --- Challenge the Alpha (the guest intent, §14.3): one wolf of the host's own pack who came to test him and whom
+	#     the Challenge's own rules allow (§13.5) fights him at the fire. No swords.
+	if = {
+		limit = {
+			spn_packs_on_trigger = yes
+			scope:host = { spn_is_alpha_trigger = yes }
+			scope:activity = { any_attending_character = { spn_gathering_challenger_trigger = yes } }
+		}
+		scope:activity = {
+			random_attending_character = {
+				limit = { spn_gathering_challenger_trigger = yes }
+				save_scope_as = spn_gc_challenger
+			}
+		}
+		# 2.37e: a player alpha answers first (WO §13.5: "A second player can never depose a player alpha without his
+		# answer"). Refusing costs him what refusing the Challenge interaction costs.
+		if = {
+			limit = { scope:host = { is_ai = yes } }
+			spn_pack_challenge_effect = { A = scope:spn_gc_challenger B = scope:host }
+		}
+		else = {
+			scope:host = { trigger_event = spn_gathering.0308 }
+		}
+	}
+	# A guest who came to seek another pack asks to run with the host's (§17.3).
+	if = {
+		limit = {
+			spn_packs_on_trigger = yes
+			scope:host = { spn_is_alpha_trigger = yes }
+		}
+		scope:host.var:spn_pack = { save_scope_as = spn_host_pack }
+		scope:activity = {
+			every_attending_character = {
+				limit = {
+					NOT = { this = scope:host }
+					has_activity_intent = spn_seek_another_pack_intent
+					spn_gathering_not_in_pack_trigger = { PACK = scope:spn_host_pack }
+					spn_is_alpha_trigger = no # 2.37o: he may have come to lead a pack since he chose it
+				}
+				save_temporary_scope_as = spn_seek_wolf
+				# 2.37o: a player host is asked (spn_gathering.0309; the review of 4 Oct, P4: his pack took a wolf, and
+				# his house a grudge, with no word). An AI host answers by the Invite's weights, as before.
+				if = {
+					limit = {
+						scope:host = { is_ai = no }
+						scope:spn_host_pack = { spn_pack_has_room_trigger = yes }
+					}
+					save_scope_as = spn_seek_ask
+					scope:host = { trigger_event = spn_gathering.0309 }
+				}
+				else_if = {
+					limit = {
+						scope:spn_host_pack = { spn_pack_has_room_trigger = yes }
+						spn_pack_accepts_asker_trigger = { ALPHA = scope:host ASKER = scope:spn_seek_wolf }
+					}
+					spn_gathering_seeker_joins_effect = yes
+				}
+			}
+		}
+	}
+	# --- The Old Wolf's Tale.
+	# Seek the Old Ways (2.37b, Thomas 3 Oct: the host should be pointed at a hide that would take him), 60%:
+	#   a. a lost hide that would take him, the best fit of those: reserved for him, as before (The Old Wolf's Tale);
+	#   b. else the shrine hide that fits him best, named with where it is kept (Where It Is Kept), and whether it
+	#      would take him yet. On the default rule only Alpha starts lost, so (b) is the usual answer.
+	# No intent: 30%, a random unreserved lost hide to a random attendee, as before.
+	if = {
+		limit = { scope:host = { has_activity_intent = spn_seek_the_old_ways_intent } }
+		random = {
+			chance = 60
+			scope:host = { save_scope_as = spn_tale_listener }
+			# Weigh him once per hide: scope:spn_tf_<hide> his fit, scope:spn_ta_<hide> if it would take him.
+			save_scope_value_as = { name = spn_fit_hide value = flag:silverback }
+			scope:host = {
+				save_scope_value_as = { name = spn_tf_silverback value = spn_hide_fit_value }
+				# The whole question, as the wake asks it: can bear one, is not a champion, has not been refused by it.
+				if = {
+					limit = {
+						spn_can_bear_hide_trigger = yes
+						spn_is_champion_trigger = no
+						NOT = { has_character_flag = spn_hide_refused_silverback }
+						spn_hide_accepts_wolf_trigger = yes
+					}
+					save_scope_value_as = { name = spn_ta_silverback value = yes }
+				}
+			}
+			save_scope_value_as = { name = spn_fit_hide value = flag:timber }
+			scope:host = {
+				save_scope_value_as = { name = spn_tf_timber value = spn_hide_fit_value }
+				# The whole question, as the wake asks it: can bear one, is not a champion, has not been refused by it.
+				if = {
+					limit = {
+						spn_can_bear_hide_trigger = yes
+						spn_is_champion_trigger = no
+						NOT = { has_character_flag = spn_hide_refused_timber }
+						spn_hide_accepts_wolf_trigger = yes
+					}
+					save_scope_value_as = { name = spn_ta_timber value = yes }
+				}
+			}
+			save_scope_value_as = { name = spn_fit_hide value = flag:tundra }
+			scope:host = {
+				save_scope_value_as = { name = spn_tf_tundra value = spn_hide_fit_value }
+				# The whole question, as the wake asks it: can bear one, is not a champion, has not been refused by it.
+				if = {
+					limit = {
+						spn_can_bear_hide_trigger = yes
+						spn_is_champion_trigger = no
+						NOT = { has_character_flag = spn_hide_refused_tundra }
+						spn_hide_accepts_wolf_trigger = yes
+					}
+					save_scope_value_as = { name = spn_ta_tundra value = yes }
+				}
+			}
+			save_scope_value_as = { name = spn_fit_hide value = flag:graybeard }
+			scope:host = {
+				save_scope_value_as = { name = spn_tf_graybeard value = spn_hide_fit_value }
+				# The whole question, as the wake asks it: can bear one, is not a champion, has not been refused by it.
+				if = {
+					limit = {
+						spn_can_bear_hide_trigger = yes
+						spn_is_champion_trigger = no
+						NOT = { has_character_flag = spn_hide_refused_graybeard }
+						spn_hide_accepts_wolf_trigger = yes
+					}
+					save_scope_value_as = { name = spn_ta_graybeard value = yes }
+				}
+			}
+			save_scope_value_as = { name = spn_fit_hide value = flag:midnight }
+			scope:host = {
+				save_scope_value_as = { name = spn_tf_midnight value = spn_hide_fit_value }
+				# The whole question, as the wake asks it: can bear one, is not a champion, has not been refused by it.
+				if = {
+					limit = {
+						spn_can_bear_hide_trigger = yes
+						spn_is_champion_trigger = no
+						NOT = { has_character_flag = spn_hide_refused_midnight }
+						spn_hide_accepts_wolf_trigger = yes
+					}
+					save_scope_value_as = { name = spn_ta_midnight value = yes }
+				}
+			}
+			save_scope_value_as = { name = spn_fit_hide value = flag:alpha }
+			scope:host = {
+				save_scope_value_as = { name = spn_tf_alpha value = spn_hide_fit_value }
+				# The whole question, as the wake asks it: can bear one, is not a champion, has not been refused by it.
+				if = {
+					limit = {
+						spn_can_bear_hide_trigger = yes
+						spn_is_champion_trigger = no
+						NOT = { has_character_flag = spn_hide_refused_alpha }
+						spn_hide_accepts_wolf_trigger = yes
+					}
+					save_scope_value_as = { name = spn_ta_alpha value = yes }
+				}
+			}
+			# a. The best lost hide that would take him.
+			save_scope_value_as = { name = spn_tale_best value = -10000 }
+			if = {
+				limit = {
+					exists = global_var:spn_hide_silverback_lost
+					NOT = { exists = global_var:spn_hide_silverback_reserved }
+					exists = scope:spn_ta_silverback
+					scope:spn_tf_silverback > scope:spn_tale_best
+				}
+				save_scope_value_as = { name = spn_tale_best value = scope:spn_tf_silverback }
+				save_scope_value_as = { name = spn_tale_hide value = flag:silverback }
+			}
+			if = {
+				limit = {
+					exists = global_var:spn_hide_timber_lost
+					NOT = { exists = global_var:spn_hide_timber_reserved }
+					exists = scope:spn_ta_timber
+					scope:spn_tf_timber > scope:spn_tale_best
+				}
+				save_scope_value_as = { name = spn_tale_best value = scope:spn_tf_timber }
+				save_scope_value_as = { name = spn_tale_hide value = flag:timber }
+			}
+			if = {
+				limit = {
+					exists = global_var:spn_hide_tundra_lost
+					NOT = { exists = global_var:spn_hide_tundra_reserved }
+					exists = scope:spn_ta_tundra
+					scope:spn_tf_tundra > scope:spn_tale_best
+				}
+				save_scope_value_as = { name = spn_tale_best value = scope:spn_tf_tundra }
+				save_scope_value_as = { name = spn_tale_hide value = flag:tundra }
+			}
+			if = {
+				limit = {
+					exists = global_var:spn_hide_graybeard_lost
+					NOT = { exists = global_var:spn_hide_graybeard_reserved }
+					exists = scope:spn_ta_graybeard
+					scope:spn_tf_graybeard > scope:spn_tale_best
+				}
+				save_scope_value_as = { name = spn_tale_best value = scope:spn_tf_graybeard }
+				save_scope_value_as = { name = spn_tale_hide value = flag:graybeard }
+			}
+			if = {
+				limit = {
+					exists = global_var:spn_hide_midnight_lost
+					NOT = { exists = global_var:spn_hide_midnight_reserved }
+					exists = scope:spn_ta_midnight
+					scope:spn_tf_midnight > scope:spn_tale_best
+				}
+				save_scope_value_as = { name = spn_tale_best value = scope:spn_tf_midnight }
+				save_scope_value_as = { name = spn_tale_hide value = flag:midnight }
+			}
+			if = {
+				limit = {
+					exists = global_var:spn_hide_alpha_lost
+					NOT = { exists = global_var:spn_hide_alpha_reserved }
+					exists = scope:spn_ta_alpha
+					scope:spn_tf_alpha > scope:spn_tale_best
+				}
+				save_scope_value_as = { name = spn_tale_best value = scope:spn_tf_alpha }
+				save_scope_value_as = { name = spn_tale_hide value = flag:alpha }
+			}
+			if = {
+				limit = { exists = scope:spn_tale_hide }
+				if = {
+					limit = { scope:spn_tale_hide = flag:silverback }
+					set_global_variable = { name = spn_hide_silverback_lost value = current_year }
+					set_global_variable = { name = spn_hide_silverback_heard_by value = scope:spn_tale_listener }
+				}
+				if = {
+					limit = { scope:spn_tale_hide = flag:timber }
+					set_global_variable = { name = spn_hide_timber_lost value = current_year }
+					set_global_variable = { name = spn_hide_timber_heard_by value = scope:spn_tale_listener }
+				}
+				if = {
+					limit = { scope:spn_tale_hide = flag:tundra }
+					set_global_variable = { name = spn_hide_tundra_lost value = current_year }
+					set_global_variable = { name = spn_hide_tundra_heard_by value = scope:spn_tale_listener }
+				}
+				if = {
+					limit = { scope:spn_tale_hide = flag:graybeard }
+					set_global_variable = { name = spn_hide_graybeard_lost value = current_year }
+					set_global_variable = { name = spn_hide_graybeard_heard_by value = scope:spn_tale_listener }
+				}
+				if = {
+					limit = { scope:spn_tale_hide = flag:midnight }
+					set_global_variable = { name = spn_hide_midnight_lost value = current_year }
+					set_global_variable = { name = spn_hide_midnight_heard_by value = scope:spn_tale_listener }
+				}
+				if = {
+					limit = { scope:spn_tale_hide = flag:alpha }
+					set_global_variable = { name = spn_hide_alpha_lost value = current_year }
+					set_global_variable = { name = spn_hide_alpha_heard_by value = scope:spn_tale_listener }
+				}
+				scope:spn_tale_listener = { trigger_event = spn_gathering.0303 }
+			}
+			# b. Else the shrine hide that fits him best. Every hide in a shrine carries var:spn_hide_shrine_county.
+			# spn_all_hides is the Circle's own list (Word at the Fire builds it; the effect is idempotent).
+			else = {
+				spn_hide_collect_hides_effect = yes
+				if = {
+					limit = {
+						any_in_list = {
+							list = spn_all_hides
+							exists = var:spn_hide_shrine_county
+						}
+					}
+					ordered_in_list = {
+						list = spn_all_hides
+						limit = { exists = var:spn_hide_shrine_county }
+						order_by = {
+							value = 0
+							if = {
+								limit = { var:spn_hide = flag:silverback }
+								add = scope:spn_tf_silverback
+							}
+							if = {
+								limit = { var:spn_hide = flag:timber }
+								add = scope:spn_tf_timber
+							}
+							if = {
+								limit = { var:spn_hide = flag:tundra }
+								add = scope:spn_tf_tundra
+							}
+							if = {
+								limit = { var:spn_hide = flag:graybeard }
+								add = scope:spn_tf_graybeard
+							}
+							if = {
+								limit = { var:spn_hide = flag:midnight }
+								add = scope:spn_tf_midnight
+							}
+							if = {
+								limit = { var:spn_hide = flag:alpha }
+								add = scope:spn_tf_alpha
+							}
+						}
+						save_scope_as = spn_tale_shrine_hide
+					}
+					scope:spn_tale_shrine_hide.var:spn_hide_shrine_county = { save_scope_as = spn_tale_shrine_county }
+					if = {
+						limit = {
+							scope:spn_tale_shrine_hide.var:spn_hide = flag:silverback
+							exists = scope:spn_ta_silverback
+						}
+						save_scope_value_as = { name = spn_tale_takes value = yes }
+					}
+					if = {
+						limit = {
+							scope:spn_tale_shrine_hide.var:spn_hide = flag:timber
+							exists = scope:spn_ta_timber
+						}
+						save_scope_value_as = { name = spn_tale_takes value = yes }
+					}
+					if = {
+						limit = {
+							scope:spn_tale_shrine_hide.var:spn_hide = flag:tundra
+							exists = scope:spn_ta_tundra
+						}
+						save_scope_value_as = { name = spn_tale_takes value = yes }
+					}
+					if = {
+						limit = {
+							scope:spn_tale_shrine_hide.var:spn_hide = flag:graybeard
+							exists = scope:spn_ta_graybeard
+						}
+						save_scope_value_as = { name = spn_tale_takes value = yes }
+					}
+					if = {
+						limit = {
+							scope:spn_tale_shrine_hide.var:spn_hide = flag:midnight
+							exists = scope:spn_ta_midnight
+						}
+						save_scope_value_as = { name = spn_tale_takes value = yes }
+					}
+					if = {
+						limit = {
+							scope:spn_tale_shrine_hide.var:spn_hide = flag:alpha
+							exists = scope:spn_ta_alpha
+						}
+						save_scope_value_as = { name = spn_tale_takes value = yes }
+					}
+					scope:host = {
+						spn_hide_learn_where_effect = { HIDE_SCOPE = scope:spn_tale_shrine_hide WHERE = scope:spn_tale_shrine_county WANTS = yes }
+					}
+					scope:spn_tale_listener = { trigger_event = spn_gathering.0307 }
+				}
+			}
+		}
+	}
+	else_if = {
+		limit = { spn_hide_tale_ready_trigger = yes }
+		random = {
+			chance = 30
+			scope:activity = {
+				random_attending_character = { save_scope_as = spn_tale_listener }
+			}
+			random_list = {
+				1 = {
+					trigger = {
+						exists = global_var:spn_hide_silverback_lost
+						NOT = { exists = global_var:spn_hide_silverback_reserved }
+					}
+					set_global_variable = { name = spn_hide_silverback_lost value = current_year }
+					set_global_variable = { name = spn_hide_silverback_heard_by value = scope:spn_tale_listener }
+					save_scope_value_as = { name = spn_tale_hide value = flag:silverback }
+				}
+				1 = {
+					trigger = {
+						exists = global_var:spn_hide_timber_lost
+						NOT = { exists = global_var:spn_hide_timber_reserved }
+					}
+					set_global_variable = { name = spn_hide_timber_lost value = current_year }
+					set_global_variable = { name = spn_hide_timber_heard_by value = scope:spn_tale_listener }
+					save_scope_value_as = { name = spn_tale_hide value = flag:timber }
+				}
+				1 = {
+					trigger = {
+						exists = global_var:spn_hide_tundra_lost
+						NOT = { exists = global_var:spn_hide_tundra_reserved }
+					}
+					set_global_variable = { name = spn_hide_tundra_lost value = current_year }
+					set_global_variable = { name = spn_hide_tundra_heard_by value = scope:spn_tale_listener }
+					save_scope_value_as = { name = spn_tale_hide value = flag:tundra }
+				}
+				1 = {
+					trigger = {
+						exists = global_var:spn_hide_graybeard_lost
+						NOT = { exists = global_var:spn_hide_graybeard_reserved }
+					}
+					set_global_variable = { name = spn_hide_graybeard_lost value = current_year }
+					set_global_variable = { name = spn_hide_graybeard_heard_by value = scope:spn_tale_listener }
+					save_scope_value_as = { name = spn_tale_hide value = flag:graybeard }
+				}
+				1 = {
+					trigger = {
+						exists = global_var:spn_hide_midnight_lost
+						NOT = { exists = global_var:spn_hide_midnight_reserved }
+					}
+					set_global_variable = { name = spn_hide_midnight_lost value = current_year }
+					set_global_variable = { name = spn_hide_midnight_heard_by value = scope:spn_tale_listener }
+					save_scope_value_as = { name = spn_tale_hide value = flag:midnight }
+				}
+				1 = {
+					trigger = {
+						exists = global_var:spn_hide_alpha_lost
+						NOT = { exists = global_var:spn_hide_alpha_reserved }
+					}
+					set_global_variable = { name = spn_hide_alpha_lost value = current_year }
+					set_global_variable = { name = spn_hide_alpha_heard_by value = scope:spn_tale_listener }
+					save_scope_value_as = { name = spn_tale_hide value = flag:alpha }
+				}
+			}
+			scope:spn_tale_listener = { trigger_event = spn_gathering.0303 }
+		}
+	}
+	# --- Two Hides in One Room: Silverback's and Midnight's champions both here.
+	if = {
+		limit = {
+			scope:activity = {
+				any_attending_character = { has_trait = spn_champion_silverback }
+				any_attending_character = { has_trait = spn_champion_midnight }
+			}
+		}
+		scope:activity = {
+			random_attending_character = {
+				limit = { has_trait = spn_champion_silverback }
+				save_scope_as = spn_th_silver
+			}
+			random_attending_character = {
+				limit = { has_trait = spn_champion_midnight }
+				save_scope_as = spn_th_midnight
+			}
+		}
+		scope:spn_th_silver = {
+			if = {
+				limit = {
+					NOT = { has_relation_rival = scope:spn_th_midnight }
+					can_set_relation_rival_trigger = { CHARACTER = scope:spn_th_midnight }
+					# 2.37o: the hides' old hatred does not make rivals of a mate or lover (the review of 4 Oct, F16).
+					NOR = {
+						is_spouse_of = scope:spn_th_midnight
+						has_relation_lover = scope:spn_th_midnight
+					}
+				}
+				set_relation_rival = {
+					target = scope:spn_th_midnight
+					reason = spn_rival_two_hides
+				}
+			}
+			trigger_event = spn_gathering.0304
+		}
+		scope:spn_th_midnight = { trigger_event = spn_gathering.0304 }
+	}
+	# --- The Unification (§15): the host asked for it, and his spouse leads another pack and is here.
+	if = {
+		limit = {
+			spn_packs_on_trigger = yes
+			scope:host = {
+				has_activity_intent = spn_hold_the_unification_intent
+				spn_is_alpha_trigger = yes
+			}
+			scope:activity = {
+				any_attending_character = {
+					spn_unification_partner_trigger = { HOST = scope:host }
+					# 2.37o: the rite answers the host alone, so an AI host never merges a player's pack into his own;
+					# the player holds the Unification himself (the review of 4 Oct, S1; pass j's rule).
+					OR = {
+						is_ai = yes
+						scope:host = { is_ai = no }
+					}
+				}
+			}
+		}
+		scope:activity = {
+			random_attending_character = {
+				limit = {
+					spn_unification_partner_trigger = { HOST = scope:host }
+					OR = {
+						is_ai = yes
+						scope:host = { is_ai = no }
+					}
+				}
+				save_scope_as = spn_un_spouse
+			}
+		}
+		if = {
+			limit = {
+				scope:host = { NOT = { any_secret = { NOT = { is_known_by = scope:spn_un_spouse } } } }
+				scope:spn_un_spouse = { NOT = { any_secret = { NOT = { is_known_by = scope:host } } } }
+			}
+			scope:host = { trigger_event = spn_gathering.0305 }
+		}
+		else = {
+			scope:host = { trigger_event = spn_gathering.0306 }
+			scope:spn_un_spouse = {
+				if = {
+					limit = { is_ai = no }
+					trigger_event = spn_gathering.0306
+				}
+			}
+		}
+	}
+}
+
+# The end (§14.2 on_complete). Pack Standing by intent (Packs On), lycanthropy, Hide Bond, the born grant, Call the
+# Packs' favours, and kindred blood between packs and faiths.
+spn_gathering_complete_effect = {
+	# 2.37b -- the Fevered: the pack sat with him through the Gathering and will see him through the fever. The turn
+	# is likelier and death less likely at its end (spn_resolve_wound_climax), the fever's last choice gains Let the
+	# Pack Carry Me, and if he turns he wakes in the host's pack (spn_pack.0014). Not more infection: a higher infection
+	# track raises the climax's death weight (20_spn_sire_effects.txt), the opposite of what the pack is for.
+	scope:host = { save_scope_as = spn_gc_host }
+	scope:activity = {
+		every_attending_character = {
+			limit = {
+				has_trait = ww_infected_wound
+				NOT = { this = scope:host }
+			}
+			add_character_flag = spn_pack_carried
+			set_variable = { name = spn_pack_carried_by value = scope:host }
+			if = {
+				limit = { is_ai = no }
+				trigger_event = spn_gathering.0401
+			}
+		}
+	}
+	scope:activity = {
+		every_attending_character = {
+			limit = { spn_is_wolf_trigger = yes }
+			save_temporary_scope_as = spn_gc_wolf
+			if = {
+				limit = { spn_packs_on_trigger = yes }
+				if = {
+					limit = { has_activity_intent = spn_earn_my_place_intent }
+					spn_pack_gain_standing_effect = { VALUE = 20 }
+				}
+				else = {
+					spn_pack_gain_standing_effect = { VALUE = 10 }
+				}
+				spn_pack_born_standing_effect = yes
+			}
+			if = {
+				limit = { has_trait = supernatural_werewolf }
+				add_trait_xp = { trait = supernatural_werewolf track = lycanthropy value = 5 }
+			}
+			else_if = {
+				limit = { has_trait = supernatural_hybrid }
+				add_trait_xp = { trait = supernatural_hybrid track = hybrid_lycanthropy value = 5 }
+			}
+			if = {
+				limit = { spn_is_champion_trigger = yes }
+				spn_hide_add_bond_effect = { VALUE = spn_hide_bond_gathering_value }
+			}
+			if = {
+				limit = { spn_pack_politics_built_trigger = yes }
+				scope:activity = {
+					every_attending_character = {
+						limit = {
+							NOT = { this = scope:spn_gc_wolf }
+							spn_is_wolf_trigger = yes
+							spn_gathering_kindred_blood_trigger = { OTHER = scope:spn_gc_wolf }
+						}
+						add_opinion = { target = scope:spn_gc_wolf modifier = spn_kindred_blood_opinion }
+					}
+				}
+			}
+		}
+	}
+	# Call the Packs (§6.5): a favour from every alpha who came. 2.37o: and the call is spent (an AI's lasts five years,
+	# so it would otherwise reach a second Gathering).
+	if = {
+		limit = { scope:host = { has_character_flag = spn_called_the_packs } }
+		scope:host = { remove_character_flag = spn_called_the_packs }
+		scope:activity = {
+			every_attending_character = {
+				limit = {
+					NOT = { this = scope:host }
+					spn_is_alpha_trigger = yes
+				}
+				save_temporary_scope_as = spn_gc_alpha
+				scope:host = {
+					if = {
+						limit = { NOT = { has_hook = scope:spn_gc_alpha } }
+						add_hook = { type = favor_hook target = scope:spn_gc_alpha }
+					}
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE FIELD (§12.3, §12.4). Root = the champion; scope:combat_side = his side.
+# ==================================================================================================
+spn_hide_feat_effect = {
+	save_scope_as = spn_feat_champ
+	# The budget, on the battle's first pick.
+	if = {
+		limit = { NOT = { has_variable = spn_feat_budget } }
+		set_variable = { name = spn_feat_budget value = spn_hide_feat_budget_value days = 60 }
+		set_variable = { name = spn_feat_province value = scope:combat_side.combat.location days = 60 }
+	}
+	if = {
+		limit = { exists = scope:spn_feat_bitten }
+		clear_saved_scope = spn_feat_bitten
+	}
+	# Counterplay: a hunter in their ranks. A quarter of his picks, the hunter finds him instead.
+	if = {
+		limit = {
+			scope:combat_side.enemy_side = {
+				any_side_knight = {
+					is_alive = yes
+					spn_has_hunter_trait = yes
+				}
+			}
+		}
+		random = {
+			chance = 25
+			save_scope_value_as = { name = spn_feat_bitten value = yes }
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_feat_bitten }
+		scope:combat_side.enemy_side = {
+			random_side_knight = {
+				limit = {
+					is_alive = yes
+					spn_has_hunter_trait = yes
+				}
+				save_temporary_scope_as = spn_feat_hunter
+			}
+		}
+		# Posted on the hunter's side: "our" hunter, their beast.
+		scope:combat_side.enemy_side = {
+			battle_event = {
+				key = spn_hide_feat_hunter
+				left_portrait = scope:spn_feat_hunter
+				right_portrait = root
+				type = wound
+				target_right = yes
+			}
+		}
+		increase_wounds_no_death_effect = { REASON = fight }
+		change_variable = { name = spn_feat_budget add = -1 }
+	}
+	else = {
+		spn_hide_feat_kill_one_effect = yes
+		# A second kill at 50%, while the budget lasts.
+		if = {
+			limit = {
+				is_alive = yes
+				var:spn_feat_budget > 0
+				scope:combat_side.enemy_side = {
+					any_side_knight = { spn_hide_feat_victim_trigger = { CHAMP = scope:spn_feat_champ } }
+				}
+			}
+			random = {
+				chance = 50
+				spn_hide_feat_kill_one_effect = yes
+			}
+		}
+	}
+	# The secret: once a battle, a chance the enemy commander understands what he saw.
+	if = {
+		limit = {
+			is_alive = yes
+			NOT = { has_character_flag = spn_feat_revealed }
+			has_character_flag = spn_feat_seen
+		}
+		add_character_flag = { flag = spn_feat_revealed days = 60 }
+		random = {
+			chance = spn_hide_war_reveal_chance_value
+			scope:combat_side.enemy_side.side_commander ?= { save_scope_as = spn_feat_witness }
+			if = {
+				limit = { exists = scope:spn_feat_witness }
+				if = {
+					limit = { has_trait = supernatural_hybrid }
+					spn_give_knowledge_of_hybrid_secret = { CHARACTER = scope:spn_feat_witness }
+				}
+				else = {
+					spn_give_knowledge_of_lycan_secret = { CHARACTER = scope:spn_feat_witness }
+				}
+			}
+		}
+	}
+}
+
+# One kill. Root = the champion.
+spn_hide_feat_kill_one_effect = {
+	scope:combat_side.enemy_side = {
+		random_side_knight = {
+			limit = { spn_hide_feat_victim_trigger = { CHAMP = scope:spn_feat_champ } }
+			save_temporary_scope_as = enemy_knight
+		}
+	}
+	if = {
+		limit = {
+			is_alive = yes
+			exists = scope:enemy_knight
+			scope:enemy_knight = { is_alive = yes }
+		}
+		change_variable = { name = spn_feat_budget add = -1 }
+		if = {
+			limit = { exists = var:spn_feat_kills }
+			change_variable = { name = spn_feat_kills add = 1 }
+		}
+		else = {
+			set_variable = { name = spn_feat_kills value = 1 days = 60 }
+		}
+		random_list = {
+			1 = {
+				scope:combat_side = {
+					battle_event = {
+						key = spn_hide_feat_1
+						left_portrait = root
+						right_portrait = scope:enemy_knight
+						type = death
+						target_right = yes
+					}
+				}
+			}
+			1 = {
+				scope:combat_side = {
+					battle_event = {
+						key = spn_hide_feat_2
+						left_portrait = root
+						right_portrait = scope:enemy_knight
+						type = death
+						target_right = yes
+					}
+				}
+			}
+			1 = {
+				scope:combat_side = {
+					battle_event = {
+						key = spn_hide_feat_3
+						left_portrait = root
+						right_portrait = scope:enemy_knight
+						type = death
+						target_right = yes
+					}
+				}
+			}
+		}
+		# The first kill of the battle is weighed by his own rite, once (the 2.36 rule).
+		if = {
+			limit = { NOT = { has_character_flag = spn_feat_weighed } }
+			add_character_flag = { flag = spn_feat_weighed days = 60 }
+			spn_creature_act_fulfillment_effect = { ACT = kill }
+		}
+		if = {
+			limit = { NOT = { has_character_flag = spn_feat_seen } }
+			add_character_flag = { flag = spn_feat_seen days = 60 }
+		}
+		spn_hide_feat_bond_effect = yes
+		# A name, at ten. Never over one he already has.
+		if = {
+			limit = { exists = var:spn_hide_feats }
+			change_variable = { name = spn_hide_feats add = 1 }
+		}
+		else = {
+			set_variable = { name = spn_hide_feats value = 1 }
+		}
+		if = {
+			limit = {
+				var:spn_hide_feats >= 10
+				has_any_nickname = no
+			}
+			give_nickname = nick_the_wolf
+		}
+		add_prestige = knight_prestige_gain_on_kill
+		# The death last.
+		scope:enemy_knight = {
+			death = {
+				death_reason = spn_death_torn_in_battle
+				killer = scope:spn_feat_champ
+			}
+		}
+	}
+}
+
+# Champion against champion (§12.4). The foe is picked INSIDE the effect: combat-phase effects run after every pick
+# of the pulse, so two opposing champions can both pick the clash, and the second must find the pair already done.
+spn_hide_field_clash_effect = {
+	save_scope_as = spn_fc_champ
+	if = {
+		limit = { exists = scope:spn_fc_foe }
+		clear_saved_scope = spn_fc_foe
+	}
+	scope:combat_side.enemy_side = {
+		if = {
+			limit = { side_commander ?= { spn_hide_clash_foe_trigger = { CHAMP = scope:spn_fc_champ } } }
+			side_commander = { save_scope_as = spn_fc_foe }
+		}
+		else = {
+			random_side_knight = {
+				limit = { spn_hide_clash_foe_trigger = { CHAMP = scope:spn_fc_champ } }
+				save_scope_as = spn_fc_foe
+			}
+		}
+	}
+	if = {
+		limit = {
+			is_alive = yes
+			exists = scope:spn_fc_foe
+		}
+		# 1. The pair, first: once a battle, the feat unblocked for both, and the aftermath finds them.
+		add_to_variable_list = { name = spn_clash_done_with target = scope:spn_fc_foe days = 60 }
+		scope:spn_fc_foe = { add_to_variable_list = { name = spn_clash_done_with target = scope:spn_fc_champ days = 60 } }
+		set_variable = { name = spn_feat_province value = scope:combat_side.combat.location days = 60 }
+		scope:spn_fc_foe = { set_variable = { name = spn_feat_province value = scope:combat_side.combat.location days = 60 } }
+		add_character_flag = { flag = spn_feat_seen days = 60 }
+		scope:spn_fc_foe = { add_character_flag = { flag = spn_feat_seen days = 60 } }
+		# 2. The clash.
+		spn_creature_clash_effect = {
+			A = scope:spn_fc_champ
+			B = scope:spn_fc_foe
+			THEN = spn_hide_field_clash_after_effect
+			FORM = no
+		}
+	}
+}
+
+# Combat side scope.
+spn_hide_clash_battle_event_effect = {
+	battle_event = {
+		key = spn_hide_clash
+		left_portrait = scope:spn_clash_winner
+		right_portrait = scope:spn_clash_loser
+		type = wound
+		target_right = yes
+	}
+}
+
+# 3. The loser's wounds are read BEFORE one is added: a wolf already badly hurt dies of this one.
+spn_hide_field_clash_after_effect = {
+	# Posted on the winner's side, so "ours" is always the one who came out on top.
+	if = {
+		limit = { scope:spn_clash_winner = scope:spn_fc_champ }
+		scope:combat_side = { spn_hide_clash_battle_event_effect = yes }
+	}
+	else = {
+		scope:combat_side.enemy_side = { spn_hide_clash_battle_event_effect = yes }
+	}
+	if = {
+		limit = {
+			scope:spn_clash_loser = {
+				OR = {
+					has_trait_rank = {
+						trait = wounded
+						rank = 2
+					}
+					has_trait_rank = {
+						trait = wounded
+						rank = 3
+					}
+					has_trait = maimed
+				}
+			}
+		}
+		scope:spn_clash_winner = {
+			if = {
+				limit = { NOT = { has_character_flag = spn_feat_weighed } }
+				add_character_flag = { flag = spn_feat_weighed days = 60 }
+			}
+			spn_creature_act_fulfillment_effect = { ACT = kill }
+		}
+		scope:spn_clash_loser = {
+			death = {
+				death_reason = spn_death_torn_in_battle
+				killer = scope:spn_clash_winner
+			}
+		}
+	}
+	else = {
+		scope:spn_clash_loser = { increase_wounds_no_death_effect = { REASON = fight } }
+	}
+}

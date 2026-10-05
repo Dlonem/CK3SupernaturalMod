@@ -920,6 +920,9 @@ supernatural_hunt = {
 				}
 			}
 		}
+		# 2.37 -- an AI hunter does not walk in on a known champion whose card is ready unless he means it (§11.2). The
+		# score below says the same thing softly; this is the hard half, because the score is only a preference.
+		NOT = { spn_hide_ai_hunter_deterred_trigger = yes }
 	}
 
 	# The player roams; the AI stays home (the 2.32 split, monument_expedition's idiom).
@@ -1070,6 +1073,11 @@ supernatural_hunt = {
 				add = { value = spn_county_prosperity_value multiply = 0.5 }
 			}
 		}
+		# 2.37 -- the same rule, soft (§11.2). AI hosts only: a player's map pins must not vanish.
+		if = {
+			limit = { spn_hide_ai_hunter_deterred_trigger = yes }
+			add = -1000
+		}
 	}
 
 	# ==========================================================================================================
@@ -1101,6 +1109,17 @@ supernatural_hunt = {
 			triggered_desc = { trigger = { county ?= { exists = var:spn_menace_count var:spn_menace_count >= 5 } } desc = spn_hunt_tag_trail_3 }
 			triggered_desc = { trigger = { county ?= { exists = var:spn_menace_count var:spn_menace_count >= 3 } } desc = spn_hunt_tag_trail_2 }
 			triggered_desc = { trigger = { county ?= { has_county_modifier = spn_menace_modifier } } desc = spn_hunt_tag_trail_1 }
+		}
+
+		# --- 2.37: SOMETHING OLD (§11.3). A hunter who can read sign knows this one is not like the others.
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					county ?= { var:spn_menace_culprit ?= { spn_is_champion_trigger = yes } }
+					scope:host = { has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 50 } }
+				}
+				desc = spn_tag_something_old
+			}
 		}
 
 		# --- WHAT LEFT IT, for a hunter who can read it (§6.2). Reading the sign is an advantage and now

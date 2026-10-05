@@ -1,1 +1,836 @@
-﻿
+﻿# Supernatural 2.37 -- the Werewolf Gathering (WORK-ORDER-2.37 §14). Claims the empty stub. The shape of the mod's own
+# vampire_feeding.txt: three phases, our own pool on_action (spn_gathering_pulse), the feeding's travel backgrounds and
+# window characters. The Gathering needs no holding: the AI stays in its own realm, a player may go as far as the hunt.
+werewolf_gathering = {
+	is_shown = {
+		OR = {
+			is_landed_or_landless_administrative = yes
+			is_landless_adventurer = yes
+		}
+		is_playable_character = yes
+		is_available_adult = yes
+		trigger_if = {
+			limit = { is_ai = yes }
+			is_at_war = no
+		}
+		spn_is_wolf_trigger = yes
+		NOT = { has_character_modifier = spn_gone_to_ground_modifier }
+	}
+
+	can_start_showing_failures_only = {
+		# 2.37e: the engine does not hold the host to the cooldown below; every vanilla activity with one checks it here.
+		NOT = { is_activity_type_on_cooldown = werewolf_gathering }
+		is_available = yes
+	}
+
+	is_valid = {
+		NOT = { has_variable = activity_invalidated }
+		scope:host = {
+			OR = {
+				is_landed_or_landless_administrative = yes
+				is_landless_adventurer = yes
+			}
+			is_alive = yes
+			is_imprisoned = no
+			NOT = { is_incapable = yes }
+		}
+	}
+
+	on_start = {
+		scope:host = { trigger_event = spn_gathering.0001 }
+	}
+
+	on_invalidated = {
+		if = {
+			limit = { scope:host = { is_incapable = yes } }
+			scope:activity = {
+				activity_type = { save_scope_as = activity_type }
+			}
+			scope:host = { trigger_event = activity_system.0330 }
+			every_attending_character = {
+				limit = { NOT = { this = scope:host } }
+				trigger_event = activity_system.0331
+			}
+		}
+	}
+
+	on_host_death = {
+		scope:activity = {
+			set_variable = { name = activity_invalidated }
+		}
+	}
+
+	###################
+	# COST
+	###################
+	cost = {
+		gold = {
+			add = {
+				value = standard_camp_party_activity_cost
+				desc = hunt_base_cost
+			}
+		}
+	}
+
+	ui_predicted_cost = {
+		gold = {
+			value = standard_camp_party_activity_cost
+			divide = 5
+			ceiling = yes
+			multiply = 5
+		}
+	}
+	cooldown = { years = 5 }
+
+	wait_time_before_start = { weeks = 1 }
+	max_guest_arrival_delay_time = { months = 3 }
+	is_single_location = yes
+
+	###################
+	# AI VALUES (§14.5). Root = the character weighing it.
+	###################
+	ai_will_do = {
+		value = 20
+		if = { limit = { has_trait = gregarious } add = 20 }
+		if = { limit = { has_trait = ambitious } add = 10 }
+		if = { limit = { spn_is_alpha_trigger = yes } add = 30 }
+		add = {
+			value = spn_pack_standing_value
+			divide = 5
+		}
+		if = { limit = { has_trait = shy } add = -20 }
+		if = { limit = { has_trait = paranoid } add = -15 }
+		if = { limit = { has_trait = content } add = -10 }
+		# Alpha's Call the Packs (§6.5).
+		if = { limit = { has_character_flag = spn_called_the_packs } add = 100 }
+	}
+
+	ai_check_interval = 60
+
+	ai_will_select_province = {
+		value = { value = 20 add = scope:score }
+	}
+
+	###################
+	# PHASES (§14.2). The host's on_phase_active moves the clock; the Run's pool comes from spn_gathering_pulse.
+	###################
+	phases = {
+		spn_gathering_calling_phase = {
+			is_predefined = yes
+			order = 1
+			on_phase_active = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { weeks = 2 } }
+					# The Pack Bows: a champion has come.
+					if = {
+						limit = {
+							scope:activity = {
+								any_attending_character = { spn_is_champion_trigger = yes }
+							}
+						}
+						scope:activity = {
+							random_attending_character = {
+								limit = { spn_is_champion_trigger = yes }
+								save_scope_as = spn_bow_champ
+							}
+							every_attending_character = {
+								limit = {
+									is_ai = no
+									NOT = { this = scope:spn_bow_champ }
+								}
+								trigger_event = spn_gathering.0110
+							}
+						}
+					}
+				}
+			}
+		}
+
+		spn_gathering_run_phase = {
+			is_predefined = yes
+			order = 2
+			# 2.37b -- on_enter_phase ADDED, the hunt's 2.35 lesson (supernatural_hunt.txt, spn_confrontation_phase).
+			# A phase after the first is entered PASSIVE and waits until something calls progress_activity_phase_after;
+			# only then is it made active and on_phase_active runs. Without this the Gathering sat on "waiting for the
+			# Run" forever: Thomas's 3 Oct save, passive since 1082.9.2, seven months.
+			on_enter_phase = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { days = 1 } }
+				}
+			}
+			on_phase_active = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { weeks = 3 } }
+				}
+			}
+			on_weekly_pulse = {
+				if = {
+					limit = { this = scope:host }
+					trigger_event = { on_action = spn_gathering_pulse }
+				}
+			}
+			on_end = {
+				if = {
+					limit = { this = scope:host }
+					spn_gathering_run_end_effect = yes
+				}
+			}
+		}
+
+		spn_gathering_circle_phase = {
+			is_predefined = yes
+			order = 3
+			# 2.37b -- the same: entered passive, made active here.
+			on_enter_phase = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { days = 1 } }
+				}
+			}
+			on_phase_active = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { weeks = 1 } }
+					spn_gathering_circle_effect = yes
+				}
+			}
+		}
+	}
+
+	###################
+	# LOCATION (§14.1). The hunt's own leash for players; the AI stays home.
+	###################
+	# 2.37b -- THE MAP PINS, the hunt's 2.35a lesson again (supernatural_hunt.txt, province_score). max_province_icons
+	# only LIMITS pins to the top-scored provinces; it does not make them. The score gave every province on the map a
+	# flat 10 and every forest 30, so the six pins went to six forests anywhere in the world and none near Thomas.
+	# Now: one place per county (its seat), the hunt's reach (near, or anywhere in your own liege's realm), and a score
+	# that starts at zero and ranks woods, your own ground and nearness.
+	is_location_valid = {
+		exists = county
+		custom_tooltip = {
+			text = spn_wg_location_capital_tt
+			OR = {
+				is_county_capital = yes
+				# A camp: domicile_realm gives a landless AI his camp's province and nothing else (_activity_type.info:91).
+				scope:host = { is_landless_adventurer = yes }
+			}
+		}
+		custom_tooltip = {
+			text = spn_wg_location_too_far_tt
+			OR = {
+				vf_host_distance_to_province <= spn_max_hunt_distance
+				AND = {
+					exists = scope:host.top_liege
+					county ?= { holder ?= { top_liege ?= { this = scope:host.top_liege } } }
+				}
+			}
+		}
+	}
+	province_filter = all
+	ai_province_filter = domicile_realm
+	max_province_icons = 5
+	allow_zero_guest_invites = yes
+	open_invite = no
+
+	# root = the province; scope:host = the host.
+	province_score = {
+		value = 0
+		# The woods are the point: the biggest term.
+		if = {
+			limit = {
+				OR = {
+					terrain = forest
+					terrain = taiga
+				}
+			}
+			add = 60
+		}
+		# Your own ground first, then your liege's realm (the hunt's two terms).
+		if = {
+			limit = { county ?= { holder ?= { OR = { this = scope:host  is_vassal_or_below_of = scope:host } } } }
+			add = 45
+		}
+		else_if = {
+			limit = {
+				exists = scope:host.top_liege
+				county ?= { holder ?= { top_liege ?= { this = scope:host.top_liege } } }
+			}
+			add = 20
+		}
+		# Nearer is better.
+		if = {
+			limit = { NOT = { vf_host_distance_to_province <= squared_distance_medium } }
+			add = -25
+		}
+		if = {
+			limit = { NOT = { vf_host_distance_to_province <= squared_distance_large } }
+			add = -35
+		}
+	}
+	# The hunt's shape: a base line, then one first_valid per tag (supernatural_hunt.txt province_description).
+	province_description = {
+		desc = spn_wg_prov_base
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					OR = {
+						terrain = forest
+						terrain = taiga
+					}
+				}
+				desc = spn_wg_tag_forest
+			}
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = { county ?= { holder ?= { OR = { this = scope:host  is_vassal_or_below_of = scope:host } } } }
+				desc = spn_wg_tag_own
+			}
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = { NOT = { vf_host_distance_to_province <= squared_distance_large } }
+				desc = spn_wg_tag_far
+			}
+		}
+	}
+
+	###################
+	# GUESTS (§14.1)
+	###################
+	max_guests = 12
+
+	guest_invite_rules = {
+		defaults = {
+			1 = activity_invite_rule_werewolves
+			2 = activity_invite_rule_pack
+			3 = activity_invite_rule_fevered
+		}
+		rules = {
+			4 = activity_invite_rule_hybrids
+		}
+	}
+
+	can_be_activity_guest = {
+		is_alive = yes
+		is_adult = yes
+		is_travelling = no
+		is_imprisoned = no
+		is_incapable = no
+		is_in_army = no
+		NOT = { exists = involved_activity }
+		# root = the candidate, scope:host = the inviter.
+		OR = {
+			AND = {
+				spn_is_wolf_trigger = yes
+				spn_host_knows_wolf_trigger = { HOST = scope:host }
+			}
+			# 2.37e: Call the Packs (Alpha's action, §6.5): every alpha in reach may come, known or not. The invite rule
+			# already listed them; this filter was dropping the ones the host did not know.
+			AND = {
+				scope:host = { has_character_flag = spn_called_the_packs }
+				spn_is_alpha_trigger = yes
+				in_diplomatic_range = scope:host
+			}
+			# 2.37b -- the Fevered (Thomas, 3 Oct): someone still in the wound's fever, whom the host knows. The pack
+			# sees him through it (spn_gathering_complete_effect, spn_wound_incubation.9000 option g).
+			AND = {
+				has_trait = ww_infected_wound
+				spn_host_knows_fevered_trigger = { HOST = scope:host }
+			}
+		}
+	}
+
+	host_intents = {
+		intents = { spn_lead_the_pack_intent spn_run_a_rivals_land_intent spn_seek_the_old_ways_intent spn_hold_the_unification_intent }
+		default = spn_lead_the_pack_intent
+	}
+
+	guest_intents = {
+		intents = { spn_earn_my_place_intent spn_challenge_the_alpha_intent spn_seek_another_pack_intent }
+		default = spn_earn_my_place_intent
+	}
+
+	guest_join_chance = {
+		base = 20
+		base_activity_modifier = yes
+		modifier = {
+			scope:host = { has_trait = paranoid }
+			add = -25
+			desc = spn_wg_join_host_paranoid
+		}
+		modifier = {
+			scope:host = { has_trait = gregarious }
+			add = 15
+			desc = spn_wg_join_host_gregarious
+		}
+		# His own pack's alpha calls: he comes.
+		modifier = {
+			trigger_if = {
+				limit = { exists = var:spn_pack }
+				var:spn_pack = { story_owner = scope:host }
+			}
+			trigger_else = { always = no }
+			add = 40
+			desc = spn_wg_join_my_alpha
+		}
+		modifier = { has_trait = gregarious add = 12 desc = spn_wg_join_guest_eager }
+		modifier = { has_trait = ambitious add = 8 desc = spn_wg_join_guest_eager }
+		modifier = { has_trait = paranoid add = -20 desc = spn_wg_join_guest_wary }
+		modifier = { has_trait = shy add = -15 desc = spn_wg_join_guest_wary }
+		modifier = { has_trait = content add = -10 desc = spn_wg_join_guest_wary }
+		activity_guest_shared_ai_accept_modifier = yes
+	}
+
+	on_complete = {
+		if = {
+			limit = { this = scope:host }
+			spn_gathering_complete_effect = yes
+			scope:host = { trigger_event = spn_gathering.0400 }
+		}
+	}
+
+	###################
+	# GRAPHICS -- the feeding's travel backgrounds; the woods at night once there.
+	###################
+	# Travel
+	background = { # Bridge
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				is_riverside_province = yes
+				#geographical_region = world_europe
+				OR = {
+					terrain = farmlands
+					terrain = plains
+					terrain = mountains
+					terrain = hills
+				}
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_bridge.dds"
+		environment = "environment_travel_bridge"
+		ambience = "event:/SFX/Events/Backgrounds/mountains_day"
+	}
+	
+	background = { # Farmland, settled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				terrain = farmlands
+				exists = province_owner
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_farm.dds"
+		environment = "environment_travel_farmlands"
+		ambience = "event:/SFX/Events/Backgrounds/fields_farms_day"
+	}
+	background = { # Farmland, unsettled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				terrain = farmlands
+				NOT = { exists = province_owner }
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/farms.dds"
+		environment = "environment_event_farms"
+		ambience = "event:/SFX/Events/Backgrounds/fields_farms_day"
+	}
+
+	background = { #Desert, settled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_desert_trigger = yes
+				exists = province_owner
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_desert.dds"
+		environment = "environment_travel_desert"
+		ambience = "event:/SFX/Events/Backgrounds/desert_day"
+	}
+	background = { #Desert, unsettled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_desert_trigger = yes
+				NOT = { exists = province_owner }
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/desert.dds"
+		environment = "environment_event_bp1_desert"
+		ambience = "event:/SFX/Events/Backgrounds/desert_day"
+	}
+
+	background = { #forest snowy
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location ?= { hunt_snowy_forest_trigger = yes }
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_hunt_snowy_forest.dds"
+		environment = "environment_hunt_snowy_forest"
+		ambience = "event:/SFX/Events/Backgrounds/mountains_day" 
+	}
+
+	background = { #forest_pine
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_forest_pine_trigger = yes
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/forest_pine.dds"
+		environment = "environment_event_forest_pine"
+		ambience = "event:/SFX/Events/Backgrounds/coniferous_forest_day"
+	}
+
+	background = { #forest
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_forest_trigger = yes
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/forest.dds"
+		environment = "environment_event_forest"
+		ambience = "event:/SFX/Events/Backgrounds/deciduous_forest_day"
+	}
+
+	background = { #mountains, settled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_mountains_trigger = yes
+				exists = province_owner
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_mountains.dds"
+		environment = "environment_travel_mountain_settlement"
+		ambience = "event:/SFX/Events/Backgrounds/mountains_day"
+	}
+	background = { #mountains, unsettled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_mountains_trigger = yes
+				NOT = { exists = province_owner }
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/mountains.dds"
+		environment = "environment_event_mountains"
+		ambience = "event:/SFX/Events/Backgrounds/mountains_day"
+	}
+
+	background = { #steppe, settled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_steppe_trigger = yes
+				exists = province_owner
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_steppe.dds"
+		environment = "environment_travel_steppe_settlement"
+		ambience = "event:/SFX/Events/Backgrounds/steppe_day"
+	}
+	background = { #steppe, unsettled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_steppe_trigger = yes
+				NOT = { exists = province_owner }
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/steppe.dds"
+		environment = "environment_event_steppe"
+		ambience = "event:/SFX/Events/Backgrounds/steppe_day"
+	}
+
+	background = { #drylands (formerly desert)
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_drylands_trigger = yes
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/drylands.dds"
+		environment = "environment_event_desert"
+		ambience = "event:/SFX/Events/Backgrounds/desert_day"
+	}
+
+	background = { #wetlands
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_wetlands_trigger = yes
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/bp1_wetlands.dds"
+		environment = "environment_event_bp1_wetlands" 
+		ambience = "event:/SFX/Events/Backgrounds/deciduous_forest_day"
+	}
+
+	background = { #jungle
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_wilderness_jungle_trigger = yes
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/bp1_jungle.dds"
+		environment = "environment_event_bp1_jungle"
+		ambience = "event:/SFX/Events/Backgrounds/deciduous_forest_day"
+	}
+
+	background = { #plains, settled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_plains_trigger = yes
+				exists = province_owner
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_hills.dds"
+		environment = "environment_travel_hills_settlement"
+		ambience = "event:/SFX/Events/Backgrounds/fields_farms_day"
+	}
+	background = { #plains, unsettled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_plains_trigger = yes
+				NOT = { exists = province_owner }
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/bp1_plains.dds"
+		environment = "environment_event_bp1_plains"
+		ambience = "event:/SFX/Events/Backgrounds/fields_farms_day"
+	}
+
+	background = { #hills, settled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_hills_trigger = yes
+				exists = province_owner
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_hills.dds"
+		environment = "environment_travel_hills_settlement"
+		ambience = "event:/SFX/Events/Backgrounds/fields_farms_day"
+	}
+	background = { #hills, unsettled
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				graphical_hills_trigger = yes
+				NOT = { exists = province_owner }
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/bp1_hills.dds"
+		environment = "environment_event_bp1_hills"
+		ambience = "event:/SFX/Events/Backgrounds/fields_farms_day"
+	}
+
+	background = { #sea
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+			scope:host.location = {
+				is_sea_province = yes
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/fp1_ocean.dds"
+		environment = "environment_event_fp1_ocean"
+		ambience = "event:/DLC/FP1/SFX/Events/event_ocean_longship"
+	}
+
+	# End Travel
+
+	background = {
+		trigger = {
+			NOR = {
+				has_current_phase = spn_gathering_run_phase
+				has_current_phase = spn_gathering_circle_phase
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/forest.dds"
+		environment = "environment_event_forest"
+		ambience = "event:/SFX/Events/Backgrounds/deciduous_forest_day"
+	}
+	background = {
+		trigger = { has_current_phase = spn_gathering_run_phase }
+		texture = "gfx/interface/illustrations/event_scenes/forest_pine.dds"
+		environment = "environment_event_forest_pine"
+		ambience = "event:/SFX/Events/Backgrounds/coniferous_forest_day"
+	}
+	background = {
+		trigger = { has_current_phase = spn_gathering_circle_phase }
+		texture = "gfx/interface/illustrations/event_scenes/forest.dds"
+		environment = "environment_event_forest"
+		ambience = "event:/SFX/Events/Backgrounds/deciduous_forest_day"
+	}
+
+	window_characters = {
+
+		guest = {
+			camera = camera_event_center
+			
+			effect = {
+				every_attending_character = {
+					limit = {
+						scope:host.location = scope:activity.activity_location
+					}
+					add_to_list = characters
+				}
+			}
+
+			scripted_animation = {
+				triggered_animation = {
+					trigger = {
+						scope:character = {
+							NOT = { has_trait = craven }
+						}
+					}
+					animation = { drink scheme spymaster ecstasy }
+				}
+				animation = worry
+			}
+		}
+
+		guest = {
+			camera = camera_event_center
+			
+			effect = {
+				every_attending_character = {
+					limit = {
+						scope:host.location = scope:activity.activity_location
+					}
+					add_to_list = characters
+				}
+			}
+
+			scripted_animation = {
+				triggered_animation = {
+					trigger = {
+						scope:character = {
+							NOT = { has_trait = craven }
+						}
+					}
+					animation = { drink scheme spymaster ecstasy }
+				}
+				animation = worry
+			}
+		}
+		
+		host = {
+			camera = camera_event_center
+			
+			effect = {
+				if = {
+					limit = {
+						scope:host.location = scope:activity.activity_location
+					}
+					scope:host = {
+						add_to_list = characters
+					}
+				}
+			}
+
+			scripted_animation = {
+				triggered_animation = {
+					trigger = {	scope:character = { NOT = { has_trait = craven }	} }
+					animation = { marshal toast idle steward }
+				}
+				animation = worry
+			}
+		}
+		
+		travel_host = {
+			camera = camera_activity_horse
+			
+			effect = {
+				if = {
+					limit = {
+						NOT = {
+							scope:host.location = scope:activity.activity_location
+						}
+					}
+					scope:host = {
+						add_to_list = characters
+					}
+				}
+			}
+
+			scripted_animation = {
+				triggered_animation = {
+					trigger = {
+						scope:character.location = { is_sea_province = yes }
+					}
+					animation = { idle }
+				}
+				triggered_animation = {
+					trigger = { scope:character = { has_trait = impatient } }
+					animation = { jockey_gallop }
+				}
+				animation = jockey_walk
+			}
+		}
+
+		guest = {
+			camera = camera_event_center
+			
+			effect = {
+				every_attending_character = {
+					limit = {
+						scope:host.location = scope:activity.activity_location
+					}
+					add_to_list = characters
+				}
+			}
+
+			scripted_animation = {
+				triggered_animation = {
+					trigger = {
+						scope:character = {
+						NOT = { has_trait = craven }
+						}
+					}
+					animation = { drink scheme spymaster ecstasy }
+				}
+				animation = worry
+			}
+		}
+
+		guest = {
+			camera = camera_event_center
+			
+			effect = {
+				every_attending_character = {
+					limit = {
+						scope:host.location = scope:activity.activity_location
+					}
+					add_to_list = characters
+				}
+			}
+
+			scripted_animation = {
+				triggered_animation = {
+					trigger = {
+						scope:character = {
+						NOT = { has_trait = craven }
+						}
+					}
+					animation = { drink scheme spymaster ecstasy }
+				}
+				animation = worry
+			}
+		}
+	}
+
+	# CK3 1.20: the activity windows read the header art from the activity type.
+	header_background = "gfx/interface/illustrations/activity_header_backgrounds/werewolf_gathering.dds"
+}

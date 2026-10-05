@@ -1,0 +1,105 @@
+﻿# Supernatural 2.37 -- the Pack as a visible story cycle (WORK-ORDER-2.37 §4.7, §13). No GUI file: vanilla 1.20 draws a
+# story with `visible = yes` in the Situations window (_story_cycles.info). Owned by the alpha.
+#
+# Every visualised variable is either always set or a list (an empty list draws nothing): the Second and the co-alpha
+# are one-entry lists for that reason, written by spn_pack_refresh_effect.
+
+story_spn_pack = {
+	visible = yes
+
+	icon = {
+		reference = "gfx/interface/icons/story_cycles/spn_pack.dds" # 2.37: a wolf, not vanilla's moose (Thomas, 3 Oct)
+	}
+	background = {
+		reference = "gfx/interface/illustrations/event_scenes/forest.dds"
+	}
+
+	# 2.37 -- no Wolves bar. Vanilla's Situations window draws counters above characters whatever order they are written in
+	# (window_situation_list.gui: counters, then specific characters, then lists), so the bar always sat over the Alpha.
+	# The count is in the text instead (spn_pack_story_string), and the Alpha now heads the panel (Thomas, 3 Oct).
+	visualization = {
+		custom_string_key = spn_pack_story_string
+		character = {
+			variable_name = spn_pack_alpha
+			label = SPN_PACK_ALPHA
+		}
+		character_list = {
+			variable_name = spn_pack_second_list
+			label = SPN_PACK_SECOND
+		}
+		character_list = {
+			variable_name = spn_pack_co_alpha_list
+			label = SPN_PACK_CO_ALPHA
+		}
+		character_list = {
+			variable_name = spn_pack_champions
+			label = SPN_PACK_CHAMPIONS
+		}
+		character_list = {
+			variable_name = spn_pack_members
+			label = SPN_PACK_MEMBERS
+		}
+		modifiers = { spn_pack_modifier spn_two_spirits_modifier spn_old_ones_gather_modifier spn_evolved_modifier }
+		decisions = { spn_leave_pack_decision spn_disband_pack_decision }
+	}
+
+	on_setup = {
+	}
+
+	on_end = {
+	}
+
+	# §13.6. Only the story is in scope here (_story_cycles.info), so the killer was written onto the story by the
+	# hide's on_death hook as var:spn_pack_killer before the death.
+	on_owner_death = {
+		spn_pack_succession_effect = yes
+	}
+
+	# The pack's year (§13.7): lycanthropy and standing, the refresh, the True Alpha's check, the moment between packs.
+	effect_group = {
+		years = 1
+		triggered_effect = {
+			trigger = { always = yes }
+			effect = { spn_pack_yearly_effect = yes }
+		}
+	}
+}
+
+# The membership mirror (§4.7). Built and never started unless spn_pack_use_mirrors_trigger is turned on: it exists in
+# case a member who is not the alpha cannot see the alpha's story. No boot has tested that either way. Owned by each member.
+story_spn_pack_membership = {
+	visible = yes
+
+	icon = {
+		reference = "gfx/interface/icons/story_cycles/spn_pack.dds" # 2.37: a wolf, not vanilla's moose (Thomas, 3 Oct)
+	}
+	background = {
+		reference = "gfx/interface/illustrations/event_scenes/forest.dds"
+	}
+
+	# 2.37 -- no Wolves bar. Vanilla's Situations window draws counters above characters whatever order they are written in
+	# (window_situation_list.gui: counters, then specific characters, then lists), so the bar always sat over the Alpha.
+	# The count is in the text instead (spn_pack_story_string), and the Alpha now heads the panel (Thomas, 3 Oct).
+	visualization = {
+		custom_string_key = spn_pack_story_string
+		character = {
+			variable_name = spn_pack_alpha
+			label = SPN_PACK_ALPHA
+		}
+		decisions = { spn_leave_pack_decision }
+	}
+
+	on_owner_death = {
+		end_story = yes
+	}
+
+	effect_group = {
+		years = 1
+		triggered_effect = {
+			trigger = {
+				story_owner = { NOT = { exists = var:spn_pack } }
+			}
+			effect = { end_story = yes }
+		}
+	}
+}

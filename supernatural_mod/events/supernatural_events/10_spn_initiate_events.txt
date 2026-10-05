@@ -231,8 +231,19 @@ spn_initiate.1001 { #Initiate Werewolf
 		# The wound/incubation climax sets spn_turned_werewolf BEFORE firing this event;
 		# everyone else (born, ruler designer, console, etc.) defaults to born.
 		if = {
-			limit = { NOT = { has_character_flag = spn_turned_werewolf } }
+			limit = {
+				NOT = { has_character_flag = spn_turned_werewolf }
+				# 2.37 -- a wolf a hide chose (It Knows You) is not born (§13.3).
+				NOT = { has_character_flag = spn_hide_chosen_werewolf }
+			}
 			add_character_flag = spn_born_werewolf
+			# 2.37 -- born wolves start at Pack Standing 25 (§13.3), once: the flag stops Found a Pack and the
+			# Gathering granting it again.
+			if = {
+				limit = { NOT = { has_character_flag = spn_born_standing_given } }
+				add_character_flag = spn_born_standing_given
+				add_trait_xp = { trait = supernatural_werewolf track = wolf_pack value = 25 }
+			}
 		}
 
 		set_variable = {
@@ -421,6 +432,11 @@ spn_initiate.2001 { #Initiate Hybrid
 	}
 
 	immediate = {
+		# 2.37 -- Pack Standing lives on the werewolf's wolf_pack track; read it before the trait goes (§13.3b).
+		if = {
+			limit = { has_trait = supernatural_werewolf }
+			save_scope_value_as = { name = spn_carry_standing value = "has_trait_xp(supernatural_werewolf|wolf_pack)" }
+		}
 		#Removes Lycanthropy from New Hybrid
 		remove_trait = supernatural_werewolf
 		remove_trait = spn_known_werewolf
@@ -456,6 +472,12 @@ spn_initiate.2001 { #Initiate Hybrid
 		else = {
 			add_trait = supernatural_hybrid
 		}
+		# 2.37 -- ...and onto the hybrid's own wolf_pack track: a Second at 80 is still a Second (§13.3b).
+		if = {
+			limit = { exists = scope:spn_carry_standing }
+			add_trait_xp = { trait = supernatural_hybrid track = wolf_pack value = scope:spn_carry_standing }
+		}
+		var:spn_pack ?= { spn_pack_refresh_effect = yes }
 
 		set_variable = {
 			name = spn_age_aquired_immortality

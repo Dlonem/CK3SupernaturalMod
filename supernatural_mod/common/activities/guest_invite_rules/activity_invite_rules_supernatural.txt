@@ -153,3 +153,135 @@ activity_invite_rule_supernatural_mp = {
 		}
 	}
 }
+
+# 2.37b -- the Fevered, for the Werewolf Gathering (Thomas, 3 Oct): people still in the wound's fever whom the host
+# knows. Those he gave the wound, those his pack gave it (spn_my_fevered, kept by spn_kickoff_wound_incubation), his
+# close family and his court. can_be_activity_guest asks the same question (spn_host_knows_fevered_trigger).
+activity_invite_rule_fevered = {
+    effect = {
+        every_in_list = {
+            variable = spn_my_fevered
+            limit = { spn_gathering_fevered_ok_trigger = yes }
+            add_to_list = characters
+        }
+        if = {
+            limit = { exists = var:spn_pack }
+            var:spn_pack = {
+                every_in_list = {
+                    variable = spn_pack_members
+                    limit = {
+                        is_alive = yes
+                        NOT = { this = root }
+                    }
+                    every_in_list = {
+                        variable = spn_my_fevered
+                        limit = { spn_gathering_fevered_ok_trigger = yes }
+                        add_to_list = characters
+                    }
+                }
+            }
+        }
+        every_close_family_member = {
+            limit = { spn_gathering_fevered_ok_trigger = yes }
+            add_to_list = characters
+        }
+        every_courtier_or_guest = {
+            limit = { spn_gathering_fevered_ok_trigger = yes }
+            add_to_list = characters
+        }
+    }
+}
+
+# 2.37 -- Werewolves, for the Werewolf Gathering: the hybrids rule's shape (above), for werewolves.
+activity_invite_rule_werewolves = {
+    effect = {
+        every_relation = {
+            type = lover
+            limit = {
+                is_adult = yes
+                is_imprisoned = no
+                has_trait = supernatural_werewolf
+            }
+            add_to_list = characters
+        }
+        every_relation = {
+            type = friend
+            limit = {
+                is_adult = yes
+                is_imprisoned = no
+                has_trait = supernatural_werewolf
+            }
+            add_to_list = characters
+        }
+        every_close_family_member = {
+            limit = {
+                is_adult = yes
+                is_imprisoned = no
+                has_trait = supernatural_werewolf
+            }
+            add_to_list = characters
+        }
+        every_relation = {
+            type = ww_clawed
+            limit = {
+                is_adult = yes
+                is_imprisoned = no
+                has_trait = supernatural_werewolf
+            }
+            add_to_list = characters
+        }
+        every_relation = {
+            type = ww_clawed_by
+            limit = {
+                is_adult = yes
+                is_imprisoned = no
+                has_trait = supernatural_werewolf
+            }
+            add_to_list = characters
+        }
+        every_courtier_or_guest = {
+            limit = {
+                is_adult = yes
+                is_imprisoned = no
+                has_trait = supernatural_werewolf
+            }
+            add_to_list = characters
+        }
+    }
+}
+
+# 2.37 -- the Pack: his own pack's wolves, and the alphas of packs near him that he knows of. While Alpha's champion has
+# called the packs (§6.5), every alpha within diplomatic range.
+activity_invite_rule_pack = {
+    effect = {
+        if = {
+            limit = { exists = var:spn_pack }
+            var:spn_pack = {
+                every_in_list = {
+                    variable = spn_pack_members
+                    limit = {
+                        is_alive = yes
+                        is_adult = yes
+                        is_imprisoned = no
+                        NOT = { this = root }
+                    }
+                    add_to_list = characters
+                }
+            }
+        }
+        every_in_global_list = {
+            variable = spn_packs
+            limit = {
+                is_alive = yes
+                is_imprisoned = no
+                NOT = { this = root }
+                in_diplomatic_range = root
+                OR = {
+                    root = { has_character_flag = spn_called_the_packs }
+                    spn_host_knows_wolf_trigger = { HOST = root }
+                }
+            }
+            add_to_list = characters
+        }
+    }
+}

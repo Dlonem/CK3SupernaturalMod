@@ -1213,8 +1213,25 @@ magic_ev.3 = {
 
 #for magic sense
 magic_ev.4 = {
-	title = ev4.0.title
-	desc = ev4.0.desc
+	# 2.37 (Supernatural): a hide's champion hears it as The Ringing.
+	title = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { spn_is_champion_trigger = yes }
+				desc = spn_ev4.0.title
+			}
+			desc = ev4.0.title
+		}
+	}
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { spn_is_champion_trigger = yes }
+				desc = spn_ev4.0.desc
+			}
+			desc = ev4.0.desc
+		}
+	}
 	theme =  mental_health
 	left_portrait = root
 	trigger = {
@@ -1367,6 +1384,44 @@ magic_ev.4 = {
 			base = 10
 		}
 	}
+	# 2.37 (Supernatural): Follow the ringing. A champion goes after a caster who is none of his own (never his liege,
+	# spouse, close family, friend, lover or courtier), once a year. Magic Tracking names the caster.
+	option = {
+		name = spn_ev4.0.ring
+		trigger = {
+			spn_is_champion_trigger = yes
+			NOT = { has_character_flag = spn_hide_chased_ringing }
+			exists = scope:magic_user
+			NOT = { scope:magic_user = ROOT }
+			NOT = { liege ?= scope:magic_user }
+			scope:magic_user = {
+				NOT = { has_strong_hook = ROOT }
+				NOR = {
+					is_spouse_of = ROOT
+					is_close_family_of = ROOT
+					has_relation_friend = ROOT
+					has_relation_lover = ROOT
+					is_courtier_of = ROOT
+				}
+			}
+		}
+		custom_tooltip = spn_ev4.0.ring.tt
+		add_character_flag = { flag = spn_hide_chased_ringing years = 1 }
+		trigger_event = magic_ev.44
+		ai_chance = {
+			base = 0
+			modifier = {
+				add = 40
+				scope:magic_user = { has_relation_rival = ROOT }
+			}
+			modifier = {
+				add = 40
+				faith = { faith_hostility_level = { target = scope:magic_user.faith value >= faith_hostile_level } }
+			}
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = vengeful }
+		}
+	}
 	#after = {
 	#	if = {
 	#		limit = {
@@ -1435,6 +1490,31 @@ magic_ev.44 = {
 		clear_saved_scope = magic_user
 		ai_chance = {
 			base = 1
+		}
+	}
+	# 2.37 (Supernatural): Go after them. Creature against caster; never a death (the hide's rule C5).
+	option = {
+		name = spn_ev4b.0.go
+		trigger = {
+			spn_is_champion_trigger = yes
+			exists = scope:magic_user
+			NOT = { scope:magic_user = ROOT }
+		}
+		custom_tooltip = spn_ev4b.0.go.tt
+		save_scope_as = spn_ring_champion
+		spn_clash_lean_tooltip_effect = { A = ROOT B = scope:magic_user FORM = no }
+		spn_creature_clash_effect = {
+			A = ROOT
+			B = scope:magic_user
+			THEN = spn_hide_ringing_after_effect
+			FORM = no
+		}
+		clear_saved_scope = magic_user
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = -30 has_trait = craven }
 		}
 	}
 	option = {

@@ -1,1 +1,212 @@
-﻿
+﻿###########################
+# Werewolf Gathering intents (WORK-ORDER-2.37 §14.3). Claims the empty stub. Shape of vampire_feeding_intents.txt.
+# Intents cannot see the location (_intents.info), so Run a Rival's Land is read at the Run's end, where it is known.
+###########################
+spn_lead_the_pack_intent = {
+	icon = raise_cohesion_intent
+	ai_will_do = {
+		value = 50
+		if = { limit = { spn_is_alpha_trigger = yes } add = 30 }
+		if = { limit = { has_trait = gregarious } add = 10 }
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_bold
+	}
+}
+
+spn_run_a_rivals_land_intent = {
+	icon = acquire_pelts_intent
+	ai_will_do = {
+		# The AI cannot hold a Gathering abroad (ai_province_filter), so it never takes this (§14.2).
+		value = 0
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_bold
+	}
+}
+
+spn_seek_the_old_ways_intent = {
+	icon = intent_storyteller
+	ai_will_do = {
+		value = 20
+		if = { limit = { has_trait = ambitious } add = 15 }
+		if = { limit = { spn_is_champion_trigger = no } add = 10 }
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_bold
+	}
+}
+
+spn_hold_the_unification_intent = {
+	icon = alliance_intent
+	is_shown = {
+		spn_packs_on_trigger = yes
+	}
+	is_valid = {
+		spn_is_alpha_trigger = yes
+		custom_tooltip = {
+			text = spn_hold_the_unification_spouse_tt
+			any_spouse = { spn_is_alpha_trigger = yes }
+		}
+	}
+	ai_will_do = {
+		value = 0
+		if = {
+			limit = {
+				spn_is_alpha_trigger = yes
+				any_spouse = { spn_is_alpha_trigger = yes }
+			}
+			add = 40
+			if = { limit = { has_trait = ambitious } add = 20 }
+			if = { limit = { has_trait = gregarious } add = 15 }
+			if = { limit = { has_trait = trusting } add = 15 }
+			if = { limit = { has_trait = paranoid } add = -30 }
+		}
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_bold
+	}
+}
+
+spn_earn_my_place_intent = {
+	icon = intent_gain_renown
+	ai_will_do = {
+		value = 50
+		if = { limit = { has_trait = diligent } add = 10 }
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_bold
+	}
+}
+
+spn_challenge_the_alpha_intent = {
+	icon = win_contest_intent
+	is_shown = {
+		spn_packs_on_trigger = yes
+		spn_is_wolf_trigger = yes # 2.37b: not the Fevered
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_challenge_the_alpha_standing_tt
+			spn_pack_standing_value >= 50
+		}
+	}
+	ai_will_do = {
+		value = 0
+		# 2.37i: only where the fire will take him: the host is his own alpha, and he is the Second (or the Second
+		# has lost to the alpha). Anyone else who chose it gave up Earn My Place for nothing.
+		# (nested: each read only once what it reads is known to exist)
+		if = {
+			limit = {
+				spn_pack_standing_value >= 50
+				exists = var:spn_pack
+				exists = scope:activity
+			}
+			if = {
+				limit = { scope:activity = { exists = activity_host } }
+				if = {
+					limit = { scope:activity.activity_host = { spn_is_alpha_trigger = yes } }
+					if = {
+						limit = {
+							scope:activity.activity_host.var:spn_pack = root.var:spn_pack
+							var:spn_pack = {
+								OR = {
+									exists = var:spn_second_lost_to_alpha
+									trigger_if = {
+										limit = { exists = var:spn_pack_second }
+										var:spn_pack_second = root
+									}
+									trigger_else = { always = no }
+								}
+							}
+						}
+						# 2.37o (Thomas, 4 Oct): and only for a reason -- his alpha is too weak for the pack, or cruel to the better
+						# of it. The same tests as the Challenge interaction and the fire ("WHY A WOLF CHALLENGES").
+						if = {
+							limit = { spn_ai_alpha_challenge_cause_trigger = { ALPHA = scope:activity.activity_host } }
+							add = 30
+							if = { limit = { spn_ai_alpha_weak_trigger = { ALPHA = scope:activity.activity_host } spn_ai_alpha_cruel_trigger = { ALPHA = scope:activity.activity_host } } add = 20 }
+							if = { limit = { spn_ai_pack_turned_trigger = { ALPHA = scope:activity.activity_host } } add = 15 }
+							if = { limit = { spn_ai_clash_edge_trigger = { FOE = scope:activity.activity_host EDGE = 1.3 } } add = 15 }
+							if = { limit = { NOT = { spn_ai_clash_edge_trigger = { FOE = scope:activity.activity_host EDGE = 0.8 } } NOT = { spn_ai_alpha_cruel_trigger = { ALPHA = scope:activity.activity_host } } } add = -40 }
+							if = { limit = { NOT = { spn_ai_clash_edge_trigger = { FOE = scope:activity.activity_host EDGE = 0.8 } } spn_ai_alpha_cruel_trigger = { ALPHA = scope:activity.activity_host } } add = -15 } # against a cruel alpha he takes worse odds
+							if = { limit = { has_trait = ambitious } add = 20 }
+							if = { limit = { has_trait = wrathful } add = 10 }
+							if = { limit = { has_trait = brave } add = 10 }
+							if = { limit = { has_trait = craven } add = -30 }
+							if = { limit = { has_trait = loyal NOT = { spn_ai_alpha_cruel_trigger = { ALPHA = scope:activity.activity_host } } } add = -20 }
+							min = 0
+						}
+					}
+				}
+			}
+		}
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_bold
+	}
+}
+
+spn_seek_another_pack_intent = {
+	icon = befriend_intent
+	is_shown = {
+		spn_packs_on_trigger = yes
+		spn_is_wolf_trigger = yes # 2.37b: not the Fevered
+		spn_is_alpha_trigger = no # 2.37e: as Ask to Run With; an alpha leaves his pack first
+	}
+	ai_will_do = {
+		value = 0
+		# 2.37o (the review of 4 Oct, F7): only for a reason, and only where it can come to something. At another
+		# alpha's fire: a wolf with no pack, or one who has had enough of his own alpha (he dislikes him, or a
+		# challenger would have a reason against him: too weak, or cruel). Anywhere else it does nothing.
+		if = {
+			limit = { exists = scope:activity }
+			if = {
+				limit = { scope:activity = { exists = activity_host } }
+				if = {
+					limit = {
+						scope:activity.activity_host = { spn_is_alpha_trigger = yes }
+						spn_gathering_not_in_pack_trigger_for = { WHO = scope:activity.activity_host }
+						OR = {
+							NOT = { exists = var:spn_pack }
+							trigger_if = {
+								limit = { exists = var:spn_pack }
+								OR = {
+									opinion = {
+										target = var:spn_pack.story_owner
+										value <= -25
+									}
+									spn_ai_alpha_challenge_cause_trigger = { ALPHA = var:spn_pack.story_owner }
+								}
+							}
+							trigger_else = { always = no }
+						}
+					}
+					add = 30
+					if = { limit = { has_trait = fickle } add = 15 }
+					if = { limit = { has_trait = ambitious } add = 10 }
+					if = { limit = { has_trait = loyal } add = -40 }
+					min = 0
+				}
+			}
+		}
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_bold
+	}
+}
+

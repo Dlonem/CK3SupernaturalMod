@@ -67,6 +67,14 @@ spn_wound_incubation.0001 = {
 				set_variable = { name = spn_last_wound_event value = 50 }
 				trigger_event = spn_wound_incubation.0050
 			}
+			10 = { # 2.37 -- It Lies Beside the Bed: a hide is near (once)
+				# 2.37b: a has_variable flag, not a counter. The counter was never started (c10 / c11 are, in
+				# spn_kickoff_wound_incubation), so change_variable failed and the read errored: error.log 3 Oct.
+				trigger = { spn_hide_near_trigger = yes  NOT = { var:spn_last_wound_event = 60 }  NOT = { has_variable = spn_wound_c60 } }
+				set_variable = { name = spn_last_wound_event value = 60 }
+				set_variable = { name = spn_wound_c60 value = 1 }
+				trigger_event = spn_wound_incubation.0060
+			}
 		}
 		trigger_event = { id = spn_wound_incubation.0001 days = { 90 120 } }
 	}
@@ -755,6 +763,41 @@ spn_wound_incubation.9000 = {
 		}
 		ai_chance = { base = 45  modifier = { add = 20  has_trait = trusting } }
 	}
+	option = { # 2.37 -- Reach for the hide. It pulls him through: Something More, and the hide decides in five days.
+		name = spn_wound_incubation.9000.f
+		trigger = { spn_hide_near_trigger = yes }
+		custom_tooltip = spn_wound_incubation.9000.f.tt
+		if = {
+			limit = { spn_owns_hide_trigger = yes }
+			add_character_flag = { flag = spn_hide_fever_bonus days = 30 }
+			random_character_artifact = {
+				limit = {
+					has_variable = spn_hide
+					NOT = { spn_hide_refused_trigger = { WHO = root } }
+				}
+				save_scope_as = spn_offered_hide
+			}
+			if = {
+				limit = { exists = scope:spn_offered_hide }
+				set_variable = { name = spn_hide_fever_hide value = scope:spn_offered_hide.var:spn_hide days = 30 }
+				trigger_event = { id = spn_hide.0009 days = 5 }
+			}
+		}
+		trigger_event = spn_wound_incubation.9010
+		ai_chance = { base = 80 }
+	}
+	option = { # 2.37b -- Let the pack carry me. He sat with wolves at a Gathering (spn_pack_carried); they see him through.
+		name = spn_wound_incubation.9000.g
+		trigger = {
+			has_character_flag = spn_pack_carried
+			var:spn_pack_carried_by ?= { is_alive = yes }
+		}
+		custom_tooltip = spn_wound_incubation.9000.g.tt
+		add_character_flag = spn_pack_carries_me
+		save_scope_value_as = { name = climax_lean  value = 2 }
+		hidden_effect = { spn_resolve_wound_climax = yes }
+		ai_chance = { base = 70 }
+	}
 }
 
 
@@ -897,5 +940,40 @@ spn_wound_incubation.9050 = {
 	immediate = {
 		add_trait_xp = { trait = supernatural_werewolf  track = lycanthropy  value = var:spn_pending_ww_xp }
 		remove_variable = spn_pending_ww_xp
+	}
+}
+
+
+# ============================================================
+# 0060 - IT LIES BESIDE THE BED (2.37, once). A hide is near: his own, his lord's, or his maker is a champion.
+# Keeping it close is a lower swing of the infection and less stress; sending it away is nothing.
+# ============================================================
+spn_wound_incubation.0060 = {
+	type = character_event
+	title = spn_wound_incubation.0060.t
+	desc = spn_wound_incubation.0060.desc
+	theme = mental_break
+	trigger = { has_trait = ww_infected_wound }
+	left_portrait = { character = root  animation = sick }
+
+	option = { # Keep it close.
+		name = spn_wound_incubation.0060.a
+		custom_tooltip = spn_wound_incubation.0060.a.tt
+		add_trait_xp = { trait = ww_infected_wound track = infection value = { integer_range = { min = 2 max = 6 } } }
+		add_stress = -15
+		ai_chance = {
+			base = 60
+			modifier = { add = 20  has_trait = brave }
+			modifier = { add = 15  has_trait = ambitious }
+			modifier = { add = -30  has_trait = craven }
+		}
+	}
+	option = { # Have it taken away.
+		name = spn_wound_incubation.0060.b
+		ai_chance = {
+			base = 40
+			modifier = { add = 30  has_trait = paranoid }
+			modifier = { add = 20  has_trait = zealous }
+		}
 	}
 }

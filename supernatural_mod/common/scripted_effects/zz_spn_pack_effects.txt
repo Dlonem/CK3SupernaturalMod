@@ -1,0 +1,1511 @@
+﻿# Supernatural 2.37 -- the Pack's effects (WORK-ORDER-2.37 §13, §15, §16, §17).
+#
+# THE DATA MODEL. One visible story cycle per pack (story_spn_pack, owned by the alpha). On the story:
+#   spn_pack_members (list), spn_pack_champions (list), spn_pack_alpha, spn_pack_second, spn_pack_size,
+#   spn_pack_champ_count, spn_pack_co_alpha / spn_pack_unified / spn_pack_unified_year / spn_pack_hybrid_gift (§15),
+#   spn_pack_killer (written by the on_death hook for on_owner_death to read), spn_second_lost_to_alpha (§13.5).
+# On each member: var:spn_pack (the story) and var:spn_pack_size_cached (what the scaled pack modifier reads).
+# Globally: spn_packs, the list of every pack's alpha, kept by found / set alpha / break. Small: one entry a pack.
+# Every member except the alpha holds the hidden two-way relation spn_pack_mate with the alpha (never member to member:
+# twenty-five members would be three hundred links).
+#
+# REASON for leaving (§4.12): flag:death | flag:left (Leave, Ask to Run With, Lure Away, Abandon: costs Pack Standing and
+# the alpha's opinion; an alpha leaving this way passes the pack on) | flag:quiet (Disband, the Unification's merge, a
+# True Alpha leaving to found his own: no cost, no succession -- the caller decides what happens to the story).
+
+# ==================================================================================================
+# FOUND (§13.1). Character scope: the founder. Also run free by the True Alpha's "I will found my own" (§16).
+# ==================================================================================================
+spn_pack_found_effect = {
+	# 2.37b: one line of tooltip, the rest hidden. The story does not exist until this runs, so while Found a Pack sat
+	# open its tooltip builder walked every line below with spn_new_pack unset: 92,086 error lines in Thomas's 3 Oct
+	# session, and nothing a player could read.
+	custom_tooltip = spn_pack_found_effect_tt
+	hidden_effect = {
+		save_scope_as = spn_founder
+		create_story = {
+			type = story_spn_pack
+			save_scope_as = spn_new_pack
+		}
+		# 2.37 -- GUARDED. The tooltip builder reads inside hidden_effect too (it evaluates every limit and resolves every
+		# scope, it only prints nothing), and it never runs create_story: with this block bare, Found a Pack's window still
+		# logged ~1,000 errors in two seconds (observer run, 3 Oct 13:20). The limit is false while the tooltip is built
+		# and true once the story exists, so the block is skipped exactly when there is nothing to read.
+		if = {
+			limit = { exists = scope:spn_new_pack }
+			scope:spn_new_pack = {
+				set_variable = { name = spn_pack_alpha value = scope:spn_founder }
+				set_variable = { name = spn_pack_size value = 0 }
+				set_variable = { name = spn_pack_champ_count value = 0 }
+			}
+			add_to_global_variable_list = { name = spn_packs target = scope:spn_founder }
+			spn_pack_add_member_effect = { WHO = scope:spn_founder PACK = scope:spn_new_pack }
+		}
+		spn_pack_born_standing_effect = yes
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_pack.0010
+		}
+	}
+}
+
+# Born wolves start at Pack Standing 25 (§13.3). spn_initiate.1001 grants it to every wolf born since 2.37; this grants
+# it once to a born wolf from an older save, the first time he founds a pack or completes a Gathering.
+spn_pack_born_standing_effect = {
+	if = {
+		limit = {
+			has_character_flag = spn_born_werewolf
+			NOT = { has_character_flag = spn_born_standing_given }
+			spn_is_wolf_trigger = yes
+		}
+		add_character_flag = spn_born_standing_given
+		spn_pack_add_standing_effect = { VALUE = 25 }
+	}
+}
+
+# Pack Standing lives on the wolf_pack track of whichever wolf trait he carries.
+spn_pack_add_standing_effect = {
+	if = {
+		limit = { has_trait = supernatural_werewolf }
+		add_trait_xp = { trait = supernatural_werewolf track = wolf_pack value = $VALUE$ }
+	}
+	else_if = {
+		limit = { has_trait = supernatural_hybrid }
+		add_trait_xp = { trait = supernatural_hybrid track = wolf_pack value = $VALUE$ }
+	}
+	# 2.37e: the Second follows standing.
+	var:spn_pack ?= { hidden_effect = { spn_pack_update_second_effect = yes } }
+}
+
+# ==================================================================================================
+# MEMBERS (§13.2)
+# ==================================================================================================
+spn_pack_add_member_effect = {
+	$WHO$ = { save_scope_as = spn_add_who }
+	$PACK$ = { save_scope_as = spn_add_pack }
+	scope:spn_add_who = {
+		set_variable = { name = spn_pack value = scope:spn_add_pack }
+		if = {
+			limit = { has_character_modifier = spn_alone_in_the_woods_modifier }
+			remove_all_character_modifier_instances = spn_alone_in_the_woods_modifier
+		}
+	}
+	scope:spn_add_pack = {
+		if = {
+			limit = { NOT = { is_target_in_variable_list = { name = spn_pack_members target = scope:spn_add_who } } }
+			add_to_variable_list = { name = spn_pack_members target = scope:spn_add_who }
+		}
+	}
+	# The relation is member-to-alpha only, and never the alpha to himself.
+	if = {
+		limit = { NOT = { scope:spn_add_pack.story_owner = scope:spn_add_who } }
+		scope:spn_add_who = {
+			# 2.37e: hidden. The relation is hidden and has no effect text; shown, it logged a missing
+			# set_relation_spn_pack_mate_first on every tooltip that walked a join.
+			hidden_effect = {
+				if = {
+					limit = { NOT = { has_relation_spn_pack_mate = scope:spn_add_pack.story_owner } }
+					set_relation_spn_pack_mate = scope:spn_add_pack.story_owner
+				}
+			}
+		}
+	}
+	scope:spn_add_pack = { spn_pack_refresh_effect = yes }
+}
+
+spn_pack_remove_member_effect = {
+	$WHO$ = { save_scope_as = spn_rem_who }
+	save_scope_value_as = { name = spn_rem_reason value = $REASON$ }
+	if = {
+		limit = { scope:spn_rem_who = { exists = var:spn_pack } }
+		scope:spn_rem_who.var:spn_pack = { save_scope_as = spn_rem_pack }
+		if = {
+			limit = { scope:spn_rem_pack.story_owner = scope:spn_rem_who }
+			save_scope_value_as = { name = spn_rem_was_alpha value = yes }
+		}
+		else = {
+			scope:spn_rem_pack.story_owner = { save_scope_as = spn_rem_alpha }
+		}
+		scope:spn_rem_pack = {
+			remove_list_variable = { name = spn_pack_members target = scope:spn_rem_who }
+			if = {
+				limit = { is_target_in_variable_list = { name = spn_pack_champions target = scope:spn_rem_who } }
+				remove_list_variable = { name = spn_pack_champions target = scope:spn_rem_who }
+			}
+			if = {
+				limit = { var:spn_pack_co_alpha ?= scope:spn_rem_who }
+				remove_variable = spn_pack_co_alpha
+			}
+		}
+		scope:spn_rem_who = {
+			remove_variable = spn_pack
+			if = {
+				limit = { exists = var:spn_pack_size_cached }
+				remove_variable = spn_pack_size_cached
+			}
+			spn_pack_clear_modifiers_effect = yes
+			# 2.37e: nested. On an alpha's removal spn_rem_alpha is unset, and the relation test beside the exists
+			# check still ran (no short-circuit): an error on every alpha death, Disband and Unification.
+			if = {
+				limit = { exists = scope:spn_rem_alpha }
+				hidden_effect = {
+					if = {
+						limit = { has_relation_spn_pack_mate = scope:spn_rem_alpha }
+						remove_relation_spn_pack_mate = scope:spn_rem_alpha
+					}
+				}
+			}
+			# Timber's champion runs alone again.
+			if = {
+				limit = {
+					is_alive = yes
+					has_trait = spn_champion_timber
+				}
+				remove_all_character_modifier_instances = spn_alone_in_the_woods_modifier
+				add_character_modifier = { modifier = spn_alone_in_the_woods_modifier years = 2 }
+			}
+		}
+		# A voluntary leave costs standing and the alpha's good will.
+		if = {
+			limit = {
+				scope:spn_rem_reason = flag:left
+				exists = scope:spn_rem_alpha
+			}
+			scope:spn_rem_alpha = {
+				if = {
+					limit = { is_alive = yes }
+					add_opinion = { target = scope:spn_rem_who modifier = spn_left_my_pack_opinion }
+					if = {
+						limit = { is_ai = no }
+						trigger_event = spn_pack.0012
+					}
+				}
+			}
+			scope:spn_rem_who = {
+				if = {
+					limit = { has_perk = wolf_politics_perk }
+					spn_pack_add_standing_effect = { VALUE = -7 }
+				}
+				else = {
+					spn_pack_add_standing_effect = { VALUE = -15 }
+				}
+			}
+		}
+		# The alpha left alive the hard way: the pack passes on (§13.6), or breaks if nobody is left.
+		if = {
+			limit = {
+				exists = scope:spn_rem_was_alpha
+				scope:spn_rem_reason = flag:left
+			}
+			scope:spn_rem_pack = { spn_pack_succession_effect = yes }
+		}
+		else_if = {
+			limit = { NOT = { exists = scope:spn_rem_was_alpha } }
+			scope:spn_rem_pack = { spn_pack_refresh_effect = yes }
+		}
+		# A dead alpha: the story's on_owner_death runs the succession. A quiet alpha: the caller ends the story.
+	}
+	# Cleared, because this effect runs in loops (a pack breaking removes every member in turn) and a scope left from
+	# the alpha's turn would make the next member think he was the alpha.
+	if = {
+		limit = { exists = scope:spn_rem_was_alpha }
+		clear_saved_scope = spn_rem_was_alpha
+	}
+	if = {
+		limit = { exists = scope:spn_rem_alpha }
+		clear_saved_scope = spn_rem_alpha
+	}
+}
+
+# Everything the pack gave him, off. Character scope.
+spn_pack_clear_modifiers_effect = {
+	if = {
+		limit = { has_character_modifier = spn_pack_modifier }
+		remove_all_character_modifier_instances = spn_pack_modifier
+	}
+	if = {
+		limit = { has_character_modifier = spn_pack_mentality_modifier }
+		remove_all_character_modifier_instances = spn_pack_mentality_modifier
+	}
+	if = {
+		limit = { has_character_modifier = spn_two_spirits_modifier }
+		remove_all_character_modifier_instances = spn_two_spirits_modifier
+	}
+	if = {
+		limit = { has_character_modifier = spn_old_ones_gather_modifier }
+		remove_all_character_modifier_instances = spn_old_ones_gather_modifier
+	}
+	if = {
+		limit = { has_character_modifier = spn_evolved_modifier }
+		remove_all_character_modifier_instances = spn_evolved_modifier
+	}
+	if = {
+		limit = { has_character_modifier = spn_hybrid_gift_modifier }
+		remove_all_character_modifier_instances = spn_hybrid_gift_modifier
+	}
+}
+
+# ==================================================================================================
+# REFRESH (§13.2, §13.4) -- story scope; the one place derived state is rebuilt. Called by add, remove, a member
+# becoming or ceasing to be a champion, a change of alpha, the hybrid carry (§13.3b) and the yearly group.
+# Every pack-family modifier is re-applied with years = 2 here, so anything a path missed heals itself.
+# ==================================================================================================
+spn_pack_refresh_effect = {
+	# 2.37e: all hidden. Visible, it printed every member's pack modifiers removed and re-added in every tooltip that
+	# adds or removes a wolf (Invite, Leave, Disband, The Hide Takes Hold...): dozens of lines that change nothing.
+	hidden_effect = {
+		save_scope_as = spn_ref_pack
+		# Anyone who died or stopped being a wolf without passing through remove (a console, another mod).
+		# Copied to a temporary list first: never remove from a list while walking it.
+		every_in_list = {
+			variable = spn_pack_members
+			limit = {
+				OR = {
+					is_alive = no
+					spn_is_wolf_trigger = no
+				}
+			}
+			add_to_temporary_list = spn_ref_gone_list
+		}
+		every_in_list = {
+			list = spn_ref_gone_list
+			save_temporary_scope_as = spn_ref_gone
+			scope:spn_ref_pack = { remove_list_variable = { name = spn_pack_members target = scope:spn_ref_gone } }
+		}
+		# Size and champions.
+		set_variable = { name = spn_pack_size value = 0 }
+		set_variable = { name = spn_pack_champ_count value = 0 }
+		clear_variable_list = spn_pack_champions
+		every_in_list = {
+			variable = spn_pack_members
+			save_temporary_scope_as = spn_ref_member
+			scope:spn_ref_pack = { change_variable = { name = spn_pack_size add = 1 } }
+			if = {
+				limit = { spn_is_champion_trigger = yes }
+				scope:spn_ref_pack = {
+					change_variable = { name = spn_pack_champ_count add = 1 }
+					add_to_variable_list = { name = spn_pack_champions target = scope:spn_ref_member }
+				}
+			}
+		}
+		# The alpha and the Second.
+		set_variable = { name = spn_pack_alpha value = story_owner }
+		spn_pack_update_second_effect = yes
+		# 2.37o: a co-alpha stands only beside the spouse the Unification joined him to. Set alpha already drops him
+		# under a new alpha; this drops him after a divorce, which nothing else saw (the review of 4 Oct, N7). Only while
+		# the alpha lives: a widow is no spouse, and succession reads the co-alpha first.
+		if = {
+			limit = {
+				exists = var:spn_pack_co_alpha
+				story_owner ?= { is_alive = yes }
+			}
+			if = {
+				limit = {
+					var:spn_pack_co_alpha = {
+						is_alive = yes
+						NOT = { is_spouse_of = scope:spn_ref_pack.story_owner }
+					}
+				}
+				remove_variable = spn_pack_co_alpha
+			}
+		}
+		clear_variable_list = spn_pack_co_alpha_list
+		if = {
+			limit = { var:spn_pack_co_alpha ?= { is_alive = yes } }
+			add_to_variable_list = { name = spn_pack_co_alpha_list target = var:spn_pack_co_alpha }
+		}
+		# The size each member's modifier scales by: doubled in a pack that holds a living True Alpha (§16).
+		save_scope_value_as = {
+			name = spn_ref_scale
+			value = {
+				value = var:spn_pack_size
+				if = {
+					limit = {
+						any_in_list = {
+							variable = spn_pack_members
+							has_trait = spn_true_alpha
+						}
+					}
+					multiply = 2
+				}
+			}
+		}
+		every_in_list = {
+			variable = spn_pack_members
+			set_variable = { name = spn_pack_size_cached value = scope:spn_ref_scale }
+			spn_pack_clear_modifiers_effect = yes
+			add_character_modifier = { modifier = spn_pack_modifier years = 2 }
+			if = {
+				limit = { has_perk = pack_mentality_perk }
+				add_character_modifier = { modifier = spn_pack_mentality_modifier years = 2 }
+			}
+			if = {
+				limit = { scope:spn_ref_pack.var:spn_pack_champ_count >= 3 }
+				add_character_modifier = { modifier = spn_old_ones_gather_modifier years = 2 }
+			}
+			else_if = {
+				limit = { scope:spn_ref_pack.var:spn_pack_champ_count = 2 }
+				add_character_modifier = { modifier = spn_two_spirits_modifier years = 2 }
+			}
+			if = {
+				limit = { scope:spn_ref_pack = { exists = var:spn_pack_unified } }
+				add_character_modifier = { modifier = spn_evolved_modifier years = 2 }
+				if = {
+					limit = { scope:spn_ref_pack = { exists = var:spn_pack_hybrid_gift } }
+					add_character_modifier = { modifier = spn_hybrid_gift_modifier years = 2 }
+				}
+			}
+			if = {
+				limit = { has_character_modifier = spn_alone_in_the_woods_modifier }
+				remove_all_character_modifier_instances = spn_alone_in_the_woods_modifier
+			}
+		}
+		if = {
+			limit = { spn_pack_use_mirrors_trigger = yes }
+			spn_pack_sync_mirrors_effect = yes
+		}
+	}
+}
+
+# The Second (§17.1): the highest standing who is not the alpha -- his heir, and the wolf a challenger meets first. Story
+# scope. 2.37e: its own effect, run by every standing change (spn_pack_add_standing_effect) as well as the refresh,
+# because "recomputed on every change" was only true of changes that refreshed the pack.
+spn_pack_update_second_effect = {
+	save_scope_as = spn_us_pack
+	if = {
+		limit = {
+			any_in_list = {
+				variable = spn_pack_members
+				NOT = { this = scope:spn_us_pack.story_owner }
+			}
+		}
+		ordered_in_list = {
+			variable = spn_pack_members
+			limit = { NOT = { this = scope:spn_us_pack.story_owner } }
+			order_by = spn_pack_standing_value
+			save_temporary_scope_as = spn_us_second
+		}
+		set_variable = { name = spn_pack_second value = scope:spn_us_second }
+	}
+	else_if = {
+		limit = { exists = var:spn_pack_second }
+		remove_variable = spn_pack_second
+	}
+	# The story draws lists, never an unset variable: the Second as a one-entry list.
+	clear_variable_list = spn_pack_second_list
+	if = {
+		limit = { exists = var:spn_pack_second }
+		add_to_variable_list = { name = spn_pack_second_list target = var:spn_pack_second }
+	}
+}
+
+# The membership mirror (§4.7), off unless the boot shows members cannot see the alpha's story. Left in place so
+# turning it on is one line: spn_pack_use_mirrors_trigger.
+spn_pack_sync_mirrors_effect = {
+	save_scope_as = spn_mirror_pack
+	every_in_list = {
+		variable = spn_pack_members
+		limit = { NOT = { this = scope:spn_mirror_pack.story_owner } }
+		if = {
+			limit = { NOT = { any_owned_story = { story_type = story_spn_pack_membership } } }
+			create_story = story_spn_pack_membership
+		}
+		random_owned_story = {
+			limit = { story_type = story_spn_pack_membership }
+			set_variable = { name = spn_pack_alpha value = scope:spn_mirror_pack.story_owner }
+			set_variable = { name = spn_pack_size value = scope:spn_mirror_pack.var:spn_pack_size }
+			set_variable = { name = spn_mirror_of value = scope:spn_mirror_pack }
+		}
+	}
+}
+
+# ==================================================================================================
+# A CHANGE OF ALPHA (§13.6) -- story scope. The one place an alpha changes: death, leaving, a won Challenge, the
+# True Alpha, a Unification. Every member's relation is re-wired to the new alpha.
+# ==================================================================================================
+spn_pack_set_alpha_effect = {
+	save_scope_as = spn_sa_pack
+	$NEW$ = { save_scope_as = spn_sa_new }
+	story_owner = { save_scope_as = spn_sa_old }
+	# The new alpha's own link to the old one goes first: the loop below links the old alpha, if he stays, to the new.
+	# 2.37e: the relinking is hidden (a hidden relation, and no effect text for it).
+	hidden_effect = {
+		scope:spn_sa_new = {
+			if = {
+				limit = { has_relation_spn_pack_mate = scope:spn_sa_old }
+				remove_relation_spn_pack_mate = scope:spn_sa_old
+			}
+		}
+		every_in_list = {
+			variable = spn_pack_members
+			limit = { NOT = { this = scope:spn_sa_new } }
+			if = {
+				limit = { has_relation_spn_pack_mate = scope:spn_sa_old }
+				remove_relation_spn_pack_mate = scope:spn_sa_old
+			}
+			if = {
+				limit = { NOT = { has_relation_spn_pack_mate = scope:spn_sa_new } }
+				set_relation_spn_pack_mate = scope:spn_sa_new
+			}
+		}
+	}
+	make_story_owner = scope:spn_sa_new
+	set_variable = { name = spn_pack_alpha value = scope:spn_sa_new }
+	# 2.37e: a co-alpha who becomes the alpha is no longer listed as both.
+	if = {
+		limit = { var:spn_pack_co_alpha ?= scope:spn_sa_new }
+		remove_variable = spn_pack_co_alpha
+	}
+	# 2.37i: the Second's two-year opening was against the old alpha; a new alpha starts closed. And a co-alpha stands
+	# only beside the spouse the Unification joined him to: under anyone else he is a member like the rest.
+	if = {
+		limit = { exists = var:spn_second_lost_to_alpha }
+		remove_variable = spn_second_lost_to_alpha
+	}
+	if = {
+		limit = { exists = var:spn_pack_co_alpha }
+		if = {
+			limit = { NOT = { var:spn_pack_co_alpha = { is_spouse_of = scope:spn_sa_new } } }
+			remove_variable = spn_pack_co_alpha
+		}
+	}
+	if = {
+		limit = { is_target_in_global_variable_list = { name = spn_packs target = scope:spn_sa_old } }
+		remove_list_global_variable = { name = spn_packs target = scope:spn_sa_old }
+	}
+	if = {
+		limit = { NOT = { is_target_in_global_variable_list = { name = spn_packs target = scope:spn_sa_new } } }
+		add_to_global_variable_list = { name = spn_packs target = scope:spn_sa_new }
+	}
+	every_in_list = {
+		variable = spn_pack_members
+		limit = { is_ai = no }
+		trigger_event = spn_pack.0013
+	}
+	spn_pack_refresh_effect = yes
+}
+
+# Who leads now (§13.6): the co-alpha (Unification); a living champion in the pack; the killer if he is a member
+# (Teen Wolf: kill an alpha, become one); the Second. Nobody: the pack breaks. Story scope.
+spn_pack_succession_effect = {
+	save_scope_as = spn_su_pack
+	# 2.37e: a heir left from an earlier succession in the same run (two alphas leaving at one Gathering) must not be
+	# handed this pack.
+	if = {
+		limit = { exists = scope:spn_su_new }
+		clear_saved_scope = spn_su_new
+	}
+	if = {
+		limit = {
+			trigger_if = {
+				limit = { exists = var:spn_pack_co_alpha }
+				var:spn_pack_co_alpha = { is_alive = yes }
+				is_target_in_variable_list = { name = spn_pack_members target = var:spn_pack_co_alpha }
+			}
+			trigger_else = { always = no }
+		}
+		var:spn_pack_co_alpha = { save_scope_as = spn_su_new }
+	}
+	else_if = {
+		limit = {
+			any_in_list = {
+				variable = spn_pack_members
+				is_alive = yes
+				spn_is_champion_trigger = yes
+				NOT = { this = scope:spn_su_pack.story_owner }
+			}
+		}
+		ordered_in_list = {
+			variable = spn_pack_members
+			limit = {
+				is_alive = yes
+				spn_is_champion_trigger = yes
+				NOT = { this = scope:spn_su_pack.story_owner }
+			}
+			order_by = spn_pack_standing_value
+			save_scope_as = spn_su_new
+		}
+	}
+	else_if = {
+		limit = {
+			trigger_if = {
+				limit = { exists = var:spn_pack_killer }
+				var:spn_pack_killer = { is_alive = yes }
+				is_target_in_variable_list = { name = spn_pack_members target = var:spn_pack_killer }
+			}
+			trigger_else = { always = no }
+		}
+		var:spn_pack_killer = { save_scope_as = spn_su_new }
+	}
+	else_if = {
+		limit = {
+			any_in_list = {
+				variable = spn_pack_members
+				is_alive = yes
+				NOT = { this = scope:spn_su_pack.story_owner }
+			}
+		}
+		ordered_in_list = {
+			variable = spn_pack_members
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_su_pack.story_owner }
+			}
+			order_by = spn_pack_standing_value
+			save_scope_as = spn_su_new
+		}
+	}
+	if = {
+		limit = { exists = var:spn_pack_killer }
+		remove_variable = spn_pack_killer
+	}
+	if = {
+		limit = { exists = scope:spn_su_new }
+		spn_pack_set_alpha_effect = { NEW = scope:spn_su_new }
+	}
+	else = {
+		spn_pack_break_effect = yes
+	}
+}
+
+# The pack ends (§13.6, Disband). Story scope. Everyone becomes an omega; the alpha leaves the global list.
+spn_pack_break_effect = {
+	save_scope_as = spn_br_pack
+	story_owner = { save_scope_as = spn_br_alpha }
+	every_in_list = {
+		variable = spn_pack_members
+		add_to_temporary_list = spn_br_list
+	}
+	every_in_list = {
+		list = spn_br_list
+		save_temporary_scope_as = spn_br_member
+		spn_pack_remove_member_effect = { WHO = scope:spn_br_member REASON = flag:quiet }
+	}
+	if = {
+		limit = { is_target_in_global_variable_list = { name = spn_packs target = scope:spn_br_alpha } }
+		remove_list_global_variable = { name = spn_packs target = scope:spn_br_alpha }
+	}
+	end_story = yes
+}
+
+# ==================================================================================================
+# HIDE FEUDS (§17.5) -- A and B are the two alphas. Deduped per house pair for ten years, so feuds cannot spiral to
+# eradicate wars on their own (§17.2). The opinion always lands; the house relation only between two houses vanilla
+# tracks. Only while priority 3 is built.
+# ==================================================================================================
+spn_hide_feud_effect = {
+	$A$ = { save_scope_as = spn_fe_a }
+	$B$ = { save_scope_as = spn_fe_b }
+	if = {
+		limit = {
+			spn_pack_politics_built_trigger = yes
+			NOT = { scope:spn_fe_a = scope:spn_fe_b }
+			scope:spn_fe_a = { is_alive = yes }
+			scope:spn_fe_b = { is_alive = yes }
+		}
+		# The dedupe: on A's house against B's house, or on A himself for a lowborn alpha. 2.37i: read both ways -- the
+		# record sits on whichever side was A, and the same two packs in the other order were feuding twice in ten years.
+		if = {
+			limit = {
+				scope:spn_fe_a = { exists = house }
+				scope:spn_fe_b = { exists = house }
+			}
+			if = {
+				limit = {
+					NOT = {
+						scope:spn_fe_a.house = {
+							is_target_in_variable_list = { name = spn_hide_feud_with target = scope:spn_fe_b.house }
+						}
+					}
+					NOT = {
+						scope:spn_fe_b.house = {
+							is_target_in_variable_list = { name = spn_hide_feud_with target = scope:spn_fe_a.house }
+						}
+					}
+				}
+				scope:spn_fe_a.house = {
+					add_to_variable_list = { name = spn_hide_feud_with target = scope:spn_fe_b.house years = 10 }
+				}
+				save_scope_value_as = { name = spn_fe_go value = yes }
+			}
+		}
+		else_if = {
+			limit = {
+				NOT = {
+					scope:spn_fe_a = {
+						is_target_in_variable_list = { name = spn_hide_feud_with target = scope:spn_fe_b }
+					}
+				}
+				NOT = {
+					scope:spn_fe_b = {
+						is_target_in_variable_list = { name = spn_hide_feud_with target = scope:spn_fe_a }
+					}
+				}
+			}
+			scope:spn_fe_a = {
+				add_to_variable_list = { name = spn_hide_feud_with target = scope:spn_fe_b years = 10 }
+			}
+			save_scope_value_as = { name = spn_fe_go value = yes }
+		}
+		if = {
+			limit = { exists = scope:spn_fe_go }
+			scope:spn_fe_a = { add_opinion = { target = scope:spn_fe_b modifier = spn_hide_feud_opinion } }
+			scope:spn_fe_b = { add_opinion = { target = scope:spn_fe_a modifier = spn_hide_feud_opinion } }
+			spn_pack_house_step_effect = { A = scope:spn_fe_a B = scope:spn_fe_b VALUE = house_relation_damage_medium_value REASON = spn_hide_taken }
+			scope:spn_fe_a = {
+				if = {
+					limit = { is_ai = no }
+					trigger_event = spn_pack.0200
+				}
+			}
+			scope:spn_fe_b = {
+				if = {
+					limit = { is_ai = no }
+					trigger_event = spn_pack.0200
+				}
+			}
+		}
+		clear_saved_scope = spn_fe_go
+	}
+}
+
+# One step of vanilla's house relation between two characters' houses (§17.2), the call shape vanilla's own events
+# use (change_house_relation_effect, 10_dlc_tgp_house_relation_scripted_effects.txt:208). Only between two different
+# houses; vanilla itself decides whether it tracks them (house_relation_is_valid_to_start_trigger).
+spn_pack_house_step_effect = {
+	if = {
+		limit = {
+			$A$ = { exists = house }
+			$B$ = { exists = house }
+		}
+		if = {
+			limit = { NOT = { $A$.house = $B$.house } }
+			$A$.house = {
+				change_house_relation_effect = {
+					HOUSE = $B$.house
+					VALUE = $VALUE$
+					REASON = $REASON$
+					CHAR = $A$
+					TARGET_CHAR = $B$
+					TITLE = scope:dummy_gender # vanilla's unset placeholder for "no title" (119 vanilla calls)
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# GAINS IN STANDING. Alpha's champion leads a pack whose standing grows twice as fast (§5.1, design §2.1).
+# ==================================================================================================
+spn_pack_gain_standing_effect = {
+	if = {
+		limit = { var:spn_pack ?= { story_owner = { has_trait = spn_champion_alpha } } }
+		save_scope_value_as = {
+			name = spn_std_gain
+			value = {
+				value = $VALUE$
+				multiply = 2
+			}
+		}
+		spn_pack_add_standing_effect = { VALUE = scope:spn_std_gain }
+	}
+	else = {
+		spn_pack_add_standing_effect = { VALUE = $VALUE$ }
+	}
+}
+
+# ==================================================================================================
+# THE PACK'S YEAR (§13.7) -- story scope.
+# ==================================================================================================
+spn_pack_yearly_effect = {
+	save_scope_as = spn_yr_pack
+	spn_pack_refresh_effect = yes
+	# Lycanthropy (§13.3): +2 a year in a pack, +3 under a champion alpha; the set bonus +1 more with two champions,
+	# +2 more with three or more. The steady source the wolf track never had.
+	save_scope_value_as = {
+		name = spn_yr_lyc
+		value = {
+			value = 2
+			if = {
+				limit = { story_owner = { spn_is_champion_trigger = yes } }
+				value = 3
+			}
+			if = {
+				limit = { var:spn_pack_champ_count >= 3 }
+				add = 2
+			}
+			else_if = {
+				limit = { var:spn_pack_champ_count = 2 }
+				add = 1
+			}
+		}
+	}
+	every_in_list = {
+		variable = spn_pack_members
+		limit = { is_alive = yes }
+		if = {
+			limit = { has_trait = supernatural_werewolf }
+			add_trait_xp = { trait = supernatural_werewolf track = lycanthropy value = scope:spn_yr_lyc }
+		}
+		else_if = {
+			limit = { has_trait = supernatural_hybrid }
+			add_trait_xp = { trait = supernatural_hybrid track = hybrid_lycanthropy value = scope:spn_yr_lyc }
+		}
+		# +5 standing a year in a pack (design §6.4).
+		spn_pack_gain_standing_effect = { VALUE = 5 }
+		# The True Alpha's floor (§16): his standing never falls below 75.
+		if = {
+			limit = {
+				has_trait = spn_true_alpha
+				spn_pack_standing_value < 75
+			}
+			save_scope_value_as = {
+				name = spn_std_floor
+				value = {
+					value = 75
+					subtract = spn_pack_standing_value
+				}
+			}
+			spn_pack_add_standing_effect = { VALUE = scope:spn_std_floor }
+		}
+	}
+	spn_pack_refresh_effect = yes
+	# The True Alpha (§16) and the moment between packs (§17.4): priority 3, behind its one switch.
+	if = {
+		limit = { spn_pack_politics_built_trigger = yes }
+		spn_pack_true_alpha_check_effect = yes
+		random = {
+			chance = spn_pack_moment_chance_value
+			spn_pack_moment_effect = yes
+		}
+	}
+}
+
+# ==================================================================================================
+# THE TRUE ALPHA (§16) -- story scope, from the yearly group. The pack's single best candidate; one in a century.
+# ==================================================================================================
+spn_pack_true_alpha_check_effect = {
+	save_scope_as = spn_ta_pack
+	if = {
+		limit = {
+			NOT = { exists = global_var:spn_ta_century }
+			any_in_list = {
+				variable = spn_pack_members
+				spn_true_alpha_candidate_trigger = { PACK = scope:spn_ta_pack }
+			}
+		}
+		ordered_in_list = {
+			variable = spn_pack_members
+			limit = { spn_true_alpha_candidate_trigger = { PACK = scope:spn_ta_pack } }
+			order_by = spn_pack_standing_value
+			save_scope_as = spn_ta_candidate
+		}
+		random = {
+			chance = spn_true_alpha_chance_value
+			scope:spn_ta_candidate = { trigger_event = spn_pack.0300 }
+		}
+	}
+}
+
+# He has risen (spn_pack.0300's immediate). Character scope = the True Alpha. Players in range see the red eyes; the
+# packs in range simply know.
+spn_true_alpha_rises_effect = {
+	save_scope_as = spn_ta
+	every_player = {
+		limit = {
+			NOT = { this = scope:spn_ta }
+			spn_is_wolf_trigger = yes
+			in_diplomatic_range = scope:spn_ta
+		}
+		trigger_event = spn_pack.0301
+	}
+	every_in_global_list = {
+		variable = spn_packs
+		limit = {
+			exists = var:spn_pack
+			in_diplomatic_range = scope:spn_ta
+		}
+		var:spn_pack = {
+			every_in_list = {
+				variable = spn_pack_members
+				set_variable = { name = spn_knows_true_alpha value = scope:spn_ta years = 100 }
+			}
+		}
+	}
+}
+
+# "I will found my own." Character scope = the True Alpha; scope:spn_ta_pack = the pack he leaves. He leaves quietly,
+# founds his own for free, and each wolf of the old pack weighs both alphas and the man.
+spn_true_alpha_found_own_effect = {
+	save_scope_as = spn_ta
+	scope:spn_ta_pack.story_owner = { save_scope_as = spn_ta_old_alpha }
+	spn_pack_remove_member_effect = { WHO = scope:spn_ta REASON = flag:quiet }
+	spn_pack_found_effect = yes
+	# 2.37b: hidden like spn_pack_found_effect itself. Its story does not exist while a tooltip is built, so every line
+	# below would read an unset spn_new_pack there (the review of 3 Oct). The option says what happens in its own words.
+	# 2.37: and guarded, because the tooltip builder still reads inside hidden_effect (Found a Pack, 3 Oct 13:20).
+	if = {
+		limit = { exists = scope:spn_new_pack }
+	hidden_effect = {
+		scope:spn_ta_pack = {
+			every_in_list = {
+				variable = spn_pack_members
+				limit = {
+					NOT = { this = scope:spn_ta_old_alpha }
+					is_ai = yes # 2.37o: a player is never moved to another pack unasked (the review of 4 Oct, S2)
+				}
+				add_to_temporary_list = spn_ta_followers
+			}
+		}
+		every_in_list = {
+			list = spn_ta_followers
+			save_temporary_scope_as = spn_ta_f
+			random = {
+				chance = {
+					value = 25
+					add = {
+						value = "opinion(scope:spn_ta)"
+						subtract = "opinion(scope:spn_ta_old_alpha)"
+						divide = 2
+					}
+					if = {
+						limit = { has_trait = just }
+						add = 10
+					}
+					if = {
+						limit = { has_trait = honest }
+						add = 10
+					}
+					if = {
+						limit = { has_trait = compassionate }
+						add = 10
+					}
+					if = {
+						limit = { has_trait = loyal }
+						add = -30
+					}
+					if = {
+						limit = { has_trait = fickle }
+						add = 15
+					}
+					min = 0
+					max = 90
+				}
+				if = {
+					limit = { scope:spn_new_pack = { spn_pack_has_room_trigger = yes } }
+					spn_pack_remove_member_effect = { WHO = scope:spn_ta_f REASON = flag:quiet }
+					spn_pack_add_member_effect = { WHO = scope:spn_ta_f PACK = scope:spn_new_pack }
+				}
+			}
+		}
+		scope:spn_ta_pack = { spn_pack_refresh_effect = yes }
+	}
+	}
+}
+
+# ==================================================================================================
+# THE YEARLY MOMENT BETWEEN PACKS (§17.4) -- story scope. One neighbouring pack, one moment, weighted by the alphas.
+# ==================================================================================================
+spn_pack_moment_effect = {
+	save_scope_as = spn_mo_pack
+	story_owner = { save_scope_as = spn_mo_alpha }
+	if = {
+		limit = {
+			any_in_global_list = {
+				variable = spn_packs
+				spn_pack_moment_other_trigger = { ALPHA = scope:spn_mo_alpha }
+			}
+		}
+		random_in_global_list = {
+			variable = spn_packs
+			limit = { spn_pack_moment_other_trigger = { ALPHA = scope:spn_mo_alpha } }
+			save_scope_as = spn_mo_other
+		}
+		scope:spn_mo_other.var:spn_pack = { save_scope_as = spn_mo_other_pack }
+		random_list = {
+			# Another Pack's Scent
+			20 = {
+				modifier = {
+					add = 15
+					scope:spn_mo_alpha = {
+						OR = {
+							has_trait = wrathful
+							has_trait = ambitious
+							has_trait = arrogant
+						}
+					}
+				}
+				spn_pack_moment_scent_effect = yes
+			}
+			# A Wolf Asks to Run With You
+			20 = {
+				trigger = {
+					scope:spn_mo_pack = { spn_pack_has_room_trigger = yes }
+					scope:spn_mo_other_pack = {
+						any_in_list = {
+							variable = spn_pack_members
+							spn_pack_moment_asker_trigger = { PACK = scope:spn_mo_other_pack NEW_ALPHA = scope:spn_mo_alpha }
+						}
+					}
+				}
+				modifier = {
+					add = 10
+					scope:spn_mo_other = {
+						OR = {
+							has_trait = arbitrary
+							has_trait = wrathful
+						}
+					}
+				}
+				spn_pack_moment_asks_effect = yes
+			}
+			# Young Wolves Fight
+			20 = {
+				trigger = {
+					scope:spn_mo_pack = {
+						any_in_list = {
+							variable = spn_pack_members
+							spn_pack_moment_member_trigger = { PACK = scope:spn_mo_pack }
+						}
+					}
+					scope:spn_mo_other_pack = {
+						any_in_list = {
+							variable = spn_pack_members
+							spn_pack_moment_member_trigger = { PACK = scope:spn_mo_other_pack }
+						}
+					}
+				}
+				spn_pack_moment_fight_effect = yes
+			}
+			# Kindred
+			20 = {
+				modifier = {
+					add = 15
+					scope:spn_mo_alpha = {
+						OR = {
+							has_trait = gregarious
+							has_trait = trusting
+						}
+					}
+				}
+				spn_pack_moment_kindred_effect = yes
+			}
+			# A Hide Seen
+			20 = {
+				trigger = {
+					any_artifact = { has_variable = spn_hide }
+				}
+				spn_pack_moment_hide_seen_effect = yes
+			}
+		}
+	}
+}
+
+# Another Pack's Scent: a player alpha chooses; an AI alpha leans by temper.
+spn_pack_moment_scent_effect = {
+	# 2.37o: when the other alpha is a player and this one is not, the player chooses (.0100 is the same choice from
+	# either side). An AI alpha used to make him a rival without a word (the review of 4 Oct, S5). The moment ends here,
+	# so the two names are simply swapped.
+	if = {
+		limit = {
+			scope:spn_mo_alpha = { is_ai = yes }
+			scope:spn_mo_other = { is_ai = no }
+		}
+		scope:spn_mo_alpha = { save_scope_as = spn_mo_swap }
+		scope:spn_mo_other = { save_scope_as = spn_mo_alpha }
+		scope:spn_mo_swap = { save_scope_as = spn_mo_other }
+	}
+	scope:spn_mo_alpha = {
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_pack.0100
+		}
+		else = {
+			random_list = {
+				50 = {
+					modifier = { add = 25 has_trait = wrathful }
+					modifier = { add = 20 has_trait = arrogant }
+					modifier = { add = 15 has_trait = ambitious }
+					# 2.37o: never against a mate or lover (the review of 4 Oct, F16; vanilla's rival test excludes only friends).
+					modifier = {
+						factor = 0
+						OR = {
+							is_spouse_of = scope:spn_mo_other
+							has_relation_lover = scope:spn_mo_other
+						}
+					}
+					spn_pack_scent_rival_effect = yes
+				}
+				50 = {
+					modifier = { add = 25 has_trait = calm }
+					modifier = { add = 20 has_trait = forgiving }
+					modifier = { add = 15 has_trait = content }
+					spn_pack_scent_truce_effect = yes
+				}
+			}
+		}
+	}
+}
+
+spn_pack_scent_rival_effect = {
+	scope:spn_mo_alpha = {
+		if = {
+			limit = {
+				has_relation_potential_rival = scope:spn_mo_other
+				can_set_relation_rival_trigger = { CHARACTER = scope:spn_mo_other }
+			}
+			set_relation_rival = {
+				target = scope:spn_mo_other
+				reason = spn_rel_pack_scent
+			}
+		}
+		else_if = {
+			limit = {
+				NOT = { has_relation_rival = scope:spn_mo_other }
+				can_set_relation_potential_rival_trigger = { CHARACTER = scope:spn_mo_other }
+			}
+			set_relation_potential_rival = scope:spn_mo_other
+		}
+	}
+}
+
+spn_pack_scent_truce_effect = {
+	scope:spn_mo_alpha = { add_opinion = { target = scope:spn_mo_other modifier = spn_pack_truce_opinion } }
+	scope:spn_mo_other = { add_opinion = { target = scope:spn_mo_alpha modifier = spn_pack_truce_opinion } }
+}
+
+# A Wolf Asks to Run With You: one of the other pack's wolves, by the Invite's weights read the other way round.
+spn_pack_moment_asks_effect = {
+	scope:spn_mo_other_pack = {
+		random_in_list = {
+			variable = spn_pack_members
+			limit = { spn_pack_moment_asker_trigger = { PACK = scope:spn_mo_other_pack NEW_ALPHA = scope:spn_mo_alpha } }
+			save_scope_as = spn_mo_asker
+		}
+	}
+	scope:spn_mo_alpha = {
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_pack.0101
+		}
+		else_if = {
+			limit = { spn_pack_accepts_asker_trigger = { ALPHA = scope:spn_mo_alpha ASKER = scope:spn_mo_asker } }
+			spn_pack_take_asker_effect = yes
+		}
+	}
+}
+
+# The asker changes packs: the old alpha's grudge, a step down between their houses.
+spn_pack_take_asker_effect = {
+	spn_pack_remove_member_effect = { WHO = scope:spn_mo_asker REASON = flag:left }
+	spn_pack_add_member_effect = { WHO = scope:spn_mo_asker PACK = scope:spn_mo_pack }
+	scope:spn_mo_other = {
+		if = {
+			limit = { is_alive = yes }
+			add_opinion = { target = scope:spn_mo_alpha modifier = spn_lured_away_opinion }
+		}
+	}
+	spn_pack_house_step_effect = {
+		A = scope:spn_mo_other
+		B = scope:spn_mo_alpha
+		VALUE = house_relation_damage_minor_value
+		REASON = spn_lured_away
+	}
+}
+
+# Young Wolves Fight: one of each, a brawl. Rivals after, or friends if both are kind or fair.
+spn_pack_moment_fight_effect = {
+	scope:spn_mo_pack = {
+		random_in_list = {
+			variable = spn_pack_members
+			limit = { spn_pack_moment_member_trigger = { PACK = scope:spn_mo_pack } }
+			save_scope_as = spn_mo_ours
+		}
+	}
+	scope:spn_mo_other_pack = {
+		random_in_list = {
+			variable = spn_pack_members
+			limit = { spn_pack_moment_member_trigger = { PACK = scope:spn_mo_other_pack } }
+			save_scope_as = spn_mo_theirs
+		}
+	}
+	spn_creature_clash_effect = {
+		A = scope:spn_mo_ours
+		B = scope:spn_mo_theirs
+		THEN = spn_pack_fight_after_effect
+		FORM = yes
+	}
+	scope:spn_mo_alpha = {
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_pack.0102
+		}
+	}
+}
+
+spn_pack_fight_after_effect = {
+	scope:spn_clash_loser = {
+		increase_wounds_no_death_effect = { REASON = fight }
+	}
+	if = {
+		limit = {
+			scope:spn_clash_winner = {
+				OR = {
+					has_trait = compassionate
+					has_trait = just
+				}
+			}
+			scope:spn_clash_loser = {
+				OR = {
+					has_trait = compassionate
+					has_trait = just
+				}
+			}
+			scope:spn_clash_winner = { can_set_relation_friend_trigger = { CHARACTER = scope:spn_clash_loser } }
+		}
+		scope:spn_clash_winner = {
+			set_relation_friend = {
+				target = scope:spn_clash_loser
+				reason = spn_rel_young_wolves_fought
+			}
+		}
+		save_scope_value_as = { name = spn_mo_fight_friends value = yes }
+	}
+	else_if = {
+		limit = {
+			scope:spn_clash_loser = {
+				NOT = { has_relation_rival = scope:spn_clash_winner }
+				can_set_relation_potential_rival_trigger = { CHARACTER = scope:spn_clash_winner }
+			}
+		}
+		scope:spn_clash_loser = { set_relation_potential_rival = scope:spn_clash_winner }
+	}
+}
+
+# Kindred: two wolves of different packs find each other. A friend, or a lover where vanilla allows it.
+spn_pack_moment_kindred_effect = {
+	scope:spn_mo_pack = {
+		random_in_list = {
+			variable = spn_pack_members
+			limit = {
+				is_alive = yes
+				is_adult = yes
+				is_imprisoned = no # 2.37o: "found each other in the woods"
+			}
+			save_scope_as = spn_mo_kin_a
+		}
+	}
+	# 2.37o: only once the first is found (an imprisoned alpha alone in his pack leaves none; the review of 4 Oct, P5).
+	if = {
+		limit = { exists = scope:spn_mo_kin_a }
+		scope:spn_mo_other_pack = {
+			random_in_list = {
+				variable = spn_pack_members
+				limit = {
+					is_alive = yes
+					is_adult = yes
+					is_imprisoned = no # 2.37o: "found each other in the woods"
+					NOT = { this = scope:spn_mo_kin_a }
+					NOT = { has_relation_friend = scope:spn_mo_kin_a }
+					NOT = { has_relation_lover = scope:spn_mo_kin_a }
+				}
+				save_scope_as = spn_mo_kin_b
+			}
+		}
+	}
+	if = {
+		limit = {
+			exists = scope:spn_mo_kin_a
+			exists = scope:spn_mo_kin_b
+		}
+		scope:spn_mo_kin_a = {
+			if = {
+				limit = {
+					is_married = no # 2.37 boot: "spouse" is not a link in 1.20 (error.log, 3 Oct)
+					scope:spn_mo_kin_b = { is_married = no }
+					can_set_relation_lover_trigger = { CHARACTER = scope:spn_mo_kin_b }
+					# 2.37i: a lover only between two AI wolves; a player is never handed one unasked. He may still be
+					# made a friend, and is told.
+					is_ai = yes
+					scope:spn_mo_kin_b = { is_ai = yes }
+				}
+				random = {
+					chance = 30
+					set_relation_lover = {
+						target = scope:spn_mo_kin_b
+						reason = spn_rel_kindred
+					}
+					save_scope_value_as = { name = spn_mo_kin_lovers value = yes }
+				}
+			}
+			if = {
+				limit = {
+					NOT = { exists = scope:spn_mo_kin_lovers }
+					can_set_relation_friend_trigger = { CHARACTER = scope:spn_mo_kin_b }
+				}
+				set_relation_friend = {
+					target = scope:spn_mo_kin_b
+					reason = spn_rel_kindred
+				}
+			}
+		}
+		# 2.37o: both players are told (it was else_if), and only of what happened: a friendship the engine refused
+		# (can_set_relation_friend_trigger) is no news.
+		if = {
+			limit = {
+				scope:spn_mo_kin_a = {
+					OR = {
+						has_relation_friend = scope:spn_mo_kin_b
+						has_relation_lover = scope:spn_mo_kin_b
+					}
+				}
+			}
+			if = {
+				limit = { scope:spn_mo_kin_a = { is_ai = no } }
+				scope:spn_mo_kin_a = { trigger_event = spn_pack.0103 }
+			}
+			if = {
+				limit = { scope:spn_mo_kin_b = { is_ai = no } }
+				scope:spn_mo_kin_b = { trigger_event = spn_pack.0103 }
+			}
+		}
+	}
+}
+
+# A Hide Seen: one wolf of the pack saw a hide where it now is. Word at the Fire for every member; the alpha hears it.
+spn_pack_moment_hide_seen_effect = {
+	spn_hide_collect_hides_effect = yes
+	scope:spn_mo_pack = {
+		every_in_list = {
+			variable = spn_pack_members
+			limit = { NOT = { this = scope:spn_mo_alpha } }
+			spn_hide_word_at_fire_effect = { SEND = no }
+		}
+	}
+	scope:spn_mo_alpha = {
+		spn_hide_word_at_fire_effect = { SEND = no }
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_pack.0104
+		}
+	}
+}
+
+# ==================================================================================================
+# THE CHALLENGE (§13.5). A = the challenger, B = the challenged. Standings read before the fight, so the winner's
+# reward and the "no farming the weak" rule see the wolves as they were.
+# ==================================================================================================
+spn_pack_challenge_effect = {
+	$A$ = { save_scope_as = spn_ch_a }
+	$B$ = { save_scope_as = spn_ch_b }
+	scope:spn_ch_a = { save_scope_value_as = { name = spn_ch_sa value = spn_pack_standing_value } }
+	scope:spn_ch_b = { save_scope_value_as = { name = spn_ch_sb value = spn_pack_standing_value } }
+	spn_creature_clash_effect = {
+		A = scope:spn_ch_a
+		B = scope:spn_ch_b
+		THEN = spn_pack_challenge_after_effect
+		FORM = yes
+	}
+	scope:spn_ch_a = {
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_pack.0020
+		}
+	}
+	scope:spn_ch_b = {
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_pack.0021
+		}
+	}
+}
+
+spn_pack_challenge_after_effect = {
+	# 2.37o: one challenge's answer never rides into the next one in the same chain (the review of 4 Oct, N8).
+	if = {
+		limit = { exists = scope:spn_ch_loser_was_second }
+		clear_saved_scope = spn_ch_loser_was_second
+	}
+	# Who was who, before anything moves.
+	if = {
+		limit = { scope:spn_clash_winner = scope:spn_ch_a }
+		save_scope_value_as = { name = spn_ch_ws value = scope:spn_ch_sa }
+		save_scope_value_as = { name = spn_ch_ls value = scope:spn_ch_sb }
+	}
+	else = {
+		save_scope_value_as = { name = spn_ch_ws value = scope:spn_ch_sb }
+		save_scope_value_as = { name = spn_ch_ls value = scope:spn_ch_sa }
+	}
+	# 2.37i: was the loser the Second? Read now -- the -10 below recomputes the Second, and a Second who fell behind
+	# another wolf was no longer found by the check further down, so his loss never opened the way.
+	if = {
+		limit = { scope:spn_clash_loser = { exists = var:spn_pack } }
+		scope:spn_clash_loser.var:spn_pack = {
+			if = {
+				limit = { exists = var:spn_pack_second }
+				if = {
+					limit = { var:spn_pack_second = scope:spn_clash_loser }
+					save_scope_value_as = { name = spn_ch_loser_was_second value = yes }
+				}
+			}
+		}
+	}
+	scope:spn_clash_loser = {
+		increase_wounds_no_death_effect = { REASON = fight }
+		spn_pack_add_standing_effect = { VALUE = -10 }
+		add_opinion = { target = scope:spn_clash_winner modifier = spn_challenge_lost_opinion }
+	}
+	# +15 only against a wolf who stood near him: no farming the weak.
+	if = {
+		limit = {
+			scope:spn_ch_ls >= {
+				value = scope:spn_ch_ws
+				subtract = 10
+			}
+		}
+		scope:spn_clash_winner = { spn_pack_gain_standing_effect = { VALUE = 15 } }
+	}
+	# The same pack: beating the alpha makes the winner alpha; the Second who lost to the alpha opens the way for
+	# everyone else for two years.
+	if = {
+		limit = {
+			scope:spn_ch_a = { exists = var:spn_pack }
+			scope:spn_ch_b = { exists = var:spn_pack }
+		}
+		if = {
+			limit = { scope:spn_ch_a.var:spn_pack = scope:spn_ch_b.var:spn_pack }
+			scope:spn_ch_a.var:spn_pack = { save_scope_as = spn_ch_pack }
+			if = {
+				limit = { scope:spn_ch_pack.story_owner = scope:spn_clash_loser }
+				scope:spn_ch_pack = { spn_pack_set_alpha_effect = { NEW = scope:spn_clash_winner } }
+			}
+			else_if = {
+				limit = {
+					scope:spn_ch_pack.story_owner = scope:spn_clash_winner
+					exists = scope:spn_ch_loser_was_second
+				}
+				scope:spn_ch_pack = { set_variable = { name = spn_second_lost_to_alpha value = yes years = 2 } }
+			}
+			else = {
+				scope:spn_ch_pack = { spn_pack_refresh_effect = yes }
+			}
+		}
+		else = {
+			spn_pack_house_step_effect = {
+				A = scope:spn_clash_loser
+				B = scope:spn_clash_winner
+				VALUE = house_relation_damage_minor_value
+				REASON = spn_beaten_in_challenge
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE UNIFICATION (§15). Character scope = the host. OTHER = the other alpha, his spouse. The other pack is merged
+# into the host's, whatever their sizes; the other alpha becomes co-alpha.
+# ==================================================================================================
+spn_pack_unify_effect = {
+	save_scope_as = spn_un_host
+	$OTHER$ = { save_scope_as = spn_un_other }
+	scope:spn_un_host.var:spn_pack = { save_scope_as = spn_un_pack }
+	scope:spn_un_other.var:spn_pack = { save_scope_as = spn_un_old }
+	scope:spn_un_old = {
+		every_in_list = {
+			variable = spn_pack_members
+			limit = { NOT = { this = scope:spn_un_other } }
+			add_to_temporary_list = spn_un_list
+		}
+	}
+	every_in_list = {
+		list = spn_un_list
+		save_temporary_scope_as = spn_un_m
+		spn_pack_remove_member_effect = { WHO = scope:spn_un_m REASON = flag:quiet }
+		spn_pack_add_member_effect = { WHO = scope:spn_un_m PACK = scope:spn_un_pack }
+	}
+	# Its alpha last; then the empty story ends and leaves the list.
+	spn_pack_remove_member_effect = { WHO = scope:spn_un_other REASON = flag:quiet }
+	if = {
+		limit = { is_target_in_global_variable_list = { name = spn_packs target = scope:spn_un_other } }
+		remove_list_global_variable = { name = spn_packs target = scope:spn_un_other }
+	}
+	scope:spn_un_old = { end_story = yes }
+	spn_pack_add_member_effect = { WHO = scope:spn_un_other PACK = scope:spn_un_pack }
+	scope:spn_un_pack = {
+		set_variable = { name = spn_pack_co_alpha value = scope:spn_un_other }
+		set_variable = { name = spn_pack_unified value = yes }
+		set_variable = { name = spn_pack_unified_year value = current_year }
+		if = {
+			limit = {
+				OR = {
+					scope:spn_un_host = { has_trait = supernatural_hybrid }
+					scope:spn_un_other = { has_trait = supernatural_hybrid }
+				}
+			}
+			set_variable = { name = spn_pack_hybrid_gift value = yes }
+		}
+		spn_pack_refresh_effect = yes
+	}
+	# 2.37o: every player whose pack was joined to the host's is told, the partner included (the review of 4 Oct, F4).
+	# .0013, the pack's own "new alpha" event, with its own line. The flag is cleared once the events are sent (a
+	# triggered event keeps its copy), so a later change of alpha in the same chain reads as one.
+	scope:spn_un_host = { save_scope_as = spn_sa_new }
+	save_scope_value_as = { name = spn_sa_joined value = yes }
+	every_in_list = {
+		list = spn_un_list
+		limit = { is_ai = no }
+		trigger_event = spn_pack.0013
+	}
+	scope:spn_un_other = {
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_pack.0013
+		}
+	}
+	clear_saved_scope = spn_sa_joined
+	if = {
+		limit = { spn_pack_politics_built_trigger = yes }
+		spn_pack_house_step_effect = {
+			A = scope:spn_un_host
+			B = scope:spn_un_other
+			VALUE = house_relation_improve_major_value
+			REASON = spn_unified
+		}
+	}
+}
+
+# ==================================================================================================
+# THE BLOOD PACT (§17.6). A and B are two alphas. Landed rulers: a real alliance, called to each other's wars. Else the
+# shown relation. Either way the opinion and a step up between their houses.
+# ==================================================================================================
+spn_pack_blood_pact_effect = {
+	$A$ = { save_scope_as = spn_bp_a }
+	$B$ = { save_scope_as = spn_bp_b }
+	if = {
+		limit = {
+			scope:spn_bp_a = { is_landed_or_landless_administrative = yes }
+			scope:spn_bp_b = { is_landed_or_landless_administrative = yes }
+			NOT = { scope:spn_bp_a = { is_allied_to = scope:spn_bp_b } }
+		}
+		scope:spn_bp_a = {
+			create_alliance = {
+				target = scope:spn_bp_b
+				allied_through_owner = scope:spn_bp_a
+				allied_through_target = scope:spn_bp_b
+			}
+		}
+	}
+	else_if = {
+		limit = { scope:spn_bp_a = { NOT = { has_relation_spn_blood_pact = scope:spn_bp_b } } }
+		# 2.37e: hidden; the option's own tooltip names the pact, and the relation has no effect text.
+		hidden_effect = { scope:spn_bp_a = { set_relation_spn_blood_pact = scope:spn_bp_b } }
+	}
+	scope:spn_bp_a = { add_opinion = { target = scope:spn_bp_b modifier = spn_blood_pact_opinion } }
+	scope:spn_bp_b = { add_opinion = { target = scope:spn_bp_a modifier = spn_blood_pact_opinion } }
+	spn_pack_house_step_effect = {
+		A = scope:spn_bp_a
+		B = scope:spn_bp_b
+		VALUE = house_relation_improve_major_value
+		REASON = spn_blood_pact
+	}
+}

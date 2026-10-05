@@ -1,0 +1,65 @@
+﻿# Supernatural 2.37 -- the hide's template (WORK-ORDER-2.37 §5.2). Every key from _templates.info.
+#
+# can_benefit decides who the worn power reaches. Its own champion, always. ALSO any other wolf who does not own it:
+# vanilla's AI only wars for an artifact it can benefit from (artifact_war_claimable_artifact_trigger,
+# 00_artifact_triggers.txt), and a non-owner never wears it, so that branch costs nothing. The owner who is not yet its
+# champion fails both branches and gets only the fallback -- a wolf who has just put a hide on is not yet chosen.
+# can_benefit outranks ai_score when the AI equips (_templates.info), which is why an AI wolf never puts one on by
+# itself and the weekly check does it for him (§5.5 case 5).
+#
+# is_holy_relic: root is the FAITH. Any faith may enshrine a hide unless a wolf holds it -- so mortal lords enshrine
+# hides through vanilla's own AI decision and wolves never do. An enshrined hide has no character owner, so ?= makes the
+# NOT pass and it stays a relic while it sits in the shrine.
+spn_hide_template = {
+	can_equip = {
+		spn_can_bear_hide_trigger = yes
+	}
+	can_benefit = {
+		OR = {
+			AND = {
+				scope:artifact.var:spn_hide ?= flag:silverback
+				has_trait = spn_champion_silverback
+			}
+			AND = {
+				scope:artifact.var:spn_hide ?= flag:timber
+				has_trait = spn_champion_timber
+			}
+			AND = {
+				scope:artifact.var:spn_hide ?= flag:tundra
+				has_trait = spn_champion_tundra
+			}
+			AND = {
+				scope:artifact.var:spn_hide ?= flag:graybeard
+				has_trait = spn_champion_graybeard
+			}
+			AND = {
+				scope:artifact.var:spn_hide ?= flag:midnight
+				has_trait = spn_champion_midnight
+			}
+			AND = {
+				scope:artifact.var:spn_hide ?= flag:alpha
+				has_trait = spn_champion_alpha
+			}
+			AND = {
+				spn_is_wolf_trigger = yes
+				NOT = { scope:artifact.artifact_owner ?= root }
+			}
+		}
+	}
+	can_reforge = {
+		always = no
+	}
+	can_repair = {
+		always = yes
+	}
+	is_holy_relic = {
+		NOT = { scope:artifact.artifact_owner ?= { spn_is_wolf_trigger = yes } }
+	}
+	fallback = {
+		monthly_prestige = 0.3
+	}
+	ai_score = {
+		value = 1000
+	}
+	unique = yes
+}

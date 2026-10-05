@@ -71,9 +71,13 @@
 # untouched; only the FIRST step onto clean ground is now uncertain.
 # ==========================================================================================================
 spn_mark_menace_effect = {
+	# 2.37 -- banked in the caller's scope before anything is pasted inside the county (a caller's `this` or `prev` meant
+	# the county there). Read below and handed on as saved scopes, never as pasted text.
+	$CULPRIT$ = { save_scope_as = spn_mm_culprit }
+	$COUNTY$ = { save_scope_as = spn_mm_county }
 	if = {
 		limit = {
-			$COUNTY$ = {
+			scope:spn_mm_county = {
 				OR = {
 					# A trail is already open here: this is escalation, and escalation is never in doubt.
 					has_county_modifier = spn_menace_modifier
@@ -82,24 +86,24 @@ spn_mark_menace_effect = {
 				}
 			}
 		}
-		spn_open_menace_trail_effect = { COUNTY = $COUNTY$ CULPRIT = $CULPRIT$ KIND = $KIND$ SEVERITY = $SEVERITY$ }
+		spn_open_menace_trail_effect = { COUNTY = scope:spn_mm_county CULPRIT = scope:spn_mm_culprit KIND = $KIND$ SEVERITY = $SEVERITY$ }
 	}
 	else = {
 		# Clean ground. Roll for it being noticed anyway; the odds are deliberately poor.
 		random = {
 			chance = spn_menace_first_notice_$SEVERITY$_value
-			spn_open_menace_trail_effect = { COUNTY = $COUNTY$ CULPRIT = $CULPRIT$ KIND = $KIND$ SEVERITY = $SEVERITY$ }
+			spn_open_menace_trail_effect = { COUNTY = scope:spn_mm_county CULPRIT = scope:spn_mm_culprit KIND = $KIND$ SEVERITY = $SEVERITY$ }
 		}
 		# If the roll failed, the county still half-remembers. Tested on the MODIFIER rather than on the roll,
 		# because the roll's own result is not a thing script can read afterwards.
 		if = {
-			limit = { $COUNTY$ = { NOT = { has_county_modifier = spn_menace_modifier } } }
-			$COUNTY$ = {
-				set_variable = { name = spn_menace_whisper value = $CULPRIT$ years = 1 }
+			limit = { scope:spn_mm_county = { NOT = { has_county_modifier = spn_menace_modifier } } }
+			scope:spn_mm_county = {
+				set_variable = { name = spn_menace_whisper value = scope:spn_mm_culprit years = 1 }
 			}
 			# The incident dedupe still has to happen, or a feed that ends in a kill rolls twice for one night.
 			# spn_open_menace_trail_effect sets this itself on the other path; this is the whisper's copy.
-			$CULPRIT$ = {
+			scope:spn_mm_culprit = {
 				add_character_flag = { flag = spn_menace_marked_recently days = 3 }
 			}
 		}
@@ -122,10 +126,12 @@ spn_open_menace_trail_effect = {
 		# The entry expires on its own after the same five years the modifier does, and readers test the modifier
 		# anyway (spn_trailsman_trail_is_warm_trigger), so a stale entry is inert rather than wrong. Guarded so a
 		# county that is marked twice is listed once.
+		# 2.37 -- refreshed on every mark, like the modifier and the culprit, and still listed once.
 		if = {
-			limit = { NOT = { is_target_in_global_variable_list = { name = spn_menace_counties target = this } } }
-			add_to_global_variable_list = { name = spn_menace_counties target = this years = 5 }
+			limit = { is_target_in_global_variable_list = { name = spn_menace_counties target = this } }
+			remove_list_global_variable = { name = spn_menace_counties target = this }
 		}
+		add_to_global_variable_list = { name = spn_menace_counties target = this years = 5 }
 		set_variable = { name = spn_menace_culprit value = $CULPRIT$ years = 5 }
 		# 2.35h -- THE CULPRIT'S OWN LIST OF WHAT HE HAS LEFT BEHIND, so that when he dies the trails he
 		# made can be found without scanning the world. Read by spn_menace_culprit_died_effect below.
@@ -503,11 +509,20 @@ spn_menace_culprit_died_effect = {
 		}
 		else = {
 			# Nothing left here. Take the whole thing off rather than leave an unhuntable mark on the map.
-			remove_county_modifier = spn_menace_modifier
-			if = { limit = { has_variable = spn_menace_culprit }  remove_variable = spn_menace_culprit }
-			if = { limit = { has_variable = spn_menace_kind }     remove_variable = spn_menace_kind }
-			if = { limit = { has_variable = spn_menace_count }    remove_variable = spn_menace_count }
-			if = { limit = { has_variable = spn_menace_notified } remove_variable = spn_menace_notified }
+			spn_menace_clear_county_effect = yes
 		}
 	}
+}
+
+# 2.37 -- the county's trail, cleared (extracted from the else branch above, so Timber's Vanish calls the same lines
+# and nothing is copied). County scope.
+spn_menace_clear_county_effect = {
+	if = {
+		limit = { has_county_modifier = spn_menace_modifier }
+		remove_county_modifier = spn_menace_modifier
+	}
+	if = { limit = { has_variable = spn_menace_culprit }  remove_variable = spn_menace_culprit }
+	if = { limit = { has_variable = spn_menace_kind }     remove_variable = spn_menace_kind }
+	if = { limit = { has_variable = spn_menace_count }    remove_variable = spn_menace_count }
+	if = { limit = { has_variable = spn_menace_notified } remove_variable = spn_menace_notified }
 }

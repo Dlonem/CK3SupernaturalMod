@@ -1,0 +1,233 @@
+﻿# Supernatural 2.37 -- the hide's interactions (WORK-ORDER-2.37 §6.5, §8.1). Loc: zz_spn_hide_l_english.yml.
+
+# ---- Silverback: Stand Over Them (§6.5) ----
+spn_stand_over_them_interaction = {
+	category = interaction_category_favorites # 2.37: the mod's Supernatural menu (Thomas, 3 Oct)
+	icon = courtier_interaction
+	desc = spn_stand_over_them_interaction_desc
+	cooldown = { years = 5 }
+	auto_accept = yes
+	ai_targets = {
+		ai_recipients = family
+		max = 6
+	}
+	ai_targets = {
+		ai_recipients = courtiers
+		max = 6
+	}
+	ai_frequency = 36
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			has_trait = spn_champion_silverback
+			trigger_if = {
+				limit = { exists = var:spn_hide_beat_silverback }
+				var:spn_hide_beat_silverback >= 3
+			}
+			trigger_else = { always = no }
+		}
+		scope:recipient = {
+			is_alive = yes
+			OR = {
+				is_close_family_of = scope:actor
+				is_spouse_of = scope:actor
+				is_courtier_of = scope:actor
+			}
+		}
+	}
+	on_accept = {
+		scope:recipient = {
+			set_variable = { name = spn_silverback_guard value = scope:actor years = 5 }
+		}
+		custom_tooltip = spn_stand_over_them_interaction_tt
+	}
+	ai_will_do = {
+		base = 10
+		modifier = {
+			add = 15
+			scope:actor = { has_trait = brave }
+		}
+		modifier = {
+			add = 15
+			scope:actor = { has_trait = just }
+		}
+		modifier = {
+			add = 15
+			scope:actor = { has_trait = honest }
+		}
+		modifier = {
+			add = 15
+			scope:actor = { has_trait = compassionate }
+		}
+		modifier = {
+			add = 15
+			scope:actor = { has_trait = strong }
+		}
+		modifier = {
+			add = 20
+			scope:recipient = { is_close_family_of = scope:actor }
+		}
+		# 2.37o: only a hunter's quarry needs guarding, and hunts are made against creatures (the review of 4 Oct, F9:
+		# it was spent on mortals, for five years at a time).
+		modifier = {
+			factor = 0
+			scope:recipient = { spn_hunt_is_creature_trigger = no }
+		}
+	}
+}
+
+# ---- Tundra: Read Them (§6.5). The reveal idiom of 20_spn_secret_effects.txt. ----
+spn_read_them_interaction = {
+	category = interaction_category_favorites # 2.37: the mod's Supernatural menu (Thomas, 3 Oct)
+	icon = icon_discovered_scheme
+	desc = spn_read_them_interaction_desc
+	cooldown = { years = 5 }
+	auto_accept = yes
+	use_diplomatic_range = yes
+	ai_targets = {
+		ai_recipients = scripted_relations
+		max = 6
+	}
+	ai_targets = {
+		ai_recipients = neighboring_rulers
+		max = 4
+	}
+	ai_frequency = 36
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			has_trait = spn_champion_tundra
+			trigger_if = {
+				limit = { exists = var:spn_hide_beat_tundra }
+				var:spn_hide_beat_tundra >= 3
+			}
+			trigger_else = { always = no }
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_read_them_nothing_tt
+				any_secret = { NOT = { is_known_by = scope:actor } }
+			}
+		}
+	}
+	on_accept = {
+		scope:recipient = {
+			random_secret = {
+				limit = { NOT = { is_known_by = scope:actor } }
+				reveal_to = scope:actor
+			}
+		}
+	}
+	ai_will_do = {
+		base = 10
+		modifier = {
+			add = 15
+			scope:actor = { has_trait = calm }
+		}
+		modifier = {
+			add = 15
+			scope:actor = { has_trait = deceitful }
+		}
+		modifier = {
+			add = 15
+			scope:actor = { has_trait = ambitious }
+		}
+		modifier = {
+			add = 15
+			scope:actor = { has_trait = patient }
+		}
+		modifier = {
+			add = 30
+			scope:actor = { has_relation_rival = scope:recipient }
+		}
+	}
+}
+
+# ---- Ask to Unbind the Hide (§8.1). A champion asks a great mage to take the hide's spirit out of him. ----
+spn_ask_to_unbind_interaction = {
+	category = interaction_category_favorites # 2.37: the mod's Supernatural menu (Thomas, 3 Oct)
+	icon = icon_cross
+	desc = spn_ask_to_unbind_interaction_desc
+	greeting = positive
+	notification_text = spn_ask_to_unbind_interaction_notification
+	ai_min_reply_days = 1
+	ai_max_reply_days = 5
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = { spn_is_champion_trigger = yes }
+		scope:recipient = {
+			OR = {
+				has_trait = archmage
+				has_trait = true_witch
+			}
+			OR = {
+				spn_knows_about_character_being_lycan_trigger = { CHARACTER = scope:actor }
+				spn_knows_about_character_being_hybrid_trigger = { CHARACTER = scope:actor }
+			}
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_ask_to_unbind_gold_tt
+				gold >= 150
+			}
+		}
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_ask_to_unbind_power_tt
+				can_spend_standard_ps_trigger = yes
+			}
+			is_imprisoned = no
+		}
+	}
+	on_accept = {
+		scope:actor = {
+			pay_short_term_gold = {
+				target = scope:recipient
+				gold = 150
+			}
+		}
+		scope:recipient = {
+			spend_standard_ps_effect = yes
+			save_scope_as = spn_unbinder
+		}
+		scope:actor = {
+			save_scope_as = spn_unbound
+			increase_wounds_no_death_effect = { REASON = fight }
+			# 2.37e: one line for what it does; the exit itself hidden (its tooltip showed him still the champion).
+			custom_tooltip = spn_ask_to_unbind_effect_tt
+			hidden_effect = { spn_hide_exit_effect = { REASON = flag:unbound } }
+			trigger_event = spn_hide.0330
+		}
+		# The ringing (§18): other champions and senses hear it -- run as the caster, the scope the effect reads.
+		scope:recipient = {
+			save_scope_as = magic_user
+			send_message_4_magic_sense_effect = yes
+			trigger_event = spn_hide.0331
+		}
+	}
+	ai_accept = {
+		base = -20
+		opinion_modifier = {
+			who = scope:recipient
+			opinion_target = scope:actor
+			multiplier = 1
+		}
+		modifier = {
+			add = 20
+			scope:recipient = { has_trait = greedy }
+			desc = spn_ai_greedy
+		}
+		modifier = {
+			add = -50
+			scope:recipient = { spn_has_hunter_trait = yes }
+			desc = spn_ai_hunter
+		}
+	}
+	ai_will_do = {
+		base = 0
+	}
+}

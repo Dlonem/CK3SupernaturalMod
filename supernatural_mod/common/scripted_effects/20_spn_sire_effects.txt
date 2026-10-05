@@ -7,6 +7,7 @@ spn_assign_conferred_sire = {
 		value = $CHARACTER$
 	}
 	add_character_flag = spn_has_conferred_sire
+	add_character_flag = { flag = spn_sire_just_set days = 1 } # 2.37b -- read by spn_kickoff_wound_incubation
 }
 
 spn_assign_conferred_progeny = {
@@ -138,6 +139,15 @@ spn_kickoff_wound_incubation = {
 	set_variable = { name = spn_last_wound_event value = 0 } # for the no-immediate-repeat guard
 	set_variable = { name = spn_wound_c10 value = 0 } # per-event fire counters (caps)
 	set_variable = { name = spn_wound_c11 value = 0 }
+	# 2.37b -- the one who gave this wound keeps a list of those still in its fever (the Gathering's Fevered rule).
+	if = {
+		limit = {
+			has_character_flag = spn_sire_just_set
+			var:spn_conferred_sire ?= { is_alive = yes }
+		}
+		save_scope_as = spn_fevered_one
+		var:spn_conferred_sire = { add_to_variable_list = { name = spn_my_fevered target = scope:spn_fevered_one } }
+	}
 	# Hidden incubation length: the climax fires at a random point 1-3 years from now.
 	trigger_event = { id = spn_wound_incubation.9000 days = { 365 1095 } }
 	# First pulse event arrives in roughly 3-4 months.
@@ -202,6 +212,21 @@ spn_clear_wound_incubation_state = {
 	remove_variable = spn_last_wound_event
 	remove_variable = spn_wound_c10
 	remove_variable = spn_wound_c11
+	remove_variable = spn_wound_c60 # 2.37 -- It Lies Beside the Bed, so a second infection sees it again
+	# 2.37b -- the Gathering's Fevered: off his sire's list, and the pack's carrying ends with the fever.
+	if = {
+		limit = { var:spn_conferred_sire ?= { is_alive = yes } }
+		save_scope_as = spn_fevered_done
+		var:spn_conferred_sire = {
+			if = {
+				limit = { is_target_in_variable_list = { name = spn_my_fevered target = scope:spn_fevered_done } }
+				remove_list_variable = { name = spn_my_fevered target = scope:spn_fevered_done }
+			}
+		}
+	}
+	remove_character_flag = spn_pack_carried
+	remove_character_flag = spn_pack_carries_me
+	remove_variable = spn_pack_carried_by
 	remove_character_flag = spn_had_healer_event
 	remove_character_flag = spn_faith_crisis_done
 }
@@ -229,6 +254,29 @@ spn_complete_wound_turn = {
 		else = {
 			add_opinion = { target = scope:the_sire modifier = spn_grateful_for_gift }
 		}
+		# 2.37 -- his maker's pack asks (§13.2): An Invitation, three days on, while there is room.
+		if = {
+			limit = {
+				spn_packs_on_trigger = yes
+				scope:the_sire = { has_variable = spn_pack }
+			}
+			scope:the_sire.var:spn_pack = { save_scope_as = spn_inv_pack }
+			scope:spn_inv_pack.story_owner = { save_scope_as = spn_inv_alpha }
+			if = {
+				limit = { scope:spn_inv_pack = { spn_pack_has_room_trigger = yes } }
+				trigger_event = { id = spn_pack.0011 days = 3 }
+			}
+		}
+	}
+	# 2.37b -- carried through the fever by a pack at a Gathering: he wakes in it (spn_pack.0014, a day on).
+	if = {
+		limit = {
+			spn_packs_on_trigger = yes
+			has_character_flag = spn_pack_carried
+			var:spn_pack_carried_by ?= { is_alive = yes has_variable = spn_pack }
+		}
+		var:spn_pack_carried_by.var:spn_pack = { save_scope_as = spn_carry_pack }
+		trigger_event = { id = spn_pack.0014 days = 1 }
 	}
 	add_character_flag = spn_turned_werewolf
 	# 2.34: the clawed memory (and the clawer's). Reads spn_conferred_sire and forced_turning, so it must sit
@@ -258,6 +306,7 @@ spn_resolve_wound_climax = {
 			modifier = { add = 4  has_character_flag = spn_yielding_to_the_change }
 			modifier = { add = 3  has_character_flag = voluntary_turning }
 			modifier = { add = 3  scope:climax_lean = 2 }
+			modifier = { add = 3  has_character_flag = spn_pack_carries_me } # 2.37b
 			trigger_event = spn_wound_incubation.9010
 		}
 		# --- Clean Turn ---
@@ -268,6 +317,8 @@ spn_resolve_wound_climax = {
 			modifier = { add = 5  has_character_flag = spn_yielding_to_the_change }
 			modifier = { add = 4  has_trait = strong }
 			modifier = { add = 4  scope:climax_lean = 2 }
+			modifier = { add = 4  has_character_flag = spn_pack_carried } # 2.37b
+			modifier = { add = 6  has_character_flag = spn_pack_carries_me } # 2.37b
 			trigger_event = spn_wound_incubation.9011
 		}
 		# --- Rough Turn ---
@@ -305,6 +356,8 @@ spn_resolve_wound_climax = {
 			modifier = { add = -8  has_trait = strong }
 			modifier = { add = -4  has_trait = brave }
 			modifier = { add = 5  scope:climax_lean = 0 }
+			modifier = { factor = 0.75  has_character_flag = spn_pack_carried } # 2.37b
+			modifier = { factor = 0.6  has_character_flag = spn_pack_carries_me } # 2.37b
 			trigger_event = spn_wound_incubation.9030
 		}
 	}

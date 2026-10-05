@@ -1,0 +1,685 @@
+﻿# Supernatural 2.37 -- the Pack's interactions (WORK-ORDER-2.37 §13.2, §13.5, §17.3). Loc: zz_spn_hide_l_english.yml.
+# (The dead duel file, 10_spn_duel_interactions.txt, is gone: all comments, nothing read it.)
+
+# ---- Invite to the Pack (§13.2) ----
+spn_invite_to_pack_interaction = {
+	category = interaction_category_favorites # 2.37: the mod's Supernatural menu (Thomas, 3 Oct)
+	icon = guest
+	desc = spn_invite_to_pack_interaction_desc
+	greeting = positive
+	notification_text = spn_invite_to_pack_interaction_notification
+	# Two years between invitations to the same wolf, one for Tundra's champion (§13.2, C10): the engine's cooldown is
+	# the shorter, and a two-year record on the recipient holds everyone else to the longer.
+	cooldown_against_recipient = { years = 1 }
+	ai_min_reply_days = 1
+	ai_max_reply_days = 5
+	ai_targets = {
+		ai_recipients = family
+		max = 6
+	}
+	ai_targets = {
+		ai_recipients = scripted_relations
+		max = 6
+	}
+	ai_targets = {
+		ai_recipients = courtiers
+		max = 6
+	}
+	ai_frequency = 24
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		spn_packs_on_trigger = yes
+		scope:actor = { spn_is_alpha_trigger = yes }
+		scope:recipient = {
+			spn_is_wolf_trigger = yes
+			is_adult = yes
+			NOT = { exists = var:spn_pack }
+			spn_host_knows_wolf_trigger = { HOST = scope:actor }
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor.var:spn_pack = {
+			custom_tooltip = {
+				text = spn_pack_full_tt
+				spn_pack_has_room_trigger = yes
+			}
+		}
+		scope:recipient = { is_imprisoned = no }
+		trigger_if = {
+			limit = { scope:actor = { NOT = { has_trait = spn_champion_tundra } } }
+			custom_tooltip = {
+				text = spn_invite_recently_tt
+				scope:recipient = { NOT = { is_target_in_variable_list = { name = spn_pack_invited_by target = scope:actor } } }
+			}
+		}
+	}
+	on_send = {
+		scope:recipient = {
+			add_to_variable_list = { name = spn_pack_invited_by target = scope:actor years = 2 }
+		}
+	}
+	on_accept = {
+		scope:actor.var:spn_pack = { save_scope_as = spn_inv_pack }
+		spn_pack_add_member_effect = { WHO = scope:recipient PACK = scope:spn_inv_pack }
+	}
+	ai_accept = {
+		base = -10
+		opinion_modifier = {
+			who = scope:recipient
+			opinion_target = scope:actor
+			multiplier = 0.5
+		}
+		modifier = {
+			add = 15
+			scope:recipient = { spn_pack_standing_value >= 25 }
+			desc = spn_ai_pack_standing
+		}
+		modifier = {
+			add = 50
+			scope:recipient = {
+				OR = {
+					is_close_family_of = scope:actor
+					has_relation_ww_clawed = scope:actor
+					has_relation_ww_clawed_by = scope:actor
+				}
+			}
+			desc = spn_ai_pack_kin
+		}
+		modifier = {
+			add = 30
+			scope:actor = { spn_is_champion_trigger = yes }
+			desc = spn_ai_pack_champion_alpha
+		}
+		modifier = {
+			add = 20
+			scope:actor = { has_trait = spn_champion_tundra }
+			desc = spn_ai_pack_tundra
+		}
+		modifier = {
+			add = 30
+			scope:actor.var:spn_pack = {
+				any_in_list = {
+					variable = spn_pack_members
+					OR = {
+						has_relation_friend = scope:recipient
+						has_relation_lover = scope:recipient
+					}
+				}
+			}
+			desc = spn_ai_pack_friend_inside
+		}
+		modifier = {
+			add = -30
+			scope:recipient = {
+				OR = {
+					has_trait = shy
+					has_trait = paranoid
+				}
+			}
+			desc = spn_ai_pack_wary
+		}
+	}
+	ai_will_do = {
+		base = 20
+		modifier = {
+			add = 20
+			scope:actor = { has_trait = gregarious }
+		}
+		modifier = {
+			add = 30
+			scope:recipient = { spn_is_champion_trigger = yes }
+		}
+	}
+}
+
+# ---- Challenge (§13.5). A brawl, no swords. A player recipient must answer. ----
+spn_challenge_interaction = {
+	category = interaction_category_favorites # 2.37: the mod's Supernatural menu (Thomas, 3 Oct)
+	icon = icon_combat
+	desc = spn_challenge_interaction_desc
+	greeting = negative
+	notification_text = spn_challenge_interaction_notification # 2.37o: says why (spn_ChallengeWhy)
+	# 2.37i: as vanilla's own challenge (challenge_for_artifact_interaction): it pops up and pauses for a player who is
+	# challenged, and it can be sent to a wolf who will refuse -- refusing is the answer that costs standing.
+	popup_on_receive = yes
+	pause_on_receive = yes
+	can_send_despite_rejection = yes
+	on_decline_summary = spn_challenge_decline_summary
+	cooldown = { years = 1 }
+	cooldown_against_recipient = { years = 2 }
+	ai_min_reply_days = 1
+	ai_max_reply_days = 3
+	ai_targets = {
+		ai_recipients = scripted_relations
+		max = 6
+	}
+	ai_targets = {
+		ai_recipients = courtiers
+		max = 6
+	}
+	# 2.37o: kin run together, and a pack is often a family. (Every member already finds his alpha among his scripted
+	# relations -- spn_pack_mate links each member to the alpha -- but not his pack-mates.)
+	ai_targets = {
+		ai_recipients = family
+		max = 6
+	}
+	ai_frequency = 24
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = { spn_pack_challenge_shown_trigger = { TARGET = scope:recipient } }
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			is_imprisoned = no
+			custom_tooltip = {
+				text = spn_challenge_too_hurt_tt
+				NOR = {
+					has_trait_rank = {
+						trait = wounded
+						rank = 2
+					}
+					has_trait_rank = {
+						trait = wounded
+						rank = 3
+					}
+				}
+			}
+		}
+		scope:recipient = {
+			is_imprisoned = no
+			# 2.37i: nor a wolf who is already badly hurt (the challenger's own rule, both ways).
+			custom_tooltip = {
+				text = spn_challenge_target_too_hurt_tt
+				NOR = {
+					has_trait_rank = {
+						trait = wounded
+						rank = 2
+					}
+					has_trait_rank = {
+						trait = wounded
+						rank = 3
+					}
+				}
+			}
+		}
+		# The alpha: only by the Second, or by anyone once the Second has lost to him within two years; and at 50.
+		trigger_if = {
+			limit = { scope:recipient = { spn_is_alpha_trigger = yes } }
+			trigger_if = {
+				limit = { scope:actor = { exists = var:spn_pack } }
+				trigger_if = {
+					limit = { scope:actor.var:spn_pack = scope:recipient.var:spn_pack }
+					custom_tooltip = {
+						text = spn_challenge_second_first_tt
+						OR = {
+							scope:actor.var:spn_pack.var:spn_pack_second ?= scope:actor
+							scope:actor.var:spn_pack = { exists = var:spn_second_lost_to_alpha }
+						}
+					}
+					custom_tooltip = {
+						text = spn_challenge_alpha_standing_tt
+						scope:actor = { spn_pack_standing_value >= 50 }
+					}
+				}
+			}
+		}
+	}
+	on_accept = {
+		spn_clash_lean_tooltip_effect = { A = scope:actor B = scope:recipient FORM = yes }
+		spn_pack_challenge_effect = { A = scope:actor B = scope:recipient }
+	}
+	on_decline = {
+		scope:recipient = {
+			spn_pack_add_standing_effect = { VALUE = -10 }
+		}
+	}
+	ai_accept = {
+		base = 20
+		modifier = {
+			add = 20
+			scope:recipient = {
+				OR = {
+					has_trait = brave
+					has_trait = wrathful
+					has_trait = arrogant
+				}
+			}
+			desc = spn_ai_challenge_bold
+		}
+		modifier = {
+			add = -30
+			scope:recipient = { has_trait = craven }
+			desc = spn_ai_challenge_craven
+		}
+		modifier = {
+			add = 30
+			scope:recipient = { has_relation_rival = scope:actor }
+			desc = spn_ai_challenge_rival
+		}
+		# 2.37i: a wolf knows when he is outmatched. Refusing costs him standing, so only the clear cases.
+		modifier = {
+			add = -25
+			scope:actor = { spn_is_champion_trigger = yes }
+			scope:recipient = { spn_is_champion_trigger = no }
+			desc = spn_ai_challenge_champion
+		}
+		# 2.37o: read on the clash itself (prowess, the wolf track, Hide Strength, a hybrid's weight): he would win
+		# fewer than about two fights in five. Was 15 prowess, which a champion's hide or a hybrid's weight made wrong.
+		modifier = {
+			add = -20
+			scope:recipient = { NOT = { spn_ai_clash_edge_trigger = { FOE = scope:actor EDGE = 0.8 } } }
+			NOT = {
+				AND = {
+					scope:actor = { spn_is_champion_trigger = yes }
+					scope:recipient = { spn_is_champion_trigger = no }
+				}
+			}
+			desc = spn_ai_challenge_outmatched
+		}
+	}
+	# 2.37o (Thomas, 4 Oct: never "for no reason"): a wolf challenges for a reason, and the gates at the end make it
+	# zero without one. Against an alpha: his own alpha is too weak for the pack, or cruel to the better of it; from
+	# outside the pack, a feud. Against anyone else: a feud, or climbing his own pack. The tests are in
+	# zz_spn_hide_triggers.txt ("WHY A WOLF CHALLENGES"); the fire and the Gathering intent read the same ones.
+	ai_will_do = {
+		base = 0
+		# The reasons.
+		modifier = {
+			add = 30
+			scope:recipient = { spn_is_alpha_trigger = yes }
+			scope:actor = { spn_ai_alpha_weak_trigger = { ALPHA = scope:recipient } }
+		}
+		modifier = {
+			add = 30
+			scope:recipient = { spn_is_alpha_trigger = yes }
+			scope:actor = { spn_ai_alpha_cruel_trigger = { ALPHA = scope:recipient } }
+		}
+		modifier = {
+			add = 15
+			scope:recipient = { spn_is_alpha_trigger = yes }
+			scope:actor = {
+				spn_ai_same_pack_trigger = { WHO = scope:recipient }
+				spn_ai_pack_turned_trigger = { ALPHA = scope:recipient }
+			}
+		}
+		modifier = {
+			add = 25
+			scope:actor = { spn_ai_feud_trigger = { FOE = scope:recipient } }
+		}
+		modifier = {
+			add = 20
+			scope:recipient = { spn_is_alpha_trigger = no }
+			scope:actor = { spn_ai_climb_trigger = { FOE = scope:recipient } }
+		}
+		# The odds, on the clash itself: he picks fights he can win.
+		modifier = {
+			add = 15
+			scope:actor = { spn_ai_clash_edge_trigger = { FOE = scope:recipient EDGE = 1.3 } }
+		}
+		modifier = {
+			add = -15
+			scope:actor = { NOT = { spn_ai_clash_edge_trigger = { FOE = scope:recipient EDGE = 1 } } }
+		}
+		# A wolf who stands against a cruel alpha will take worse odds than one who only smells weakness.
+		modifier = {
+			add = -40
+			scope:actor = {
+				NOT = { spn_ai_clash_edge_trigger = { FOE = scope:recipient EDGE = 0.8 } }
+				NOT = { spn_ai_alpha_cruel_trigger = { ALPHA = scope:recipient } }
+			}
+		}
+		modifier = {
+			add = -15
+			scope:actor = {
+				NOT = { spn_ai_clash_edge_trigger = { FOE = scope:recipient EDGE = 0.8 } }
+				spn_ai_alpha_cruel_trigger = { ALPHA = scope:recipient }
+			}
+		}
+		# His temper.
+		modifier = {
+			add = 15
+			scope:actor = { has_trait = ambitious }
+		}
+		modifier = {
+			add = 10
+			scope:actor = { has_trait = wrathful }
+		}
+		modifier = {
+			add = 10
+			scope:actor = { has_trait = brave }
+		}
+		modifier = {
+			add = -30
+			scope:actor = {
+				OR = {
+					has_trait = content
+					has_trait = craven
+				}
+			}
+		}
+		# A loyal wolf bears with a weak alpha. Not with a cruel one.
+		modifier = {
+			add = -25
+			scope:actor = {
+				has_trait = loyal
+				spn_ai_same_pack_trigger = { WHO = scope:recipient }
+				NOT = { spn_ai_alpha_cruel_trigger = { ALPHA = scope:recipient } }
+			}
+			scope:recipient = { spn_is_alpha_trigger = yes }
+		}
+		# No reason, no challenge.
+		modifier = {
+			factor = 0
+			scope:recipient = { spn_is_alpha_trigger = yes }
+			scope:actor = { NOT = { spn_ai_alpha_challenge_cause_trigger = { ALPHA = scope:recipient } } }
+		}
+		modifier = {
+			factor = 0
+			scope:recipient = { spn_is_alpha_trigger = no }
+			scope:actor = { NOT = { spn_ai_wolf_challenge_cause_trigger = { FOE = scope:recipient } } }
+		}
+	}
+}
+
+# ---- Ask to Run With [Alpha]'s Pack (§17.3). Leave and join in one step. ----
+spn_ask_to_run_with_interaction = {
+	category = interaction_category_favorites # 2.37: the mod's Supernatural menu (Thomas, 3 Oct)
+	icon = change_allegiance
+	desc = spn_ask_to_run_with_interaction_desc
+	greeting = positive
+	notification_text = spn_ask_to_run_with_interaction_notification
+	cooldown_against_recipient = { years = 2 }
+	ai_min_reply_days = 1
+	ai_max_reply_days = 5
+	ai_targets = {
+		ai_recipients = scripted_relations
+		ai_recipients = neighboring_rulers
+		ai_recipients = peer_vassals
+		ai_recipients = nearby_domicile_owners
+		max = 8
+	}
+	ai_frequency = 24
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		spn_packs_on_trigger = yes
+		scope:actor = {
+			spn_is_wolf_trigger = yes
+			is_adult = yes
+			spn_is_alpha_trigger = no
+		}
+		scope:recipient = {
+			spn_is_alpha_trigger = yes
+			spn_gathering_not_in_pack_trigger_for = { WHO = scope:actor }
+		}
+		# 2.37e: the asker must know the alpha is a wolf (WO §17.3). It was the other way round, and the trigger's
+		# "openly known wolf" clause then showed this on every secret alpha in the world.
+		scope:recipient = { spn_host_knows_wolf_trigger = { HOST = scope:actor } }
+	}
+	is_valid_showing_failures_only = {
+		scope:recipient.var:spn_pack ?= {
+			custom_tooltip = {
+				text = spn_pack_full_tt
+				spn_pack_has_room_trigger = yes
+			}
+		}
+	}
+	on_accept = {
+		# 2.37o: only while the pack he asked to join is still there and has room. An answer comes days later, and he
+		# was taken out of his own pack first (the review of 4 Oct, F14).
+		if = {
+			limit = {
+				scope:recipient = { spn_is_alpha_trigger = yes }
+				scope:recipient.var:spn_pack ?= { spn_pack_has_room_trigger = yes }
+				scope:actor = {
+					spn_is_alpha_trigger = no
+					spn_gathering_not_in_pack_trigger_for = { WHO = scope:recipient }
+				}
+			}
+			scope:recipient.var:spn_pack = { save_scope_as = spn_rw_pack }
+			scope:actor = {
+				if = {
+					limit = { exists = var:spn_pack }
+					var:spn_pack.story_owner ?= { save_scope_as = spn_rw_old_alpha }
+					spn_pack_remove_member_effect = { WHO = scope:actor REASON = flag:left }
+				}
+			}
+			spn_pack_add_member_effect = { WHO = scope:actor PACK = scope:spn_rw_pack }
+			if = {
+				limit = { exists = scope:spn_rw_old_alpha }
+				spn_pack_house_step_effect = {
+					A = scope:spn_rw_old_alpha
+					B = scope:recipient
+					VALUE = house_relation_damage_minor_value
+					REASON = spn_lured_away
+				}
+			}
+		}
+		else = {
+			custom_tooltip = spn_moment_passed_tt
+		}
+	}
+	ai_accept = {
+		base = -10
+		opinion_modifier = {
+			who = scope:recipient
+			opinion_target = scope:actor
+			multiplier = 0.5
+		}
+		modifier = {
+			add = 15
+			scope:actor = { spn_pack_standing_value >= 25 }
+			desc = spn_ai_pack_standing
+		}
+		modifier = {
+			add = 50
+			scope:actor = {
+				OR = {
+					is_close_family_of = scope:recipient
+					has_relation_ww_clawed = scope:recipient
+					has_relation_ww_clawed_by = scope:recipient
+				}
+			}
+			desc = spn_ai_pack_kin
+		}
+		modifier = {
+			add = 30
+			scope:actor = { spn_is_champion_trigger = yes }
+			desc = spn_ai_pack_champion_asker
+		}
+		# 2.37o: a pack of one or two needs wolves (the 1141 run: both packs stayed packs of one).
+		modifier = {
+			add = 20
+			scope:recipient.var:spn_pack ?= { var:spn_pack_size <= 2 }
+			desc = spn_ai_pack_small
+		}
+	}
+	# 2.37o (the review of 4 Oct, F10): a wolf asks for a reason. A lone wolf looks for a pack; a wolf in one asks only
+	# when he has had enough of his own alpha, or a friend or lover runs in the other. Fickle and loyal lean it.
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 30
+			scope:actor = { NOT = { exists = var:spn_pack } }
+		}
+		modifier = {
+			add = 30
+			scope:actor = {
+				exists = var:spn_pack
+				opinion = {
+					target = var:spn_pack.story_owner
+					value <= -25
+				}
+			}
+		}
+		modifier = {
+			add = 30
+			scope:recipient.var:spn_pack = {
+				any_in_list = {
+					variable = spn_pack_members
+					OR = {
+						has_relation_friend = scope:actor
+						has_relation_lover = scope:actor
+					}
+				}
+			}
+		}
+		modifier = {
+			add = 10
+			scope:recipient = { spn_is_champion_trigger = yes }
+		}
+		modifier = {
+			add = 15
+			scope:actor = { has_trait = fickle }
+		}
+		modifier = {
+			add = -40
+			scope:actor = { has_trait = loyal }
+		}
+		# No reason, no move: a wolf content with his own pack stays.
+		modifier = {
+			factor = 0
+			scope:actor = {
+				exists = var:spn_pack
+				opinion = {
+					target = var:spn_pack.story_owner
+					value > -25
+				}
+			}
+			NOT = {
+				scope:recipient.var:spn_pack = {
+					any_in_list = {
+						variable = spn_pack_members
+						OR = {
+							has_relation_friend = scope:actor
+							has_relation_lover = scope:actor
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+# ---- Lure Away (§17.3). An alpha who knows the politics, or stands high, invites another pack's wolf. ----
+spn_lure_away_interaction = {
+	category = interaction_category_favorites # 2.37: the mod's Supernatural menu (Thomas, 3 Oct)
+	icon = fabricate_hook_interaction
+	desc = spn_lure_away_interaction_desc
+	greeting = positive
+	notification_text = spn_lure_away_interaction_notification
+	cooldown_against_recipient = { years = 5 }
+	ai_min_reply_days = 1
+	ai_max_reply_days = 5
+	ai_targets = {
+		ai_recipients = scripted_relations
+		ai_recipients = neighboring_rulers
+		ai_recipients = peer_vassals
+		ai_recipients = nearby_domicile_owners
+		max = 8
+	}
+	ai_frequency = 24
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		spn_packs_on_trigger = yes
+		scope:actor = {
+			spn_is_alpha_trigger = yes
+			OR = {
+				has_perk = wolf_politics_perk
+				spn_pack_standing_value >= 75
+			}
+		}
+		scope:recipient = {
+			spn_is_wolf_trigger = yes
+			exists = var:spn_pack
+			spn_is_alpha_trigger = no
+			spn_gathering_not_in_pack_trigger_for = { WHO = scope:actor }
+			spn_host_knows_wolf_trigger = { HOST = scope:actor } # 2.37e: only a wolf he knows is one
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor.var:spn_pack = {
+			custom_tooltip = {
+				text = spn_pack_full_tt
+				spn_pack_has_room_trigger = yes
+			}
+		}
+	}
+	on_accept = {
+		scope:actor.var:spn_pack = { save_scope_as = spn_la_pack }
+		scope:recipient.var:spn_pack.story_owner ?= { save_scope_as = spn_la_old_alpha }
+		spn_pack_remove_member_effect = { WHO = scope:recipient REASON = flag:left }
+		spn_pack_add_member_effect = { WHO = scope:recipient PACK = scope:spn_la_pack }
+		if = {
+			limit = { exists = scope:spn_la_old_alpha }
+			scope:spn_la_old_alpha = { add_opinion = { target = scope:actor modifier = spn_lured_away_opinion } }
+			spn_pack_house_step_effect = {
+				A = scope:spn_la_old_alpha
+				B = scope:actor
+				VALUE = house_relation_damage_medium_value
+				REASON = spn_lured_away
+			}
+		}
+	}
+	ai_accept = {
+		base = 0
+		opinion_modifier = {
+			who = scope:recipient
+			opinion_target = scope:actor
+			multiplier = 0.5
+		}
+		# Less what he thinks of his own alpha (is_shown keeps him in a pack).
+		opinion_modifier = {
+			who = scope:recipient
+			opinion_target = scope:recipient.var:spn_pack.story_owner
+			multiplier = -0.5
+			desc = spn_ai_lure_own_alpha
+		}
+		modifier = {
+			add = 20
+			scope:recipient = { has_trait = fickle }
+			desc = spn_ai_lure_fickle
+		}
+		modifier = {
+			add = 15
+			scope:recipient = { has_trait = ambitious }
+			desc = spn_ai_lure_ambitious
+		}
+		modifier = {
+			add = -40
+			scope:recipient = { has_trait = loyal }
+			desc = spn_ai_lure_loyal
+		}
+		modifier = {
+			add = 30
+			scope:actor.var:spn_pack = {
+				any_in_list = {
+					variable = spn_pack_members
+					OR = {
+						has_relation_friend = scope:recipient
+						has_relation_lover = scope:recipient
+					}
+				}
+			}
+			desc = spn_ai_pack_friend_inside
+		}
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 20
+			scope:actor = { has_trait = ambitious }
+		}
+		modifier = {
+			add = 30
+			scope:actor.var:spn_pack = {
+				any_in_list = {
+					variable = spn_pack_members
+					OR = {
+						has_relation_friend = scope:recipient
+						has_relation_lover = scope:recipient
+					}
+				}
+			}
+		}
+	}
+}
