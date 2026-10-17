@@ -1,0 +1,1124 @@
+﻿# Supernatural 2.39 -- Imperium and the council's works (WORK-ORDER-2.39 F12, F13). The state model is at the top of
+# common/scripted_triggers/zz_spn_imperium_triggers.txt. Extends Witchcraft's own meeting ("the second part",
+# magic_ev10.85), its council support modifier (mage_council_support_modifier, renamed "Imperium" in the replace loc),
+# F1's yes/no rule (Aye must beat Nay; a tie refuses), the Order's crime (spn_order_broke_rules_effect) and Respondeo's
+# own three effects. Not a second vote system, not a second support modifier, not a second memory system.
+#
+# Order of a motion: open (bank the voters) -> levers (a player Grand Magus picks one in Before the Council Votes; an AI
+# picks by nature; none in an emergency session) -> start (the AI seats vote at once, the fallback count is queued) ->
+# next (each player seat in Witchcraft's turn order) -> count (once: spn_imp_counted) -> the result.
+
+# ==================================================================================================
+# THE MOTION
+# ==================================================================================================
+# Open a vote of the council on this Grand Magus's motion. $MOTION$ = flag:imperium | flag:respondeo; $CRISIS$ = flag:none
+# for a motion he brings, or flag:death | flag:rift | flag:plague | flag:hunters for an emergency session (no levers, no
+# meeting). Grand Magus scope.
+spn_imperium_open_effect = {
+	save_scope_as = spn_imp_gm
+	# The vote's number. global_var:spn_imp_serial only ever counts up; it is bookkeeping (identity state), so it has no
+	# expiry. A ballot carries it, so a window left open from an earlier vote never counts in this one.
+	if = {
+		limit = { NOT = { exists = global_var:spn_imp_serial } }
+		set_global_variable = { name = spn_imp_serial value = 0 }
+	}
+	change_global_variable = { name = spn_imp_serial add = 1 }
+	set_variable = { name = spn_imp_vote_id value = global_var:spn_imp_serial days = 60 }
+	save_scope_value_as = { name = spn_imp_ballot value = global_var:spn_imp_serial }
+	set_variable = { name = spn_imp_open value = yes days = 60 }
+	set_variable = { name = spn_imp_motion value = $MOTION$ days = 60 }
+	set_variable = { name = spn_imp_crisis value = $CRISIS$ days = 60 }
+	set_variable = { name = spn_imp_yes value = 0 days = 60 }
+	set_variable = { name = spn_imp_no value = 0 days = 60 }
+	set_variable = { name = spn_imp_pledges value = 0 days = 60 }
+	set_variable = { name = spn_imp_pledge_slips value = 0 days = 60 }
+	if = {
+		limit = { has_variable = spn_imp_counted }
+		remove_variable = spn_imp_counted
+	}
+	if = {
+		limit = { has_variable = spn_imp_struck }
+		remove_variable = spn_imp_struck
+	}
+	if = {
+		limit = { has_variable = spn_imp_rm_target }
+		remove_variable = spn_imp_rm_target
+	}
+	if = {
+		limit = { has_variable_list = spn_imp_voters }
+		clear_variable_list = spn_imp_voters
+	}
+	if = {
+		limit = { has_variable_list = spn_imp_nays }
+		clear_variable_list = spn_imp_nays
+	}
+	if = {
+		limit = { has_variable_list = spn_imp_pledgers }
+		clear_variable_list = spn_imp_pledgers
+	}
+	# The councillor a staged rift struck (The Ground Splits saves him) weighs Aye in the session it brings.
+	if = {
+		limit = {
+			exists = scope:spn_imp_struck
+			var:spn_imp_crisis = flag:rift
+		}
+		set_variable = { name = spn_imp_struck value = scope:spn_imp_struck days = 60 }
+	}
+	# An emergency session has no meeting to end, and it leaves spn_imp_in_meeting alone: that marker belongs to the
+	# meeting's own motion (I1), and only the count of a motion he brought moves it into its result (review LOW-7).
+	# What the Great Respondeo is aimed at (the yearly pulse's cache, banked for this vote).
+	if = {
+		limit = { var:spn_imp_motion = flag:respondeo }
+		global_var:spn_respondeo_magna_target ?= { save_scope_as = spn_rm_ruler }
+		if = {
+			limit = { exists = scope:spn_rm_ruler }
+			set_variable = { name = spn_imp_rm_target value = scope:spn_rm_ruler days = 60 }
+		}
+	}
+	# The voters: the three seat holders in Witchcraft's own turn order, kept as a list on the Grand Magus (not saved
+	# scopes), so one who dies mid-vote cannot stall it. The Grand Magus never votes on his own motion.
+	global_var:current_black_mage_global ?= {
+		if = {
+			limit = { spn_imperium_voter_ok_trigger = yes }
+			spn_imperium_add_voter_effect = { SEAT = 3 }
+		}
+	}
+	global_var:current_loremaster_global ?= {
+		if = {
+			limit = { spn_imperium_voter_ok_trigger = yes }
+			spn_imperium_add_voter_effect = { SEAT = 2 }
+		}
+	}
+	global_var:current_admin_global ?= {
+		if = {
+			limit = { spn_imperium_voter_ok_trigger = yes }
+			spn_imperium_add_voter_effect = { SEAT = 1 }
+		}
+	}
+	# Before the vote: a motion for Imperium he brought himself has its levers first.
+	if = {
+		limit = {
+			var:spn_imp_motion = flag:imperium
+			var:spn_imp_crisis = flag:none
+		}
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_order.1001 # Before the Council Votes; its option starts the vote
+		}
+		else = {
+			spn_imperium_ai_lever_effect = yes
+			spn_imperium_start_effect = yes
+		}
+	}
+	else = {
+		spn_imperium_start_effect = yes
+	}
+}
+
+# One voter onto the list, with his seat for the turn order, and nothing left over from an earlier vote. Voter scope.
+spn_imperium_add_voter_effect = {
+	save_temporary_scope_as = spn_imp_v
+	scope:spn_imp_gm = {
+		add_to_variable_list = { name = spn_imp_voters target = scope:spn_imp_v days = 60 }
+	}
+	set_variable = { name = spn_imp_seat value = $SEAT$ days = 60 }
+	if = {
+		limit = { has_character_flag = spn_imp_voted }
+		remove_character_flag = spn_imp_voted
+	}
+	if = {
+		limit = { has_character_flag = spn_imp_bound }
+		remove_character_flag = spn_imp_bound
+	}
+	if = {
+		limit = { has_character_flag = spn_imp_favour }
+		remove_character_flag = spn_imp_favour
+	}
+	if = {
+		limit = { has_character_flag = spn_imp_paid }
+		remove_character_flag = spn_imp_paid
+	}
+	if = {
+		limit = { has_character_flag = spn_imp_spoke }
+		remove_character_flag = spn_imp_spoke
+	}
+}
+
+# The AI seats vote at once; the hidden fallback count is queued; the first player seat is asked. Grand Magus scope
+# (scope:spn_imp_gm and scope:spn_imp_ballot saved by the open effect).
+spn_imperium_start_effect = {
+	# The vote's state lives 60 days from the day the vote STARTS, not the day the motion opened: a player Grand Magus may
+	# answer Before the Council Votes weeks later, and the state must outlive the 30-day fallback count queued below
+	# (review LOW-2). Re-set with its own value, as vanilla renews a timed variable (00_hunt_effects.txt:3398). Nothing
+	# has been cast yet, so the counters are 0 again, and the nay and pledger lists are still empty.
+	set_variable = { name = spn_imp_open value = yes days = 60 }
+	set_variable = { name = spn_imp_vote_id value = var:spn_imp_vote_id days = 60 }
+	set_variable = { name = spn_imp_motion value = var:spn_imp_motion days = 60 }
+	set_variable = { name = spn_imp_crisis value = var:spn_imp_crisis days = 60 }
+	set_variable = { name = spn_imp_yes value = 0 days = 60 }
+	set_variable = { name = spn_imp_no value = 0 days = 60 }
+	set_variable = { name = spn_imp_pledges value = 0 days = 60 }
+	set_variable = { name = spn_imp_pledge_slips value = 0 days = 60 }
+	if = {
+		limit = {
+			has_variable = spn_imp_in_meeting
+			var:spn_imp_crisis = flag:none
+		}
+		set_variable = { name = spn_imp_in_meeting value = yes days = 60 }
+	}
+	if = {
+		limit = { has_variable = spn_imp_struck }
+		set_variable = { name = spn_imp_struck value = var:spn_imp_struck days = 60 }
+	}
+	if = {
+		limit = { has_variable = spn_imp_rm_target }
+		set_variable = { name = spn_imp_rm_target value = var:spn_imp_rm_target days = 60 }
+	}
+	# The voters and their seats, the same way: the list is rebuilt, so every entry runs 60 days from now.
+	if = {
+		limit = { has_variable_list = spn_imp_voters }
+		every_in_list = {
+			variable = spn_imp_voters
+			add_to_temporary_list = spn_imp_renew
+		}
+		clear_variable_list = spn_imp_voters
+		every_in_list = {
+			list = spn_imp_renew
+			save_temporary_scope_as = spn_imp_v
+			scope:spn_imp_gm = {
+				add_to_variable_list = { name = spn_imp_voters target = scope:spn_imp_v days = 60 }
+			}
+			if = {
+				limit = { has_variable = spn_imp_seat }
+				set_variable = { name = spn_imp_seat value = var:spn_imp_seat days = 60 }
+			}
+		}
+	}
+	every_in_list = {
+		variable = spn_imp_voters
+		limit = {
+			is_ai = yes
+			is_alive = yes
+		}
+		spn_imperium_ai_vote_effect = yes
+	}
+	trigger_event = { id = spn_order.1009 days = 30 } # counts whatever was cast, once (a player seat may never answer)
+	spn_imperium_next_effect = yes
+}
+
+# The next player seat in turn, or the count. Any scope; reads scope:spn_imp_gm.
+spn_imperium_next_effect = {
+	scope:spn_imp_gm = {
+		if = {
+			limit = {
+				spn_imperium_vote_running_trigger = yes
+				any_in_list = {
+					variable = spn_imp_voters
+					spn_imperium_awaits_trigger = yes
+				}
+			}
+			ordered_in_list = {
+				variable = spn_imp_voters
+				limit = { spn_imperium_awaits_trigger = yes }
+				order_by = spn_imperium_turn_value
+				if = {
+					limit = { scope:spn_imp_gm = { var:spn_imp_motion = flag:respondeo } }
+					trigger_event = spn_order.1004 # The Council Pledges
+				}
+				else = {
+					trigger_event = spn_order.1002 # The Grand Magus Asks for Imperium
+				}
+			}
+		}
+		else_if = {
+			limit = { spn_imperium_vote_running_trigger = yes }
+			spn_imperium_count_effect = yes
+		}
+	}
+}
+
+# A player's slip from his vote window: counted only if the ballot is still live (the option's own trigger says the same;
+# this is the guard if a window is answered after the count). Then the next seat. Voter scope.
+spn_imperium_player_vote_effect = {
+	if = {
+		limit = { spn_imperium_ballot_live_trigger = yes }
+		spn_imperium_cast_effect = { VOTE = $VOTE$ }
+		spn_imperium_next_effect = yes
+	}
+}
+
+# A player Grand Magus's lever from Before the Council Votes, then the vote starts (same guard). A lever picked after
+# the motion lapsed does what the window's own lapsed option does. Grand Magus scope.
+spn_imperium_player_lever_effect = {
+	if = {
+		limit = { spn_imperium_ballot_live_trigger = yes }
+		spn_imperium_lever_effect = { LEVER = $LEVER$ }
+		spn_imperium_start_effect = yes
+	}
+	else = {
+		spn_imperium_lapse_effect = yes
+	}
+}
+
+# Before the Council Votes was answered after the motion's 60 days ran out (review LOW-2): the vote never started and
+# nothing was counted. The meeting it was brought to (scope:amage exists only in a meeting's chain) ends now, as it
+# would have after the count, if he still holds the chair; his own next meeting is four years off (Witchcraft's
+# decision cooldown), so no later meeting can be the one ended. Grand Magus scope.
+spn_imperium_lapse_effect = {
+	if = {
+		limit = {
+			exists = scope:amage
+			is_alive = yes
+			global_var:current_archmage_global ?= this
+		}
+		scope:amage = { trigger_event = magic_ev10.92 }
+	}
+}
+
+# One slip. $VOTE$ = flag:aye | flag:nay | flag:blank | flag:pledge (an Aye that pays if the work is carried). Voter scope.
+spn_imperium_cast_effect = {
+	save_temporary_scope_as = spn_imp_caster
+	save_temporary_scope_value_as = { name = spn_imp_slip value = $VOTE$ }
+	add_character_flag = { flag = spn_imp_voted days = 60 }
+	if = {
+		limit = {
+			OR = {
+				scope:spn_imp_slip = flag:aye
+				scope:spn_imp_slip = flag:pledge
+			}
+		}
+		scope:spn_imp_gm = { change_variable = { name = spn_imp_yes add = 1 } }
+		if = {
+			limit = { scope:spn_imp_slip = flag:pledge }
+			scope:spn_imp_gm = {
+				change_variable = { name = spn_imp_pledge_slips add = 1 }
+				add_to_variable_list = { name = spn_imp_pledgers target = scope:spn_imp_caster days = 60 }
+			}
+		}
+	}
+	else_if = {
+		limit = { scope:spn_imp_slip = flag:nay }
+		scope:spn_imp_gm = {
+			change_variable = { name = spn_imp_no add = 1 }
+			add_to_variable_list = { name = spn_imp_nays target = scope:spn_imp_caster days = 60 }
+		}
+	}
+}
+
+# An AI seat votes. The staged-rift secret wins over a hook: a voter who knows it votes Nay even if he is bound
+# (red team L24). A voter the Grand Magus called a hook on votes Aye. Otherwise the hidden roll. An AI never leaves a
+# blank slip. On the Great Respondeo an AI seat always votes Aye, and pledges by nature if it can pay. Voter scope.
+spn_imperium_ai_vote_effect = {
+	if = {
+		limit = { scope:spn_imp_gm = { var:spn_imp_motion = flag:respondeo } }
+		if = {
+			limit = { spn_respondeo_magna_can_pledge_trigger = yes }
+			random = {
+				chance = spn_respondeo_magna_pledge_chance_value
+				spn_imperium_cast_effect = { VOTE = flag:pledge }
+			}
+		}
+		if = {
+			limit = { NOT = { has_character_flag = spn_imp_voted } }
+			spn_imperium_cast_effect = { VOTE = flag:aye }
+		}
+	}
+	else_if = {
+		limit = { spn_imperium_knows_rift_trigger = yes }
+		spn_imperium_cast_effect = { VOTE = flag:nay }
+	}
+	else_if = {
+		limit = { has_character_flag = spn_imp_bound }
+		spn_imperium_cast_effect = { VOTE = flag:aye }
+	}
+	else = {
+		random = {
+			chance = spn_imperium_aye_chance_value
+			spn_imperium_cast_effect = { VOTE = flag:aye }
+		}
+		if = {
+			limit = { NOT = { has_character_flag = spn_imp_voted } }
+			spn_imperium_cast_effect = { VOTE = flag:nay }
+		}
+	}
+}
+
+# ==================================================================================================
+# BEFORE THE VOTE: THE LEVERS (Witchcraft's Seeking Support shape, magic_ev7.111)
+# ==================================================================================================
+# $LEVER$ = flag:hooks | flag:favour | flag:gold | flag:talk | flag:none. Grand Magus scope (scope:spn_imp_gm).
+spn_imperium_lever_effect = {
+	save_temporary_scope_value_as = { name = spn_imp_lv value = $LEVER$ }
+	if = {
+		limit = { scope:spn_imp_lv = flag:hooks }
+		every_in_list = {
+			variable = spn_imp_voters
+			save_temporary_scope_as = spn_imp_v
+			if = {
+				limit = { scope:spn_imp_gm = { has_usable_hook = scope:spn_imp_v } }
+				scope:spn_imp_gm = { use_hook = scope:spn_imp_v }
+				add_character_flag = { flag = spn_imp_bound days = 60 }
+			}
+		}
+	}
+	else_if = {
+		limit = { scope:spn_imp_lv = flag:favour }
+		every_in_list = {
+			variable = spn_imp_voters
+			add_hook = {
+				type = favor_hook
+				target = scope:spn_imp_gm
+			}
+			add_character_flag = { flag = spn_imp_favour days = 60 }
+		}
+	}
+	else_if = {
+		limit = { scope:spn_imp_lv = flag:gold }
+		every_in_list = {
+			variable = spn_imp_voters
+			save_temporary_scope_as = spn_imp_v
+			scope:spn_imp_gm = {
+				pay_short_term_gold = {
+					target = scope:spn_imp_v
+					gold = medium_gold_value_check
+				}
+			}
+			add_character_flag = { flag = spn_imp_paid days = 60 }
+		}
+	}
+	else_if = {
+		limit = { scope:spn_imp_lv = flag:talk }
+		# The shape of spn_conclave.0120's duel, rolled out of sight: the odds are never shown.
+		duel = {
+			skill = diplomacy
+			value = 14
+			60 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 3
+				}
+				every_in_list = {
+					variable = spn_imp_voters
+					add_character_flag = { flag = spn_imp_spoke days = 60 }
+				}
+				if = {
+					limit = { is_ai = no }
+					send_interface_toast = {
+						type = event_toast_effect_good
+						title = spn_imperium_toast_spoke_well
+						left_icon = this
+					}
+				}
+			}
+			40 = {
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -3
+				}
+				if = {
+					limit = { is_ai = no }
+					send_interface_toast = {
+						type = event_toast_effect_neutral
+						title = spn_imperium_toast_spoke_badly
+						left_icon = this
+					}
+				}
+			}
+		}
+	}
+}
+
+# An AI Grand Magus picks one lever by nature (findings/imperium_endgame.md §4.3). Grand Magus scope.
+spn_imperium_ai_lever_effect = {
+	random_list = {
+		100 = {
+			trigger = {
+				any_in_list = {
+					variable = spn_imp_voters
+					scope:spn_imp_gm = { has_usable_hook = prev }
+				}
+			}
+			spn_imperium_lever_effect = { LEVER = flag:hooks }
+		}
+		30 = {
+			modifier = {
+				add = 20
+				has_trait = generous
+			}
+			modifier = {
+				add = -20
+				has_trait = greedy
+			}
+			spn_imperium_lever_effect = { LEVER = flag:favour }
+		}
+		20 = {
+			trigger = { gold >= spn_imperium_gold_need_value }
+			modifier = {
+				add = 20
+				gold > 500
+			}
+			modifier = {
+				add = -30
+				has_trait = greedy
+			}
+			modifier = {
+				factor = 0
+				has_trait = greedy
+				gold <= 500
+			}
+			spn_imperium_lever_effect = { LEVER = flag:gold }
+		}
+		30 = {
+			modifier = {
+				add = 20
+				has_trait = diplomat
+			}
+			modifier = {
+				add = 20
+				has_trait = gregarious
+			}
+			modifier = {
+				add = -20
+				has_trait = shy
+			}
+			spn_imperium_lever_effect = { LEVER = flag:talk }
+		}
+		20 = {
+			spn_imperium_lever_effect = { LEVER = flag:none }
+		}
+	}
+}
+
+# ==================================================================================================
+# THE COUNT AND WHAT FOLLOWS
+# ==================================================================================================
+# Once only (spn_imp_counted). Any scope; reads scope:spn_imp_gm.
+spn_imperium_count_effect = {
+	scope:spn_imp_gm = {
+		set_variable = { name = spn_imp_counted value = yes days = 60 }
+		if = {
+			limit = { has_variable = spn_imp_open }
+			remove_variable = spn_imp_open
+		}
+		# Bank the count before any result is sent (review LOW-3). The Council Has Spoken reads these saved values, never
+		# the Grand Magus's variables, which run out after 60 days and which a later vote resets.
+		save_scope_value_as = { name = spn_imp_ayes value = var:spn_imp_yes }
+		save_scope_value_as = { name = spn_imp_nays_n value = var:spn_imp_no }
+		# 2.39 (Boot 4, 16 Oct): banked as one of two flag literals (from the variable it was refused; The Council Has Spoken
+		# reads only whether there was a crisis)
+		if = {
+			limit = {
+				exists = var:spn_imp_crisis
+				NOT = { var:spn_imp_crisis = flag:none }
+			}
+			save_scope_value_as = { name = spn_imp_was_crisis value = flag:crisis }
+		}
+		else = {
+			save_scope_value_as = { name = spn_imp_was_crisis value = flag:none }
+		}
+		# The meeting this motion was brought to (I1) ends after its result (review LOW-7). The marker moves from the Grand
+		# Magus into this vote's own chain now, so an emergency session that opens while The Council Has Spoken is still
+		# unanswered cannot take the meeting's end from it. An emergency session never ends a meeting. Saved every count,
+		# so a later vote in the same chain never reads an earlier one's.
+		if = {
+			limit = {
+				has_variable = spn_imp_in_meeting
+				var:spn_imp_crisis = flag:none
+			}
+			remove_variable = spn_imp_in_meeting
+			save_scope_value_as = { name = spn_imp_ends_meeting value = yes }
+		}
+		else = {
+			save_scope_value_as = { name = spn_imp_ends_meeting value = no }
+		}
+		if = {
+			limit = { var:spn_imp_motion = flag:respondeo }
+			spn_respondeo_magna_count_effect = yes
+		}
+		else = {
+			spn_imperium_result_effect = yes
+		}
+	}
+}
+
+# Imperium: more Ayes than Nays grants it; a tie or an empty slate refuses (Witchcraft's Summit rule, F1's rule). A
+# motion whose Grand Magus has left the chair simply lapses. Grand Magus scope.
+spn_imperium_result_effect = {
+	# Saved scopes travel down an event chain: nothing from an earlier vote may be read as this one's.
+	clear_saved_scope = spn_imp_result
+	clear_saved_scope = spn_imp_dissenter
+	if = {
+		limit = {
+			is_alive = yes
+			spn_order_on_trigger = yes
+			global_var:current_archmage_global ?= this
+			spn_is_order_member_trigger = yes
+			var:spn_imp_yes > var:spn_imp_no
+		}
+		save_scope_value_as = { name = spn_imp_result value = flag:granted }
+		spn_imperium_grant_effect = yes
+	}
+	else_if = {
+		limit = {
+			is_alive = yes
+			global_var:current_archmage_global ?= this
+		}
+		save_scope_value_as = { name = spn_imp_result value = flag:refused }
+		# The record (3 years). Only a motion he brought leaves one: an emergency session is the reconsideration itself,
+		# so a refusal is reconsidered once, and the dark road opens once per refusal.
+		if = {
+			limit = { var:spn_imp_crisis = flag:none }
+			set_global_variable = { name = spn_imperium_refused value = this years = 3 }
+		}
+		# The most opposed Nay voter, named by the result and the one a staged rift would strike.
+		if = {
+			limit = { has_variable_list = spn_imp_nays }
+			ordered_in_list = {
+				variable = spn_imp_nays
+				limit = { is_alive = yes }
+				order_by = spn_imperium_dissent_value
+				save_scope_as = spn_imp_dissenter
+			}
+		}
+		every_in_list = {
+			variable = spn_imp_voters
+			limit = {
+				is_ai = no
+				is_alive = yes
+			}
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = spn_imperium_toast_refused
+				left_icon = scope:spn_imp_gm
+			}
+		}
+	}
+	# The answer: a player Grand Magus is told and may choose; an AI one may take the dark road.
+	if = {
+		limit = {
+			is_ai = no
+			is_alive = yes
+			exists = scope:spn_imp_result
+		}
+		trigger_event = spn_order.1003 # The Council Has Spoken; it ends the meeting after his choice
+	}
+	else = {
+		if = {
+			limit = { scope:spn_imp_result ?= flag:refused }
+			spn_imperium_ai_stage_effect = yes
+		}
+		spn_imperium_meeting_end_effect = yes
+	}
+}
+
+# What Imperium grants (§4.5). The bank first, the visible changes last. Grand Magus scope.
+spn_imperium_grant_effect = {
+	# 1. Renewal fatigue: the council remembers whom it granted it to (10 years).
+	set_global_variable = { name = spn_imperium_last value = this years = 10 }
+	# 2. Any refusal on record is answered.
+	if = {
+		limit = { has_global_variable = spn_imperium_refused }
+		remove_global_variable = spn_imperium_refused
+	}
+	# 3. Witchcraft's own support modifier, as Extraordinary Measures gives it, for five years by vote.
+	if = {
+		limit = { NOT = { has_character_modifier = mage_council_support_modifier } }
+		add_character_modifier = {
+			modifier = mage_council_support_modifier
+			years = 5
+		}
+	}
+	# 4. Every member is told.
+	spn_order_toast_members_effect = { TITLE = spn_order_toast_imperium_granted }
+	# 5. A player master proclaims a new Prerogative at once.
+	if = {
+		limit = {
+			is_ai = no
+			spn_order_is_master_trigger = yes
+		}
+		trigger_event = { id = spn_order.0940 days = 2 }
+	}
+}
+
+# A meeting the motion was brought to ends, the way Extraordinary Measures ends it (magic_ev10.94's Chancellor branch).
+# Only when the count banked this vote as the meeting's own (scope:spn_imp_ends_meeting, set at every count before any
+# caller runs). scope:amage is the meeting's own. Any scope; reads scope:spn_imp_gm.
+spn_imperium_meeting_end_effect = {
+	if = {
+		limit = {
+			exists = scope:spn_imp_ends_meeting
+			scope:spn_imp_ends_meeting = yes
+			exists = scope:amage
+			scope:spn_imp_gm ?= { is_alive = yes }
+		}
+		scope:amage = { trigger_event = magic_ev10.92 }
+	}
+}
+
+# ==================================================================================================
+# A REFUSAL, AND A CRISIS THAT OVERTURNS IT (§4.6)
+# ==================================================================================================
+# Callable from anywhere: a seat holder's death (I4, Witchcraft's seat remover), A Rift Opens (spn_order.0826), the
+# beetle plague (F4, P5), hunters closing in (F2's watch list, P3), and The Ground Splits. Does nothing unless a refusal
+# is on record and that man is still alive, in the chair, a member, without Imperium, and no vote is running. Clears the
+# record first (a refusal is reconsidered once), then opens an emergency session: the same vote, no meeting, no levers,
+# the AI seats +50. $CRISIS$ = flag:death | flag:rift | flag:plague | flag:hunters.
+spn_imperium_crisis_effect = {
+	if = {
+		limit = {
+			spn_order_on_trigger = yes
+			global_var:spn_imperium_refused ?= {
+				is_alive = yes
+				global_var:current_archmage_global ?= this
+				spn_is_order_member_trigger = yes
+				NOT = { has_character_modifier = mage_council_support_modifier }
+				NOT = { spn_imperium_vote_running_trigger = yes }
+			}
+		}
+		save_temporary_scope_value_as = { name = spn_imp_cr value = $CRISIS$ }
+		global_var:spn_imperium_refused = { save_temporary_scope_as = spn_imp_cr_gm }
+		remove_global_variable = spn_imperium_refused
+		if = {
+			limit = { scope:spn_imp_cr = flag:death }
+			# A seat holder died: the vote waits seven days, so Witchcraft's own remover has emptied his seat first.
+			scope:spn_imp_cr_gm = { trigger_event = { id = spn_order.1008 days = 7 } }
+		}
+		else = {
+			scope:spn_imp_cr_gm = { spn_imperium_open_effect = { CRISIS = $CRISIS$ MOTION = flag:imperium } }
+		}
+	}
+}
+
+# ==================================================================================================
+# THE DARK ROAD: A STAGED RIFT (§4.7)
+# ==================================================================================================
+# Stage it: the price now, the rift where the dissenter stands in 30-90 days (The Ground Splits re-checks everything
+# when it fires, and records the crime first). Grand Magus scope; reads scope:spn_imp_dissenter.
+spn_imperium_stage_effect = {
+	save_scope_as = spn_imp_stager
+	if = {
+		limit = { NOT = { has_character_modifier = spn_fors_factorum_modifier } }
+		spend_huge_ps_effect = yes
+	}
+	scope:spn_imp_dissenter = { trigger_event = { id = spn_order.1005 days = { 30 90 } } }
+}
+
+# An AI Grand Magus who was refused: only with the means, never against a friend, lover or close family, and by nature
+# (spn_imperium_ai_stage_chance_value, 0 if honest, just or compassionate). Grand Magus scope.
+spn_imperium_ai_stage_effect = {
+	if = {
+		limit = {
+			is_ai = yes
+			global_var:spn_imperium_refused ?= this
+			spn_imperium_stage_means_trigger = yes
+			exists = scope:spn_imp_dissenter
+			scope:spn_imp_dissenter = { spn_imperium_stage_target_ok_trigger = { GM = scope:spn_imp_gm } }
+		}
+		random = {
+			chance = spn_imperium_ai_stage_chance_value
+			spn_imperium_stage_effect = yes
+		}
+	}
+}
+
+# The staged rift exposed (the secret's on_expose; by anyone, with vanilla's Expose Secret, or at a Conclave). Read and
+# bank first; the void last. Owner scope. $VICTIM$ = scope:secret_target.
+spn_imperium_exposed_effect = {
+	save_scope_as = spn_imp_exposed
+	# 1. Bank: did he hold Imperium, and is he still the Grand Magus?
+	if = {
+		limit = { spn_imperium_holds_trigger = yes }
+		save_temporary_scope_value_as = { name = spn_imp_held_it value = yes }
+	}
+	if = {
+		limit = { global_var:current_archmage_global ?= this }
+		save_temporary_scope_value_as = { name = spn_imp_in_chair value = yes }
+	}
+	# 2. The Order's existing crime (10-year flag, his Temple Magus's opinion). The Reckoning and Invocare read it.
+	if = {
+		limit = { spn_is_order_member_trigger = yes }
+		spn_order_broke_rules_effect = yes
+	}
+	# 3. Every other seat holder.
+	global_var:current_black_mage_global ?= {
+		if = {
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_imp_exposed }
+			}
+			add_opinion = { target = scope:spn_imp_exposed modifier = spn_betrayed_the_order_opinion }
+		}
+	}
+	global_var:current_loremaster_global ?= {
+		if = {
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_imp_exposed }
+			}
+			add_opinion = { target = scope:spn_imp_exposed modifier = spn_betrayed_the_order_opinion }
+		}
+	}
+	global_var:current_admin_global ?= {
+		if = {
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_imp_exposed }
+			}
+			add_opinion = { target = scope:spn_imp_exposed modifier = spn_betrayed_the_order_opinion }
+		}
+	}
+	# 4. The councillor it struck (vanilla attempted_murder_opinion).
+	$VICTIM$ ?= {
+		if = {
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_imp_exposed }
+			}
+			add_opinion = { target = scope:spn_imp_exposed modifier = attempted_murder_opinion }
+		}
+	}
+	# 5. Invocare opens at once (F1's world cooldown, P3's). Only against the man in the chair: an old crime exposed after
+	# he left it must not open the vote against his successor.
+	if = {
+		limit = {
+			exists = scope:spn_imp_in_chair
+			exists = global_var:spn_invocare_cd
+		}
+		remove_global_variable = spn_invocare_cd
+	}
+	# 6. Last: Imperium is void. (Removing the modifier also re-opens Witchcraft's Extraordinary Measures to him in a
+	# future world crisis, which is right.)
+	if = {
+		limit = { exists = scope:spn_imp_held_it }
+		remove_character_modifier = mage_council_support_modifier
+		spn_order_toast_members_effect = { TITLE = spn_order_toast_imperium_void }
+	}
+}
+
+# ==================================================================================================
+# AT THE CONCLAVE (the show's turning point)
+# ==================================================================================================
+# The Masks (the phase before the Reckoning): every player member who came and knows what the Grand Magus did is asked
+# whether to say it, so his answer is in before anyone is judged. Host scope; scope:activity.
+spn_conclave_unmask_ask_effect = {
+	clear_saved_scope = spn_cv_gm
+	global_var:current_archmage_global ?= {
+		if = {
+			limit = {
+				is_alive = yes
+				any_secret = { secret_type = spn_secret_staged_rift }
+			}
+			save_scope_as = spn_cv_gm
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_cv_gm }
+		scope:activity = {
+			every_attending_character = {
+				limit = {
+					is_ai = no
+					spn_is_order_member_trigger = yes
+					NOT = { this = scope:spn_cv_gm }
+					any_known_secret = {
+						secret_type = spn_secret_staged_rift
+						secret_owner = scope:spn_cv_gm
+					}
+				}
+				trigger_event = spn_conclave.0210 # What the Grand Magus Did
+			}
+		}
+	}
+}
+
+# The Reckoning's FIRST step (before the charges are banked and the accused collected): if no one has said it yet, the
+# AI member who came and knows it best may say it in the room. At most one exposure a Conclave (spn_cv_unmasked).
+# Host scope; scope:activity.
+spn_conclave_unmask_ai_effect = {
+	if = {
+		limit = {
+			NOT = { scope:activity = { has_variable = spn_cv_unmasked } }
+			global_var:current_archmage_global ?= {
+				is_alive = yes
+				any_secret = { secret_type = spn_secret_staged_rift }
+			}
+		}
+		global_var:current_archmage_global = { save_scope_as = spn_cv_gm }
+		clear_saved_scope = spn_cv_unmasker
+		scope:activity = {
+			ordered_attending_character = {
+				limit = {
+					is_ai = yes
+					spn_is_order_member_trigger = yes
+					NOT = { this = scope:spn_cv_gm }
+					any_known_secret = {
+						secret_type = spn_secret_staged_rift
+						secret_owner = scope:spn_cv_gm
+					}
+				}
+				order_by = spn_conclave_unmask_ai_chance_value
+				save_scope_as = spn_cv_unmasker
+			}
+		}
+		scope:spn_cv_unmasker ?= {
+			random = {
+				chance = spn_conclave_unmask_ai_chance_value
+				scope:activity = { set_variable = { name = spn_cv_unmasked value = yes days = 60 } }
+				scope:spn_cv_gm = {
+					random_secret = {
+						limit = {
+							secret_type = spn_secret_staged_rift
+							is_known_by = scope:spn_cv_unmasker
+						}
+						expose_secret = scope:spn_cv_unmasker
+					}
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# F13 THE GREAT RESPONDEO (a realm forgets)
+# ==================================================================================================
+# Yearly, in the Order's pulse: one pass over the trail-county list (no world walk), counting live trails per independent
+# ruler with a temporary variable (removed at the end), and the best ruler with five or more, in whose realm an Order
+# member lives, is cached for a year. A trigger cannot set variables, so this is an effect (red team M10 item 4).
+spn_respondeo_magna_target_effect = {
+	if = {
+		limit = { has_global_variable = spn_respondeo_magna_target }
+		remove_global_variable = spn_respondeo_magna_target
+	}
+	if = {
+		limit = {
+			spn_council_works_open_trigger = yes
+			NOT = { exists = global_var:spn_respondeo_magna_cd }
+			exists = global_var:current_archmage_global
+		}
+		every_in_global_list = {
+			variable = spn_menace_counties
+			limit = {
+				has_county_modifier = spn_menace_modifier
+				exists = holder
+			}
+			holder.top_liege = {
+				if = {
+					limit = { NOT = { is_in_list = spn_rm_rulers } }
+					add_to_temporary_list = spn_rm_rulers
+					set_variable = { name = spn_rm_trails value = 0 days = 1 } # temporary: removed below
+				}
+				change_variable = { name = spn_rm_trails add = 1 }
+			}
+		}
+		every_in_list = {
+			list = spn_rm_rulers
+			limit = {
+				var:spn_rm_trails >= 5
+				is_alive = yes
+				is_independent_ruler = yes
+			}
+			save_temporary_scope_as = spn_rm_cand
+			if = {
+				limit = { spn_respondeo_magna_member_there_trigger = { RULER = scope:spn_rm_cand } }
+				add_to_temporary_list = spn_rm_ok
+			}
+		}
+		ordered_in_list = {
+			list = spn_rm_ok
+			order_by = var:spn_rm_trails
+			set_global_variable = { name = spn_respondeo_magna_target value = this years = 1 }
+		}
+		every_in_list = {
+			list = spn_rm_rulers
+			remove_variable = spn_rm_trails
+		}
+	}
+}
+
+# A seat's pledge, paid when the council carries the work (an Aye that pays): the Chancellor 200 from the council's
+# funds, the Keeper and the Adeptus Major standard power. Each pledger earns standing under Silence. Pledger scope.
+spn_respondeo_magna_pay_effect = {
+	if = {
+		limit = { global_var:current_admin_global ?= this }
+		decrease_mc_funds_effect = { VALUE = 200 }
+	}
+	else = {
+		spend_standard_ps_effect = yes
+	}
+	spn_order_deed_effect = { PREROGATIVE = flag:silence AMOUNT = 15 TOAST = yes }
+}
+
+# The count of the Great Respondeo. It passes on Aye > Nay; the more seats pledge, the more it does. Grand Magus scope.
+spn_respondeo_magna_count_effect = {
+	clear_saved_scope = spn_rm_ruler
+	var:spn_imp_rm_target ?= { save_scope_as = spn_rm_ruler }
+	if = {
+		limit = {
+			is_alive = yes
+			spn_order_on_trigger = yes
+			global_var:current_archmage_global ?= this
+			spn_is_order_member_trigger = yes
+			var:spn_imp_yes > var:spn_imp_no
+			exists = scope:spn_rm_ruler
+			scope:spn_rm_ruler = { is_alive = yes }
+			can_spend_huge_ps_trigger = yes
+			NOT = { exists = global_var:spn_respondeo_magna_cd }
+		}
+		save_scope_value_as = { name = spn_rm_result value = flag:passed }
+		# 1. Bank: the 20-year cooldown, and who actually pays (a pledger who can no longer pay does not count).
+		set_global_variable = { name = spn_respondeo_magna_cd value = yes years = 20 }
+		if = {
+			limit = { has_global_variable = spn_respondeo_magna_target }
+			remove_global_variable = spn_respondeo_magna_target
+		}
+		if = {
+			limit = { has_variable_list = spn_imp_pledgers }
+			every_in_list = {
+				variable = spn_imp_pledgers
+				limit = {
+					is_alive = yes
+					spn_respondeo_magna_can_pledge_trigger = yes
+				}
+				spn_respondeo_magna_pay_effect = yes
+				scope:spn_imp_gm = { change_variable = { name = spn_imp_pledges add = 1 } }
+			}
+		}
+		# 2. The Grand Magus casts it and takes Respondeo's own price (spn_order_respondeo_effect).
+		spend_huge_ps_effect = yes
+		increase_wounds_no_death_effect = { REASON = fight }
+		add_stress = major_stress_impact_gain
+		add_character_modifier = { modifier = spn_order_respondeo_modifier years = 1 }
+		spn_order_deed_effect = { PREROGATIVE = flag:silence AMOUNT = 15 TOAST = yes }
+		# 3. Any pass: every trail county in that realm is cleared (Respondeo's own county clear).
+		every_in_global_list = {
+			variable = spn_menace_counties
+			limit = {
+				has_county_modifier = spn_menace_modifier
+				holder ?= { top_liege ?= scope:spn_rm_ruler }
+			}
+			spn_menace_clear_county_effect = yes
+		}
+		# 4. Two pledges or more: the members known in that realm are forgotten there (C9's rule, as Pulveris does it).
+		if = {
+			limit = { var:spn_imp_pledges >= 2 }
+			spn_respondeo_magna_forget_effect = yes
+		}
+		# 5. Three pledges: watched hunters in that realm lose what they learned of a temple.
+		if = {
+			limit = { var:spn_imp_pledges >= 3 }
+			spn_respondeo_magna_unwatch_effect = yes
+		}
+	}
+	else_if = {
+		limit = {
+			is_alive = yes
+			var:spn_imp_yes > var:spn_imp_no
+		}
+		save_scope_value_as = { name = spn_rm_result value = flag:failed } # carried, but the working never began
+	}
+	else = {
+		save_scope_value_as = { name = spn_rm_result value = flag:refused }
+	}
+	# Bank the pledges that were paid (review LOW-3): A Realm Forgets reads this, never the live variable.
+	if = {
+		limit = { has_variable = spn_imp_pledges }
+		save_scope_value_as = { name = spn_rm_pledges value = var:spn_imp_pledges }
+	}
+	else = {
+		save_scope_value_as = { name = spn_rm_pledges value = 0 }
+	}
+	spn_respondeo_magna_tell_effect = yes
+	spn_imperium_meeting_end_effect = yes
+}
+
+# Two pledges: every member whose Blue Rose secret is known by anyone in that realm has it reset by the rule Pulveris
+# uses (spn_order_forget_secret_effect: the engine cannot make one man forget, so the secret is re-issued and told again
+# only to his own temple). The members are banked first, then reset. Reads scope:spn_rm_ruler.
+spn_respondeo_magna_forget_effect = {
+	every_in_global_list = {
+		variable = spn_order_chapters
+		limit = { exists = var:spn_order_chapter }
+		var:spn_order_chapter = {
+			every_in_list = {
+				variable = spn_order_members
+				limit = {
+					is_alive = yes
+					spn_is_order_member_trigger = yes
+					any_secret = {
+						secret_type = spn_secret_blue_rose
+						any_secret_knower = { top_liege ?= scope:spn_rm_ruler }
+					}
+				}
+				add_to_temporary_list = spn_rm_forget
+			}
+		}
+	}
+	every_in_list = {
+		list = spn_rm_forget
+		spn_order_forget_secret_effect = { WHO = this }
+	}
+}
+
+# Three pledges: hunters on F2's watch list (global list spn_order_watched, P3's) in that realm lose
+# var:spn_hunter_knows_chapter, so Break the Order's lines turn red again: harder, never locked. A guarded mind (the
+# Draught of a Clear Mind, F17, through has_immunity_for_magic_domination) keeps it.
+# Every writer of the variable (2.39): zz_spn_order_effects.txt spn_order_outsider_result_effect and
+# spn_order_hunter_learns_effect, and F15's cellar search. Removers: The Adeptus Major Moves (two options) and this.
+spn_respondeo_magna_unwatch_effect = {
+	if = {
+		limit = { has_global_variable_list = spn_order_watched }
+		every_in_global_list = {
+			variable = spn_order_watched
+			limit = {
+				is_alive = yes
+				top_liege ?= scope:spn_rm_ruler
+				exists = var:spn_hunter_knows_chapter
+				has_immunity_for_magic_domination = no
+			}
+			remove_variable = spn_hunter_knows_chapter
+		}
+	}
+}
+
+# "A Realm Forgets" to every player seat and the Grand Magus, and, when it passed, to the realm's player members.
+# Grand Magus scope.
+spn_respondeo_magna_tell_effect = {
+	if = {
+		limit = {
+			is_ai = no
+			is_alive = yes
+		}
+		add_to_temporary_list = spn_rm_tell
+	}
+	every_in_list = {
+		variable = spn_imp_voters
+		limit = {
+			is_ai = no
+			is_alive = yes
+			NOT = { is_in_list = spn_rm_tell }
+		}
+		add_to_temporary_list = spn_rm_tell
+	}
+	if = {
+		limit = { scope:spn_rm_result ?= flag:passed }
+		every_in_global_list = {
+			variable = spn_order_chapters
+			limit = { exists = var:spn_order_chapter }
+			var:spn_order_chapter = {
+				every_in_list = {
+					variable = spn_order_members
+					limit = {
+						is_ai = no
+						is_alive = yes
+						top_liege ?= scope:spn_rm_ruler
+						NOT = { is_in_list = spn_rm_tell }
+					}
+					add_to_temporary_list = spn_rm_tell
+				}
+			}
+		}
+	}
+	every_in_list = {
+		list = spn_rm_tell
+		trigger_event = spn_order.1006 # A Realm Forgets
+	}
+}

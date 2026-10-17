@@ -1,0 +1,577 @@
+﻿namespace = spn_conclave
+
+# Supernatural 2.38b -- the Conclave (DESIGN-2.38b §4). The activity: zz_spn_conclave.txt. Effects:
+# zz_spn_conclave_effects.txt. Loc: localization/english/event_localization/spn_conclave_l_english.yml.
+
+# .0001 -- The Masks Must Meet. A player asked to call the Conclave: the planner opens from here.
+spn_conclave.0001 = {
+	type = character_event
+	title = spn_conclave.0001.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { var:spn_conclave_reason ?= flag:chair }
+				desc = spn_conclave.0001.desc_chair
+			}
+			triggered_desc = {
+				trigger = { var:spn_conclave_reason ?= flag:prerogative }
+				desc = spn_conclave.0001.desc_prerogative
+			}
+			# 2.39 (WORK-ORDER-2.39 F1): Invocare.
+			triggered_desc = {
+				trigger = {
+					var:spn_conclave_reason ?= flag:invocare
+					var:spn_conclave_iv_caller ?= root
+				}
+				desc = spn_conclave.0001.desc_invocare_self
+			}
+			triggered_desc = {
+				trigger = { var:spn_conclave_reason ?= flag:invocare }
+				desc = spn_conclave.0001.desc_invocare
+			}
+			desc = spn_conclave.0001.desc_will
+		}
+		triggered_desc = {
+			trigger = { exists = scope:spn_cv_second }
+			desc = spn_conclave.0001.desc_second
+		}
+	}
+	theme = learning
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = personality_rational }
+	# 2.38c: your second, the highest member of your temple after you (Thomas: "so it doesn't feel like it's just me").
+	right_portrait = {
+		character = scope:spn_cv_second
+		trigger = { exists = scope:spn_cv_second }
+		animation = personality_bold
+	}
+	trigger = {
+		is_alive = yes
+		has_character_flag = spn_conclave_may_call
+		NOT = { involved_activity ?= { has_activity_type = spn_conclave } } # 2.38c: already planning or travelling to it
+		# 2.39 (WORK-ORDER-2.39 B12 d): the chair may have been filled while the note waited.
+		trigger_if = {
+			limit = { var:spn_conclave_reason ?= flag:chair }
+			NOT = { exists = global_var:current_archmage_global }
+		}
+		# 2.39 (WORK-ORDER-2.39 F1, G1): the Grand Magus the motion names is still in the chair.
+		trigger_if = {
+			limit = { var:spn_conclave_reason ?= flag:invocare }
+			exists = var:spn_conclave_iv_magus
+			global_var:current_archmage_global ?= var:spn_conclave_iv_magus
+		}
+	}
+	on_trigger_fail = {
+		# 2.39 (WORK-ORDER-2.39 B12 d): the chair was filled meanwhile: the call is spent. Only this failure clears it.
+		if = {
+			limit = {
+				var:spn_conclave_reason ?= flag:chair
+				exists = global_var:current_archmage_global
+			}
+			if = {
+				limit = { has_character_flag = spn_conclave_may_call }
+				remove_character_flag = spn_conclave_may_call
+			}
+			remove_variable = spn_conclave_reason
+		}
+		# 2.39 (review L-3): the Grand Magus it named has left the chair, and the chair's own call reached this host while the
+		# motion waited: the call becomes the chair's (one of the two notes is still on its way; failing that, the activity
+		# list serves), and the motion lapses unheard. Nobody pays.
+		else_if = {
+			limit = {
+				var:spn_conclave_reason ?= flag:invocare
+				NOT = { exists = global_var:current_archmage_global }
+				exists = var:spn_conclave_chair_after
+				has_character_flag = spn_conclave_may_call
+			}
+			set_variable = { name = spn_conclave_reason value = flag:chair years = 2 }
+			remove_variable = spn_conclave_chair_after
+			if = {
+				limit = { has_variable = spn_conclave_iv_magus }
+				remove_variable = spn_conclave_iv_magus
+			}
+			if = {
+				limit = { has_variable = spn_conclave_iv_caller }
+				remove_variable = spn_conclave_iv_caller
+			}
+			if = {
+				limit = { has_global_variable = spn_invocare_called }
+				remove_global_variable = spn_invocare_called
+			}
+		}
+		# 2.39 (WORK-ORDER-2.39 F1, G1): the Grand Magus it named has left the chair: the motion lapses, and nobody pays.
+		else_if = {
+			limit = {
+				var:spn_conclave_reason ?= flag:invocare
+				NOT = {
+					AND = {
+						exists = var:spn_conclave_iv_magus
+						global_var:current_archmage_global ?= var:spn_conclave_iv_magus
+					}
+				}
+			}
+			spn_invocare_clear_call_effect = yes
+		}
+	}
+	immediate = {
+		# The named heir first, as the succession does (spn_order_succession_effect); else the highest member.
+		var:spn_order_chapter.var:spn_order_heir ?= {
+			if = {
+				limit = {
+					is_alive = yes
+					NOT = { this = root }
+				}
+				save_scope_as = spn_cv_second
+			}
+		}
+		var:spn_order_chapter ?= {
+			ordered_in_list = {
+				variable = spn_order_members
+				limit = {
+					is_alive = yes
+					NOT = { this = root }
+					spn_is_order_member_trigger = yes
+				}
+				order_by = spn_order_succession_score_value
+				save_scope_as = spn_cv_second_alt
+			}
+		}
+		if = {
+			limit = { NOT = { exists = scope:spn_cv_second } }
+			scope:spn_cv_second_alt ?= { save_scope_as = spn_cv_second }
+		}
+	}
+	option = {
+		name = spn_conclave.0001.a
+		open_view_data = {
+			view = activity_list_detail_host_window
+			data = activity_type:spn_conclave
+		}
+	}
+	option = {
+		name = spn_conclave.0001.b
+		custom_tooltip = spn_conclave.0001.b.tt
+	}
+}
+
+# .0002 -- The Call Goes Out. The host, as the Conclave begins.
+spn_conclave.0002 = {
+	type = activity_event
+	title = spn_conclave.0002.t
+	desc = spn_conclave.0002.desc
+	theme = learning
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = personality_bold }
+	trigger = {
+		is_alive = yes
+		is_ai = no
+	}
+	option = {
+		name = spn_conclave.0002.a
+	}
+}
+
+# ==================================================================================================
+# THE MASKS: the weekly pool. The host's pulse hands one moment to a player who came and has not had it.
+# ==================================================================================================
+spn_conclave.0099 = {
+	type = activity_event
+	hidden = yes
+	immediate = {
+		scope:activity = {
+			random_attending_character = {
+				limit = {
+					is_ai = no
+					NOT = { has_character_flag = spn_cv_moment_seen }
+				}
+				add_character_flag = { flag = spn_cv_moment_seen days = 60 }
+				random_list = {
+					10 = {
+						trigger = { NOT = { has_character_flag = spn_cv_seen_familiar } }
+						trigger_event = spn_conclave.0100
+					}
+					10 = {
+						trigger = { NOT = { has_character_flag = spn_cv_seen_story } }
+						trigger_event = spn_conclave.0110
+					}
+					10 = {
+						trigger = { NOT = { has_character_flag = spn_cv_seen_knows } }
+						trigger_event = spn_conclave.0120
+					}
+				}
+			}
+		}
+	}
+}
+
+# .0100 -- A Familiar Mask. Someone from another temple.
+spn_conclave.0100 = {
+	type = activity_event
+	title = spn_conclave.0100.t
+	desc = spn_conclave.0100.desc
+	theme = learning
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = interested }
+	right_portrait = { character = scope:spn_cv_stranger animation = personality_rational }
+	trigger = {
+		is_alive = yes
+		scope:activity = {
+			any_attending_character = {
+				spn_is_order_member_trigger = yes
+				NOT = { this = root }
+				NOT = { var:spn_order_chapter ?= root.var:spn_order_chapter }
+			}
+		}
+	}
+	immediate = {
+		add_character_flag = { flag = spn_cv_seen_familiar years = 20 }
+		spn_flavor_mark_effect = yes # 2.39 (WORK-ORDER-2.39 F14): marks the flavor gate
+		scope:activity = {
+			random_attending_character = {
+				limit = {
+					spn_is_order_member_trigger = yes
+					NOT = { this = root }
+					NOT = { var:spn_order_chapter ?= root.var:spn_order_chapter }
+				}
+				save_scope_as = spn_cv_stranger
+			}
+		}
+	}
+	option = {
+		name = spn_conclave.0100.a
+		custom_tooltip = spn_conclave.0100.a.tt
+		spn_order_reveal_membership_effect = { WHO = scope:spn_cv_stranger TO = root }
+		spn_order_reveal_membership_effect = { WHO = root TO = scope:spn_cv_stranger }
+		add_opinion = { target = scope:spn_cv_stranger modifier = friendliness_opinion opinion = 15 }
+		reverse_add_opinion = { target = scope:spn_cv_stranger modifier = friendliness_opinion opinion = 15 }
+	}
+	option = {
+		name = spn_conclave.0100.b
+		custom_tooltip = spn_conclave.0100.b.tt
+		spn_order_add_standing_effect = { VALUE = 3 }
+	}
+}
+
+# .0110 -- The Old Story. An old Magistratus tells the Order's history.
+spn_conclave.0110 = {
+	type = activity_event
+	title = spn_conclave.0110.t
+	desc = spn_conclave.0110.desc
+	theme = learning
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = thinking }
+	immediate = {
+		add_character_flag = { flag = spn_cv_seen_story years = 20 }
+		spn_flavor_mark_effect = yes # 2.39 (WORK-ORDER-2.39 F14): marks the flavor gate
+	}
+	option = {
+		name = spn_conclave.0110.a
+		custom_tooltip = spn_conclave.0110.a.tt
+		add_learning_lifestyle_xp = minor_lifestyle_xp
+	}
+	option = {
+		name = spn_conclave.0110.b
+		custom_tooltip = spn_conclave.0110.b.tt
+		add_intrigue_lifestyle_xp = minor_lifestyle_xp
+	}
+}
+
+# .0120 -- A Mask Knows Too Much.
+spn_conclave.0120 = {
+	type = activity_event
+	title = spn_conclave.0120.t
+	desc = spn_conclave.0120.desc
+	theme = intrigue
+	override_background = { reference = mc_shadows }
+	left_portrait = { character = root animation = worry }
+	immediate = {
+		add_character_flag = { flag = spn_cv_seen_knows years = 20 }
+		spn_flavor_mark_effect = yes # 2.39 (WORK-ORDER-2.39 F14): marks the flavor gate
+	}
+	option = {
+		name = spn_conclave.0120.a
+		duel = {
+			skill = intrigue
+			value = 14
+			60 = {
+				desc = spn_conclave.0120.a.success
+				compare_modifier = { value = scope:duel_value multiplier = 3 }
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_conclave.0120.a.success
+					desc = spn_conclave.0120.a.success_desc
+					left_icon = root
+					spn_order_add_standing_effect = { VALUE = 5 }
+				}
+			}
+			40 = {
+				desc = spn_conclave.0120.a.failure
+				compare_modifier = { value = scope:duel_value multiplier = -3 }
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_conclave.0120.a.failure
+					desc = spn_conclave.0120.a.failure_desc
+					left_icon = root
+					add_stress = minor_stress_gain
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_conclave.0120.b
+		custom_tooltip = spn_conclave.0120.b.tt
+		spn_order_add_standing_effect = { VALUE = 3 }
+	}
+	# 2.39 (WORK-ORDER-2.39 F7): a wolf follows the grey mask's scent: option a's success, with no intrigue duel.
+	option = {
+		name = spn_conclave.0120.scent
+		trigger = { spn_is_wolf_trigger = yes }
+		send_interface_toast = {
+			type = event_toast_text_good
+			title = spn_conclave.0120.a.success
+			desc = spn_conclave.0120.scent.desc
+			left_icon = root
+			spn_order_add_standing_effect = { VALUE = 5 }
+		}
+	}
+}
+
+# ==================================================================================================
+# THE RECKONING
+# ==================================================================================================
+# .0200 -- The Accused. A player host judges one member who broke the rules (scope:spn_cv_accused_one).
+spn_conclave.0200 = {
+	type = activity_event
+	title = spn_conclave.0200.t
+	desc = spn_conclave.0200.desc
+	theme = intrigue
+	override_background = { reference = mc_shadows }
+	left_portrait = { character = root animation = personality_rational }
+	right_portrait = { character = scope:spn_cv_accused_one animation = worry }
+	trigger = {
+		is_alive = yes
+		scope:spn_cv_accused_one ?= {
+			is_alive = yes
+			spn_is_order_member_trigger = yes
+		}
+	}
+	option = {
+		name = spn_conclave.0200.a
+		custom_tooltip = spn_conclave.0200.a.tt
+		scope:spn_cv_accused_one = {
+			remove_character_flag = spn_order_broke_rules
+			add_opinion = { target = root modifier = grateful_opinion opinion = 20 }
+		}
+	}
+	option = {
+		name = spn_conclave.0200.b
+		custom_tooltip = spn_conclave.0200.b.tt
+		scope:spn_cv_accused_one = {
+			spn_order_add_standing_effect = { VALUE = -20 }
+			remove_character_flag = spn_order_broke_rules
+		}
+	}
+	option = {
+		name = spn_conclave.0200.c
+		custom_tooltip = spn_conclave.0200.c.tt
+		scope:spn_cv_accused_one = { trigger_event = spn_order.0192 }
+	}
+}
+
+# ==================================================================================================
+# THE ANOINTING
+# ==================================================================================================
+# .0300 -- Make an Entrance. A player who brought proof (spn_conclave_entrance_effect).
+spn_conclave.0300 = {
+	type = activity_event
+	title = spn_conclave.0300.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_cv_proof_art }
+				desc = spn_conclave.0300.desc_item
+			}
+			desc = spn_conclave.0300.desc_kill
+		}
+		triggered_desc = {
+			trigger = { has_character_flag = spn_conclave_raised }
+			desc = spn_conclave.0300.desc_raised
+		}
+	}
+	theme = learning
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = personality_bold }
+	right_portrait = {
+		trigger = { exists = global_var:current_archmage_global }
+		character = global_var:current_archmage_global
+		animation = admiration
+	}
+	option = {
+		name = spn_conclave.0300.a
+	}
+}
+
+# ==================================================================================================
+# THE VOTE
+# ==================================================================================================
+# .0400 -- The Vote. A player voter chooses among the candidates (the activity's list spn_cv_cands).
+spn_conclave.0400 = {
+	type = activity_event
+	title = spn_conclave.0400.t
+	desc = spn_conclave.0400.desc
+	theme = learning
+	override_background = { reference = mc_shadows }
+	left_portrait = { character = root animation = thinking }
+	immediate = {
+		scope:activity = {
+			ordered_in_list = {
+				variable = spn_cv_cands
+				order_by = spn_conclave_candidate_score_value
+				position = 0
+				check_range_bounds = no
+				save_scope_as = spn_cv_c1
+			}
+			if = { # 2.39 (Boot 2, 16 Oct): only when the list is long enough
+				limit = { any_in_list = { variable = spn_cv_cands count >= 2 } }
+				ordered_in_list = {
+					variable = spn_cv_cands
+					order_by = spn_conclave_candidate_score_value
+					position = 1
+					check_range_bounds = no
+					save_scope_as = spn_cv_c2
+				}
+			}
+			if = { # 2.39 (Boot 2, 16 Oct): only when the list is long enough
+				limit = { any_in_list = { variable = spn_cv_cands count >= 3 } }
+				ordered_in_list = {
+					variable = spn_cv_cands
+					order_by = spn_conclave_candidate_score_value
+					position = 2
+					check_range_bounds = no
+					save_scope_as = spn_cv_c3
+				}
+			}
+			if = { # 2.39 (Boot 2, 16 Oct): only when the list is long enough
+				limit = { any_in_list = { variable = spn_cv_cands count >= 4 } }
+				ordered_in_list = {
+					variable = spn_cv_cands
+					order_by = spn_conclave_candidate_score_value
+					position = 3
+					check_range_bounds = no
+					save_scope_as = spn_cv_c4
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_conclave.0400.c1
+		trigger = { exists = scope:spn_cv_c1 }
+		scope:spn_cv_c1 = { change_variable = { name = spn_cv_votes add = 1 } }
+	}
+	option = {
+		name = spn_conclave.0400.c2
+		trigger = { exists = scope:spn_cv_c2 }
+		scope:spn_cv_c2 = { change_variable = { name = spn_cv_votes add = 1 } }
+	}
+	option = {
+		name = spn_conclave.0400.c3
+		trigger = { exists = scope:spn_cv_c3 }
+		scope:spn_cv_c3 = { change_variable = { name = spn_cv_votes add = 1 } }
+	}
+	option = {
+		name = spn_conclave.0400.c4
+		trigger = { exists = scope:spn_cv_c4 }
+		scope:spn_cv_c4 = { change_variable = { name = spn_cv_votes add = 1 } }
+	}
+	option = {
+		name = spn_conclave.0400.abstain
+	}
+}
+
+# .0410 -- Fill the Seats. A player Grand Magus names one member to an empty seat; again while seats and names remain
+# (at most three times: spn_cv_seat_rounds).
+spn_conclave.0410 = {
+	type = character_event
+	title = spn_conclave.0410.t
+	desc = spn_conclave.0410.desc
+	theme = learning
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = personality_rational }
+	trigger = {
+		is_alive = yes
+		global_var:current_archmage_global ?= root
+		spn_conclave_seat_open_trigger = yes
+	}
+	immediate = {
+		# 2.39 (Boot 2, 16 Oct): each round reads its nominees afresh
+		if = { limit = { exists = scope:spn_cv_n1 } clear_saved_scope = spn_cv_n1 }
+		if = { limit = { exists = scope:spn_cv_n2 } clear_saved_scope = spn_cv_n2 }
+		if = { limit = { exists = scope:spn_cv_n3 } clear_saved_scope = spn_cv_n3 }
+		save_scope_as = spn_cv_chair
+		if = {
+			limit = { NOT = { exists = var:spn_cv_seat_rounds } }
+			set_variable = { name = spn_cv_seat_rounds value = 0 days = 30 }
+		}
+		change_variable = { name = spn_cv_seat_rounds add = 1 }
+		every_in_global_list = {
+			variable = spn_order_chapters
+			limit = { exists = var:spn_order_chapter }
+			var:spn_order_chapter = {
+				every_in_list = {
+					variable = spn_order_members
+					limit = { spn_order_seat_candidate_trigger = { CHAIR = scope:spn_cv_chair } }
+					add_to_temporary_list = spn_cv_nominees
+				}
+			}
+		}
+		ordered_in_list = {
+			list = spn_cv_nominees
+			order_by = spn_conclave_seat_score_value
+			position = 0
+			check_range_bounds = no
+			save_scope_as = spn_cv_n1
+		}
+		if = { # 2.39 (Boot 2, 16 Oct): only when the list is long enough
+			limit = { any_in_list = { list = spn_cv_nominees count >= 2 } }
+			ordered_in_list = {
+				list = spn_cv_nominees
+				order_by = spn_conclave_seat_score_value
+				position = 1
+				check_range_bounds = no
+				save_scope_as = spn_cv_n2
+			}
+		}
+		if = { # 2.39 (Boot 2, 16 Oct): only when the list is long enough
+			limit = { any_in_list = { list = spn_cv_nominees count >= 3 } }
+			ordered_in_list = {
+				list = spn_cv_nominees
+				order_by = spn_conclave_seat_score_value
+				position = 2
+				check_range_bounds = no
+				save_scope_as = spn_cv_n3
+			}
+		}
+	}
+	option = {
+		name = spn_conclave.0410.n1
+		trigger = { exists = scope:spn_cv_n1 }
+		scope:spn_cv_n1 = { spn_order_take_seat_effect = yes }
+		spn_conclave_seat_again_effect = yes
+	}
+	option = {
+		name = spn_conclave.0410.n2
+		trigger = { exists = scope:spn_cv_n2 }
+		scope:spn_cv_n2 = { spn_order_take_seat_effect = yes }
+		spn_conclave_seat_again_effect = yes
+	}
+	option = {
+		name = spn_conclave.0410.n3
+		trigger = { exists = scope:spn_cv_n3 }
+		scope:spn_cv_n3 = { spn_order_take_seat_effect = yes }
+		spn_conclave_seat_again_effect = yes
+	}
+	option = {
+		name = spn_conclave.0410.none
+		custom_tooltip = spn_conclave.0410.none.tt
+	}
+}

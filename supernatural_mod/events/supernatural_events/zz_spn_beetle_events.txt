@@ -1,0 +1,403 @@
+﻿namespace = spn_relic
+
+# Supernatural 2.39 -- "The Hermetic Order of the Blue Rose, Part 2": the Homunculus Beetle (WORK-ORDER-2.39 F4).
+# Loc: localization/english/event_localization/zz_spn_239_beetle_l_english.yml. Effects: zz_spn_beetle_effects.txt.
+# Every delayed event re-checks its situation in its own trigger (G4).
+
+# ==================================================================================================
+# .0700 -- The Beetle Wakes. The carrier, 3-10 days after it went in. The plague breaks out wherever he stands now.
+# ==================================================================================================
+spn_relic.0700 = {
+	type = character_event
+	title = spn_relic.0700.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_bw_how ?= flag:swallowed }
+				desc = spn_relic.0700.desc_swallowed
+			}
+			triggered_desc = {
+				trigger = { scope:spn_bw_how ?= flag:forced }
+				desc = spn_relic.0700.desc_forced
+			}
+			desc = spn_relic.0700.desc_slipped
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_bw_outbreak }
+				desc = spn_relic.0700.desc_outbreak
+			}
+			desc = spn_relic.0700.desc_few
+		}
+	}
+	theme = plague
+	override_background = { # 2.39 (final pass, 17 Oct): the texts wake him in his cell or his bed
+		trigger = { is_imprisoned = yes }
+		reference = dungeon
+	}
+	override_background = { reference = bedchamber }
+	left_portrait = { character = root animation = sick }
+	trigger = {
+		is_alive = yes
+		global_var:spn_beetle_carrier ?= root
+		global_var:spn_beetle_state ?= flag:inside
+		spn_beetle_plague_running_trigger = no
+	}
+	immediate = {
+		# F14: the answer to a swallow, a slip or a feeding. It marks the flavor gate and never waits for it.
+		spn_flavor_mark_effect = yes
+		# How it went in (the text), banked: the record is cleared when the beetle comes back.
+		# 2.39 (Boot 3, 16 Oct): a flag cannot be read into a scope value; each is saved as itself
+		if = {
+			limit = { global_var:spn_beetle_how ?= flag:swallowed }
+			save_scope_value_as = { name = spn_bw_how value = flag:swallowed }
+		}
+		else_if = {
+			limit = { global_var:spn_beetle_how ?= flag:forced }
+			save_scope_value_as = { name = spn_bw_how value = flag:forced }
+		}
+		else_if = {
+			limit = { exists = global_var:spn_beetle_how }
+			save_scope_value_as = { name = spn_bw_how value = flag:slipped }
+		}
+		# 1. Where he stands: his location, else his capital, else his court's.
+		if = {
+			limit = { location ?= { exists = county } }
+			location = { save_scope_as = spn_bw_province }
+		}
+		else_if = {
+			limit = { exists = capital_province }
+			capital_province = { save_scope_as = spn_bw_province }
+		}
+		else_if = {
+			limit = { court_owner ?= { exists = capital_province } }
+			court_owner.capital_province = { save_scope_as = spn_bw_province }
+		}
+		# 2. Witchcraft's own Source of Plague, as its Plague spell gives it.
+		add_character_modifier = {
+			modifier = plague_spell_modifier
+			years = 2
+		}
+		# 3. The plague, or (vanilla's epidemic_frequency_disabled rule) only a few around him.
+		if = {
+			limit = {
+				NOT = { has_game_rule = epidemic_frequency_disabled }
+				exists = scope:spn_bw_province
+			}
+			save_scope_value_as = { name = spn_bw_outbreak value = yes }
+			set_global_variable = { name = spn_beetle_province value = scope:spn_bw_province years = 3 }
+			scope:spn_bw_province = {
+				create_epidemic_outbreak = {
+					type = spn_blue_beetle
+					intensity = major
+				}
+			}
+			# The plague's own on_start infects him. If it could not, he has the fever anyway.
+			if = {
+				limit = { NOT = { has_trait = spn_blue_fever } }
+				spn_blue_fever_give_effect = yes
+			}
+			# The Order hears: every player Temple Magus and a player Grand Magus. An AI Temple Magus waits 90 days for them.
+			if = {
+				limit = { spn_order_on_trigger = yes }
+				set_global_variable = { name = spn_beetle_contain_wait value = yes days = 90 }
+				every_in_global_list = {
+					variable = spn_order_chapters
+					limit = {
+						is_alive = yes
+						is_ai = no
+						exists = var:spn_order_chapter
+					}
+					add_to_temporary_list = spn_bw_heads
+				}
+				global_var:spn_order_master ?= {
+					if = {
+						limit = {
+							is_alive = yes
+							is_ai = no
+							NOT = { is_in_list = spn_bw_heads }
+						}
+						add_to_temporary_list = spn_bw_heads
+					}
+				}
+				every_in_list = {
+					list = spn_bw_heads
+					trigger_event = { id = spn_relic.0710 days = 1 }
+				}
+				trigger_event = { id = spn_relic.0711 days = 90 }
+			}
+			# F12: a real crisis may bring a refused Imperium back (it does nothing unless a refusal is on record).
+			spn_imperium_crisis_effect = { CRISIS = flag:plague }
+		}
+		else = {
+			spn_blue_fever_give_effect = yes
+			court_owner ?= {
+				every_courtier = {
+					limit = {
+						NOT = { this = root }
+						exists = location
+						location = root.location
+						can_contract_disease_trigger = { DISEASE = spn_blue_fever }
+					}
+					add_to_temporary_list = spn_bw_near
+				}
+			}
+			random_in_list = {
+				list = spn_bw_near
+				save_scope_as = spn_bw_sick_1
+			}
+			random_in_list = {
+				list = spn_bw_near
+				limit = { NOT = { scope:spn_bw_sick_1 ?= this } }
+				save_scope_as = spn_bw_sick_2
+			}
+			random_in_list = {
+				list = spn_bw_near
+				limit = {
+					NOT = { scope:spn_bw_sick_1 ?= this }
+					NOT = { scope:spn_bw_sick_2 ?= this }
+				}
+				save_scope_as = spn_bw_sick_3
+			}
+			scope:spn_bw_sick_1 ?= { spn_blue_fever_give_effect = yes }
+			scope:spn_bw_sick_2 ?= { spn_blue_fever_give_effect = yes }
+			scope:spn_bw_sick_3 ?= { spn_blue_fever_give_effect = yes }
+		}
+	}
+	option = {
+		name = spn_relic.0700.a
+		trigger = { scope:spn_bw_how ?= flag:swallowed }
+	}
+	option = {
+		name = spn_relic.0700.b
+		trigger = {
+			NOT = { scope:spn_bw_how ?= flag:swallowed }
+		}
+	}
+}
+
+# ==================================================================================================
+# .0701 -- (hidden) Slip the Beetle: the roll, 2-5 days after the choice. The actor; scope:spn_bs_target. Re-checks that
+# the target is alive and still in reach, and that the actor still holds the beetle (Zecchia or a relic war can take it).
+# ==================================================================================================
+spn_relic.0701 = {
+	type = character_event
+	hidden = yes
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_beetle_usable_trigger = yes
+		global_var:spn_beetle_state ?= flag:jar
+		spn_beetle_plague_running_trigger = no
+		scope:spn_bs_target ?= { spn_beetle_slip_reach_trigger = { ACTOR = root } }
+	}
+	on_trigger_fail = {
+		if = {
+			limit = {
+				is_alive = yes
+				is_ai = no
+			}
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = spn_beetle_toast_no_chance
+				left_icon = this
+			}
+		}
+	}
+	immediate = {
+		random = {
+			chance = spn_beetle_slip_chance_value
+			save_scope_value_as = { name = spn_bs_pass value = yes }
+		}
+		if = {
+			limit = { exists = scope:spn_bs_pass }
+			spn_beetle_swallowed_effect = { CARRIER = scope:spn_bs_target USER = root HOW = flag:slipped }
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_good
+					title = spn_beetle_toast_slipped
+					left_icon = scope:spn_bs_target
+				}
+			}
+		}
+		else = {
+			# Seen. Nobody dies of the attempt; the beetle stays with him.
+			scope:spn_bs_target = {
+				add_opinion = {
+					target = root
+					modifier = attempted_murder_opinion
+				}
+				if = {
+					limit = { is_ai = no }
+					send_interface_toast = {
+						type = event_toast_effect_bad
+						title = spn_beetle_toast_attempt
+						left_icon = root
+					}
+				}
+			}
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_bad
+					title = spn_beetle_toast_seen
+					left_icon = scope:spn_bs_target
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# .0710 -- The Blue Plague. Every player Temple Magus and a player Grand Magus, a day after it broke out (Order On).
+# Order crisis management, like the Imperium's events: it neither checks nor marks the flavor gate (F14).
+# ==================================================================================================
+spn_relic.0710 = {
+	type = character_event
+	title = spn_relic.0710.t
+	desc = spn_relic.0710.desc
+	theme = plague
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = worry }
+	trigger = {
+		is_alive = yes
+		spn_order_on_trigger = yes
+		OR = {
+			spn_is_temple_magus_trigger = yes
+			spn_order_is_master_trigger = yes
+		}
+		spn_beetle_plague_running_trigger = yes
+		NOT = { exists = global_var:spn_beetle_contained }
+	}
+	option = {
+		name = spn_relic.0710.a
+		trigger = {
+			can_spend_standard_ps_trigger = yes
+			spn_beetle_plague_running_trigger = yes
+			NOT = { exists = global_var:spn_beetle_contained } # another temple may have paid first
+		}
+		show_as_unavailable = { always = yes }
+		spn_beetle_contain_effect = yes
+		ai_chance = { base = 50 }
+	}
+	option = {
+		name = spn_relic.0710.b
+		trigger = { exists = global_var:spn_beetle_carrier }
+		custom_tooltip = spn_relic.0710.b_tt
+		hidden_effect = {
+			global_var:spn_beetle_carrier ?= { save_scope_as = spn_bp_carrier }
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = spn_beetle_toast_carrier
+				left_icon = scope:spn_bp_carrier
+			}
+		}
+		ai_chance = { base = 25 }
+	}
+	option = {
+		name = spn_relic.0710.c
+		ai_chance = { base = 25 }
+	}
+}
+
+# .0711 -- (hidden) 90 days on: if no player has contained it, the first AI Temple Magus who can pay does. The carrier is
+# only the clock; a dead carrier's copy is lost, and the yearly pass is the backstop.
+spn_relic.0711 = {
+	type = character_event
+	hidden = yes
+	trigger = {
+		spn_order_on_trigger = yes
+		spn_beetle_plague_running_trigger = yes
+		NOT = { exists = global_var:spn_beetle_contained }
+	}
+	immediate = {
+		spn_beetle_ai_contain_effect = yes
+	}
+}
+
+# ==================================================================================================
+# .0720 -- The Blue Fever Passes. 45-120 days after the fever took hold. The Transference may have drawn it already.
+# ==================================================================================================
+spn_relic.0720 = {
+	type = character_event
+	title = spn_relic.0720.t
+	desc = spn_relic.0720.desc
+	theme = recovery
+	left_portrait = { character = root animation = personality_content }
+	trigger = {
+		is_alive = yes
+		has_trait = spn_blue_fever
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes # F14: a report of a change already made. It marks the flavor gate and never waits for it.
+		hidden_effect = { remove_trait = spn_blue_fever }
+	}
+	option = {
+		name = spn_relic.0720.a
+		show_as_tooltip = { remove_trait_force_tooltip = spn_blue_fever }
+	}
+}
+
+# ==================================================================================================
+# .0790 -- DEBUG ONLY (console: event spn_relic.0790). Hand yourself the beetle, force the slip's roll, or bring the
+# beetle back now (WORK-ORDER-2.39 §8.2 F4). Players never reach it.
+# ==================================================================================================
+spn_relic.0790 = {
+	type = character_event
+	title = spn_relic.0790.t
+	desc = spn_relic.0790.desc
+	orphan = yes
+	theme = witchcraft
+	left_portrait = { character = root }
+	option = {
+		name = spn_relic.0790.a
+		# Inside someone: brought back first. Then the jar is moved to you and taken out of any Reliquary; made if none.
+		if = {
+			limit = { global_var:spn_beetle_state ?= flag:inside }
+			spn_beetle_plague_ended_effect = yes
+		}
+		if = {
+			limit = { exists = global_var:spn_beetle_art }
+			global_var:spn_beetle_art = { save_scope_as = spn_dbg_beetle }
+			spn_relic_unpledge_effect = { ART = scope:spn_dbg_beetle }
+			scope:spn_dbg_beetle = {
+				if = {
+					limit = { NOT = { artifact_owner ?= root } }
+					set_owner = {
+						target = root
+						history = {
+							type = given
+							recipient = root
+						}
+					}
+				}
+			}
+		}
+		else = {
+			set_global_variable = spn_beetle_seeded
+			set_global_variable = { name = spn_beetle_state value = flag:jar }
+			spn_relic_make_beetle_effect = { OWNER = root }
+		}
+	}
+	option = {
+		name = spn_relic.0790.b
+		set_global_variable = { name = spn_debug_beetle_slip_force value = 100 years = 1 }
+	}
+	option = {
+		name = spn_relic.0790.c
+		set_global_variable = { name = spn_debug_beetle_slip_force value = 0 years = 1 }
+	}
+	option = {
+		name = spn_relic.0790.d
+		if = {
+			limit = { has_global_variable = spn_debug_beetle_slip_force }
+			remove_global_variable = spn_debug_beetle_slip_force
+		}
+	}
+	option = {
+		name = spn_relic.0790.e
+		spn_beetle_plague_ended_effect = yes
+	}
+	option = { name = spn_debug_events.cancel }
+}

@@ -48,6 +48,11 @@ spn_hunt.0006 = {
 	trigger = {
 		is_alive = yes
 		exists = scope:spn_menace_county
+		# 2.39 (WORK-ORDER-2.39 B12 b): 7-20 days on; seven effects can clear a trail meanwhile.
+		scope:spn_menace_county ?= {
+			has_county_modifier = spn_menace_modifier
+			exists = var:spn_menace_culprit
+		}
 	}
 
 	immediate = {
@@ -116,7 +121,12 @@ spn_hunt.0007 = {
 		has_variable = spn_summons_lord
 		var:spn_summons_lord = { is_alive = yes }
 		NOT = { has_character_flag = spn_summons_accepted }
+		var:spn_summons_county ?= { has_county_modifier = spn_menace_modifier } # 2.39 (WORK-ORDER-2.39 B12 b)
 	}
+	# 2.39 (WORK-ORDER-2.39 B12 b): a letter he can no longer answer (the lord dead, the trail gone, himself in prison) frees
+	# him. Until now he stayed booked for ten years. The booking's one writer is spn_summons_send_effect, which sends this
+	# event once per booking, so the existing clean-up removes only this letter's own record.
+	on_trigger_fail = { spn_summons_clear_effect = yes }
 
 	immediate = {
 		# Re-banked here rather than relied on from the lord's event: scopes do propagate down a

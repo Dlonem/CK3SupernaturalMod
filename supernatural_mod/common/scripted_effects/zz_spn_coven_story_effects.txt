@@ -1,0 +1,375 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": the coven's panel (WORK-ORDER-2.38 §7). Not zz_spn_coven_effects.txt, which
+# holds 2.35's coven sweep.
+#
+# A coven is vanilla's: the house modifier witch_coven. The panel is a story owned by the coven's Grand Master in the
+# house, else the house head. On the HOUSE: var:spn_coven_story. On the story: spn_coven_head, spn_coven_house,
+# spn_coven_size, the lists spn_coven_members and spn_coven_reliquary. On each member: var:spn_coven (the story).
+# Global: spn_covens, every coven STORY (not its owner, which can change).
+#
+# Started from: our Found a Coven (§7.1), Witchcraft's five witch_coven adds (the apply_coven_hooks pass, §15.2), and the
+# one-time sweep. Ended by: Leave, Disband, Witchcraft's witch war (E13), and the yearly backstop.
+
+# ==================================================================================================
+# START (§7.2). House scope.
+# ==================================================================================================
+spn_coven_started_effect = {
+	if = {
+		limit = { NOT = { exists = var:spn_coven_story } }
+		save_scope_as = spn_cs_house
+		# The owner: a Grand Master of the house, else its head.
+		random_house_member = {
+			limit = {
+				is_alive = yes
+				is_adult = yes
+				has_trait = grandmaster_coven
+			}
+			save_scope_as = spn_cs_owner
+		}
+		if = {
+			limit = { NOT = { exists = scope:spn_cs_owner } }
+			house_head ?= { save_scope_as = spn_cs_owner }
+		}
+		if = {
+			limit = { exists = scope:spn_cs_owner }
+			scope:spn_cs_owner = {
+				create_story = {
+					type = story_spn_coven
+					save_scope_as = spn_new_coven
+				}
+			}
+			# GUARDED (2.37): a tooltip walks this without creating the story.
+			if = {
+				limit = { exists = scope:spn_new_coven }
+				set_variable = { name = spn_coven_story value = scope:spn_new_coven }
+				scope:spn_new_coven = {
+					set_variable = { name = spn_coven_house value = scope:spn_cs_house }
+					set_variable = { name = spn_coven_head value = scope:spn_cs_owner }
+					set_variable = { name = spn_coven_size value = 0 }
+					set_variable = { name = spn_order_reliquary_count value = 0 }
+					set_variable = { name = spn_order_reliquary_magic value = 0 }
+				}
+				add_to_global_variable_list = { name = spn_covens target = scope:spn_new_coven }
+				scope:spn_new_coven = { spn_coven_refresh_effect = yes }
+				scope:spn_new_coven = {
+					every_in_list = {
+						variable = spn_coven_members
+						limit = { is_ai = no }
+						trigger_event = { id = spn_coven.0001 days = 1 }
+					}
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE LIST (§7.2): every adult witch of the house the owner knows to be one (is_witch_known_by_trigger), and the owner.
+# Story scope. Then the reliquary, the members' modifiers and the mirrors.
+# ==================================================================================================
+spn_coven_refresh_effect = {
+	save_scope_as = spn_cr_story
+	story_owner = { save_scope_as = spn_cr_owner }
+	set_variable = { name = spn_coven_head value = scope:spn_cr_owner }
+	# Who is listed now, from a copy.
+	every_in_list = {
+		variable = spn_coven_members
+		add_to_temporary_list = spn_cr_old
+	}
+	clear_variable_list = spn_coven_members
+	set_variable = { name = spn_coven_size value = 0 }
+	var:spn_coven_house ?= {
+		every_house_member = {
+			limit = {
+				is_alive = yes
+				is_adult = yes
+				OR = {
+					this = scope:spn_cr_owner
+					AND = {
+						is_witch_known_by_trigger = { CHARACTER = scope:spn_cr_owner }
+						NOT = { has_character_flag = spn_coven_left }
+					}
+				}
+			}
+			scope:spn_cr_story = {
+				add_to_variable_list = { name = spn_coven_members target = prev }
+				change_variable = { name = spn_coven_size add = 1 }
+			}
+			set_variable = { name = spn_coven value = scope:spn_cr_story }
+		}
+	}
+	# Whoever dropped off: his coven variable, his modifier and his pledges to it go.
+	every_in_list = {
+		list = spn_cr_old
+		limit = {
+			NOT = { scope:spn_cr_story = { is_target_in_variable_list = { name = spn_coven_members target = prev } } }
+		}
+		spn_coven_clear_member_effect = { STORY = scope:spn_cr_story }
+	}
+	spn_reliquary_rebuild_effect = yes
+	every_in_list = {
+		variable = spn_coven_members
+		spn_coven_reliquary_apply_effect = yes
+	}
+}
+
+# A member leaves the coven's data. Character scope; $STORY$ is the coven.
+spn_coven_clear_member_effect = {
+	save_scope_as = spn_cm_who
+	if = {
+		limit = { var:spn_coven ?= $STORY$ }
+		remove_variable = spn_coven
+	}
+	if = {
+		limit = { has_character_modifier = spn_coven_reliquary_modifier }
+		remove_character_modifier = spn_coven_reliquary_modifier
+	}
+	if = { # 2.38c: a character with no variables at all logs an error (Thomas's 9 Oct run)
+		limit = { has_variable = spn_coven_reliquary_cached }
+		remove_variable = spn_coven_reliquary_cached
+	}
+	every_character_artifact = {
+		limit = { var:spn_pledged_to ?= $STORY$ }
+		add_to_temporary_list = spn_cm_items
+	}
+	every_in_list = {
+		list = spn_cm_items
+		spn_relic_unpledge_effect = { ART = this }
+	}
+	random_owned_story = {
+		limit = { story_type = story_spn_coven_mirror }
+		end_story = yes
+	}
+}
+
+# Story scope. Every PLAYER member who is not the owner owns a mirror (C2), as the chapter's.
+spn_coven_sync_mirrors_effect = {
+	save_scope_as = spn_cmi_story
+	every_in_list = {
+		variable = spn_coven_members
+		limit = {
+			is_ai = no
+			is_alive = yes
+			NOT = { this = scope:spn_cmi_story.story_owner }
+		}
+		if = {
+			limit = { NOT = { any_owned_story = { story_type = story_spn_coven_mirror } } }
+			create_story = story_spn_coven_mirror
+		}
+		random_owned_story = {
+			limit = { story_type = story_spn_coven_mirror }
+			save_scope_as = spn_cmi_mirror
+			set_variable = { name = spn_mirror_of value = scope:spn_cmi_story }
+			set_variable = { name = spn_coven_head value = scope:spn_cmi_story.story_owner }
+			set_variable = { name = spn_coven_house value = scope:spn_cmi_story.var:spn_coven_house }
+			set_variable = { name = spn_coven_size value = scope:spn_cmi_story.var:spn_coven_size }
+			clear_variable_list = spn_coven_members
+			clear_variable_list = spn_coven_reliquary
+			scope:spn_cmi_story = {
+				every_in_list = {
+					variable = spn_coven_members
+					scope:spn_cmi_mirror = { add_to_variable_list = { name = spn_coven_members target = prev } }
+				}
+				every_in_list = {
+					variable = spn_coven_reliquary
+					scope:spn_cmi_mirror = { add_to_variable_list = { name = spn_coven_reliquary target = prev } }
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# END (§7.3). House scope.
+# ==================================================================================================
+spn_coven_ended_effect = {
+	if = {
+		limit = { exists = var:spn_coven_story }
+		var:spn_coven_story = { save_scope_as = spn_ce_story }
+		scope:spn_ce_story = {
+			every_in_list = {
+				variable = spn_coven_members
+				add_to_temporary_list = spn_ce_members
+			}
+		}
+		every_in_list = {
+			list = spn_ce_members
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_bad
+					title = spn_coven_toast_broken
+					left_icon = this
+				}
+			}
+			spn_coven_clear_member_effect = { STORY = scope:spn_ce_story }
+		}
+		if = {
+			limit = { is_target_in_global_variable_list = { name = spn_covens target = scope:spn_ce_story } }
+			remove_list_global_variable = { name = spn_covens target = scope:spn_ce_story }
+		}
+		remove_variable = spn_coven_story
+		scope:spn_ce_story = { end_story = yes }
+	}
+}
+
+# on_owner_death (§7.4). Story scope: the Grand Master, else the new house head, else the oldest listed witch; none -> end.
+spn_coven_succession_effect = {
+	save_scope_as = spn_csu_story
+	story_owner = { save_scope_as = spn_csu_old }
+	var:spn_coven_house ?= {
+		random_house_member = {
+			limit = {
+				is_alive = yes
+				is_adult = yes
+				has_trait = grandmaster_coven
+				NOT = { this = scope:spn_csu_old }
+			}
+			save_scope_as = spn_csu_new
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_csu_new }
+				house_head ?= {
+					is_alive = yes
+					NOT = { this = scope:spn_csu_old }
+				}
+			}
+			house_head = { save_scope_as = spn_csu_new }
+		}
+	}
+	if = {
+		limit = { NOT = { exists = scope:spn_csu_new } }
+		ordered_in_list = {
+			variable = spn_coven_members
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_csu_old }
+			}
+			order_by = age
+			save_scope_as = spn_csu_new
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_csu_new }
+		spn_coven_set_owner_effect = { NEW = scope:spn_csu_new }
+	}
+	else = {
+		var:spn_coven_house ?= { spn_coven_ended_effect = yes }
+	}
+}
+
+# Story scope: a new owner (the 2.37 set-alpha shape). He must not also hold a mirror.
+spn_coven_set_owner_effect = {
+	if = {
+		limit = { NOT = { story_owner = $NEW$ } }
+		make_story_owner = $NEW$
+		$NEW$ = {
+			random_owned_story = {
+				limit = { story_type = story_spn_coven_mirror }
+				end_story = yes
+			}
+		}
+	}
+	spn_coven_refresh_effect = yes
+	spn_coven_sync_mirrors_effect = yes
+}
+
+# ==================================================================================================
+# THE COVEN'S YEAR (§7.4). Story scope.
+# ==================================================================================================
+spn_coven_year_effect = {
+	save_scope_as = spn_cy_story
+	# The backstop: the house lost the coven by a road we did not hook, or fewer than two adult witches remain.
+	if = {
+		limit = {
+			OR = {
+				NOT = { exists = var:spn_coven_house }
+				var:spn_coven_house = { NOT = { has_house_modifier = witch_coven } }
+				NOT = {
+					var:spn_coven_house = {
+						any_house_member = {
+							count >= 2
+							is_alive = yes
+							is_adult = yes
+							OR = {
+								has_trait = witch
+								any_secret = { type = secret_witch }
+							}
+						}
+					}
+				}
+			}
+		}
+		if = {
+			limit = { exists = var:spn_coven_house }
+			var:spn_coven_house = { spn_coven_ended_effect = yes }
+		}
+		else = {
+			end_story = yes
+		}
+	}
+	else = {
+		# A Grand Master in the house becomes the owner.
+		if = {
+			limit = {
+				story_owner = { NOT = { has_trait = grandmaster_coven } }
+				var:spn_coven_house = {
+					any_house_member = {
+						is_alive = yes
+						is_adult = yes
+						has_trait = grandmaster_coven
+					}
+				}
+			}
+			var:spn_coven_house = {
+				random_house_member = {
+					limit = {
+						is_alive = yes
+						is_adult = yes
+						has_trait = grandmaster_coven
+					}
+					save_scope_as = spn_cy_gm
+				}
+			}
+			spn_coven_set_owner_effect = { NEW = scope:spn_cy_gm }
+		}
+		else = {
+			spn_coven_refresh_effect = yes
+			spn_coven_sync_mirrors_effect = yes
+		}
+		# A member of both a coven and a chapter (§16.1): The Sisters Ask What You Are. 20%, players only, once in ten years.
+		random = {
+			chance = 20
+			random_in_list = {
+				variable = spn_coven_members
+				limit = {
+					is_ai = no
+					is_alive = yes
+					spn_is_order_member_trigger = yes
+					NOT = { this = scope:spn_cy_story.story_owner }
+					NOT = { has_character_flag = spn_coven_asked }
+					NOT = { scope:spn_cy_story.story_owner = { spn_order_knows_member_trigger = { WHO = prev } } }
+				}
+				add_character_flag = { flag = spn_coven_asked years = 10 }
+				trigger_event = { id = spn_coven.0010 days = { 1 200 } }
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE SWEEP (§7.2): covens that already exist at game start, or in a save opened under 2.38. Once.
+# ==================================================================================================
+spn_coven_sweep_existing_effect = {
+	if = {
+		limit = { NOT = { exists = global_var:spn_coven_swept } }
+		set_global_variable = spn_coven_swept
+		every_living_character = {
+			limit = {
+				is_house_head = yes
+				house ?= { has_house_modifier = witch_coven }
+			}
+			house = { spn_coven_started_effect = yes }
+		}
+	}
+}

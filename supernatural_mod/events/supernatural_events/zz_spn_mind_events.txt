@@ -1,0 +1,93 @@
+﻿namespace = spn_order
+
+# Supernatural 2.39 -- the wolf remembers (WORK-ORDER-2.39 F17 (a)). Loc: zz_spn_239_mind_l_english.yml.
+# .0195 "It Comes Back" (a report: it marks the flavor gate, F14); .0196 the slow pull (hidden).
+# Every delayed event re-checks its situation in its own trigger (2.37 §19's rule, the Long Night lesson).
+
+# ==================================================================================================
+# .0195 -- It Comes Back. The wolf, the moment the bank is spent (spn_order_memory_returns_effect). The text follows the
+# road that brought it back: the ringing, or the slow pull.
+# ==================================================================================================
+spn_order.0195 = {
+	type = character_event
+	title = spn_order.0195.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_mr_cause ?= flag:pull }
+				desc = spn_order.0195.desc_pull
+			}
+			desc = spn_order.0195.desc
+		}
+	}
+	theme = mental_health
+	override_background = { reference = bedchamber }
+	left_portrait = { character = root animation = shock }
+	trigger = {
+		is_alive = yes
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes    # F14: a report marks the gate, it does not check it
+	}
+	option = {
+		name = spn_order.0195.a
+	}
+}
+
+# ==================================================================================================
+# .0196 -- the slow pull (hidden). Any wiped wolf, 3-6 years after the wipe, then again every 3-6 years while the wipe
+# lasts: 8% plus 0.12 per point of the wolf's track (spn_pm_pull_chance_value). Started only by Pulveris, and only when
+# no chain is already running (spn_pm_pull_active, L23). A pull that succeeds ends the chain and clears the flag itself,
+# so a later wipe starts a new chain. When the wipe has ended, he is no longer a wolf, or the bank is gone, the chain
+# stops and on_trigger_fail clears what only it kept (L22: no bank outlives its use).
+# ==================================================================================================
+spn_order.0196 = {
+	hidden = yes
+	trigger = {
+		is_alive = yes
+		has_character_flag = spn_order_wiped
+		spn_is_wolf_trigger = yes
+		has_variable_list = spn_pm_forgotten
+	}
+	on_trigger_fail = {
+		if = {
+			limit = { has_character_flag = spn_pm_pull_active }
+			remove_character_flag = spn_pm_pull_active
+		}
+		if = {
+			limit = {
+				OR = {
+					NOT = { has_character_flag = spn_order_wiped }
+					spn_is_wolf_trigger = no
+				}
+			}
+			if = {
+				limit = { has_variable_list = spn_pm_forgotten }
+				clear_variable_list = spn_pm_forgotten
+			}
+			if = {
+				limit = { has_variable = spn_pm_rings }
+				remove_variable = spn_pm_rings
+			}
+		}
+	}
+	immediate = {
+		random = {
+			chance = spn_pm_pull_chance_value
+			save_scope_value_as = { name = spn_pm_pulled value = yes }
+		}
+		if = {
+			limit = { exists = scope:spn_pm_pulled }
+			# This chain ends here: no .0196 is queued after it (2.39 review M1). The flag is always up here (Pulveris adds
+			# it when it queues the chain); the guard only keeps the removal quiet if it has expired in the meantime.
+			if = {
+				limit = { has_character_flag = spn_pm_pull_active }
+				remove_character_flag = spn_pm_pull_active
+			}
+			spn_order_memory_returns_effect = { CAUSE = flag:pull }
+		}
+		else = {
+			trigger_event = { id = spn_order.0196 years = { 3 6 } }
+		}
+	}
+}

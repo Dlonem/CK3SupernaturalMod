@@ -1,0 +1,88 @@
+﻿# Supernatural 2.39 -- the wolf remembers (WORK-ORDER-2.39 F17 (a)). Loc: zz_spn_239_mind_l_english.yml.
+#
+# Thomas: "the powder did work on them. However, they were more likely to get their memory back, especially when the
+# ringing kept happening." Pulveris Memoria (spn_order_pulveris_effect, zz_spn_order_effects.txt) now BANKS, for a wolf
+# only, whose Blue Rose secrets it took (variable list spn_pm_forgotten) before it takes them, and sets spn_pm_rings to 0.
+# Two roads bring them back, and both end in spn_order_memory_returns_effect:
+#   the ringing  -- Witchcraft's "The Ringing" (magic_ev.4) calls spn_ringing_heard_effect from its immediate (generator
+#                   entry U1). One ring counts every 180 days (spn_pm_ring_cd); each counted ring rolls
+#                   spn_pm_ring_return_chance_value (zz_spn_mind_values.txt): 18% on the first, 34% on the third.
+#   the slow pull -- the hidden spn_order.0196, 3-6 years after the wipe and again every 3-6 years while the wipe lasts
+#                   (expert call, wolves Q7 (B)). spn_pm_pull_active keeps a second wipe from starting a second chain.
+# Only wolves recover, so only wolves are banked; nothing is left on anyone else. Magic, once stripped, never comes back.
+#
+# State, all of it (every writer and remover is in this file, in Pulveris, or in spn_order.0196):
+#   var list spn_pm_forgotten, var spn_pm_rings  -- written by Pulveris (a wolf with at least one name banked); cleared
+#                                                   here on return, and by .0196's on_trigger_fail when the wipe has
+#                                                   ended or he is no longer a wolf.
+#   flag spn_pm_ring_cd (180 days)               -- written here.
+#   flag spn_pm_pull_active (30 years, the wipe) -- written (and refreshed) by Pulveris; removed only by .0196: when
+#                                                   its own pull succeeds (nothing is queued after it), or by its
+#                                                   on_trigger_fail, when the chain it marks has ended.
+#   flag spn_order_wiped                         -- its one writer is Pulveris; its two readers are the join trigger and the
+#                                                   teaching (zz_spn_order_triggers.txt, zz_spn_order_effects.txt). It is
+#                                                   removed here on return, and only here.
+
+# Root = whoever hears "The Ringing" (magic_ev.4's immediate, generator entry U1). Cheapest test first: almost nobody has
+# a bank. Hidden: nothing here prints under the ringing's own text.
+spn_ringing_heard_effect = {
+	if = {
+		limit = {
+			has_variable_list = spn_pm_forgotten
+			has_character_flag = spn_order_wiped
+			spn_is_wolf_trigger = yes
+			NOT = { has_character_flag = spn_pm_ring_cd }
+		}
+		hidden_effect = {
+			add_character_flag = { flag = spn_pm_ring_cd days = 180 }
+			if = {
+				limit = { NOT = { has_variable = spn_pm_rings } }
+				set_variable = { name = spn_pm_rings value = 0 }
+			}
+			change_variable = { name = spn_pm_rings add = 1 }
+			random = {
+				chance = spn_pm_ring_return_chance_value
+				save_scope_value_as = { name = spn_pm_rang_back value = yes }
+			}
+			if = {
+				limit = { exists = scope:spn_pm_rang_back }
+				spn_order_memory_returns_effect = { CAUSE = flag:ring }
+			}
+		}
+	}
+}
+
+# It comes back. Root = the wolf. $CAUSE$ = flag:ring or flag:pull (the text of "It Comes Back" reads it).
+# READ FIRST: each living owner in the bank shows him one of his Blue Rose secrets again (reveal_to, the pattern of
+# spn_order_forget_secret_effect). Then the bank, the ring count and the wipe are cleared, and the event fires.
+# Magic is never touched.
+spn_order_memory_returns_effect = {
+	save_scope_as = spn_mr_who
+	save_scope_value_as = { name = spn_mr_cause value = $CAUSE$ }
+	every_in_list = {
+		variable = spn_pm_forgotten
+		limit = { is_alive = yes }
+		random_secret = {
+			limit = {
+				secret_type = spn_secret_blue_rose
+				NOT = { is_known_by = scope:spn_mr_who }
+			}
+			reveal_to = scope:spn_mr_who
+		}
+	}
+	clear_variable_list = spn_pm_forgotten
+	if = {
+		limit = { has_variable = spn_pm_rings }
+		remove_variable = spn_pm_rings
+	}
+	if = {
+		limit = { has_character_flag = spn_order_wiped }
+		remove_character_flag = spn_order_wiped
+	}
+	# spn_pm_pull_active is NOT removed here; .0196 owns it. The RINGING path keeps it: the chain's next .0196 is still
+	# queued, and it is the one that ends the chain and clears the flag (its on_trigger_fail). If he is wiped again before
+	# it fires, the flag is still up, so the new wipe joins that chain instead of starting a second one beside it (red
+	# team L23). The PULL path clears it: when .0196 itself succeeds nothing is queued after it, so .0196 removes the flag
+	# before it calls this, and a later wipe starts a new chain (2.39 review M1).
+	trigger_event = spn_order.0195
+}

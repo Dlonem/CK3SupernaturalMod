@@ -1,0 +1,445 @@
+﻿# Supernatural 2.38b -- the Conclave (DESIGN-2.38b §4): the Order of the Blue Rose's own masked gathering. Built on the
+# mod's Werewolf Gathering (werewolf_gathering.txt), the 1.20 shape that already works in this game: phases entered passive
+# and made active by the host, our own pool on_action, vanilla's activity window, header_background set.
+#
+# Who calls it: only a character the Order has asked to (character flag spn_conclave_may_call, set by
+# spn_conclave_call_effect: the Conclave of the Chair, of the Prerogative, or a player Grand Magus at will). Who comes:
+# every member of the Order in the host's reach (activity_invite_rule_spn_order). What it does: the Masks (meeting), the
+# Reckoning (deeds, judgement, the Prerogative), the Anointing (oaths, and Make an Entrance), the Vote (the chair, then
+# the seats). Effects: zz_spn_conclave_effects.txt. Events: spn_conclave. Loc: spn_conclave_l_english.yml.
+spn_conclave = {
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_is_order_member_trigger = yes
+		has_character_flag = spn_conclave_may_call
+	}
+
+	can_start_showing_failures_only = {
+		NOT = { is_activity_type_on_cooldown = spn_conclave }
+		is_available = yes
+		custom_tooltip = {
+			text = spn_conclave_one_at_a_time_tt
+			NOT = { exists = global_var:spn_conclave_running }
+		}
+	}
+
+	is_valid = {
+		NOT = { has_variable = activity_invalidated }
+		scope:host = {
+			is_alive = yes
+			is_imprisoned = no
+			NOT = { is_incapable = yes }
+			spn_is_order_member_trigger = yes
+		}
+	}
+
+	on_start = {
+		set_global_variable = { name = spn_conclave_running value = yes years = 2 }
+		scope:host = {
+			if = {
+				limit = { exists = var:spn_conclave_reason }
+				scope:activity = { set_variable = { name = spn_cv_reason value = scope:host.var:spn_conclave_reason } }
+				remove_variable = spn_conclave_reason
+			}
+			# 2.39 (WORK-ORDER-2.39 F1): Invocare's two names move to the activity (they end with it).
+			if = {
+				limit = { exists = var:spn_conclave_iv_magus }
+				scope:activity = { set_variable = { name = spn_iv_magus value = scope:host.var:spn_conclave_iv_magus } }
+				remove_variable = spn_conclave_iv_magus
+			}
+			if = {
+				limit = { exists = var:spn_conclave_iv_caller }
+				scope:activity = { set_variable = { name = spn_iv_caller value = scope:host.var:spn_conclave_iv_caller } }
+				remove_variable = spn_conclave_iv_caller
+			}
+			# 2.39 (review L-3): a chair call kept behind a waiting Invocare is answered by this Conclave (The Vote elects
+			# whenever the chair is empty).
+			if = {
+				limit = { has_variable = spn_conclave_chair_after }
+				remove_variable = spn_conclave_chair_after
+			}
+			if = {
+				limit = { has_character_flag = spn_conclave_may_call }
+				remove_character_flag = spn_conclave_may_call
+			}
+			trigger_event = spn_conclave.0002
+		}
+	}
+
+	on_invalidated = {
+		if = {
+			limit = { has_global_variable = spn_conclave_running }
+			remove_global_variable = spn_conclave_running
+		}
+		# 2.39 (WORK-ORDER-2.39 F1): a Conclave that falls apart before its motion was heard frees the call (nobody paid).
+		if = {
+			limit = {
+				scope:activity ?= {
+					var:spn_cv_reason ?= flag:invocare
+					NOT = { exists = var:spn_iv_yes }
+				}
+				exists = global_var:spn_invocare_called
+			}
+			remove_global_variable = spn_invocare_called
+		}
+		if = {
+			limit = { scope:host = { is_incapable = yes } }
+			scope:activity = {
+				activity_type = { save_scope_as = activity_type }
+			}
+			scope:host = { trigger_event = activity_system.0330 }
+			every_attending_character = {
+				limit = { NOT = { this = scope:host } }
+				trigger_event = activity_system.0331
+			}
+		}
+	}
+
+	on_host_death = {
+		scope:activity = {
+			set_variable = { name = activity_invalidated }
+		}
+	}
+
+	###################
+	# COST
+	###################
+	cost = {
+		gold = {
+			add = {
+				value = standard_camp_party_activity_cost
+				desc = spn_conclave_cost_desc
+			}
+		}
+	}
+
+	ui_predicted_cost = {
+		gold = {
+			value = standard_camp_party_activity_cost
+			divide = 5
+			ceiling = yes
+			multiply = 5
+		}
+	}
+	cooldown = { years = 5 }
+
+	wait_time_before_start = { weeks = 1 }
+	max_guest_arrival_delay_time = { months = 4 }
+	is_single_location = yes
+
+	###################
+	# AI: only when called (the flag); then always.
+	###################
+	ai_will_do = {
+		value = 0
+		if = {
+			limit = { has_character_flag = spn_conclave_may_call }
+			add = 200
+		}
+	}
+	ai_check_interval = 6
+
+	ai_will_select_province = {
+		value = { value = 20 add = scope:score }
+	}
+
+	###################
+	# PHASES (§4). The host's on_phase_active moves the clock. Every phase after the first is entered passive and made
+	# active by on_enter_phase (the Gathering's 2.37b lesson).
+	###################
+	phases = {
+		spn_conclave_masks_phase = {
+			is_predefined = yes
+			order = 1
+			on_phase_active = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { weeks = 2 } }
+					spn_conclave_unmask_ask_effect = yes # 2.39 (WORK-ORDER-2.39 F12): What the Grand Magus Did
+				}
+			}
+			on_weekly_pulse = {
+				if = {
+					limit = { this = scope:host }
+					trigger_event = { on_action = spn_conclave_masks_pulse }
+				}
+			}
+		}
+
+		spn_conclave_reckoning_phase = {
+			is_predefined = yes
+			order = 2
+			on_enter_phase = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { days = 1 } }
+				}
+			}
+			on_phase_active = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { weeks = 1 } }
+					spn_conclave_reckoning_effect = yes
+				}
+			}
+		}
+
+		spn_conclave_anointing_phase = {
+			is_predefined = yes
+			order = 3
+			on_enter_phase = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { days = 1 } }
+				}
+			}
+			on_phase_active = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { weeks = 1 } }
+					spn_conclave_anointing_effect = yes
+				}
+			}
+		}
+
+		spn_conclave_vote_phase = {
+			is_predefined = yes
+			order = 4
+			on_enter_phase = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { days = 1 } }
+				}
+			}
+			on_phase_active = {
+				if = {
+					limit = { this = scope:host }
+					scope:activity = { progress_activity_phase_after = { weeks = 2 } }
+					spn_conclave_vote_open_effect = yes
+				}
+			}
+			on_end = {
+				if = {
+					limit = { this = scope:host }
+					spn_conclave_vote_close_effect = yes
+				}
+			}
+		}
+	}
+
+	###################
+	# LOCATION: a county seat the host holds.
+	###################
+	is_location_valid = {
+		exists = county
+		custom_tooltip = {
+			text = spn_conclave_location_tt
+			is_county_capital = yes
+			county ?= { holder ?= scope:host }
+		}
+	}
+	province_filter = domicile_domain
+	ai_province_filter = domicile_domain
+	max_province_icons = 5
+	allow_zero_guest_invites = yes
+	open_invite = no
+
+	province_score = {
+		value = 10
+		if = {
+			limit = { this = scope:host.capital_province }
+			add = 40
+		}
+		if = {
+			limit = {
+				exists = scope:host.var:spn_order_chapter.var:spn_order_seat
+				county ?= scope:host.var:spn_order_chapter.var:spn_order_seat
+			}
+			add = 60
+		}
+		# 2.39 (WORK-ORDER-2.39 F15): beneath the host temple's own Collegium. `this` is the province.
+		if = {
+			limit = {
+				exists = scope:host.var:spn_order_chapter
+				scope:host.var:spn_order_chapter = { spn_order_hall_stands_trigger = yes }
+				var:spn_order_hall_of ?= scope:host.var:spn_order_chapter
+			}
+			add = 80
+		}
+	}
+	province_description = {
+		desc = spn_conclave_prov_base
+	}
+
+	max_guests = 40
+
+	guest_invite_rules = {
+		defaults = {
+			1 = activity_invite_rule_spn_order
+		}
+	}
+
+	can_be_activity_guest = {
+		is_alive = yes
+		is_adult = yes
+		is_travelling = no
+		is_imprisoned = no
+		is_incapable = no
+		is_in_army = no
+		NOT = { exists = involved_activity }
+		spn_order_in_chapter_trigger = yes
+		in_diplomatic_range = scope:host
+	}
+
+	host_intents = {
+		intents = { spn_conclave_preside_intent spn_seek_the_chair_intent spn_speak_for_my_temple_intent spn_make_an_entrance_intent }
+		default = spn_conclave_preside_intent
+	}
+
+	guest_intents = {
+		intents = { spn_conclave_attend_intent spn_seek_the_chair_intent spn_seek_a_seat_intent spn_speak_for_my_temple_intent spn_find_a_teacher_intent spn_borrow_from_another_temple_intent spn_ask_for_the_working_intent spn_make_an_entrance_intent }
+		default = spn_conclave_attend_intent
+	}
+
+	guest_join_chance = {
+		base = 50
+		base_activity_modifier = yes
+		modifier = {
+			spn_is_temple_magus_trigger = yes
+			add = 40
+			desc = spn_conclave_join_temple_magus
+		}
+		modifier = {
+			has_variable = mc_member_var
+			add = 30
+			desc = spn_conclave_join_council
+		}
+		modifier = {
+			spn_order_is_neophyte_trigger = yes
+			add = 30
+			desc = spn_conclave_join_oath
+		}
+		modifier = {
+			spn_order_fit_value >= 20
+			add = 15
+			desc = spn_conclave_join_devoted
+		}
+		modifier = {
+			has_trait = shy
+			add = -10
+			desc = spn_conclave_join_shy
+		}
+		activity_guest_shared_ai_accept_modifier = yes
+	}
+
+	on_complete = {
+		spn_conclave_complete_effect = yes
+		if = {
+			limit = { this = scope:host }
+			if = {
+				limit = { has_global_variable = spn_conclave_running }
+				remove_global_variable = spn_conclave_running
+			}
+		}
+	}
+
+	background = {
+		trigger = {
+			NOT = { scope:host.location = scope:activity.activity_location }
+		}
+		texture = "gfx/interface/illustrations/event_scenes/ep2_travel_hills.dds"
+		environment = "environment_travel_hills_settlement"
+		ambience = "event:/SFX/Events/Backgrounds/fields_farms_day"
+	}
+	background = {
+		trigger = {
+			OR = {
+				has_current_phase = spn_conclave_masks_phase
+				has_current_phase = spn_conclave_anointing_phase
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/temple.dds"
+		environment = "environment_event_fp3_temple"
+		ambience = "event:/SFX/Events/Backgrounds/temple_generic"
+	}
+	background = {
+		trigger = {
+			OR = {
+				has_current_phase = spn_conclave_reckoning_phase
+				has_current_phase = spn_conclave_vote_phase
+			}
+		}
+		texture = "gfx/interface/illustrations/event_scenes/mc_shadows.dds"
+		environment = "environment_event_fp2_corridor_night"
+		ambience = "event:/SFX/Events/Backgrounds/castle_corridor_night"
+	}
+
+	window_characters = {
+		guest = {
+			camera = camera_event_center
+			effect = {
+				every_attending_character = {
+					limit = {
+						scope:host.location = scope:activity.activity_location
+					}
+					add_to_list = characters
+				}
+			}
+			# A list of animations is only valid inside triggered_animation (2.38b boot: a bare list broke the whole file).
+			scripted_animation = {
+				triggered_animation = {
+					trigger = { always = yes }
+					animation = { personality_rational thinking idle }
+				}
+				animation = idle
+			}
+		}
+		host = {
+			camera = camera_event_center
+			effect = {
+				if = {
+					limit = {
+						scope:host.location = scope:activity.activity_location
+					}
+					scope:host = {
+						add_to_list = characters
+					}
+				}
+			}
+			scripted_animation = {
+				triggered_animation = {
+					trigger = { always = yes }
+					animation = { personality_bold personality_rational }
+				}
+				animation = idle
+			}
+		}
+		travel_host = {
+			camera = camera_activity_horse
+			effect = {
+				if = {
+					limit = {
+						NOT = {
+							scope:host.location = scope:activity.activity_location
+						}
+					}
+					scope:host = {
+						add_to_list = characters
+					}
+				}
+			}
+			scripted_animation = {
+				triggered_animation = {
+					trigger = {
+						scope:character.location = { is_sea_province = yes }
+					}
+					animation = { idle }
+				}
+				animation = jockey_walk
+			}
+		}
+	}
+
+	# CK3 1.20: the activity windows read the header art from the activity type.
+	header_background = "gfx/interface/illustrations/activity_header_backgrounds/spn_conclave.dds"
+}

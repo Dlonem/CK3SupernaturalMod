@@ -1,0 +1,565 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": every hook (WORK-ORDER-2.38 §19). Each vanilla on_action is APPENDED through
+# `on_actions = { }`, which merges across files (2.37's idiom), so no vanilla on_action is copied or shadowed. Each starts
+# with the cheapest test that is false almost everywhere.
+#
+# No scripted trigger may live in this folder (2.35d: the parser stops at it); every trigger used here is in
+# common/scripted_triggers/zz_spn_order_triggers.txt.
+
+# ==================================================================================================
+# GAME START (§5.2, §7.2, §9.6, §9.7, §12.2). After the hides' day-1 seeding.
+# ==================================================================================================
+on_game_start_after_lobby = {
+	on_actions = {
+		spn_order_game_start
+	}
+}
+
+spn_order_game_start = {
+	trigger = {
+		NOT = { exists = global_var:spn_order_seeded }
+	}
+	# The yearly older-save seeding waits while a new game's own seeding is still on its way.
+	effect = {
+		set_global_variable = { name = spn_seed_pending value = yes days = 60 }
+		# 2.38b: the council is the Order's from the first day (the council's HUD buttons read this).
+		if = {
+			limit = { NOT = { has_game_rule = spn_order_off } }
+			set_global_variable = spn_order_council_ours
+		}
+	}
+	# 2.38a: one delay per events list. 2.38 put five delays in one list; the engine read only the first ("Trying to read
+	# a duration with two separate values", 9 Oct log), so everything ran on day 2. Days count from game start.
+	on_actions = {
+		spn_order_game_start_offer
+		spn_order_game_start_world
+		spn_order_game_start_seats_1
+		spn_order_game_start_seats_2
+		spn_order_game_start_seats_3
+	}
+}
+spn_order_game_start_offer = {
+	events = {
+		delay = { days = 2 }
+		spn_order.0004		# the players' offer (T27)
+	}
+}
+spn_order_game_start_world = {
+	events = {
+		delay = { days = 3 }
+		spn_coven.0002		# the covens that already exist
+		spn_vade.0002		# the pages
+		spn_relic.0002		# the Seal of Solomon (any rules)
+	}
+}
+spn_order_game_start_seats_1 = {
+	events = {
+		delay = { days = 12 }
+		spn_order.0002		# the AI seats, if no player is still deciding
+	}
+}
+spn_order_game_start_seats_2 = {
+	events = {
+		delay = { days = 22 }
+		spn_order.0002
+	}
+}
+spn_order_game_start_seats_3 = {
+	events = {
+		delay = { days = 32 }
+		spn_order.0002		# the last wait: seats regardless
+	}
+}
+
+# ==================================================================================================
+# THE YEAR (§5.4, §5.16, §5.18, §5.22, §9.5, §9.7, §11.6, §12). One world walk a year: the Selection's (C16).
+# ==================================================================================================
+yearly_global_pulse = {
+	on_actions = {
+		spn_order_yearly
+		spn_order_yearly_older_save
+	}
+}
+
+spn_order_yearly = {
+	effect = {
+		# 2.38a: the county count the start offer takes (in 2.38 it never ran: its event had the number 0). Once, whatever
+		# the rules: the coven cap reads it too.
+		if = {
+			limit = { NOT = { exists = global_var:spn_county_count } }
+			spn_order_count_counties_effect = yes
+		}
+		# 2.39 (WORK-ORDER-2.39 B3 D): a man in two council seats keeps the higher; the Order below offers the freed seat.
+		spn_council_dedupe_effect = yes
+		spn_collegia_yearly_effect = yes # 2.39 (Thomas's call, 16 Oct): the Collegia's world list
+		# The Order.
+		if = {
+			limit = {
+				spn_order_on_trigger = yes
+				exists = global_var:spn_order_seeded
+			}
+			spn_order_selection_effect = yes
+			# 2.38a: the Order gathers while the world has fewer temples than it starts with (see the effect).
+			spn_order_gather_effect = yes
+			spn_order_chair_fill_effect = yes # 2.38b: the chair is the Order's (DESIGN-2.38b §3)
+			spn_order_rumour_yearly_effect = yes # 2.38b: the rumour (DESIGN-2.38b §8)
+			spn_conclave_yearly_effect = yes # 2.38b: the Conclave of the Prerogative (DESIGN-2.38b §4)
+			spn_order_master_refresh_effect = yes
+			spn_order_chair_yearly_effect = yes
+			spn_order_ai_prerogative_effect = yes
+			spn_order_adepti_yearly_effect = yes
+			spn_order_compacts_yearly_effect = yes
+			spn_respondeo_magna_target_effect = yes # 2.39 (WORK-ORDER-2.39 F13): the Great Respondeo's realm, cached a year
+			spn_order_watch_yearly_effect = yes # 2.39 (WORK-ORDER-2.39 F2): the Order's watch list
+		}
+		# Loans, whoever holds them.
+		spn_relic_loans_yearly_effect = yes
+		# The Seal.
+		spn_seal_yearly_effect = yes
+		# The book.
+		spn_vade_yearly_effect = yes
+	}
+}
+
+# An older save, opened under 2.38 for the first time: seed now, once each (no player offer: a running game has no lobby).
+spn_order_yearly_older_save = {
+	trigger = {
+		NOT = { exists = global_var:spn_seed_pending }
+	}
+	effect = {
+		if = {
+			limit = { NOT = { exists = global_var:spn_coven_swept } }
+			spn_coven_sweep_existing_effect = yes
+		}
+		if = {
+			limit = { NOT = { exists = global_var:spn_seal_seeded } }
+			spn_seal_seed_effect = yes
+		}
+		if = {
+			limit = { NOT = { exists = global_var:spn_vade_seeded } }
+			spn_vade_seed_effect = yes
+		}
+		if = {
+			limit = {
+				spn_order_on_trigger = yes
+				NOT = { exists = global_var:spn_order_seeded }
+			}
+			spn_order_count_counties_effect = yes
+			spn_order_seed_ai_effect = yes
+		}
+		# 2.39 (WORK-ORDER-2.39 F15): each AI temple's Collegium, and as many in learned courts outside the Order, once per
+		# game. An older save runs it in its first year under 2.39. A new game runs it once the Order has gathered its
+		# starting temples (Witchcraft makes no Mage at game start, so the gather founds them one a year), or at year ten.
+		if = {
+			limit = {
+				spn_order_on_trigger = yes
+				exists = global_var:spn_order_seeded
+				NOT = { exists = global_var:spn_order_halls_seeded }
+				OR = {
+					any_in_global_list = {
+						variable = spn_order_chapters
+						count >= spn_order_chapters_start_value
+					}
+					years_from_game_start >= 10
+				}
+			}
+			spn_order_hall_seed_effect = yes
+		}
+		if = {
+			limit = {
+				NOT = { exists = global_var:spn_relics_seeded }
+				NOT = { spn_order_on_trigger = yes }
+			}
+			spn_relic_seed_effect = yes
+		}
+	}
+}
+
+# ==================================================================================================
+# DEATH (§19). Root is about to die; never a death in here (§22.1 row 19): anything that kills is a day later.
+# ==================================================================================================
+on_death = {
+	on_actions = {
+		spn_order_on_death
+		spn_order_proof_on_death # 2.38b: Make an Entrance's proof (DESIGN-2.38b §4)
+	}
+}
+
+# 2.38b: a member who destroys a golem or a demon has something to bring to the next Conclave. Cheapest test first.
+spn_order_proof_on_death = {
+	trigger = {
+		OR = {
+			has_trait = golem
+			has_trait = demon1
+			has_trait = demon2
+		}
+		scope:killer ?= { spn_is_order_member_trigger = yes }
+	}
+	effect = {
+		scope:killer = { add_character_flag = { flag = spn_order_proof_kill years = 20 } }
+	}
+}
+
+spn_order_on_death = {
+	trigger = {
+		OR = {
+			exists = var:spn_order_chapter
+			exists = var:spn_coven
+			exists = var:spn_fates_bound_to
+			has_character_flag = spn_knows_zecchia
+			has_trait = spn_vade_bound
+			global_var:spn_vade_contract_running ?= root
+			global_var:spn_zecchia_busy ?= root
+			global_var:spn_order_master ?= root
+			exists = var:spn_transference_carrier_of
+			exists = var:spn_transference_disease
+			any_character_artifact = { has_variable = spn_borrowed_from }
+		}
+	}
+	effect = {
+		save_scope_as = spn_dying
+		# 1. The Order: removal for death (the story's own on_owner_death passes a head's temple on).
+		if = {
+			limit = { exists = var:spn_order_chapter }
+			save_scope_as = spn_od_member
+			# A member killed by a wolf: his Temple Magus hears it (.0829), the Order and the packs at war.
+			if = {
+				limit = {
+					spn_is_order_member_trigger = yes
+					scope:killer ?= { spn_is_wolf_trigger = yes }
+				}
+				var:spn_order_chapter.story_owner = {
+					if = {
+						limit = {
+							is_ai = no
+							NOT = { this = scope:spn_dying }
+						}
+						save_scope_as = spn_od_head
+						trigger_event = { id = spn_order.0829 days = 1 }
+					}
+				}
+			}
+			# 2.38c: a member's children are the Order's legacy (Thomas, 9 Oct: his heir, eight, son of a Temple Magus).
+			# The flag puts them in the Selection's reach from twelve; a player child finds the rose (.0096).
+			if = {
+				limit = { spn_is_order_member_trigger = yes }
+				every_child = {
+					limit = {
+						is_alive = yes
+						NOT = { exists = var:spn_order_chapter }
+						NOT = { has_character_flag = spn_order_legacy }
+					}
+					add_character_flag = { flag = spn_order_legacy years = 40 }
+					# A player's heir is still AI inside on_death (vanilla death.txt sends to player_heir the same way).
+					if = {
+						limit = {
+							age >= 6
+							OR = {
+								is_ai = no
+								AND = {
+									scope:spn_dying = { is_ai = no }
+									scope:spn_dying.player_heir ?= this
+								}
+							}
+						}
+						trigger_event = { id = spn_order.0096 days = { 30 120 } }
+					}
+				}
+			}
+			spn_order_remove_member_effect = { WHO = scope:spn_dying REASON = flag:death }
+		}
+		# 1b. 2.38f: a coven member leaves his coven at death: off the list, and his coven data cleared the way the yearly refresh
+		# clears anyone who drops off (spn_coven_clear_member_effect). A dead member left on the list is purged from the game
+		# in time, and the refresh then read a character that no longer exists (31 errors in Thomas's 233-year run).
+		if = {
+			limit = { exists = var:spn_coven }
+			var:spn_coven = { save_scope_as = spn_od_coven }
+			scope:spn_od_coven = {
+				if = {
+					limit = { is_target_in_variable_list = { name = spn_coven_members target = scope:spn_dying } }
+					remove_list_variable = { name = spn_coven_members target = scope:spn_dying }
+					if = {
+						limit = {
+							exists = var:spn_coven_size
+							var:spn_coven_size > 0
+						}
+						change_variable = { name = spn_coven_size add = -1 }
+					}
+				}
+			}
+			spn_coven_clear_member_effect = { STORY = scope:spn_od_coven }
+		}
+		# 2. The master's death: the next refresh names another (readers test is_alive meanwhile).
+		if = {
+			limit = { global_var:spn_order_master ?= root }
+			remove_global_variable = spn_order_master
+		}
+		# 3. Loans he holds go home.
+		if = {
+			limit = { any_character_artifact = { has_variable = spn_borrowed_from } }
+			spn_relic_return_loans_of_effect = { WHO = scope:spn_dying }
+		}
+		# 4. The Mirror Shard (C13): only a death with a killer takes the partner, a day later; the bond is gone first.
+		if = {
+			limit = { exists = var:spn_fates_bound_to }
+			var:spn_fates_bound_to = { save_scope_as = spn_od_partner }
+			if = {
+				limit = { exists = var:spn_mirror_shard_of }
+				var:spn_mirror_shard_of = { save_scope_as = spn_od_shard }
+			}
+			remove_variable = spn_fates_bound_to
+			remove_variable = spn_mirror_shard_of
+			if = {
+				limit = { has_character_modifier = spn_fates_bound_modifier }
+				remove_character_modifier = spn_fates_bound_modifier
+			}
+			scope:spn_od_partner = {
+				remove_variable = spn_fates_bound_to
+				remove_variable = spn_mirror_shard_of
+				if = {
+					limit = { has_character_modifier = spn_fates_bound_modifier }
+					remove_character_modifier = spn_fates_bound_modifier
+				}
+				if = {
+					limit = {
+						is_alive = yes
+						exists = scope:killer
+					}
+					save_scope_as = spn_fates_partner
+					scope:killer = { save_scope_as = spn_fates_killer }
+					trigger_event = { id = spn_relic.0310 days = 1 }
+				}
+			}
+		}
+		# 5. Zecchia: her name passes to the heir with the dead man's papers; a job dies with its hirer.
+		if = {
+			limit = {
+				has_character_flag = spn_knows_zecchia
+				exists = primary_heir
+			}
+			primary_heir = { add_character_flag = spn_knows_zecchia }
+		}
+		if = {
+			limit = { global_var:spn_zecchia_busy ?= root }
+			spn_zecchia_dismiss_effect = yes
+		}
+		# 6. The book: a binder dying mid-Contract (the failure without the death), and a bound master's soul (T31).
+		if = {
+			limit = { global_var:spn_vade_contract_running ?= root }
+			spn_vade_contract_end_effect = { RESULT = died }
+		}
+		else_if = {
+			limit = { has_trait = spn_vade_bound }
+			spn_vade_take_soul_effect = yes
+		}
+		# 7. Workings (§5.19). A carrier killed (not a natural death) undoes the Transference, a day later, in the patient.
+		if = {
+			limit = { exists = var:spn_transference_carrier_of }
+			var:spn_transference_carrier_of = { save_scope_as = spn_od_patient }
+			remove_variable = spn_transference_carrier_of
+			if = {
+				limit = {
+					exists = scope:killer
+					scope:spn_od_patient = {
+						is_alive = yes
+						exists = var:spn_transference_disease
+					}
+				}
+				scope:killer = { save_scope_as = spn_rv_killer }
+				scope:spn_od_patient = { trigger_event = { id = spn_order.0827 days = 1 } }
+			}
+		}
+		# The patient died first: the carriers are freed.
+		if = {
+			limit = { has_variable = spn_transference_disease }
+			remove_variable = spn_transference_disease
+			spn_transference_free_carriers_effect = yes
+		}
+	}
+}
+
+# ==================================================================================================
+# ARTIFACTS (§9.4, §9.7, §12.4, §12.6)
+# ==================================================================================================
+on_artifact_changed_owner = {
+	on_actions = {
+		spn_relic_owner_changed
+	}
+}
+
+# Root = the artifact; scope:owner, scope:old_owner, scope:old_holy_site (inventory_on_actions.txt:1-7).
+spn_relic_owner_changed = {
+	trigger = {
+		OR = {
+			has_variable = spn_pledged_to
+			has_variable = spn_borrowed_from
+			has_variable = spn_relic_returning
+			has_variable = spn_vade_page
+			has_variable = spn_vade_book
+			var:spn_relic ?= flag:seal
+		}
+	}
+	effect = {
+		spn_relic_owner_changed_effect = yes
+	}
+}
+
+on_artifact_changed_holy_site_owner = {
+	on_actions = {
+		spn_seal_holy_site_changed
+	}
+}
+
+# Root = the artifact; scope:holy_site, scope:old_holy_site, scope:old_owner (inventory_on_actions.txt:530-537).
+spn_seal_holy_site_changed = {
+	trigger = {
+		var:spn_relic ?= flag:seal
+	}
+	effect = {
+		spn_seal_holy_site_changed_effect = yes
+	}
+}
+
+# A siege (§9.7). Root = the occupant; scope:county. A day later, after vanilla's own siege theft has had its turn.
+on_siege_completion = {
+	on_actions = {
+		spn_seal_siege
+	}
+}
+
+spn_seal_siege = {
+	trigger = {
+		scope:county ?= { has_county_modifier = spn_seal_kept_modifier }
+		OR = {
+			has_trait = archmage
+			exists = var:spn_knows_seal
+		}
+	}
+	effect = {
+		scope:county = { save_scope_as = spn_seal_siege_county }
+		trigger_event = { id = spn_relic.0600 days = 1 }
+	}
+}
+
+# A pilgrimage (§9.7). Root = the pilgrim; scope:activity. Once a pilgrimage; never for a caught thief.
+pilgrimage_destination_events = {
+	on_actions = {
+		spn_seal_pilgrimage
+	}
+}
+
+spn_seal_pilgrimage = {
+	trigger = {
+		exists = var:spn_knows_seal
+		NOT = { has_character_flag = spn_seal_tried }
+		NOT = { has_character_flag = spn_seal_thief }
+		scope:activity ?= {
+			activity_location.county ?= {
+				has_county_modifier = spn_seal_kept_modifier
+				this = root.var:spn_knows_seal
+			}
+		}
+	}
+	effect = {
+		add_character_flag = { flag = spn_seal_tried months = 6 }
+		scope:activity.activity_location.county = { save_scope_as = spn_seal_pilgrim_county }
+		trigger_event = spn_relic.0610
+	}
+}
+
+# Witchcraft's Search for Magical Artifacts (§9.6): one relic at most per search, to the host.
+artifacts_searching_destination_events = {
+	on_actions = {
+		spn_relic_search_find
+	}
+}
+
+spn_relic_search_find = {
+	trigger = {
+		exists = scope:activity
+		this = scope:host
+		NOT = { scope:activity = { has_variable = spn_relic_found } }
+	}
+	random_events = {
+		900 = 0
+		100 = spn_relic.0400
+	}
+}
+
+# ==================================================================================================
+# LEGACY BIRTHS (§14). Witchcraft's own on_birth_child form; scope:child, scope:mother, scope:real_father.
+# ==================================================================================================
+on_birth_child = {
+	on_actions = {
+		spn_order_legacy_birth
+	}
+}
+
+spn_order_legacy_birth = {
+	trigger = {
+		# 2.38h: a parent who died before the birth has no variables to read (Thomas's 1178 run); trigger_if, since CK3
+		# does not stop at a false sibling.
+		scope:mother ?= {
+			trigger_if = {
+				limit = { is_alive = yes }
+				has_variable = spn_order_member
+			}
+			trigger_else = { always = no }
+		}
+		scope:real_father ?= {
+			trigger_if = {
+				limit = { is_alive = yes }
+				has_variable = spn_order_member
+			}
+			trigger_else = { always = no }
+		}
+		scope:mother = { has_trait = archmage }
+		scope:real_father = { has_trait = archmage }
+		scope:child = {
+			NOR = {
+				has_trait = source
+				has_trait = source2
+			}
+		}
+	}
+	effect = {
+		random = {
+			chance = 10
+			scope:child = {
+				add_trait = source
+				set_source4child = yes
+			}
+			scope:mother = {
+				if = {
+					limit = { is_ai = no }
+					send_interface_toast = {
+						type = event_toast_effect_good
+						title = spn_order_toast_spark
+						left_icon = this
+						right_icon = scope:child
+					}
+				}
+			}
+			scope:real_father = {
+				if = {
+					limit = { is_ai = no }
+					send_interface_toast = {
+						type = event_toast_effect_good
+						title = spn_order_toast_spark
+						left_icon = this
+						right_icon = scope:child
+					}
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# 2.38b: THE CONCLAVE's weekly pool in the Masks (DESIGN-2.38b §4). Fired on the host; .0099 hands a moment to a player.
+# ==================================================================================================
+spn_conclave_masks_pulse = {
+	random_events = {
+		chance_of_no_event = 30
+		100 = spn_conclave.0099
+	}
+}

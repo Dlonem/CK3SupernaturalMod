@@ -340,7 +340,7 @@ spn_debug_events.0303 = {
 				exists = global_var:spn_hide_silverback_lost
 			}
 			if = {
-				limit = { exists = global_var:spn_hide_silverback_reserved }
+				limit = { has_global_variable = spn_hide_silverback_reserved }
 				remove_global_variable = spn_hide_silverback_reserved
 			}
 			set_global_variable = { name = spn_hide_silverback_heard_by value = root }
@@ -353,7 +353,7 @@ spn_debug_events.0303 = {
 				exists = global_var:spn_hide_timber_lost
 			}
 			if = {
-				limit = { exists = global_var:spn_hide_timber_reserved }
+				limit = { has_global_variable = spn_hide_timber_reserved }
 				remove_global_variable = spn_hide_timber_reserved
 			}
 			set_global_variable = { name = spn_hide_timber_heard_by value = root }
@@ -366,7 +366,7 @@ spn_debug_events.0303 = {
 				exists = global_var:spn_hide_tundra_lost
 			}
 			if = {
-				limit = { exists = global_var:spn_hide_tundra_reserved }
+				limit = { has_global_variable = spn_hide_tundra_reserved }
 				remove_global_variable = spn_hide_tundra_reserved
 			}
 			set_global_variable = { name = spn_hide_tundra_heard_by value = root }
@@ -379,7 +379,7 @@ spn_debug_events.0303 = {
 				exists = global_var:spn_hide_graybeard_lost
 			}
 			if = {
-				limit = { exists = global_var:spn_hide_graybeard_reserved }
+				limit = { has_global_variable = spn_hide_graybeard_reserved }
 				remove_global_variable = spn_hide_graybeard_reserved
 			}
 			set_global_variable = { name = spn_hide_graybeard_heard_by value = root }
@@ -392,7 +392,7 @@ spn_debug_events.0303 = {
 				exists = global_var:spn_hide_midnight_lost
 			}
 			if = {
-				limit = { exists = global_var:spn_hide_midnight_reserved }
+				limit = { has_global_variable = spn_hide_midnight_reserved }
 				remove_global_variable = spn_hide_midnight_reserved
 			}
 			set_global_variable = { name = spn_hide_midnight_heard_by value = root }
@@ -405,7 +405,7 @@ spn_debug_events.0303 = {
 				exists = global_var:spn_hide_alpha_lost
 			}
 			if = {
-				limit = { exists = global_var:spn_hide_alpha_reserved }
+				limit = { has_global_variable = spn_hide_alpha_reserved }
 				remove_global_variable = spn_hide_alpha_reserved
 			}
 			set_global_variable = { name = spn_hide_alpha_heard_by value = root }
@@ -577,6 +577,547 @@ spn_debug_events.0307 = {
 			if = {
 				limit = { has_activity_type = werewolf_gathering }
 				progress_activity_phase_after = { days = 1 }
+			}
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# ==================================================================================================
+# 2.38 -- "The Blue Rose" (WORK-ORDER-2.38 §23). Console: event spn_debug_events.0400 (to .0419).
+# ==================================================================================================
+# .0400 -- make me a Mage member of a chapter (one in reach, else any).
+spn_debug_events.0400 = {
+	type = character_event
+	title = spn_debug_events.0400.t
+	desc = spn_debug_events.0400.desc
+	orphan = yes
+	theme = learning
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0400.a
+		if = {
+			limit = { NOT = { has_trait = archmage } }
+			turn_into_mage_effect = yes
+		}
+		random_in_global_list = {
+			variable = spn_order_chapters
+			limit = {
+				is_alive = yes
+				NOT = { this = root }
+				in_diplomatic_range = root
+			}
+			var:spn_order_chapter = { save_scope_as = spn_dbg_ch }
+		}
+		if = {
+			limit = { NOT = { exists = scope:spn_dbg_ch } }
+			random_in_global_list = {
+				variable = spn_order_chapters
+				limit = {
+					is_alive = yes
+					NOT = { this = root }
+				}
+				var:spn_order_chapter = { save_scope_as = spn_dbg_ch }
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_dbg_ch }
+			if = {
+				limit = { exists = var:spn_order_chapter }
+				spn_order_remove_member_effect = { WHO = root REASON = flag:quiet }
+			}
+			spn_order_add_member_effect = { WHO = root CHAPTER = scope:spn_dbg_ch RANK = flag:medicum }
+			spn_order_grant_membership_effect = yes
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0401 -- make me a Temple Magus here (a new chapter at my seat), then The Mask of the Temple.
+spn_debug_events.0401 = {
+	type = character_event
+	title = spn_debug_events.0401.t
+	desc = spn_debug_events.0401.desc
+	orphan = yes
+	theme = learning
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0401.a
+		if = {
+			limit = { NOT = { has_trait = archmage } }
+			turn_into_mage_effect = yes
+		}
+		if = {
+			limit = { exists = capital_county }
+			capital_county = { save_scope_as = spn_dbg_seat }
+		}
+		else = {
+			location.county = { save_scope_as = spn_dbg_seat }
+		}
+		spn_order_found_chapter_effect = { HEAD = root SEAT = scope:spn_dbg_seat }
+		trigger_event = { id = spn_order.0143 days = 1 }
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0402 -- give me a relic.
+spn_debug_events.0402 = {
+	type = character_event
+	title = spn_debug_events.0402.t
+	desc = spn_debug_events.0402.desc
+	orphan = yes
+	theme = learning
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0402.glove
+		spn_relic_make_glove_effect = { OWNER = root }
+	}
+	option = {
+		name = spn_debug_events.0402.necrophone
+		spn_relic_make_necrophone_effect = { OWNER = root }
+	}
+	option = {
+		name = spn_debug_events.0402.blade
+		spn_relic_make_blade_effect = { OWNER = root }
+	}
+	option = {
+		name = spn_debug_events.0402.pendant
+		spn_relic_make_pendant_effect = { OWNER = root }
+	}
+	option = {
+		name = spn_debug_events.0402.powder
+		spn_relic_make_powder_effect = { OWNER = root }
+	}
+	option = {
+		name = spn_debug_events.0402.mirror
+		spn_relic_make_mirror_effect = { OWNER = root }
+	}
+	option = {
+		name = spn_debug_events.0402.bell
+		spn_relic_make_bell_effect = { OWNER = root }
+	}
+	option = {
+		name = spn_debug_events.0402.seal
+		if = {
+			limit = { exists = global_var:spn_seal }
+			global_var:spn_seal = {
+				set_owner = {
+					target = root
+					history = {
+						type = given
+						recipient = root
+					}
+				}
+			}
+		}
+		else = {
+			spn_seal_create_effect = { OWNER = root }
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0403 -- give me a page, or all four (an existing page is moved to me, never made twice).
+spn_debug_events.0403 = {
+	type = character_event
+	title = spn_debug_events.0403.t
+	desc = spn_debug_events.0403.desc
+	orphan = yes
+	theme = witchcraft
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0403.one
+		spn_debug_give_page_effect = { N = 1 }
+	}
+	option = {
+		name = spn_debug_events.0403.all
+		spn_debug_give_page_effect = { N = 1 }
+		spn_debug_give_page_effect = { N = 2 }
+		spn_debug_give_page_effect = { N = 3 }
+		spn_debug_give_page_effect = { N = 4 }
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0404 -- set my standing.
+spn_debug_events.0404 = {
+	type = character_event
+	title = spn_debug_events.0404.t
+	desc = spn_debug_events.0404.desc
+	orphan = yes
+	theme = learning
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0404.a
+		set_variable = { name = spn_order_standing value = 25 }
+	}
+	option = {
+		name = spn_debug_events.0404.b
+		set_variable = { name = spn_order_standing value = 50 }
+	}
+	option = {
+		name = spn_debug_events.0404.c
+		set_variable = { name = spn_order_standing value = 75 }
+	}
+	option = {
+		name = spn_debug_events.0404.d
+		set_variable = { name = spn_order_standing value = 100 }
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0405 -- run the Selection now (and the Bargain's walk with it).
+spn_debug_events.0405 = {
+	type = character_event
+	title = spn_debug_events.0405.t
+	desc = spn_debug_events.0405.desc
+	orphan = yes
+	theme = learning
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0405.a
+		spn_order_selection_effect = yes
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0406 -- summon Zecchia now.
+spn_debug_events.0406 = {
+	type = character_event
+	title = spn_debug_events.0406.t
+	desc = spn_debug_events.0406.desc
+	orphan = yes
+	theme = witchcraft
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0406.a
+		add_character_flag = spn_knows_zecchia
+		if = {
+			limit = { has_global_variable = spn_zecchia_busy }
+			remove_global_variable = spn_zecchia_busy
+		}
+		spn_zecchia_get_effect = { HIRER = root }
+		trigger_event = spn_zecchia.0010
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0407 -- make my house a coven of three (two adult kin made known witches).
+spn_debug_events.0407 = {
+	type = character_event
+	title = spn_debug_events.0407.t
+	desc = spn_debug_events.0407.desc
+	orphan = yes
+	theme = witchcraft
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0407.a
+		trigger = { exists = house }
+		if = {
+			limit = { NOT = { has_trait = witch } }
+			add_trait = witch
+		}
+		house = {
+			ordered_house_member = {
+				limit = {
+					is_alive = yes
+					is_adult = yes
+					NOT = { this = root }
+				}
+				order_by = age
+				max = 2
+				check_range_bounds = no
+				if = {
+					limit = { NOT = { has_trait = witch } }
+					add_trait = witch
+				}
+			}
+			if = {
+				limit = { NOT = { has_house_modifier = witch_coven } }
+				add_house_modifier = witch_coven
+			}
+			spn_coven_started_effect = yes
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0408 -- move the Contract on a year (twelve ticks of thirty days).
+spn_debug_events.0408 = {
+	type = character_event
+	title = spn_debug_events.0408.t
+	desc = spn_debug_events.0408.desc
+	orphan = yes
+	theme = dread
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0408.a
+		trigger = { global_var:spn_vade_contract_running ?= root }
+		random_owned_story = {
+			limit = { story_type = story_spn_vade_contract }
+			change_variable = { name = spn_vade_days_left add = -330 }
+			spn_vade_contract_tick_effect = yes
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0409 -- the chapters, to game.log (one line per head: name, chapter, size and cap are in the scope dump).
+spn_debug_events.0409 = {
+	type = character_event
+	title = spn_debug_events.0409.t
+	desc = spn_debug_events.0409.desc
+	orphan = yes
+	theme = learning
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0409.a
+		every_in_global_list = {
+			variable = spn_order_chapters
+			debug_log = "spn_order: a chapter head"
+			debug_log_scopes = yes
+			var:spn_order_chapter ?= {
+				debug_log = "spn_order: his chapter (size, cap, way in its variables)"
+				debug_log_scopes = yes
+			}
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0410 -- age my loans out (as lender or borrower), then run the loans' year.
+spn_debug_events.0410 = {
+	type = character_event
+	title = spn_debug_events.0410.t
+	desc = spn_debug_events.0410.desc
+	orphan = yes
+	theme = learning
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0410.a
+		every_in_global_list = {
+			variable = spn_relic_loans
+			limit = {
+				OR = {
+					artifact_owner ?= root
+					var:spn_borrowed_from ?= root
+				}
+			}
+			remove_variable = spn_borrow_timer
+		}
+		spn_relic_loans_yearly_effect = yes
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0411 -- run the Vade's year now.
+spn_debug_events.0411 = {
+	type = character_event
+	title = spn_debug_events.0411.t
+	desc = spn_debug_events.0411.desc
+	orphan = yes
+	theme = witchcraft
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0411.a
+		spn_vade_yearly_effect = yes
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0412 -- run my chapter's year now.
+spn_debug_events.0412 = {
+	type = character_event
+	title = spn_debug_events.0412.t
+	desc = spn_debug_events.0412.desc
+	orphan = yes
+	theme = learning
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0412.a
+		trigger = { exists = var:spn_order_chapter }
+		var:spn_order_chapter = { spn_order_chapter_year_effect = yes }
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0413 -- give me cancer, and five AI members of my chapter at my court who will volunteer.
+spn_debug_events.0413 = {
+	type = character_event
+	title = spn_debug_events.0413.t
+	desc = spn_debug_events.0413.desc
+	orphan = yes
+	theme = healthcare
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0413.a
+		trigger = { exists = var:spn_order_chapter }
+		if = {
+			limit = { NOT = { has_trait = cancer } }
+			add_trait = cancer
+		}
+		spn_debug_volunteer_effect = yes
+		spn_debug_volunteer_effect = yes
+		spn_debug_volunteer_effect = yes
+		spn_debug_volunteer_effect = yes
+		spn_debug_volunteer_effect = yes
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0414 -- kill one of my carriers (I am the patient). The killer: a wolf at my court, else me.
+spn_debug_events.0414 = {
+	type = character_event
+	title = spn_debug_events.0414.t
+	desc = spn_debug_events.0414.desc
+	orphan = yes
+	theme = dread
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0414.a
+		trigger = { has_variable_list = spn_transference_carriers }
+		random_courtier = {
+			limit = { spn_is_wolf_trigger = yes }
+			save_scope_as = spn_dbg_killer
+		}
+		if = {
+			limit = { NOT = { exists = scope:spn_dbg_killer } }
+			save_scope_as = spn_dbg_killer
+		}
+		random_in_list = {
+			variable = spn_transference_carriers
+			limit = { is_alive = yes }
+			death = { death_reason = spn_death_clawed killer = scope:spn_dbg_killer }
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0415 -- make me the master and open The Order's Prerogative.
+spn_debug_events.0415 = {
+	type = character_event
+	title = spn_debug_events.0415.t
+	desc = spn_debug_events.0415.desc
+	orphan = yes
+	theme = realm
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0415.a
+		set_global_variable = { name = spn_order_master value = root }
+		trigger_event = spn_order.0940
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0416 -- make me a demon (Witchcraft's own make_demon_effect).
+spn_debug_events.0416 = {
+	type = character_event
+	title = spn_debug_events.0416.t
+	desc = spn_debug_events.0416.desc
+	orphan = yes
+	theme = dread
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0416.a
+		make_demon_effect = yes
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0417 -- call my favor now.
+spn_debug_events.0417 = {
+	type = character_event
+	title = spn_debug_events.0417.t
+	desc = spn_debug_events.0417.desc
+	orphan = yes
+	theme = dread
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0417.a
+		trigger = { exists = var:spn_order_favor_owed }
+		trigger_event = spn_order.0910
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0418 -- the Grand Magus dies.
+spn_debug_events.0418 = {
+	type = character_event
+	title = spn_debug_events.0418.t
+	desc = spn_debug_events.0418.desc
+	orphan = yes
+	theme = realm
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0418.a
+		global_var:current_archmage_global ?= {
+			if = {
+				limit = {
+					is_alive = yes
+					NOT = { this = root }
+				}
+				death = { death_reason = death_mysterious }
+			}
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# .0419 -- teach me the Fors Factorum and bring the price now.
+spn_debug_events.0419 = {
+	type = character_event
+	title = spn_debug_events.0419.t
+	desc = spn_debug_events.0419.desc
+	orphan = yes
+	theme = healthcare
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0419.a
+		if = {
+			limit = { NOT = { has_character_modifier = spn_fors_factorum_modifier } }
+			add_character_modifier = spn_fors_factorum_modifier
+		}
+		trigger_event = spn_order.0841
+	}
+	option = { name = spn_debug_events.cancel }
+}
+
+# ==================================================================================================
+# 2.39 -- Imperium and the council's works (WORK-ORDER-2.39 F12, F13). Console: event spn_debug_events.0470
+# ==================================================================================================
+# .0470 -- a: open the council's works now (the 50-year gate's debug override, read only in debug_mode) and look for a
+# Great Respondeo realm at once; b: bring a motion before the council now (outside a meeting); c: clear the records.
+spn_debug_events.0470 = {
+	type = character_event
+	title = spn_debug_events.0470.t
+	desc = spn_debug_events.0470.desc
+	orphan = yes
+	theme = diplomacy
+	left_portrait = { character = root }
+	option = {
+		name = spn_debug_events.0470.a
+		set_global_variable = { name = spn_debug_works_open value = yes years = 10 }
+		hidden_effect = { spn_respondeo_magna_target_effect = yes }
+	}
+	option = {
+		name = spn_debug_events.0470.b
+		trigger = { global_var:current_archmage_global ?= root }
+		trigger_event = spn_order.1000
+	}
+	option = {
+		name = spn_debug_events.0470.c
+		hidden_effect = {
+			if = {
+				limit = { has_global_variable = spn_imperium_refused }
+				remove_global_variable = spn_imperium_refused
+			}
+			if = {
+				limit = { has_global_variable = spn_imperium_last }
+				remove_global_variable = spn_imperium_last
+			}
+			if = {
+				limit = { has_global_variable = spn_respondeo_magna_cd }
+				remove_global_variable = spn_respondeo_magna_cd
 			}
 		}
 	}

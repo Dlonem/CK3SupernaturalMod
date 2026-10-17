@@ -1,0 +1,537 @@
+﻿# Supernatural 2.38b -- the Conclave (DESIGN-2.38b §4). The activity is zz_spn_conclave.txt; events spn_conclave.
+# Activity variables: spn_cv_reason (flag:chair | flag:prerogative | flag:will), the list spn_cv_cands (the chair's
+# candidates), spn_cv_voted (a counter). Character variables, cleared at the end: spn_cv_votes (a candidate's votes).
+# Everything the vote does runs once, for the host (every attendee runs on_end; vanilla's own guard).
+
+# ==================================================================================================
+# CALLING IT. Root: the one asked to call it (the senior Temple Magus, or the Grand Magus). A host must hold land (the
+# Conclave sits at a county seat he holds); else the senior landed Temple Magus calls it; else nobody, and for the chair
+# the three-year deadline in spn_order_chair_fill_effect seats the senior instead.
+# ==================================================================================================
+spn_conclave_call_effect = {
+	save_scope_as = spn_cl_asked
+	save_scope_value_as = { name = spn_cl_reason value = $REASON$ } # 2.39 (WORK-ORDER-2.39 F1): banked for the tests below
+	if = {
+		limit = {
+			scope:spn_cl_asked = { is_landed = yes }
+			# 2.39 (WORK-ORDER-2.39 F1, review M-1): an Invocare host is not still on the Conclave's cooldown.
+			trigger_if = {
+				limit = { scope:spn_cl_reason = flag:invocare }
+				scope:spn_cl_asked = { NOT = { is_activity_type_on_cooldown = spn_conclave } }
+			}
+		}
+		scope:spn_cl_asked = { save_scope_as = spn_cl_host }
+	}
+	else = {
+		ordered_in_global_list = {
+			variable = spn_order_chapters
+			limit = {
+				is_alive = yes
+				is_landed = yes
+				is_imprisoned = no
+				exists = var:spn_order_chapter
+				# 2.39 (WORK-ORDER-2.39 F1): Invocare is never hosted by the Grand Magus it judges, nor by one still on the
+				# Conclave's cooldown (review M-1).
+				trigger_if = {
+					limit = { scope:spn_cl_reason = flag:invocare }
+					NOT = { global_var:current_archmage_global ?= this }
+					NOT = { is_activity_type_on_cooldown = spn_conclave }
+				}
+			}
+			order_by = spn_order_chapter_age_value
+			save_scope_as = spn_cl_host
+		}
+	}
+	scope:spn_cl_host ?= {
+		add_character_flag = { flag = spn_conclave_may_call years = 2 }
+		# 2.39 (WORK-ORDER-2.39 F1): an Invocare waiting with this host is never overwritten by a later call (it would lapse
+		# unseen); its two names travel with the call to the activity (zz_spn_conclave.txt on_start).
+		if = {
+			limit = { NOT = { var:spn_conclave_reason ?= flag:invocare } }
+			set_variable = { name = spn_conclave_reason value = $REASON$ years = 2 }
+			if = {
+				limit = { has_variable = spn_conclave_chair_after }
+				remove_variable = spn_conclave_chair_after
+			}
+		}
+		# 2.39 (review L-3): a chair call that finds an Invocare waiting is remembered (the life of the call). If the motion
+		# then lapses because its Grand Magus has left the chair, The Masks Must Meet turns the call into the chair's
+		# instead of dropping it (zz_spn_conclave_events.txt, .0001 on_trigger_fail).
+		else_if = {
+			limit = { scope:spn_cl_reason = flag:chair }
+			set_variable = { name = spn_conclave_chair_after value = yes years = 2 }
+		}
+		if = {
+			limit = { scope:spn_cl_reason = flag:invocare }
+			set_variable = { name = spn_conclave_iv_magus value = scope:spn_iv_magus years = 2 }
+			set_variable = { name = spn_conclave_iv_caller value = scope:spn_iv_caller years = 2 }
+		}
+		if = {
+			limit = { is_ai = yes }
+			ai_attempt_to_host_activity = spn_conclave
+		}
+		else_if = {
+			limit = { scope:spn_cl_host.var:spn_conclave_reason ?= flag:will }
+			trigger_event = spn_conclave.0001 # the player asked: at once
+		}
+		else = {
+			trigger_event = { id = spn_conclave.0001 days = { 45 90 } } # 2.38c: spaced from the chapter's own events
+		}
+	}
+}
+
+# Yearly (Order rule On): the Conclave of the Prerogative, when ten years have passed and three temples stand.
+spn_conclave_yearly_effect = {
+	if = {
+		limit = {
+			exists = global_var:current_archmage_global
+			NOT = { exists = global_var:spn_conclave_running }
+			any_in_global_list = {
+				variable = spn_order_chapters
+				count >= spn_order_conclave_threshold_value
+			}
+			OR = {
+				NOT = { exists = global_var:spn_order_prerogative_year }
+				global_var:spn_order_prerogative_year <= spn_order_ten_years_ago_value
+			}
+			NOT = { exists = global_var:spn_conclave_prerogative_asked }
+			global_var:current_archmage_global = {
+				is_alive = yes
+				spn_is_order_member_trigger = yes
+				NOT = { has_character_flag = spn_conclave_may_call }
+				NOT = { is_activity_type_on_cooldown = spn_conclave }
+			}
+		}
+		set_global_variable = { name = spn_conclave_prerogative_asked value = yes years = 5 }
+		global_var:current_archmage_global = { spn_conclave_call_effect = { REASON = flag:prerogative } }
+	}
+}
+
+# ==================================================================================================
+# THE RECKONING (host). Every member seen; one who broke the rules is judged in the room; the Prerogative proclaimed.
+# ==================================================================================================
+spn_conclave_reckoning_effect = {
+	# 2.39 (WORK-ORDER-2.39 F12): first, if no player said it in The Masks, the AI who knows the Grand Magus staged a rift
+	# may say it now, so it is judged in this Reckoning and weighs in an Invocare vote. At most once a Conclave.
+	spn_conclave_unmask_ai_effect = yes
+	scope:activity = {
+		every_attending_character = {
+			limit = { spn_is_order_member_trigger = yes }
+			spn_order_add_standing_effect = { VALUE = 3 }
+		}
+		# 2.39 (WORK-ORDER-2.39 F1, M3): if Invocare is heard at this Conclave, bank the charges the masks will weigh before
+		# anyone is judged (activity var spn_iv_charges), and save the Grand Magus as spn_iv_held for the block below.
+		spn_invocare_bank_effect = yes
+		# Judgement: the first accused goes to a player host; the rest the masks settle by the host's leaning.
+		every_attending_character = {
+			limit = {
+				spn_is_order_member_trigger = yes
+				has_character_flag = spn_order_broke_rules
+				NOT = { has_character_flag = spn_conclave_judged }
+				NOT = { this = scope:host }
+				NOT = { scope:spn_iv_held ?= this } # 2.39 (WORK-ORDER-2.39 M3): under Invocare the vote is his judgment
+			}
+			add_to_temporary_list = spn_cv_accused
+		}
+	}
+	if = {
+		limit = {
+			scope:host = { is_ai = no }
+			any_in_list = { list = spn_cv_accused always = yes }
+		}
+		random_in_list = {
+			list = spn_cv_accused
+			save_scope_as = spn_cv_accused_one
+			add_character_flag = { flag = spn_conclave_judged years = 10 }
+		}
+		scope:host = { trigger_event = spn_conclave.0200 }
+	}
+	every_in_list = {
+		list = spn_cv_accused
+		limit = { NOT = { has_character_flag = spn_conclave_judged } }
+		add_character_flag = { flag = spn_conclave_judged years = 10 }
+		save_temporary_scope_as = spn_cv_acc
+		if = {
+			limit = {
+				scope:host = { opinion = { target = scope:spn_cv_acc value < -20 } }
+			}
+			trigger_event = spn_order.0192
+		}
+		else = {
+			spn_order_add_standing_effect = { VALUE = -20 }
+			remove_character_flag = spn_order_broke_rules
+		}
+	}
+	# 2.39 (WORK-ORDER-2.39 F14, D15): the masks raise favouritism, the lesser charge (-10 standing, the flag removed).
+	spn_conclave_favouritism_effect = yes
+	# 2.39 (WORK-ORDER-2.39 F1): Invocare is heard now, or lapses; the price is taken only when it is heard.
+	spn_invocare_open_effect = yes
+	# The Prerogative: the master proclaims it (a player chooses; the AI renews or sets it by its own rule).
+	# (2.38b review: the master need not be the host; an unlanded Grand Magus's Conclave is hosted by a Temple Magus.)
+	global_var:spn_order_master ?= {
+		if = {
+			limit = {
+				is_alive = yes
+				is_ai = no
+				# Only when it is due (or this is the Conclave of the Prerogative).
+				OR = {
+					scope:activity.var:spn_cv_reason ?= flag:prerogative
+					NOT = { exists = global_var:spn_order_prerogative_year }
+					global_var:spn_order_prerogative_year <= spn_order_ten_years_ago_value
+				}
+			}
+			trigger_event = { id = spn_order.0940 days = 2 }
+		}
+		else = {
+			spn_order_ai_prerogative_effect = yes
+		}
+	}
+}
+
+# ==================================================================================================
+# THE ANOINTING (host). Neophytes who passed their tests take the oath before every temple; and any member who brought
+# proof makes an entrance.
+# ==================================================================================================
+spn_conclave_anointing_effect = {
+	scope:activity = {
+		every_attending_character = {
+			limit = {
+				spn_order_is_neophyte_trigger = yes
+				var:spn_order_pledge_step ?= 3
+			}
+			add_character_flag = { flag = spn_conclave_anointed days = 30 }
+			trigger_event = { id = spn_order.0130 days = 1 }
+		}
+		every_attending_character = {
+			limit = {
+				has_activity_intent = spn_make_an_entrance_intent
+				spn_conclave_has_proof_trigger = yes
+			}
+			spn_conclave_entrance_effect = yes
+		}
+	}
+}
+
+# One member makes an entrance (Make an Entrance). Root: the member. The proof is marked so it counts once.
+spn_conclave_entrance_effect = {
+	save_scope_as = spn_cv_entrant
+	clear_saved_scope = spn_cv_proof_art
+	if = {
+		limit = { has_character_flag = spn_order_proof_kill }
+		remove_character_flag = spn_order_proof_kill
+	}
+	else = {
+		random_character_artifact = {
+			limit = { spn_conclave_proof_artifact_trigger = yes }
+			set_variable = spn_shown_at_conclave
+			save_scope_as = spn_cv_proof_art
+		}
+	}
+	spn_order_add_standing_effect = { VALUE = 20 }
+	if = {
+		limit = { var:spn_order_rank ?= flag:acolyte }
+		spn_order_set_rank_effect = { WHO = scope:spn_cv_entrant RANK = flag:medicum }
+		add_character_flag = { flag = spn_conclave_raised days = 30 }
+	}
+	if = {
+		limit = { is_ai = no }
+		trigger_event = spn_conclave.0300
+	}
+	scope:activity = {
+		every_attending_character = {
+			limit = {
+				is_ai = no
+				NOT = { this = scope:spn_cv_entrant }
+			}
+			send_interface_toast = {
+				type = event_toast_text_neutral
+				title = spn_conclave_toast_entrance
+				desc = spn_conclave_toast_entrance_desc
+				left_icon = scope:spn_cv_entrant
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE VOTE (host). The chair, if it is empty: the Temple Magi who came stand; Temple Magi and seat holders vote. Then the
+# seats: the Grand Magus names, the temples confirm.
+# ==================================================================================================
+spn_conclave_vote_open_effect = {
+	spn_conclave_invocare_close_effect = yes # 2.39 (WORK-ORDER-2.39 F1): the count; a tie keeps him
+	if = {
+		limit = { NOT = { exists = global_var:current_archmage_global } }
+		scope:activity = {
+			ordered_attending_character = {
+				limit = { spn_conclave_candidate_trigger = yes }
+				order_by = spn_conclave_candidate_score_value
+				max = 4
+				check_range_bounds = no
+				save_temporary_scope_as = spn_cv_c
+				scope:activity = { add_to_variable_list = { name = spn_cv_cands target = scope:spn_cv_c } }
+			}
+		}
+		if = {
+			limit = { scope:activity = { has_variable_list = spn_cv_cands } }
+			scope:activity = {
+				every_in_list = {
+					variable = spn_cv_cands
+					set_variable = { name = spn_cv_votes value = 0 }
+				}
+			}
+			# Voters: AI now, players by event.
+			scope:activity = {
+				every_attending_character = {
+					limit = { spn_conclave_voter_trigger = yes }
+					if = {
+						limit = { is_ai = yes }
+						spn_conclave_ai_vote_effect = yes
+					}
+					else = {
+						trigger_event = spn_conclave.0400
+					}
+				}
+			}
+		}
+	}
+}
+
+# An AI voter. Root: the voter. A candidate votes for himself; else a friend or lover who stands; else the best.
+spn_conclave_ai_vote_effect = {
+	save_scope_as = spn_cv_voter
+	scope:activity = {
+		if = {
+			limit = { is_target_in_variable_list = { name = spn_cv_cands target = scope:spn_cv_voter } }
+			scope:spn_cv_voter = { save_scope_as = spn_cv_choice }
+		}
+		else_if = {
+			limit = {
+				any_in_list = {
+					variable = spn_cv_cands
+					OR = {
+						has_relation_friend = scope:spn_cv_voter
+						has_relation_lover = scope:spn_cv_voter
+					}
+				}
+			}
+			random_in_list = {
+				variable = spn_cv_cands
+				limit = {
+					OR = {
+						has_relation_friend = scope:spn_cv_voter
+						has_relation_lover = scope:spn_cv_voter
+					}
+				}
+				save_scope_as = spn_cv_choice
+			}
+		}
+		else = {
+			ordered_in_list = {
+				variable = spn_cv_cands
+				limit = { NOT = { has_relation_rival = scope:spn_cv_voter } }
+				order_by = spn_conclave_candidate_score_value
+				save_scope_as = spn_cv_choice
+			}
+		}
+	}
+	scope:spn_cv_choice ?= { change_variable = { name = spn_cv_votes add = 1 } }
+	clear_saved_scope = spn_cv_choice
+}
+
+spn_conclave_vote_close_effect = {
+	scope:activity = { set_variable = spn_cv_vote_closed }
+	# 2.39 (WORK-ORDER-2.39 F1, D4): a recalled Grand Magus is barred from this Conclave's election only.
+	scope:activity = {
+		var:spn_iv_magus ?= {
+			if = {
+				limit = { has_character_flag = spn_order_recalled }
+				remove_character_flag = spn_order_recalled
+			}
+		}
+	}
+	# The chair.
+	if = {
+		limit = {
+			NOT = { exists = global_var:current_archmage_global }
+			scope:activity = { has_variable_list = spn_cv_cands }
+		}
+		scope:activity = {
+			ordered_in_list = {
+				variable = spn_cv_cands
+				limit = {
+					is_alive = yes
+					spn_is_order_member_trigger = yes
+				}
+				order_by = spn_conclave_tally_value
+				save_scope_as = spn_cv_winner
+			}
+		}
+		scope:spn_cv_winner ?= {
+			spn_order_take_chair_effect = yes
+			add_prestige = major_prestige_gain
+		}
+		scope:activity = {
+			if = {
+				limit = { exists = scope:spn_cv_winner }
+				add_activity_log_entry = {
+					key = spn_conclave_log_chair
+					show_in_conclusion = yes
+					character = scope:spn_cv_winner
+				}
+			}
+			every_in_list = {
+				variable = spn_cv_cands
+				remove_variable = spn_cv_votes
+			}
+			clear_variable_list = spn_cv_cands
+		}
+	}
+	# The seats.
+	global_var:current_archmage_global ?= {
+		save_scope_as = spn_cv_chair
+		if = {
+			limit = {
+				is_ai = no
+				spn_conclave_seat_open_trigger = yes
+			}
+			trigger_event = { id = spn_conclave.0410 days = 1 }
+		}
+		else = {
+			spn_conclave_ai_seat_effect = yes
+			spn_conclave_ai_seat_effect = yes
+			spn_conclave_ai_seat_effect = yes
+		}
+	}
+}
+
+# One empty seat for an AI chair: the attendee who came for a seat first, then the most respected. Root: the chair.
+spn_conclave_ai_seat_effect = {
+	if = {
+		limit = { spn_conclave_seat_open_trigger = yes }
+		scope:activity = {
+			ordered_attending_character = {
+				limit = { spn_order_seat_candidate_trigger = { CHAIR = scope:spn_cv_chair } }
+				order_by = spn_conclave_seat_score_value
+				save_scope_as = spn_cv_seat_pick
+			}
+		}
+		scope:spn_cv_seat_pick ?= {
+			spn_order_take_seat_effect = yes
+			scope:activity = {
+				add_activity_log_entry = {
+					key = spn_conclave_log_seat
+					show_in_conclusion = yes
+					character = scope:spn_cv_seat_pick
+				}
+			}
+		}
+		clear_saved_scope = spn_cv_seat_pick
+	}
+}
+
+# ==================================================================================================
+# THE END: each attendee's intent pays (on_complete; root is the attendee).
+# ==================================================================================================
+spn_conclave_complete_effect = {
+	if = {
+		limit = { spn_is_order_member_trigger = yes }
+		if = {
+			limit = { has_activity_intent = spn_conclave_preside_intent }
+			spn_order_add_standing_effect = { VALUE = 10 }
+			add_prestige = medium_prestige_gain
+		}
+		else_if = {
+			limit = { has_activity_intent = spn_speak_for_my_temple_intent }
+			spn_order_add_standing_effect = { VALUE = 10 }
+		}
+		else_if = {
+			limit = {
+				OR = {
+					has_activity_intent = spn_seek_the_chair_intent
+					has_activity_intent = spn_seek_a_seat_intent
+					has_activity_intent = spn_conclave_attend_intent
+				}
+			}
+			spn_order_add_standing_effect = { VALUE = 5 }
+		}
+		else_if = {
+			limit = {
+				has_activity_intent = spn_find_a_teacher_intent
+				NOT = { exists = var:spn_order_tutor }
+			}
+			spn_order_assign_tutor_effect = { WHO = root }
+		}
+		else_if = {
+			limit = {
+				has_activity_intent = spn_borrow_from_another_temple_intent
+				NOT = { has_character_flag = spn_order_borrow_cd }
+			}
+			spn_conclave_borrow_effect = yes
+		}
+		else_if = {
+			limit = {
+				has_activity_intent = spn_ask_for_the_working_intent
+				spn_order_deadly_disease_trigger = yes
+				NOT = { exists = var:spn_transference_pending }
+				NOT = { exists = var:spn_transference_disease }
+			}
+			spn_conclave_working_effect = yes
+		}
+	}
+}
+
+# Borrow from Another Temple: one pledged item of an attendee of another temple. Root: the borrower.
+spn_conclave_borrow_effect = {
+	save_scope_as = spn_cvb_borrower
+	scope:activity = {
+		random_attending_character = {
+			limit = {
+				spn_is_order_member_trigger = yes
+				NOT = { this = scope:spn_cvb_borrower }
+				NOT = { var:spn_order_chapter ?= scope:spn_cvb_borrower.var:spn_order_chapter }
+				any_character_artifact = { spn_conclave_lendable_trigger = yes }
+			}
+			save_scope_as = spn_cvb_lender
+		}
+	}
+	scope:spn_cvb_lender ?= {
+		random_character_artifact = {
+			limit = { spn_conclave_lendable_trigger = yes }
+			save_scope_as = spn_cvb_art
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_cvb_art }
+		add_character_flag = { flag = spn_order_borrow_cd years = 5 }
+		spn_relic_lend_effect = { ART = scope:spn_cvb_art LENDER = scope:spn_cvb_lender BORROWER = scope:spn_cvb_borrower }
+	}
+}
+
+# Ask for the Working: an attending caster who can, by the Transference's own rules. Root: the patient.
+spn_conclave_working_effect = {
+	save_scope_as = spn_cvw_patient
+	scope:activity = {
+		random_attending_character = {
+			limit = {
+				NOT = { this = scope:spn_cvw_patient }
+				spn_transference_caster_trigger = yes
+			}
+			save_scope_as = spn_cvw_caster
+		}
+	}
+	scope:spn_cvw_caster ?= {
+		spn_transference_begin_effect = { CASTER = scope:spn_cvw_caster PATIENT = scope:spn_cvw_patient }
+	}
+}
+
+# Fill the Seats again while seats and rounds remain (at most three). Root: the player Grand Magus.
+spn_conclave_seat_again_effect = {
+	if = {
+		limit = {
+			exists = var:spn_cv_seat_rounds
+			var:spn_cv_seat_rounds < 3
+			spn_conclave_seat_open_trigger = yes
+		}
+		trigger_event = { id = spn_conclave.0410 days = 1 }
+	}
+}

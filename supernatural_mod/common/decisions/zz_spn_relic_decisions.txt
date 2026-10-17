@@ -1,0 +1,193 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": relics, the Seal and Zecchia (WORK-ORDER-2.38 §9.3, §9.7, §11.2).
+# Loc: localization/english/spn_relic_l_english.yml.
+
+# Break the Mirror (§9.3): either party ends Bind Our Fates; the shard breaks wherever it is.
+spn_relic_break_mirror_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_relic_break_mirror_decision_desc
+	selection_tooltip = spn_relic_break_mirror_decision_tooltip
+	confirm_text = spn_relic_break_mirror_decision_confirm
+	ai_check_interval = 60
+	is_shown = {
+		exists = var:spn_fates_bound_to
+	}
+	effect = {
+		custom_tooltip = spn_relic_break_mirror_decision_effect_tt
+		var:spn_fates_bound_to = { save_scope_as = spn_bm_partner }
+		var:spn_mirror_shard_of ?= { save_scope_as = spn_bm_shard }
+		remove_variable = spn_fates_bound_to
+		remove_variable = spn_mirror_shard_of
+		if = {
+			limit = { has_character_modifier = spn_fates_bound_modifier }
+			remove_character_modifier = spn_fates_bound_modifier
+		}
+		scope:spn_bm_partner = {
+			if = {
+				limit = { var:spn_fates_bound_to ?= root }
+				remove_variable = spn_fates_bound_to
+				remove_variable = spn_mirror_shard_of
+				if = {
+					limit = { has_character_modifier = spn_fates_bound_modifier }
+					remove_character_modifier = spn_fates_bound_modifier
+				}
+			}
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_relic_toast_mirror_broken
+					left_icon = root
+				}
+			}
+		}
+		scope:spn_bm_shard ?= { destroy_artifact = this }
+	}
+	ai_potential = { exists = var:spn_fates_bound_to }
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 100
+			opinion = { target = var:spn_fates_bound_to value <= -20 }
+		}
+	}
+}
+
+# Take the Seal from the Shrine (§9.7): AI only. A player uses vanilla's holy-site window.
+spn_seal_take_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds" }
+	desc = spn_seal_take_decision_desc
+	selection_tooltip = spn_seal_take_decision_tooltip
+	ai_check_interval = 12
+	is_shown = {
+		is_ai = yes
+		exists = global_var:spn_seal
+		global_var:spn_seal_county ?= { holder ?= root }
+	}
+	is_valid = {
+		global_var:spn_seal_county = {
+			any_county_holy_site = {
+				save_temporary_scope_as = spn_st_check
+				any_holy_site_enshrined_artifact = { this = global_var:spn_seal }
+				root = {
+					can_remove_holy_site_artifact = {
+						holy_site = scope:spn_st_check
+						artifact = global_var:spn_seal
+					}
+				}
+			}
+		}
+	}
+	effect = {
+		global_var:spn_seal_county = {
+			random_county_holy_site = {
+				limit = { any_holy_site_enshrined_artifact = { this = global_var:spn_seal } }
+				save_scope_as = spn_st_site
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_st_site }
+			global_var:spn_seal = { save_scope_as = spn_st_seal }
+			remove_holy_site_artifact = {
+				holy_site = scope:spn_st_site
+				artifact = scope:spn_st_seal
+			}
+			add_character_flag = { flag = spn_seal_taken_cd years = 20 }
+		}
+	}
+	ai_potential = {
+		is_ai = yes
+		OR = {
+			has_trait = archmage
+			spn_is_order_member_trigger = yes
+		}
+		OR = {
+			exists = var:spn_knows_seal
+			exists = var:spn_knows_seal_holder
+		}
+		OR = {
+			NOT = { faith = { religion = { is_in_family = rf_abrahamic } } }
+			NOT = { has_character_flag = spn_seal_taken_cd }
+		}
+	}
+	ai_will_do = {
+		base = 60
+		modifier = { add = 20 has_trait = greedy }
+	}
+}
+
+# Summon Zecchia (§11.2): who knows her name may call her: a Mage who can pay, or anyone who wears the Seal.
+spn_zecchia_summon_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_zecchia_summon_decision_desc
+	selection_tooltip = spn_zecchia_summon_decision_tooltip
+	confirm_text = spn_zecchia_summon_decision_confirm
+	ai_check_interval = 36
+	cooldown = { years = 2 }
+	is_shown = {
+		has_character_flag = spn_knows_zecchia
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_zecchia_summon_pay_tt
+			OR = {
+				spn_wears_seal_trigger = yes
+				AND = {
+					has_trait = archmage
+					can_spend_standard_ps_trigger = yes
+				}
+			}
+		}
+		custom_tooltip = {
+			text = spn_zecchia_busy_tt
+			NOT = { exists = global_var:spn_zecchia_busy }
+		}
+		custom_tooltip = {
+			text = spn_zecchia_summon_not_hired_tt
+			NOT = { exists = var:spn_zecchia_count }
+		}
+	}
+	effect = {
+		if = {
+			limit = { spn_wears_seal_trigger = no }
+			spend_standard_ps_effect = yes
+		}
+		# Rule One: with demons, don't (§11.6).
+		if = {
+			limit = {
+				spn_is_order_member_trigger = yes
+				NOT = { spn_order_prerogative_is_trigger = { P = flag:pit } }
+			}
+			custom_tooltip = spn_order_rule_one_tt
+			spn_order_add_standing_effect = { VALUE = -10 }
+		}
+		spn_zecchia_get_effect = { HIRER = root }
+		if = {
+			limit = { NOT = { any_memory = { memory_type = spn_zecchia_hired_memory } } }
+			create_character_memory = { type = spn_zecchia_hired_memory }
+		}
+		trigger_event = spn_zecchia.0010
+	}
+	ai_potential = {
+		has_character_flag = spn_knows_zecchia
+		OR = {
+			any_relation = {
+				type = rival
+				spn_zecchia_wanted_victim_trigger = { HIRER = root } # 2.39 (Boot 4, 16 Oct): the rival her pick will take: in reach, under the send rule, not spared
+				any_character_artifact = {
+					spn_is_magic_item_trigger = yes
+					spn_zecchia_takeable_trigger = yes
+				}
+			}
+			spn_zecchia_ai_wants_trigger = yes # 2.39 (Boot 3, 16 Oct): an item he wants (HANDOFF §9)
+		}
+	}
+	ai_will_do = {
+		base = 0
+		modifier = { add = 30 has_trait = vengeful }
+		modifier = { add = 30 has_trait = greedy }
+		modifier = { add = 40 spn_zecchia_ai_wants_trigger = yes } # 2.39 (Boot 3, 16 Oct): an item he wants
+	}
+}

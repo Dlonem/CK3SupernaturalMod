@@ -235,7 +235,10 @@ for _f, _id, _icon in (('events/ev7.txt', 'magic_ev7.132', 'splash_legends'),   
                        ('events/ev10.txt', 'magic_ev10.121', 'splash_epidemics')):
     E(_f, '%s = {\n\ttype = character_event\n\twindow = fullscreen_event\n' % _id,
           '%s = {\n\ttype = character_event\n\twindow = fullscreen_event\n\tqueue_icon = "gfx/interface/icons/splash_icons/%s.dds"\t# CK3 1.20: fullscreen events require a queue icon\n' % (_id, _icon))
-E('common/character_interactions/00_magic_interactions.txt',   # S20 -- the convert follows the actor's Rite
+# S20 -- the convert follows the actor's Rite. 2.39 (WORK-ORDER-2.39 B14): retired; apply_upstream_edits.py entry 70 (Demand
+# Submission) makes this change now, together with 2.38's forced-conversion line that superseded this pair's text. Kept
+# here, unregistered, as the record of what the port did.
+_S20_RETIRED = ('common/character_interactions/00_magic_interactions.txt',
   '\t\t\t\t\tif = {\n\t\t\t\t\t\tlimit = {\n\t\t\t\t\t\t\tNOT = {\tfaith = scope:actor.faith\t}\n\t\t\t\t\t\t}\n\t\t\t\t\t\tset_character_faith_with_conversion = scope:actor.faith\n\t\t\t\t\t}\n',
   '\t\t\t\t\tif = {\n\t\t\t\t\t\tlimit = {\n\t\t\t\t\t\t\tNOT = {\trite = scope:actor.rite\t}\t# CK3 1.20: the convert follows the actor\'s Rite, not only the Faith\n\t\t\t\t\t\t}\n\t\t\t\t\t\tset_character_rite_with_conversion = scope:actor.rite\n\t\t\t\t\t}\n')
 
@@ -317,11 +320,12 @@ def check_laws():
                     'camp_purpose_seekers law, law_group_type = camp_purpose, index = 6)' % path)
     else: SKIPPED.append(path)
 
-# S17 -- three Witchcraft keys vanilla 1.20 now ships itself (Russian is the translator's and is never touched)
+# S17 -- three Witchcraft keys vanilla 1.20 now ships itself. 2.39 (WORK-ORDER-2.39 B8): Russian too; removing a key
+# vanilla defines changes no translated word.
 LOC_DUPES = ('scheme_agent_aptitude.trait.lifestyle_mystic', 'murder_enemy_scheme_phase_duration_add',
              'convert_to_witchcraft_scheme_phase_duration_add')
 def apply_loc():
-    for l in ('english', 'french', 'german', 'korean', 'polish', 'simp_chinese', 'spanish'):
+    for l in ('english', 'french', 'german', 'korean', 'polish', 'russian', 'simp_chinese', 'spanish'):
         path = 'localization/%s/event_localization/witch_ep8_l_%s.yml' % (l, l)
         if not os.path.exists(path): continue
         t, meta = load(path); out = []; n = 0

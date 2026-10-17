@@ -1,0 +1,89 @@
+﻿# Supernatural 2.39 -- the Collegium's triggers (WORK-ORDER-2.39 F15). Data model and the one writer/remover:
+# common/scripted_effects/zz_spn_collegium_effects.txt.
+
+# STORY scope (a chapter). THE ONE TEST: the temple meets beneath a Collegium that still stands, and no hunter has walked
+# its corridor in the last ten years. Everything the temple gets from its hall reads this (the cap, the Transference, the
+# Clay Working, Respondeo, the Conclave, Beneath the Collegium, The Corridor). The building test makes a razed hall stop
+# counting at once; the chapter's year then releases it with a toast (spn_order_hall_year_effect, step 2b).
+spn_order_hall_stands_trigger = {
+	exists = var:spn_order_hall
+	var:spn_order_hall = { has_building = spn_order_collegium_01 }
+	NOT = { has_variable = spn_order_hall_profaned }
+}
+
+# CHARACTER scope. May this character's building become his temple's hall? He is its Temple Magus, or a seat holder or the
+# Grand Magus with 50 standing in it (WORK-ORDER-2.39 F15, expert call T3), and his temple has no hall yet. Read only by
+# the building's hidden hooks, its AI value and the Order's own effects: never a requirement line.
+spn_order_hall_patron_trigger = {
+	is_alive = yes # 2.39 (Boot 1, 16 Oct): a dead builder holds no variables
+	NOT = { has_game_rule = spn_order_off }
+	spn_is_order_member_trigger = yes
+	var:spn_order_chapter ?= { NOT = { exists = var:spn_order_hall } }
+	OR = {
+		spn_is_temple_magus_trigger = yes
+		AND = {
+			OR = {
+				has_variable = mc_member_var								# a seat on the Gnostic Council (Witchcraft's marker)
+				global_var:current_archmage_global ?= this				# the Grand Magus
+			}
+			exists = var:spn_order_standing
+			var:spn_order_standing >= 50
+		}
+	}
+}
+
+# CHARACTER scope (the hall's lord). Can the temple bring him in? Read inside effects only, never to show or hide an
+# option (B6, red team M7): spn_order_can_join_trigger reads a secret (Witchcraft's witch-hunter secret, B7) and hidden
+# flags, so "Bring him in" and "Ask the master" are always shown and a refusal is a neutral toast.
+spn_order_hall_can_bring_in_trigger = {
+	is_alive = yes
+	NOT = { exists = var:spn_order_chapter }
+	spn_order_can_join_trigger = yes
+}
+
+# CHARACTER scope (a player member, from the chapter's yearly moment list, F14). The branch of "Beneath the Collegium"
+# (spn_order.0164): a full member, not seen in ten years, whose temple's hall stands. The event's own trigger repeats it.
+spn_order_cm_hall_ok_trigger = {
+	NOT = { has_character_flag = spn_cm_seen_0164 }
+	spn_is_order_member_trigger = yes
+	var:spn_order_chapter ?= { spn_order_hall_stands_trigger = yes }
+}
+
+# CHARACTER scope (a ruler). A capital where the once-per-game seed may raise a Collegium: an AI ruler, not tribal (the
+# building's own requirement, vanilla building_requirement_tribal), with a free slot and no Collegium in his capital.
+spn_order_hall_seed_site_trigger = {
+	is_alive = yes
+	is_ai = yes
+	NOT = { government_has_flag = government_is_tribal }
+	NOT = { government_has_flag = government_is_nomadic }
+	NOT = { government_has_flag = government_is_wanua }
+	capital_province ?= {
+		free_building_slots > 0
+		# Only the holding types whose buildings list carries the Collegium (the mod's common/holdings/00_holdings.txt),
+		# so add_building never places it where no ruler could have built it (review H-1, 16 Oct).
+		OR = {
+			has_holding_type = castle_holding
+			has_holding_type = city_holding
+			has_holding_type = church_holding
+		}
+		NOT = { has_building = spn_order_collegium_01 }
+		NOT = { exists = var:spn_order_hall_of }
+	}
+}
+
+# CHARACTER scope (the hunter; spn_hunt_coven_next_effect). The Corridor stands in place of the SECOND door of a temple
+# sweep ("They answer to a temple") when the sweep is in the county of the culprit temple's standing hall, once per sweep.
+# The temple is the one banked on the activity when the sweep began (var:spn_hunt_sweep_ch, spn_hunt.0171): by now the
+# culprit is usually dead, and her death removes her var:spn_order_chapter (review H-2, 16 Oct).
+spn_hunt_corridor_due_trigger = {
+	scope:spn_hunt_activity ?= {
+		has_variable = spn_hunt_chapter_sweep
+		NOT = { has_variable = spn_hunt_corridor_done }
+		var:spn_hunt_coven_round = 2
+	}
+	exists = scope:spn_hunt_county
+	scope:spn_hunt_activity.var:spn_hunt_sweep_ch ?= {
+		spn_order_hall_stands_trigger = yes
+		var:spn_order_hall.county ?= scope:spn_hunt_county
+	}
+}

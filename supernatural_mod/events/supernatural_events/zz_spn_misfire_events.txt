@@ -1,0 +1,571 @@
+﻿namespace = spn_vade
+
+# Supernatural 2.39 -- "The Hermetic Order of the Blue Rose, Part 2": Bound as Witness, spells that go wrong
+# (WORK-ORDER-2.39 F3). Loc: localization/english/event_localization/zz_spn_239_misfire_l_english.yml.
+# The roll is spn_vade_misfire_roll_effect (zz_spn_misfire_effects.txt), called from Witchcraft's set_spell_id.
+
+# ==================================================================================================
+# .0600 -- The Spell Goes Wrong. The caster, a day after the cast. Everything is banked in the immediate; the target's
+# death, when it comes, is the option's last line and is re-checked at the click (G3).
+# ==================================================================================================
+spn_vade.0600 = {
+	type = character_event
+	title = spn_vade.0600.t
+	desc = {
+		desc = spn_vade.0600.desc
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_mf_outcome = flag:kill }
+				desc = spn_vade.0600.desc_kill
+			}
+			triggered_desc = {
+				trigger = { scope:spn_mf_outcome = flag:spared }
+				desc = spn_vade.0600.desc_spared
+			}
+			triggered_desc = {
+				trigger = { scope:spn_mf_outcome = flag:wide }
+				desc = spn_vade.0600.desc_wide
+			}
+			triggered_desc = {
+				trigger = { scope:spn_mf_outcome = flag:court }
+				desc = spn_vade.0600.desc_court
+			}
+			triggered_desc = {
+				trigger = { scope:spn_mf_outcome = flag:felt }
+				desc = spn_vade.0600.desc_felt
+			}
+			triggered_desc = {
+				trigger = { scope:spn_mf_outcome = flag:cancer }
+				desc = spn_vade.0600.desc_cancer
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_mf_outcome = flag:reopen
+					exists = scope:spn_mf_victim
+				}
+				desc = spn_vade.0600.desc_reopen_other
+			}
+			triggered_desc = {
+				trigger = { scope:spn_mf_outcome = flag:reopen }
+				desc = spn_vade.0600.desc_reopen_self
+			}
+			triggered_desc = {
+				trigger = { scope:spn_mf_outcome = flag:curdle }
+				desc = spn_vade.0600.desc_curdle
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_mf_outcome = flag:mind
+					exists = scope:spn_mf_victim
+				}
+				desc = spn_vade.0600.desc_mind_other
+			}
+			triggered_desc = {
+				trigger = { scope:spn_mf_outcome = flag:mind }
+				desc = spn_vade.0600.desc_mind_self
+			}
+			triggered_desc = {
+				trigger = { scope:spn_mf_outcome = flag:ward }
+				desc = spn_vade.0600.desc_ward
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_mf_outcome = flag:nosebleed
+					scope:spn_mf_kind = flag:travel
+				}
+				desc = spn_vade.0600.desc_travel
+			}
+			triggered_desc = {
+				trigger = { scope:spn_mf_outcome = flag:nosebleed }
+				desc = spn_vade.0600.desc_nosebleed
+			}
+			triggered_desc = {
+				trigger = { scope:spn_mf_outcome = flag:laugh }
+				desc = spn_vade.0600.desc_laugh
+			}
+			triggered_desc = {
+				trigger = { scope:spn_mf_outcome = flag:through }
+				desc = spn_vade.0600.desc_through
+			}
+			desc = spn_vade.0600.desc_back
+		}
+	}
+	theme = witchcraft
+	left_portrait = {
+		character = root
+		triggered_animation = {
+			trigger = { scope:spn_mf_outcome = flag:laugh }
+			animation = shame
+		}
+		triggered_animation = {
+			trigger = {
+				OR = {
+					scope:spn_mf_outcome = flag:back
+					scope:spn_mf_outcome = flag:ward
+					scope:spn_mf_outcome = flag:nosebleed
+					AND = {
+						scope:spn_mf_outcome = flag:reopen
+						NOT = { exists = scope:spn_mf_victim }
+					}
+				}
+			}
+			animation = pain
+		}
+		triggered_animation = {
+			trigger = { scope:spn_mf_outcome = flag:through }
+			animation = fear
+		}
+		animation = shock
+	}
+	right_portrait = {
+		character = scope:spn_mf_victim
+		trigger = { exists = scope:spn_mf_victim }
+		triggered_animation = {
+			trigger = {
+				OR = {
+					scope:spn_mf_outcome = flag:kill
+					scope:spn_mf_outcome = flag:spared
+					scope:spn_mf_outcome = flag:reopen
+					scope:spn_mf_outcome = flag:cancer
+				}
+			}
+			animation = pain
+		}
+		triggered_animation = {
+			trigger = { scope:spn_mf_outcome = flag:mind }
+			animation = stress
+		}
+		animation = worry
+	}
+	lower_right_portrait = {
+		character = scope:spn_mf_hurt
+		trigger = { exists = scope:spn_mf_hurt }
+	}
+	trigger = {
+		is_alive = yes
+		has_character_modifier = spn_vade_witness_bond_modifier # the bond may have been broken that day
+		NOT = { exists = global_var:spn_vade_destroyed }
+		exists = var:spn_mf_spell
+	}
+	on_trigger_fail = {
+		spn_vade_misfire_clear_effect = yes
+	}
+	immediate = {
+		# F14: the consequence of his own cast. It marks the flavor gate and never waits for it.
+		spn_flavor_mark_effect = yes
+		# 1. Bank everything the text and the option read. Witchcraft's own spell_id (read only by its LastSpellCast text) is
+		# set back to the spell that misfired, in case he cast again since.
+		set_variable = { name = spell_id value = var:spn_mf_spell }
+		var:spn_mf_target ?= {
+			if = {
+				limit = { is_alive = yes }
+				save_scope_as = spn_mf_victim
+			}
+		}
+		var:spn_mf_title ?= { save_scope_as = spn_mf_county }
+		# 2. The kind of spell.
+		if = {
+			limit = { spn_vade_misfire_disabling_trigger = yes }
+			save_scope_value_as = { name = spn_mf_kind value = flag:disabling }
+		}
+		else_if = {
+			limit = { spn_vade_misfire_deadly_trigger = yes }
+			save_scope_value_as = { name = spn_mf_kind value = flag:deadly }
+		}
+		else_if = {
+			limit = {
+				OR = {
+					var:spn_mf_spell = 4
+					var:spn_mf_spell = 28
+				}
+			}
+			save_scope_value_as = { name = spn_mf_kind value = flag:heal }
+		}
+		else_if = {
+			limit = {
+				OR = {
+					var:spn_mf_spell = 11
+					var:spn_mf_spell = 34
+				}
+			}
+			save_scope_value_as = { name = spn_mf_kind value = flag:bless }
+			if = {
+				limit = { var:spn_mf_spell = 34 }
+				save_scope_value_as = { name = spn_mf_thorns value = yes } # Thorn Walls: its own walls go, not a blessing
+			}
+		}
+		else_if = {
+			limit = {
+				OR = {
+					var:spn_mf_spell = 10
+					var:spn_mf_spell = 14
+				}
+			}
+			save_scope_value_as = { name = spn_mf_kind value = flag:mind }
+		}
+		else_if = {
+			limit = { spn_vade_misfire_helpful_trigger = yes } # Greater Protection, Stop the Cataclysm
+			save_scope_value_as = { name = spn_mf_kind value = flag:ward }
+		}
+		else_if = {
+			limit = {
+				OR = {
+					var:spn_mf_spell = 21
+					var:spn_mf_spell = 25
+				}
+			}
+			save_scope_value_as = { name = spn_mf_kind value = flag:summons }
+		}
+		else_if = {
+			limit = {
+				OR = {
+					var:spn_mf_spell = 12
+					var:spn_mf_spell = 37
+				}
+			}
+			save_scope_value_as = { name = spn_mf_kind value = flag:travel }
+		}
+		else = {
+			save_scope_value_as = { name = spn_mf_kind value = flag:utility }
+		}
+		# 3. What happened. Decided here, shown as what happened; no odds are ever shown.
+		if = {
+			limit = { scope:spn_mf_kind = flag:disabling }
+			random_list = {
+				# D9: it does not stop, and the target dies. About one disabling misfire in ten, and only with a living
+				# target who is not the caster. An AI caster's misfire never kills a player: it wounds him instead.
+				10 = {
+					trigger = {
+						exists = scope:spn_mf_victim
+						OR = {
+							is_ai = no
+							scope:spn_mf_victim = { is_ai = yes }
+						}
+					}
+					save_scope_value_as = { name = spn_mf_outcome value = flag:kill }
+				}
+				10 = {
+					trigger = {
+						exists = scope:spn_mf_victim
+						is_ai = yes
+						scope:spn_mf_victim = { is_ai = no }
+					}
+					save_scope_value_as = { name = spn_mf_outcome value = flag:spared }
+				}
+				55 = {
+					save_scope_value_as = { name = spn_mf_outcome value = flag:back }
+				}
+				35 = {
+					save_scope_value_as = { name = spn_mf_outcome value = flag:wide }
+				}
+			}
+		}
+		else_if = {
+			limit = { scope:spn_mf_kind = flag:deadly }
+			random_list = {
+				60 = {
+					save_scope_value_as = { name = spn_mf_outcome value = flag:back }
+				}
+				25 = {
+					trigger = {
+						any_courtier = {
+							is_adult = yes
+							NOT = { scope:spn_mf_victim ?= this }
+						}
+					}
+					random_courtier = {
+						limit = {
+							is_adult = yes
+							NOT = { scope:spn_mf_victim ?= this }
+						}
+						save_scope_as = spn_mf_hurt
+					}
+					save_scope_value_as = { name = spn_mf_outcome value = flag:court }
+				}
+				15 = {
+					save_scope_value_as = { name = spn_mf_outcome value = flag:felt }
+				}
+			}
+		}
+		else_if = {
+			limit = { scope:spn_mf_kind = flag:heal }
+			random_list = {
+				# The flesh keeps knitting: only on someone else. The caster's own misfires cost wounds and stress at worst.
+				# 2.39 review L5: as with the kill line (D9), an AI caster never gives a player this; the wound reopens instead.
+				40 = {
+					trigger = {
+						scope:spn_mf_victim ?= { can_contract_disease_trigger = { DISEASE = cancer } }
+						OR = {
+							is_ai = no
+							scope:spn_mf_victim ?= { is_ai = yes }
+						}
+					}
+					save_scope_value_as = { name = spn_mf_outcome value = flag:cancer }
+				}
+				60 = {
+					save_scope_value_as = { name = spn_mf_outcome value = flag:reopen }
+				}
+			}
+		}
+		else_if = {
+			limit = {
+				scope:spn_mf_kind = flag:bless
+				exists = scope:spn_mf_county
+			}
+			save_scope_value_as = { name = spn_mf_outcome value = flag:curdle }
+		}
+		else_if = {
+			limit = { scope:spn_mf_kind = flag:mind }
+			save_scope_value_as = { name = spn_mf_outcome value = flag:mind }
+		}
+		else_if = {
+			limit = { scope:spn_mf_kind = flag:ward }
+			save_scope_value_as = { name = spn_mf_outcome value = flag:ward }
+		}
+		else_if = {
+			limit = { scope:spn_mf_kind = flag:summons }
+			random_list = {
+				40 = {
+					save_scope_value_as = { name = spn_mf_outcome value = flag:felt }
+				}
+				25 = {
+					save_scope_value_as = { name = spn_mf_outcome value = flag:nosebleed }
+				}
+				25 = {
+					save_scope_value_as = { name = spn_mf_outcome value = flag:laugh }
+				}
+				10 = {
+					save_scope_value_as = { name = spn_mf_outcome value = flag:through }
+				}
+			}
+		}
+		else = {
+			# Utility, travel, and a blessing with no county to land on.
+			random_list = {
+				40 = {
+					save_scope_value_as = { name = spn_mf_outcome value = flag:felt }
+				}
+				25 = {
+					save_scope_value_as = { name = spn_mf_outcome value = flag:nosebleed }
+				}
+				25 = {
+					save_scope_value_as = { name = spn_mf_outcome value = flag:laugh }
+				}
+			}
+		}
+		# 4. The record is banked; clear it, so a later cast can roll again.
+		spn_vade_misfire_clear_effect = yes
+	}
+	option = {
+		name = spn_vade.0600.a
+		# Everything that does not kill comes first.
+		if = {
+			limit = {
+				OR = {
+					scope:spn_mf_outcome = flag:back
+					scope:spn_mf_outcome = flag:ward
+				}
+			}
+			increase_wounds_no_death_effect = { REASON = fight }
+			add_stress = medium_stress_impact_gain
+		}
+		else_if = {
+			limit = { scope:spn_mf_outcome = flag:wide }
+			add_character_modifier = {
+				modifier = cursed_modifier
+				years = 5
+			}
+		}
+		else_if = {
+			limit = { scope:spn_mf_outcome = flag:court }
+			scope:spn_mf_hurt ?= {
+				if = {
+					limit = { is_alive = yes }
+					increase_wounds_no_death_effect = { REASON = fight }
+				}
+			}
+		}
+		else_if = {
+			limit = { scope:spn_mf_outcome = flag:felt }
+			custom_tooltip = spn_vade_misfire_felt_tt
+			# The Contract's own "felt" effect: the ringing for anyone with Magical Senses, and the county marked.
+			hidden_effect = { spn_vade_step_felt_effect = yes }
+		}
+		else_if = {
+			limit = { scope:spn_mf_outcome = flag:cancer }
+			scope:spn_mf_victim ?= {
+				if = {
+					limit = { is_alive = yes }
+					contract_disease_effect = { DISEASE = cancer TREATMENT_EVENT = no }
+				}
+			}
+		}
+		else_if = {
+			limit = { scope:spn_mf_outcome = flag:reopen }
+			if = {
+				limit = { scope:spn_mf_victim ?= { is_alive = yes } }
+				scope:spn_mf_victim = { increase_wounds_no_death_effect = { REASON = fight } }
+			}
+			else = {
+				increase_wounds_no_death_effect = { REASON = fight }
+			}
+		}
+		else_if = {
+			limit = { scope:spn_mf_outcome = flag:curdle }
+			# In place of what the spell gave: Bless the Land's blessing, or Thorn Walls' walls.
+			scope:spn_mf_county ?= {
+				if = {
+					limit = {
+						exists = scope:spn_mf_thorns
+						has_county_modifier = thorn_walls_modifier
+					}
+					remove_county_modifier = thorn_walls_modifier
+				}
+				else_if = {
+					limit = {
+						NOT = { exists = scope:spn_mf_thorns }
+						has_county_modifier = blessed_land_modifier
+					}
+					remove_county_modifier = blessed_land_modifier
+				}
+				add_county_modifier = {
+					modifier = cursed_land_modifier
+					years = 5
+				}
+			}
+		}
+		else_if = {
+			limit = { scope:spn_mf_outcome = flag:mind }
+			if = {
+				limit = { scope:spn_mf_victim ?= { is_alive = yes } }
+				scope:spn_mf_victim = { add_stress = major_stress_impact_gain }
+			}
+			else = {
+				add_stress = major_stress_impact_gain
+			}
+		}
+		else_if = {
+			limit = { scope:spn_mf_outcome = flag:nosebleed }
+			increase_wounds_no_death_effect = { REASON = fight }
+		}
+		else_if = {
+			limit = { scope:spn_mf_outcome = flag:laugh }
+			add_prestige = minor_prestige_loss
+			add_stress = minor_stress_impact_gain
+		}
+		else_if = {
+			limit = { scope:spn_mf_outcome = flag:through }
+			custom_tooltip = spn_vade_misfire_through_tt
+			# Witchcraft's own escaped demon (the Order's "A Rift Opens" uses it the same way): his nemesis, hunting him.
+			hidden_effect = { demon_escapes_effect = yes }
+		}
+		else_if = {
+			limit = { scope:spn_mf_outcome = flag:spared }
+			scope:spn_mf_victim ?= {
+				if = {
+					limit = { is_alive = yes }
+					increase_wounds_no_death_effect = { REASON = fight }
+				}
+			}
+		}
+		# A player who was the spell's target hears of it.
+		if = {
+			limit = {
+				OR = {
+					scope:spn_mf_outcome = flag:spared
+					scope:spn_mf_outcome = flag:cancer
+					scope:spn_mf_outcome = flag:reopen
+					scope:spn_mf_outcome = flag:mind
+				}
+				scope:spn_mf_victim ?= {
+					is_alive = yes
+					is_ai = no
+				}
+			}
+			scope:spn_mf_victim = {
+				send_interface_toast = {
+					type = event_toast_effect_bad
+					title = spn_vade_toast_misfire
+					left_icon = root
+					custom_tooltip = spn_vade_toast_misfire_tt
+				}
+			}
+		}
+		# LAST: the target's death, re-checked at the click (alive; and for an AI caster, not a player now). Counted as the
+		# caster's kill.
+		if = {
+			limit = { scope:spn_mf_outcome = flag:kill }
+			stress_and_fulfillment_impact = {
+				compassionate = medium_stress_impact_gain
+				just = minor_stress_impact_gain
+			}
+			scope:spn_mf_victim ?= {
+				if = {
+					limit = {
+						is_alive = yes
+						OR = {
+							root = { is_ai = no }
+							is_ai = yes
+						}
+					}
+					death = {
+						death_reason = spn_death_misfire
+						killer = root
+					}
+				}
+				else_if = {
+					limit = { is_alive = yes }
+					increase_wounds_no_death_effect = { REASON = fight }
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# .0690 -- DEBUG ONLY (console: event spn_vade.0690). Make yourself a witness, and force the misfire chance to 100 or 0,
+# so a test can count "The Spell Goes Wrong" (WORK-ORDER-2.39 §8.2 F3). Players never reach it.
+# ==================================================================================================
+spn_vade.0690 = {
+	type = character_event
+	title = spn_vade.0690.t
+	desc = spn_vade.0690.desc
+	orphan = yes
+	theme = witchcraft
+	left_portrait = { character = root }
+	option = {
+		name = spn_vade.0690.a
+		# The witness half of spn_vade_set_witness_effect, without a Contract.
+		if = {
+			limit = { NOT = { has_character_modifier = spn_vade_witness_bond_modifier } }
+			add_character_modifier = spn_vade_witness_bond_modifier
+		}
+		if = {
+			limit = { NOT = { is_target_in_global_variable_list = { name = spn_vade_witnesses target = this } } }
+			add_to_global_variable_list = { name = spn_vade_witnesses target = this }
+		}
+	}
+	option = {
+		name = spn_vade.0690.b
+		set_global_variable = { name = spn_debug_misfire_force value = 100 years = 1 }
+	}
+	option = {
+		name = spn_vade.0690.c
+		set_global_variable = { name = spn_debug_misfire_force value = 0 years = 1 }
+	}
+	option = {
+		name = spn_vade.0690.d
+		if = {
+			limit = { has_global_variable = spn_debug_misfire_force }
+			remove_global_variable = spn_debug_misfire_force
+		}
+	}
+	option = {
+		name = spn_vade.0690.e
+		if = {
+			limit = { has_character_modifier = spn_vade_witness_bond_modifier }
+			remove_character_modifier = spn_vade_witness_bond_modifier
+		}
+	}
+	option = { name = spn_debug_events.cancel }
+}

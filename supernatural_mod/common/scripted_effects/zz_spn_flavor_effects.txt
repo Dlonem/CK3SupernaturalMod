@@ -1,0 +1,306 @@
+﻿# Supernatural 2.39 -- F14's effects (WORK-ORDER-2.39 F14): Order romance (the hook, the favour, the talk) and the pack's
+# night home. The flavor gate's mark (spn_flavor_mark_effect) is in zz_spn_memory_effects.txt.
+
+# ==================================================================================================
+# STANDING IN A MOMENT
+# ==================================================================================================
+# A small gain or loss of standing from a moment, for a member only. A neophyte is raised to 5 when he is initiated
+# (spn_order_initiate_effect; 5 or more is kept), so a few points before that would simply be lost in the 5.
+spn_order_flavor_standing_effect = {
+	if = {
+		limit = { spn_is_order_member_trigger = yes }
+		spn_order_add_standing_effect = { VALUE = $VALUE$ }
+	}
+}
+
+# ==================================================================================================
+# ORDER ROMANCE (F14 §2). Root = the initiator of a lover relation, scope:target the other (spn_order_lover_set).
+# ==================================================================================================
+spn_order_lover_hook_effect = {
+	save_scope_as = spn_lh_a
+	scope:target = { save_scope_as = spn_lh_b }
+	# 1. Which of the two is the junior, and which his patron (his own Temple Magus, or the Grand Magus).
+	if = {
+		limit = { scope:spn_lh_a = { spn_order_patron_of_trigger = { JUNIOR = scope:spn_lh_b } } }
+		scope:spn_lh_a = { save_scope_as = spn_fv_patron }
+		scope:spn_lh_b = { save_scope_as = spn_fv_junior }
+	}
+	else_if = {
+		limit = { scope:spn_lh_b = { spn_order_patron_of_trigger = { JUNIOR = scope:spn_lh_a } } }
+		scope:spn_lh_b = { save_scope_as = spn_fv_patron }
+		scope:spn_lh_a = { save_scope_as = spn_fv_junior }
+	}
+	# 2. Both 18 or older, and the junior has not asked in ten years.
+	if = {
+		limit = {
+			exists = scope:spn_fv_junior
+			scope:spn_fv_junior = {
+				age >= 18
+				NOT = { has_character_flag = spn_order_favour_asked }
+			}
+			scope:spn_fv_patron = { age >= 18 }
+		}
+		scope:spn_fv_junior = {
+			# 3. A player junior: What Is It Worth?, a month or three later.
+			if = {
+				limit = { is_ai = no }
+				trigger_event = { id = spn_order.0352 days = { 30 90 } }
+			}
+			# 4. An AI junior asks by his nature. A player patron is asked (Your Lover Asks a Favour); between two AI
+			# characters it is settled here, hidden.
+			else = {
+				random = {
+					chance = spn_order_favour_ask_chance_value
+					add_character_flag = { flag = spn_order_favour_asked years = 10 }
+					if = {
+						limit = { scope:spn_fv_patron = { is_ai = no } }
+						scope:spn_fv_patron = { trigger_event = { id = spn_order.0353 days = { 30 90 } } }
+					}
+					else = {
+						scope:spn_fv_patron = {
+							random = {
+								chance = spn_order_favour_grant_chance_value
+								spn_order_favour_effect = { JUNIOR = scope:spn_fv_junior PATRON = scope:spn_fv_patron }
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+# The patron's word (D15): standing, never a rank. +10 from his Temple Magus, +15 from the Grand Magus. Medicum still
+# needs the teaching finished (spn_order_taught_trigger) and Magistratus still needs 50, so no favour skips a floor.
+spn_order_favour_effect = {
+	$JUNIOR$ = { save_scope_as = spn_fe_junior }
+	$PATRON$ = { save_scope_as = spn_fe_patron }
+	scope:spn_fe_junior = {
+		set_variable = { name = spn_order_favoured_by value = scope:spn_fe_patron years = 5 }
+		# A neophyte starts at 5 when he is initiated, and initiation keeps more than 5 (spn_order_initiate_effect): the
+		# word adds to that 5. (A Conclave moment may have given a neophyte 3 already.)
+		if = {
+			limit = {
+				OR = {
+					NOT = { exists = var:spn_order_standing }
+					AND = {
+						spn_order_is_neophyte_trigger = yes
+						var:spn_order_standing < 5
+					}
+				}
+			}
+			set_variable = { name = spn_order_standing value = 5 }
+		}
+		if = {
+			limit = { scope:spn_fe_patron = { global_var:current_archmage_global ?= this } }
+			spn_order_add_standing_effect = { VALUE = 15 }
+			# When the Grand Magus speaks, the junior's own Temple Magus takes note.
+			var:spn_order_chapter ?= {
+				story_owner = {
+					if = {
+						limit = {
+							NOT = { this = scope:spn_fe_patron }
+							NOT = { this = scope:spn_fe_junior }
+						}
+						add_opinion = {
+							target = scope:spn_fe_junior
+							modifier = respect_opinion
+							opinion = 10
+						}
+					}
+				}
+			}
+		}
+		else = {
+			spn_order_add_standing_effect = { VALUE = 10 }
+		}
+		add_opinion = {
+			target = scope:spn_fe_patron
+			modifier = grateful_opinion
+			opinion = 20
+		}
+	}
+	spn_order_favour_talk_effect = yes
+}
+
+# The talk (hidden; no odds are shown anywhere). Someone of the junior's rank in his temple may have seen. If so, he
+# resents the junior, and both junior and patron carry the lesser charge, spn_order_favouritism (10 years), which the
+# masks raise at the next Conclave and which counts against a Grand Magus in Invocare (both P3's). Not
+# spn_order_broke_rules: under an AI Temple Magus that is being cast out within the year (D15).
+spn_order_favour_talk_effect = {
+	scope:spn_fe_junior = {
+		random = {
+			chance = spn_order_favour_scandal_chance_value
+			var:spn_order_chapter ?= {
+				random_in_list = {
+					variable = spn_order_members
+					limit = { spn_order_favour_peer_trigger = { JUNIOR = scope:spn_fe_junior PATRON = scope:spn_fe_patron } }
+					weight = {
+						base = 1
+						modifier = {
+							add = 4
+							spn_order_favour_jealous_trigger = { JUNIOR = scope:spn_fe_junior PATRON = scope:spn_fe_patron }
+						}
+					}
+					save_scope_as = spn_fe_witness
+				}
+			}
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_fe_witness }
+		scope:spn_fe_witness = {
+			add_opinion = {
+				target = scope:spn_fe_junior
+				modifier = spn_order_favouritism_opinion
+			}
+		}
+		scope:spn_fe_junior = { add_character_flag = { flag = spn_order_favouritism years = 10 } }
+		scope:spn_fe_patron = { add_character_flag = { flag = spn_order_favouritism years = 10 } }
+		# One text for each reader: the junior reads about himself and his patron, the patron about himself and the junior.
+		scope:spn_fe_junior = {
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_text_bad
+					title = spn_order_talk_toast
+					desc = spn_order_talk_toast_desc_junior
+					left_icon = scope:spn_fe_witness
+				}
+			}
+		}
+		scope:spn_fe_patron = {
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_text_bad
+					title = spn_order_talk_toast
+					desc = spn_order_talk_toast_desc_patron
+					left_icon = scope:spn_fe_witness
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE PACK'S NIGHT HOME (F14 §4). Story scope (the pack), from spn_pack_moment_effect: scope:spn_mo_pack and
+# scope:spn_mo_alpha are saved. It walks the pack, at most 25 wolves, and no other list.
+# ==================================================================================================
+spn_pack_moment_home_effect = {
+	# 1. The alpha and each wolf (the 2.37 rule: never every pair).
+	every_in_list = {
+		variable = spn_pack_members
+		limit = {
+			is_alive = yes
+			NOT = { this = scope:spn_mo_alpha }
+		}
+		add_opinion = {
+			target = scope:spn_mo_alpha
+			modifier = spn_pack_home_opinion
+		}
+		scope:spn_mo_alpha = {
+			add_opinion = {
+				target = prev
+				modifier = spn_pack_home_opinion
+			}
+		}
+	}
+	# 2. One pair of AI wolves grows closer, or falls out. Never a romance here: vanilla's own lover AI does that.
+	random_in_list = {
+		variable = spn_pack_members
+		limit = { spn_pack_home_pair_trigger = yes }
+		save_scope_as = spn_ph_a
+	}
+	if = {
+		limit = { exists = scope:spn_ph_a }
+		random_in_list = {
+			variable = spn_pack_members
+			limit = {
+				spn_pack_home_pair_trigger = yes
+				NOT = { this = scope:spn_ph_a }
+			}
+			# A wolf who feels strongly about the first, either way, is likelier to be the other half of the night.
+			weight = {
+				base = 1
+				modifier = {
+					add = 2
+					OR = {
+						opinion = {
+							target = scope:spn_ph_a
+							value >= 25
+						}
+						opinion = {
+							target = scope:spn_ph_a
+							value <= -20
+						}
+					}
+				}
+			}
+			save_scope_as = spn_ph_b
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_ph_b }
+		if = {
+			limit = {
+				scope:spn_ph_a = {
+					opinion = {
+						target = scope:spn_ph_b
+						value >= 25
+					}
+					can_set_relation_friend_trigger = { CHARACTER = scope:spn_ph_b }
+				}
+				scope:spn_ph_b = {
+					opinion = {
+						target = scope:spn_ph_a
+						value >= 25
+					}
+				}
+			}
+			random = {
+				chance = 25
+				scope:spn_ph_a = {
+					set_relation_friend = {
+						target = scope:spn_ph_b
+						reason = spn_rel_pack_home
+					}
+				}
+				save_scope_value_as = { name = spn_ph_friends value = yes }
+			}
+		}
+		else_if = {
+			limit = {
+				OR = {
+					scope:spn_ph_a = {
+						opinion = {
+							target = scope:spn_ph_b
+							value <= -20
+						}
+					}
+					scope:spn_ph_b = {
+						opinion = {
+							target = scope:spn_ph_a
+							value <= -20
+						}
+					}
+				}
+				scope:spn_ph_a = {
+					# never between mates or lovers (the 2.37o rule of Another Pack's Scent)
+					NOT = { is_spouse_of = scope:spn_ph_b }
+					NOT = { has_relation_lover = scope:spn_ph_b }
+					can_set_relation_potential_rival_trigger = { CHARACTER = scope:spn_ph_b }
+				}
+			}
+			scope:spn_ph_a = { set_relation_potential_rival = scope:spn_ph_b }
+			save_scope_value_as = { name = spn_ph_quarrel value = yes }
+		}
+	}
+	# 3. Each player wolf who is due spends the night with them: The Pack Comes Home, a few days on. An AI-only pack
+	# stops at 1 and 2.
+	every_in_list = {
+		variable = spn_pack_members
+		limit = { spn_pack_home_due_trigger = yes }
+		trigger_event = { id = spn_pack.0105 days = { 1 20 } }
+	}
+}

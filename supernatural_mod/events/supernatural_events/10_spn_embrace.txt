@@ -1725,6 +1725,14 @@ spn_embrace.3003 = {
 	option = {
 		name = spn_embrace.3003.a
 		custom_tooltip = spn_embrace.3003.a.tt
+		hidden_effect = { # 2.39 (WORK-ORDER-2.39 B10): kept, so never vanished by a later chain
+			scope:spn_new_created_hunter ?= {
+				if = {
+					limit = { has_variable = spn_invented_hunter }
+					remove_variable = spn_invented_hunter
+				}
+			}
+		}
 		trigger_event = {
 			id = spn_embrace.3004 #Train as Hunter
 			days = 28
@@ -1743,12 +1751,21 @@ spn_embrace.3003 = {
 	after = {
 		if = {
 			limit = { has_character_flag = dissappear_spn_new_created_hunter }
-			scope:spn_new_created_hunter = {
-				death = {
-					death_reason = death_vanished
+			remove_character_flag = dissappear_spn_new_created_hunter
+			# 2.39 (WORK-ORDER-2.39 B10): since 2.35 the finder prefers a REAL hunter (your courtier, your liege's, the
+			# county holder's, or the county holder himself). Only one THIS event's finder invented is vanished (the
+			# event-local value), and only while he still carries the mark.
+			if = {
+				limit = {
+					exists = scope:spn_hunter_was_invented
+					scope:spn_new_created_hunter ?= { has_variable = spn_invented_hunter }
+				}
+				scope:spn_new_created_hunter = {
+					death = {
+						death_reason = death_vanished
+					}
 				}
 			}
-			remove_character_flag = dissappear_spn_new_created_hunter
 		}
 	}
 }
@@ -1756,6 +1773,13 @@ spn_embrace.3003 = {
 #Train as a Hunter
 spn_embrace.3004 = {
 	type = character_event
+	# 2.39 (WORK-ORDER-2.39 B12 j): 28 days on. Not if you have become a creature or a hunter since, or he is dead.
+	trigger = {
+		is_alive = yes
+		spn_has_supernatural_trait = no
+		spn_has_hunter_trait = no
+		scope:spn_new_created_hunter ?= { is_alive = yes }
+	}
 	title = spn_embrace.3004.t
 	desc = spn_embrace.3004.desc
 	theme = intrigue
@@ -1772,6 +1796,14 @@ spn_embrace.3004 = {
 
 	option = {
 		name = spn_embrace.3004.a
+		hidden_effect = { # 2.39 (WORK-ORDER-2.39 B10): he trains you, so he is never vanished by a later chain
+			scope:spn_new_created_hunter ?= {
+				if = {
+					limit = { has_variable = spn_invented_hunter }
+					remove_variable = spn_invented_hunter
+				}
+			}
+		}
 
 		trigger_event = spn_initiate.3001 #Initiate Hunter
 		hidden_effect = {
@@ -1857,6 +1889,14 @@ spn_embrace.3006 = {
 		random_list = {
 			80 = { #You talk him down. Only the blade is settled here - the bite is not.
 				custom_tooltip = spn_embrace.1002.surv.tt
+				hidden_effect = { # 2.39 (WORK-ORDER-2.39 B10): kept, so never vanished by a later chain
+					scope:spn_new_created_hunter ?= {
+						if = {
+							limit = { has_variable = spn_invented_hunter }
+							remove_variable = spn_invented_hunter
+						}
+					}
+				}
 
 				modifier = {
 					add = {
@@ -1888,12 +1928,21 @@ spn_embrace.3006 = {
 	after = {
 		if = { 
 			limit = { has_character_flag = dissappear_spn_new_created_hunter }
-			scope:spn_new_created_hunter = {
-				death = {
-					death_reason = death_vanished
+			remove_character_flag = dissappear_spn_new_created_hunter
+			# 2.39 (WORK-ORDER-2.39 B10): since 2.35 the finder prefers a REAL hunter (your courtier, your liege's, the
+			# county holder's, or the county holder himself). Only one THIS event's finder invented is vanished (the
+			# event-local value), and only while he still carries the mark.
+			if = {
+				limit = {
+					exists = scope:spn_hunter_was_invented
+					scope:spn_new_created_hunter ?= { has_variable = spn_invented_hunter }
+				}
+				scope:spn_new_created_hunter = {
+					death = {
+						death_reason = death_vanished
+					}
 				}
 			}
-			remove_character_flag = dissappear_spn_new_created_hunter
 		}
 	}
 }

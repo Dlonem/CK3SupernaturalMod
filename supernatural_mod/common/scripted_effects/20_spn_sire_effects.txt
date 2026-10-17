@@ -101,11 +101,17 @@ spn_assign_hunter_trainer = {
 }
 
 spn_update_number_of_supernatural_children_for_parents = {
-	scope:real_father = {
-		spn_update_num_immortal_children = yes
+	scope:real_father ?= { # 2.38h: may have died before the birth
+		if = {
+			limit = { is_alive = yes }
+			spn_update_num_immortal_children = yes
+		}
 	}
-	scope:mother = {
-		spn_update_num_immortal_children = yes
+	scope:mother ?= {
+		if = {
+			limit = { is_alive = yes }
+			spn_update_num_immortal_children = yes
+		}
 	}
 }
 
@@ -176,6 +182,7 @@ spn_begin_werewolf_bite_effect = {
 			# already refused at spn_initiate.1001, so what this prevents is the dead end: an infected
 			# wound and a one-to-three-year incubation on something that can never become a werewolf.
 			spn_is_valid_supernatural_target = yes
+			is_adult = yes # 2.39 (Thomas's call, 17 Oct): a child is never infected (Thomas)
 			spn_has_supernatural_trait = no
 			NOT = { has_trait = ww_infected_wound }
 			#NEVER IF: a Hunter. spn_initiate.1001 refuses spn_has_hunter_trait = yes, so an
@@ -194,8 +201,11 @@ spn_begin_werewolf_bite_effect = {
 # SIRE must be a living character - a dead one cannot hold a relation.
 spn_begin_werewolf_bite_sired_effect = {
 	#SEVMIN / SEVMAX / TURNTYPE / SIRE
-	spn_assign_conferred_sire = { CHARACTER = $SIRE$ }
-	spn_begin_werewolf_bite_effect = { SEVMIN = $SEVMIN$  SEVMAX = $SEVMAX$  TURNTYPE = $TURNTYPE$ }
+	if = {
+		limit = { is_adult = yes } # 2.39 (Thomas's call, 17 Oct): no sire for a child the bite cannot turn
+		spn_assign_conferred_sire = { CHARACTER = $SIRE$ }
+		spn_begin_werewolf_bite_effect = { SEVMIN = $SEVMIN$  SEVMAX = $SEVMAX$  TURNTYPE = $TURNTYPE$ }
+	}
 }
 
 # Tear down the incubation state (called by the climax on resolution).

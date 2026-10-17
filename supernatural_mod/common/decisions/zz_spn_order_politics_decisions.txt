@@ -1,0 +1,292 @@
+﻿# Supernatural 2.39 -- the Order's politics: Invocare (WORK-ORDER-2.39 F1) and Break the Order of the Blue Rose (F2).
+# Loc: localization/english/event_localization/zz_spn_239_order_politics_l_english.yml.
+#
+# Neither decision has a cost block: what each costs is taken later, when it actually happens (stale audit G1, G2). The
+# price is a requirement line here, so a player sees it before he commits.
+
+# ==================================================================================================
+# INVOCARE (F1). A Temple Magus or seat holder of standing calls the temples to judge the Grand Magus. It is heard at a
+# Conclave: decided in The Reckoning, and if it passes, The Vote of the same Conclave chooses his successor.
+# ==================================================================================================
+spn_order_invocare_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_realm.dds" }
+	desc = spn_order_invocare_decision_desc
+	selection_tooltip = spn_order_invocare_decision_tooltip
+	confirm_text = spn_order_invocare_decision_confirm
+	ai_check_interval = 60
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_is_order_member_trigger = yes
+		OR = {
+			spn_is_temple_magus_trigger = yes
+			has_variable = mc_member_var
+		}
+		global_var:current_archmage_global ?= {
+			is_alive = yes
+			NOT = { this = root }
+		}
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_invocare_standing_tt
+			exists = var:spn_order_standing
+			var:spn_order_standing >= 50
+		}
+		custom_tooltip = {
+			text = spn_invocare_second_tt
+			spn_invocare_second_trigger = { CALLER = root }
+		}
+		custom_tooltip = {
+			text = spn_invocare_temples_tt
+			any_in_global_list = {
+				variable = spn_order_chapters
+				count >= spn_order_conclave_threshold_value
+			}
+		}
+		# The chair's year is written by the yearly Order pulse whenever it sees a new face in the chair, so a chair filled
+		# by Witchcraft's own appointment is dated too (spn_order_chair_yearly_effect). Review L-2: in an older save the pulse
+		# has not looked at yet (three years or more after its start), the sitting Grand Magus counts as settled, as the
+		# pulse will date him.
+		custom_tooltip = {
+			text = spn_invocare_settled_tt
+			OR = {
+				AND = {
+					global_var:spn_order_chair_dated ?= global_var:current_archmage_global
+					exists = global_var:spn_order_chair_year
+					global_var:spn_order_chair_year <= spn_order_three_years_ago_value
+				}
+				AND = {
+					NOT = { exists = global_var:spn_order_chair_looked }
+					years_from_game_start >= 3
+				}
+			}
+		}
+		custom_tooltip = {
+			text = spn_invocare_cd_tt
+			NOT = { exists = global_var:spn_invocare_cd }
+		}
+		custom_tooltip = {
+			text = spn_invocare_pending_tt
+			NOT = { exists = global_var:spn_invocare_called }
+		}
+		custom_tooltip = {
+			text = spn_conclave_one_at_a_time_tt
+			NOT = { exists = global_var:spn_conclave_running }
+		}
+		# F12: Imperium's first power.
+		custom_tooltip = {
+			text = spn_invocare_imperium_tt
+			global_var:current_archmage_global ?= { spn_imperium_holds_trigger = no }
+		}
+		custom_tooltip = {
+			text = spn_invocare_host_tt
+			spn_invocare_host_exists_trigger = { CALLER = root }
+		}
+	}
+	is_valid_showing_failures_only = {
+		is_imprisoned = no
+	}
+	effect = {
+		custom_tooltip = spn_invocare_effect_tt
+		custom_tooltip = spn_invocare_effect_cost_tt
+		hidden_effect = {
+			save_scope_as = spn_iv_caller
+			global_var:current_archmage_global = {
+				save_scope_as = spn_iv_magus
+				# Marks from a motion that lapsed unheard are cleared before he answers this one.
+				spn_invocare_clear_defence_effect = yes
+			}
+			# The call waits for its Conclave (2 years, the life of the host's own call). Cleared when the motion is heard
+			# or lapses.
+			set_global_variable = { name = spn_invocare_called value = scope:spn_iv_magus years = 2 }
+			spn_conclave_call_effect = { REASON = flag:invocare }
+			if = {
+				limit = { exists = scope:spn_cl_host }
+				# He always answers first (the target gets a chance to defend).
+				scope:spn_iv_magus = {
+					if = {
+						limit = { is_ai = no }
+						trigger_event = spn_conclave.0240
+					}
+					else = {
+						spn_invocare_ai_defend_effect = yes
+					}
+				}
+			}
+			else = {
+				remove_global_variable = spn_invocare_called
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_invocare_toast_no_host
+					desc = spn_invocare_toast_no_host_desc
+					left_icon = root
+				}
+			}
+		}
+	}
+	ai_potential = {
+		spn_is_order_member_trigger = yes
+		NOT = { has_trait = content }
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 40
+			opinion = { target = global_var:current_archmage_global value <= -40 }
+		}
+		modifier = {
+			add = 50
+			has_relation_rival = global_var:current_archmage_global
+		}
+		modifier = {
+			add = 30
+			has_character_flag = spn_order_aspires_chair
+		}
+		modifier = {
+			add = 20
+			has_trait = ambitious
+		}
+		modifier = {
+			add = 40
+			global_var:current_archmage_global = { has_character_flag = spn_order_broke_rules }
+		}
+		modifier = {
+			add = 20
+			has_trait = just
+			global_var:current_archmage_global = { has_character_flag = spn_order_broke_rules }
+		}
+		modifier = {
+			add = 10
+			global_var:current_archmage_global = { has_character_flag = spn_order_favouritism }
+		}
+		modifier = {
+			add = -30
+			has_trait = loyal
+		}
+		modifier = {
+			add = -100
+			OR = {
+				has_relation_friend = global_var:current_archmage_global
+				has_relation_lover = global_var:current_archmage_global
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# BREAK THE ORDER OF THE BLUE ROSE (F2). The vanilla major-decision shape (unite_the_spanish_thrones_decision,
+# 00_major_decisions_iberia_north_africa.txt:143-260): a narrow is_shown (shown only to an outsider who already knows the
+# Order exists, so it never gives the secret away), every requirement listed, the outcomes shown before you commit.
+# Two steps: the decision warns the Order's master tonight ("The Rose Burns Its Letters", spn_order.0982); the hidden
+# step (spn_order.0984) a day after his answer re-checks everything, takes the price and breaks it.
+# ==================================================================================================
+spn_order_break_decision = {
+	decision_group_type = major
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_realm.dds" }
+	desc = spn_order_break_decision_desc
+	selection_tooltip = spn_order_break_decision_tooltip
+	confirm_text = spn_order_break_decision_confirm
+	ai_check_interval = 60
+	# A Break stopped in the night costs nothing but this.
+	cooldown = { years = 5 }
+	is_shown = {
+		spn_order_on_trigger = yes
+		exists = global_var:spn_order_seeded
+		any_in_global_list = { variable = spn_order_chapters always = yes }
+		spn_is_order_member_trigger = no
+		NOT = { exists = var:spn_order_chapter }
+		spn_order_break_knows_trigger = yes
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_order_break_road_tt
+			spn_order_break_road_trigger = yes
+		}
+		custom_tooltip = {
+			text = spn_order_break_heads_tt
+			spn_order_break_heads_trigger = yes
+		}
+		custom_tooltip = {
+			text = spn_order_break_fallen_tt
+			spn_order_break_fallen_trigger = { WHO = root }
+		}
+		custom_tooltip = {
+			text = spn_order_break_chair_tt
+			spn_order_break_chair_trigger = { WHO = root }
+		}
+		# The price, taken only if the Break goes ahead (spn_order.0984).
+		trigger_if = {
+			limit = { faith.religious_head ?= root }
+			piety >= 1000
+		}
+		trigger_else = {
+			prestige >= 1000
+		}
+		custom_tooltip = {
+			text = spn_order_break_not_broken_tt
+			NOT = { exists = global_var:spn_order_broken }
+		}
+		custom_tooltip = {
+			text = spn_order_break_not_pending_tt
+			NOT = { exists = global_var:spn_order_break_pending }
+		}
+	}
+	is_valid_showing_failures_only = {
+		is_imprisoned = no
+	}
+	effect = {
+		custom_tooltip = spn_order_break_effect_night_tt
+		custom_tooltip = spn_order_break_effect_secrets_tt
+		custom_tooltip = spn_order_break_effect_treasury_tt
+		custom_tooltip = spn_order_break_effect_council_tt
+		custom_tooltip = spn_order_break_effect_temples_tt
+		custom_tooltip = spn_order_break_effect_rise_tt
+		custom_tooltip = spn_order_break_effect_cost_tt
+		hidden_effect = {
+			save_scope_as = spn_bk_breaker
+			if = { # 2.39 (final pass, 17 Oct): a hidden half from an earlier Break that failed is not this one's
+				limit = { has_global_variable = spn_order_break_hid }
+				remove_global_variable = spn_order_break_hid
+			}
+			# 31 days: the master's answer queues the hidden step a day later; the backstop below fires on the thirtieth.
+			set_global_variable = { name = spn_order_break_pending value = root days = 31 }
+			trigger_event = { id = spn_order.0984 days = 30 }
+			global_var:spn_order_master ?= {
+				if = {
+					limit = {
+						is_alive = yes
+						is_ai = no
+					}
+					trigger_event = spn_order.0982
+				}
+				else_if = {
+					limit = { is_alive = yes }
+					spn_order_break_ai_answer_effect = yes
+				}
+			}
+		}
+	}
+	ai_potential = {
+		spn_order_break_road_trigger = yes
+	}
+	ai_will_do = {
+		base = 50
+		modifier = {
+			add = 30
+			has_trait = zealous
+		}
+		modifier = {
+			add = 20
+			spn_has_hunter_trait = yes
+		}
+		modifier = {
+			add = -40
+			has_trait = compassionate
+		}
+		modifier = {
+			add = -30
+			has_trait = content
+		}
+	}
+}

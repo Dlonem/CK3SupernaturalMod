@@ -1,0 +1,34 @@
+﻿# Supernatural 2.39 -- Order romance (WORK-ORDER-2.39 F14 §2). Vanilla's on_set_relation_lover is APPENDED through
+# `on_actions = { }` (the mod's idiom, zz_spn_order_on_actions.txt:1-3), never copied.
+#
+# Why this on_action and not seduce_success: seduce_success has a fallback, and vanilla runs a fallback only "if no
+# events/on_actions are run" (_on_actions.info:99), so appending there could stop vanilla's own success event.
+# on_set_relation_lover has no fallback and fires on every set_relation_lover: Seduce, Late Lessons and the 2.39 moments.
+# It fires on the initiator only (ROOT; the other is scope:target, _scripted_relations.info:37-38), so both are read.
+#
+# No scripted trigger may live in this folder (2.35d); the triggers are in zz_spn_flavor_triggers.txt.
+
+on_set_relation_lover = {
+	on_actions = {
+		spn_order_lover_set
+	}
+}
+
+spn_order_lover_set = {
+	trigger = {
+		exists = var:spn_order_chapter						# the cheapest test first: false almost everywhere
+		scope:target ?= { exists = var:spn_order_chapter }
+		# Compel Mortal's "Become My Lover" marks BOTH characters (spn_compelled_lover, 3 days) before it sets the
+		# relation from the recipient: a compelled lover is never a favour.
+		NOT = { has_character_flag = spn_compelled_lover }
+		scope:target = { NOT = { has_character_flag = spn_compelled_lover } }
+		# Witchcraft's Command Minion "lover" order (00_magic_interactions.txt, command_minion_lover) sets the relation
+		# on a dominated minion with no flag. The master holds the relation mminion with his minion
+		# (has_relation_mminion = scope:recipient, the interaction's own test), so either way round is not a favour.
+		NOT = { has_relation_mminion = scope:target }
+		scope:target = { NOT = { has_relation_mminion = root } }
+	}
+	effect = {
+		spn_order_lover_hook_effect = yes
+	}
+}

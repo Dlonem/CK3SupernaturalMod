@@ -1,0 +1,53 @@
+﻿# Supernatural 2.39 -- the Gnostic Council's seats (WORK-ORDER-2.39 B3 C). Read by two generator entries: Witchcraft's
+# meeting decision (common/decisions/magic_dec.txt, mc_meeting_decision) and its "Secret Meeting" (events/ev10.txt,
+# magic_ev10.81).
+#
+# Witchcraft's secret meeting passes its turn seat by seat (Grand Magus, Adeptus Major, Keeper of the Reliquary,
+# Chancellor) and picks the next speaker by asking which seat the last one holds, taking the first match. A man who holds
+# two seats keeps matching his first one, so the meeting reopens for ever (huntsmanra9, 12 Oct). The four seats must be
+# four people. The writers of the four seat variables are Witchcraft's appoint_as_archmage_effect and
+# appoint_to_mc1/2/3_effect only (00_variety_magic_effects.txt); spn_council_dedupe_effect repairs a double seat yearly.
+
+# Any scope. No two of the four seat variables name the same character. An empty seat is never a duplicate.
+spn_council_seats_distinct_trigger = {
+	NOR = {
+		AND = {
+			exists = global_var:current_loremaster_global
+			global_var:current_archmage_global ?= global_var:current_loremaster_global
+		}
+		AND = {
+			exists = global_var:current_black_mage_global
+			global_var:current_archmage_global ?= global_var:current_black_mage_global
+		}
+		AND = {
+			exists = global_var:current_admin_global
+			global_var:current_archmage_global ?= global_var:current_admin_global
+		}
+		AND = {
+			exists = global_var:current_black_mage_global
+			global_var:current_loremaster_global ?= global_var:current_black_mage_global
+		}
+		AND = {
+			exists = global_var:current_admin_global
+			global_var:current_loremaster_global ?= global_var:current_admin_global
+		}
+		AND = {
+			exists = global_var:current_admin_global
+			global_var:current_black_mage_global ?= global_var:current_admin_global
+		}
+	}
+}
+
+# Inside the secret meeting (magic_ev10.81): the four people the meeting saved when it began (configure_mc_secret_meeting_
+# effect: scope:amage, scope:bmage, scope:loremaster, scope:admin) are four different people. A meeting that is already
+# looping, from a 2.38 save, ends at its next turn: the loop runs on these saved scopes, so emptying a seat cannot stop it.
+spn_council_meeting_roles_distinct_trigger = {
+	NOR = {
+		scope:amage ?= scope:bmage
+		scope:amage ?= scope:loremaster
+		scope:amage ?= scope:admin
+		scope:bmage ?= scope:loremaster
+		scope:bmage ?= scope:admin
+		scope:loremaster ?= scope:admin
+	}
+}

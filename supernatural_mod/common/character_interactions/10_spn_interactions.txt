@@ -183,6 +183,9 @@
 						  if = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism value = -15 } }
 						  else_if = { limit = { has_trait = supernatural_hybrid }  add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -15 } }
 						}
+						# 2.39 (WORK-ORDER-2.39 F14): a lover the bond orders is not a favour; the Order's romance hook passes it by.
+						add_character_flag = { flag = spn_compelled_lover days = 3 }
+						scope:actor = { add_character_flag = { flag = spn_compelled_lover days = 3 } }
 						set_relation_lover = scope:actor
 						save_scope_as = had_sex_with_effect_partner
 						scope:actor = {
@@ -1497,6 +1500,24 @@ spn_compulsion = {
 	greeting = positive
 	notification_text = COMPEL_MORTAL_PROPOSAL
 
+	# 2.39 (WORK-ORDER-2.39 F16): Release Me. A jailed vampire who clicks his own portrait reaches his gaoler, in vanilla
+	# ransom_me_interaction's own shape and scope names (00_prison_interactions.txt). A free vampire who clicks himself
+	# still sees nothing: is_shown keeps NOT = { scope:recipient = scope:actor }.
+	redirect = {
+		if = {
+			limit = {
+				scope:puppet_or_actor = scope:recipient
+				exists = scope:puppet_or_actor.imprisoner
+			}
+			scope:puppet_or_actor.imprisoner = { save_scope_as = recipient }
+		}
+	}
+	# 2.39 (F16, first-boot check 7): from a cell the gaoler is at hand, so the diplomatic-range check is waived on that
+	# path only, as ransom_me waives it (use_diplomatic_range = no). Every other use keeps the default range check.
+	use_diplomatic_range = {
+		NOT = { scope:actor = { is_imprisoned_by = scope:recipient } }
+	}
+
 	# Cooldowns (global + per-recipient)
 	cooldown = { months = 6 }
 	cooldown_against_recipient = { months = 3 }
@@ -1509,8 +1530,13 @@ spn_compulsion = {
 	is_shown = {
 		NOT = { scope:recipient = scope:actor }
 		scope:actor = { 
-			is_adult = yes 
-			is_imprisoned = no
+			is_adult = yes
+			# 2.39 (WORK-ORDER-2.39 F16): free, or in the cell of the one he compels. From a cell, only the one who holds
+			# the key, and only Release Me (every other order below needs a free actor).
+			OR = {
+				is_imprisoned = no
+				is_imprisoned_by = scope:recipient
+			}
 			OR = {
 				has_trait = supernatural_vampire
 				has_trait = supernatural_hybrid
@@ -1520,9 +1546,13 @@ spn_compulsion = {
 			#is_imprisoned = no
 			NOT = { has_trait = supernatural_vampire }
 			NOT = { has_trait = supernatural_hybrid }
+			NOT = { has_trait = supernatural_werewolf }     # 2.39 (WORK-ORDER-2.39 D7): the shows' rule, below
 			NOT = { is_a_demon_trigger = yes }                  # your demon trait check
-			NOT = { is_witch_trigger = yes }        # Witchcraft block
-			# werewolf allowed (handled by acceptance and surcharge)
+			# 2.39 (WORK-ORDER-2.39 B6, D2): hide only for an OPEN witch -- the trait, or a witch secret this vampire already
+			# knows. A menu entry that vanished on a SECRET would tell a vampire player who is a hidden witch; a secret witch
+			# can be targeted, and the attempt fails in on_accept and reveals her (TVD 6x06: "it didn't take").
+			NOT = { is_witch_known_by_trigger = { CHARACTER = scope:actor } }        # Witchcraft block (vanilla 00_crime_triggers.txt)
+			# 2.39 (D7): werewolves cannot be compelled (TVD 2x06, 3x01)
 		}
 	}
 
@@ -1533,6 +1563,9 @@ spn_compulsion = {
 				text = spn_compel_range_gate_tt
 
 				OR = {
+					# 2.39 (WORK-ORDER-2.39 F16): from a cell, the one who holds the key is always in reach.
+					scope:actor = { is_imprisoned_by = scope:recipient }
+
 					# === SAME REALM (either direction) ===
 					scope:recipient = { is_vassal_or_below_of = scope:actor }      # my vassal/below
 					scope:actor     = { is_vassal_or_below_of = scope:recipient }  # I'm their vassal/below
@@ -1598,6 +1631,16 @@ spn_compulsion = {
 				text = spn_cannot_be_compelled_custom
 				spn_is_valid_supernatural_target = yes
 			}
+			# 2.39 (WORK-ORDER-2.39 B6): a guarded mind cannot be compelled. The Seal of Solomon's description always said so;
+			# Witchcraft's own test (magic_triggers.txt) reads it, Master Defence and the rest, and since F17 U2 the Draught
+			# of a Clear Mind. Only for a person: a non-person already has its own reason line just above.
+			trigger_if = {
+				limit = { spn_is_valid_supernatural_target = yes }
+				custom_description = {
+					text = spn_mind_guarded_custom
+					has_immunity_for_magic_domination = no
+				}
+			}
 		}
 	}
 
@@ -1609,6 +1652,7 @@ spn_compulsion = {
 
 	# Demand Gold (cost 20)
 	send_option = {
+		is_shown = { scope:actor = { is_imprisoned = no } }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
 		is_valid = {
 			custom_description = {
 				text = invoke_bond_requires_vampiric_strength_20
@@ -1629,6 +1673,7 @@ spn_compulsion = {
 	# Reveal Secrets (cost 20)
 	send_option = {
 		is_shown = {
+			scope:actor = { is_imprisoned = no }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
 			scope:recipient = { any_secret = { NOT = { is_known_by = scope:actor } } }
 		}
 		is_valid = {
@@ -1650,6 +1695,7 @@ spn_compulsion = {
 	# Join My Court (cost 25) — non-ruler targets
 	send_option = {
 		is_shown = {
+			scope:actor = { is_imprisoned = no }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
 			scope:actor = { is_ruler = yes }
 			scope:recipient = { is_ruler = no NOT = { is_courtier_of = scope:actor } }
 		}
@@ -1679,6 +1725,7 @@ spn_compulsion = {
 	# Become My Lover (cost 25)
 	send_option = {
 		is_shown = {
+			scope:actor = { is_imprisoned = no }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
 			scope:recipient = {
 				is_adult = yes
 				NOT = { has_relation_lover    = scope:actor }
@@ -1703,6 +1750,7 @@ spn_compulsion = {
 
 	# Be Obedient (weak hook on target) (cost 35)
 	send_option = {
+		is_shown = { scope:actor = { is_imprisoned = no } }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
 		is_valid = {
 			custom_description = {
 				text = invoke_bond_requires_vampiric_strength_35
@@ -1722,6 +1770,7 @@ spn_compulsion = {
 	# Become My Patron (strong hook on target) (cost 20)
 	send_option = {
 	  is_shown = {
+		scope:actor = { is_imprisoned = no }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
 		scope:actor = { is_landless_adventurer = yes }
 		scope:recipient = { is_landed_or_landless_administrative = yes NOT = { is_contact_of = scope:actor } }
 	  }
@@ -1743,7 +1792,10 @@ spn_compulsion = {
 
 	# Release From Prison (NEW) (cost 20)
 	send_option = {
-		is_shown = { scope:recipient = { is_imprisoned = yes } }
+		is_shown = {
+			scope:recipient = { is_imprisoned = yes }
+			scope:actor = { is_imprisoned = no }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
+		}
 		is_valid = {
 			custom_description = {
 				text = invoke_bond_requires_vampiric_strength_20
@@ -1754,14 +1806,50 @@ spn_compulsion = {
 					}
 				}
 			}
+			# 2.39 (WORK-ORDER-2.39 F6): no back door. A wolf held in the Warded Chains is not compelled out of them.
+			scope:recipient = {
+				custom_description = {
+					text = spn_held_in_chains_other_custom
+					spn_held_in_chains_trigger = no
+				}
+			}
 		}
 		starts_enabled = { spn_compel_ai_choice_value = 6 }
 		flag = compel_mortal_release
 		localization = COMPEL_MORTAL_RELEASE
 	}
 
+	# 2.39 (WORK-ORDER-2.39 F16, D18): Release Me. A jailed vampire's one order, and only to the one who holds the key
+	# (the redirect above turns a click on your own portrait into your gaoler). Vampiric strength 20, the existing reason
+	# line. A hybrid in the Warded Chains is held by them (expert call, wolves Q4: otherwise the wolf counter has a back
+	# door); a pure vampire never is (spn_held_in_chains_trigger needs a wolf). Settled LAST in on_accept: quiet or loud.
+	send_option = {
+		is_shown = { scope:actor = { is_imprisoned_by = scope:recipient } }
+		is_valid = {
+			custom_description = {
+				text = invoke_bond_requires_vampiric_strength_20
+				scope:actor = {
+					OR = {
+						has_trait_xp = { trait = supernatural_vampire track = vampirism        value >= 20 }
+						has_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value >= 20 }
+					}
+				}
+			}
+			scope:actor = {
+				custom_description = {
+					text = spn_held_in_chains_custom
+					spn_held_in_chains_trigger = no
+				}
+			}
+		}
+		starts_enabled = { spn_compel_ai_choice_value = 9 }
+		flag = compel_mortal_free_me
+		localization = COMPEL_MORTAL_FREE_ME
+	}
+
 	# End Your Life (cost 85)
 	send_option = {
+		is_shown = { scope:actor = { is_imprisoned = no } }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
 		is_valid = {
 			custom_description = {
 				text = invoke_bond_requires_vampiric_strength_75
@@ -1793,6 +1881,18 @@ spn_compulsion = {
 			}
 		}
 
+		# 2.39 (WORK-ORDER-2.39 F16): a refused Release Me costs the cell. House arrest becomes the dungeon (vanilla's idiom,
+		# 00_prison_interactions.txt), as a failed Break the Chains does.
+		if = {
+			limit = {
+				scope:actor = {
+					is_imprisoned_by = scope:recipient
+					is_in_prison_type = house_arrest
+				}
+			}
+			scope:actor = { hidden_effect = { change_prison_type = dungeon } }
+		}
+
 		# Recipient resisted: notify both sides (the actor's nature is exposed just above)
 		scope:actor = { trigger_event = { id = spn_message.4002 } } # 2.37: an interaction's on_accept/on_decline has no character in scope
 	}
@@ -1806,6 +1906,98 @@ spn_compulsion = {
 			limit = { scope:recipient = { exists = location } }
 			scope:recipient.location.county ?= { save_scope_as = spn_body_county }
 		}
+		# 2.39 (WORK-ORDER-2.39 F16): Release Me banks its own ground here, before anything is spent: the gaoler as
+		# scope:imprisoner (vanilla's escape effect reads it), the county of the actor's cell for the W5 trace below, and the
+		# hidden quiet-or-loud roll, read before the XP cost so the age of the blood is read untouched. Hidden, so the
+		# preview prints no odds. From a cell Release Me is the only order, so the cell is the test.
+		if = {
+			limit = { scope:actor = { is_imprisoned_by = scope:recipient } }
+			scope:recipient = { save_scope_as = imprisoner }
+			scope:actor = {
+				location ?= {
+					county ?= { save_scope_as = spn_body_county }
+				}
+			}
+			hidden_effect = {
+				scope:actor = {
+					random = {
+						chance = spn_compel_cell_quiet_chance_value
+						save_scope_value_as = { name = spn_cell_quiet value = yes }
+					}
+				}
+			}
+		}
+		# 2.39 (WORK-ORDER-2.39 B6, D2): a SECRET witch. The menu never vanishes on a secret (is_shown hides only an open
+		# witch), so the attempt is made, and it fails HERE, in the effect: never in ai_accept, whose breakdown would print
+		# the reason before you send. The failure is what tells it: her secret to the vampire (vanilla reveal_to, the mod's
+		# own pattern in zz_spn_order_effects.txt), and his to her, as on_decline does for anyone who resists.
+		# TVD 6x06: Alaric compels Jo, "it didn't take", and that is how they learn she is a witch.
+		# All of it HIDDEN, and the normal body below gated on a 1-day flag set in this hidden branch, never on an if/else on
+		# the witch test or a saved scope: the send window previews on_accept, and the preview walks into hidden_effect and
+		# runs its scope saves (vanilla relies on it: 00_revoke_title_interaction.txt with 00_interaction_effects.txt,
+		# 30_mongol_invasion_decisions.txt). Either would preview the failure for a secret witch, which is the very leak B6
+		# closes. A tooltip never writes game state, so the preview never sees the flag and always shows the ordinary
+		# command. The flag is removed at the end of on_accept (2.39 review H1).
+		hidden_effect = {
+		if = {
+			limit = { scope:recipient = { is_witch_trigger = yes } }
+			# A flag, not a saved scope: the tooltip preview runs scope saves inside hidden_effect, but never writes game
+			# state, so the send window can never see this.
+			scope:recipient = { add_character_flag = { flag = spn_cm_did_not_take days = 1 } }
+			scope:recipient = {
+				every_secret = {
+					limit = {
+						secret_type = secret_witch
+						NOT = { is_known_by = scope:actor }
+					}
+					reveal_to = scope:actor
+				}
+			}
+			scope:actor = {
+				if = {
+					limit = { any_secret = { type = spn_secret_vampire NOT = { is_known_by = scope:recipient } } }
+					spn_give_knowledge_of_vampire_secret = { CHARACTER = scope:recipient }
+				}
+				if = {
+					limit = { any_secret = { type = spn_secret_hybrid NOT = { is_known_by = scope:recipient } } }
+					spn_give_knowledge_of_hybrid_secret = { CHARACTER = scope:recipient }
+				}
+			}
+			# F16 step 7 (red team L26): a Release Me that fails here costs the cell, as a refusal does.
+			if = {
+				limit = {
+					scope:actor = {
+						is_imprisoned_by = scope:recipient
+						is_in_prison_type = house_arrest
+					}
+				}
+				scope:actor = { hidden_effect = { change_prison_type = dungeon } }
+			}
+			scope:actor = {
+				send_interface_message = {
+					type = event_generic_neutral
+					title = spn_compel_did_not_take_actor
+					right_icon = scope:recipient
+					show_as_tooltip = {
+						scope:recipient = { custom_tooltip = spn_msg_compel_did_not_take_actor }
+					}
+				}
+			}
+			scope:recipient = {
+				send_interface_message = {
+					type = event_generic_neutral
+					title = spn_compel_did_not_take_recipient
+					right_icon = scope:actor
+					show_as_tooltip = {
+						scope:actor = { custom_tooltip = spn_msg_compel_did_not_take_recipient }
+					}
+				}
+			}
+		}
+		}
+		# Everything below is the compulsion taking hold (2.35-2.38, unchanged), and 2.39's Release Me last of all.
+		if = {
+			limit = { scope:recipient = { NOT = { has_character_flag = spn_cm_did_not_take } } }
 		# 2.36 -- End Your Life is a kill: the vampire's own Rite weighs it (zz_spn_fulfillment_effects.txt). Here, before the
 		# death inside the toast below, and outside that toast so a player gets the faith's own toast, not one nested in it.
 		if = {
@@ -1877,6 +2069,10 @@ spn_compulsion = {
 					scope:recipient = {
 						if = { limit = { has_relation_lover    = scope:actor } remove_relation_lover    = scope:actor }
 						if = { limit = { has_relation_soulmate = scope:actor } remove_relation_soulmate = scope:actor }
+						# 2.39 (WORK-ORDER-2.39 F14, red team M14): a compelled lover is no romance. Both carry the 3-day flag BEFORE
+						# the relation is set, so the Order's romance hook (on_set_relation_lover, either side) passes it by.
+						hidden_effect = { add_character_flag = { flag = spn_compelled_lover days = 3 } }
+						scope:actor = { hidden_effect = { add_character_flag = { flag = spn_compelled_lover days = 3 } } }
 						set_relation_lover = scope:actor
 					}
 					if      = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism        value = -15 } }
@@ -1897,6 +2093,14 @@ spn_compulsion = {
 					scope:recipient = { release_from_prison = yes }
 					if      = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism        value = -5 } }
 					else_if = { limit = { has_trait = supernatural_hybrid  } add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -5 } }
+				}
+
+				# ---- RELEASE ME (2.39, WORK-ORDER-2.39 F16). The release itself is the last line of on_accept. ----
+				else_if = {
+					limit = { scope:compel_mortal_free_me = yes }
+					custom_tooltip = spn_compel_free_me_tt
+					if      = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism        value = -15 } }
+					else_if = { limit = { has_trait = supernatural_hybrid  } add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -15 } }
 				}
 
 				# ---- END YOUR LIFE ----
@@ -1925,6 +2129,47 @@ spn_compulsion = {
 
 		# Notify both sides that the compulsion took hold (4001 handles actor + recipient)
 		scope:actor = { trigger_event = { id = spn_message.4001 } } # 2.37: an interaction's on_accept/on_decline has no character in scope
+
+		# 2.39 (WORK-ORDER-2.39 F16): Release Me, LAST. The release is the irreversible step, after the trace and the message.
+		#   quiet: vanilla's own release (ransom_me's on_accept, 00_prison_interactions.txt); the gaoler believes he chose to;
+		#   loud:  vanilla's escape (opinion, memory, release); he comes to himself in front of an empty cell.
+		# "Older blood leaves more quietly": spn_compel_cell_quiet_chance_value, rolled and banked at the top. Hidden: the
+		# toast line above already says he walks out, and a preview (which never rolls) must not print the loud version.
+		hidden_effect = {
+			if = {
+				limit = {
+					scope:compel_mortal_free_me = yes
+					scope:actor = { is_imprisoned_by = scope:recipient }
+				}
+				if = {
+					limit = { exists = scope:spn_cell_quiet }
+					scope:actor = {
+						if = {
+							limit = { has_character_modifier = allowed_to_go_outside }
+							remove_character_modifier = allowed_to_go_outside
+						}
+						if = {
+							limit = { has_character_modifier = moldy_gruel_diet }
+							remove_character_modifier = moldy_gruel_diet
+						}
+						release_from_prison = yes
+					}
+				}
+				else = {
+					scope:actor = { escape_from_prison_effect = yes }
+				}
+			}
+		}
+		}
+		# 2.39 (WORK-ORDER-2.39 B6, review H1): B6's failure flag has done its work; nothing after this reads it.
+		hidden_effect = {
+			scope:recipient = {
+				if = {
+					limit = { has_character_flag = spn_cm_did_not_take }
+					remove_character_flag = spn_cm_did_not_take
+				}
+			}
+		}
 	}
 
 
@@ -1963,6 +2208,10 @@ spn_compulsion = {
 	ai_targets = {
 		ai_recipients = activity_guests
 	}
+	# 2.39 (WORK-ORDER-2.39 F16): a jailed vampire's gaoler, through the redirect (vanilla ransom_me's AI target).
+	ai_targets = {
+		ai_recipients = self
+	}
 
 	ai_target_quick_trigger = {
 		adult = yes
@@ -1990,7 +2239,7 @@ spn_compulsion = {
 	}
 
 	ai_potential = {
-		is_imprisoned = no
+		# 2.39 (WORK-ORDER-2.39 F16): is_imprisoned = no is gone: from a cell the AI may send Release Me (is_shown allows only that).
 		is_incapable = no
 		OR = {
 			has_trait = supernatural_vampire
@@ -2008,6 +2257,9 @@ spn_compulsion = {
 		modifier = { add = 12  scope:actor = { spn_vampiric_reserve_value >= 40 } }
 		modifier = { add = 12  scope:actor = { spn_vampiric_reserve_value >= 60 } }
 		modifier = { add = 14  scope:actor = { spn_vampiric_reserve_value >= 80 } }
+		# 2.39 (WORK-ORDER-2.39 F16): a creature in a cell wants out more than it wants anything else. Before the two
+		# factor-0 lines below, so a hungry creature still hoards.
+		modifier = { add = 60  scope:actor = { is_imprisoned_by = scope:recipient } }
 		# Hungry. Hoard it.
 		modifier = { factor = 0  scope:actor = { spn_vampiric_reserve_value < 15 } }
 		# The cascade found no command worth the price for this pair.

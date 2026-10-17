@@ -99,14 +99,22 @@ spn_hide_create_effect = {
 		limit = { exists = scope:spn_new_hide }
 		scope:spn_new_hide = {
 			set_variable = { name = spn_hide value = flag:$HIDE$ }
+			# 2.38 (§12.2): a hide that guarded a page holds it again (the page travels in the globals).
+			if = {
+				limit = {
+					global_var:spn_vade_page_4_state ?= flag:in_hide
+					global_var:spn_vade_page_4_hide ?= flag:$HIDE$
+				}
+				set_variable = { name = spn_holds_vade_page value = 4 }
+			}
 		}
 		# Only a hide that was really made takes the hide off the lost record.
 		if = {
-			limit = { exists = global_var:spn_hide_$HIDE$_lost }
+			limit = { has_global_variable = spn_hide_$HIDE$_lost }
 			remove_global_variable = spn_hide_$HIDE$_lost
 		}
 		if = {
-			limit = { exists = global_var:spn_hide_$HIDE$_heard_by }
+			limit = { has_global_variable = spn_hide_$HIDE$_heard_by }
 			remove_global_variable = spn_hide_$HIDE$_heard_by
 		}
 	}
@@ -123,7 +131,7 @@ spn_hide_record_lost_effect = {
 		}
 	}
 	if = {
-		limit = { exists = global_var:spn_hide_$HIDE$_reserved }
+		limit = { has_global_variable = spn_hide_$HIDE$_reserved }
 		remove_global_variable = spn_hide_$HIDE$_reserved
 	}
 }
@@ -138,7 +146,7 @@ spn_hide_rewait_effect = {
 		}
 	}
 	if = {
-		limit = { exists = global_var:spn_hide_$HIDE$_reserved }
+		limit = { has_global_variable = spn_hide_$HIDE$_reserved }
 		remove_global_variable = spn_hide_$HIDE$_reserved
 	}
 }
@@ -194,7 +202,7 @@ spn_hide_make_champion_dispatch_effect = {
 	# 2.37o: a hide that takes a champion is not idle; its count starts again (the review of 4 Oct, P6).
 	scope:spn_mc_hide = {
 		if = {
-			limit = { exists = var:spn_hide_idle_since }
+			limit = { has_variable = spn_hide_idle_since }
 			remove_variable = spn_hide_idle_since
 		}
 	}
@@ -496,6 +504,18 @@ spn_hide_yearly_bond_one_effect = {
 				}
 			}
 			spn_hide_tongue_effect = yes
+			# 2.38e: a Champion who practises magic (spn_wolf_practitioner_trigger).
+			if = {
+				limit = { spn_wolf_practitioner_trigger = yes }
+				gain_huge_ps_effect = yes
+				if = {
+					limit = {
+						is_true_mage = yes
+						has_trait_xp = { trait = archmage track = combat_magic value < 100 }
+					}
+					add_trait_xp = { trait = archmage track = combat_magic value = 1 }
+				}
+			}
 		}
 	}
 }
@@ -1402,14 +1422,14 @@ spn_hide_learn_where_effect = {
 			set_variable = { name = spn_knows_shrine_silverback value = $WHERE$ years = 10 }
 			set_variable = { name = spn_hide_wants_silverback value = yes years = 10 }
 			if = {
-				limit = { exists = var:spn_knows_hide_silverback }
+				limit = { has_variable = spn_knows_hide_silverback }
 				remove_variable = spn_knows_hide_silverback
 			}
 		}
 		else = {
 			set_variable = { name = spn_knows_hide_silverback value = $WHERE$ years = 10 }
 			if = {
-				limit = { exists = var:spn_knows_shrine_silverback }
+				limit = { has_variable = spn_knows_shrine_silverback }
 				remove_variable = spn_knows_shrine_silverback
 			}
 		}
@@ -1421,14 +1441,14 @@ spn_hide_learn_where_effect = {
 			set_variable = { name = spn_knows_shrine_timber value = $WHERE$ years = 10 }
 			set_variable = { name = spn_hide_wants_timber value = yes years = 10 }
 			if = {
-				limit = { exists = var:spn_knows_hide_timber }
+				limit = { has_variable = spn_knows_hide_timber }
 				remove_variable = spn_knows_hide_timber
 			}
 		}
 		else = {
 			set_variable = { name = spn_knows_hide_timber value = $WHERE$ years = 10 }
 			if = {
-				limit = { exists = var:spn_knows_shrine_timber }
+				limit = { has_variable = spn_knows_shrine_timber }
 				remove_variable = spn_knows_shrine_timber
 			}
 		}
@@ -1440,14 +1460,14 @@ spn_hide_learn_where_effect = {
 			set_variable = { name = spn_knows_shrine_tundra value = $WHERE$ years = 10 }
 			set_variable = { name = spn_hide_wants_tundra value = yes years = 10 }
 			if = {
-				limit = { exists = var:spn_knows_hide_tundra }
+				limit = { has_variable = spn_knows_hide_tundra }
 				remove_variable = spn_knows_hide_tundra
 			}
 		}
 		else = {
 			set_variable = { name = spn_knows_hide_tundra value = $WHERE$ years = 10 }
 			if = {
-				limit = { exists = var:spn_knows_shrine_tundra }
+				limit = { has_variable = spn_knows_shrine_tundra }
 				remove_variable = spn_knows_shrine_tundra
 			}
 		}
@@ -1459,14 +1479,14 @@ spn_hide_learn_where_effect = {
 			set_variable = { name = spn_knows_shrine_graybeard value = $WHERE$ years = 10 }
 			set_variable = { name = spn_hide_wants_graybeard value = yes years = 10 }
 			if = {
-				limit = { exists = var:spn_knows_hide_graybeard }
+				limit = { has_variable = spn_knows_hide_graybeard }
 				remove_variable = spn_knows_hide_graybeard
 			}
 		}
 		else = {
 			set_variable = { name = spn_knows_hide_graybeard value = $WHERE$ years = 10 }
 			if = {
-				limit = { exists = var:spn_knows_shrine_graybeard }
+				limit = { has_variable = spn_knows_shrine_graybeard }
 				remove_variable = spn_knows_shrine_graybeard
 			}
 		}
@@ -1478,14 +1498,14 @@ spn_hide_learn_where_effect = {
 			set_variable = { name = spn_knows_shrine_midnight value = $WHERE$ years = 10 }
 			set_variable = { name = spn_hide_wants_midnight value = yes years = 10 }
 			if = {
-				limit = { exists = var:spn_knows_hide_midnight }
+				limit = { has_variable = spn_knows_hide_midnight }
 				remove_variable = spn_knows_hide_midnight
 			}
 		}
 		else = {
 			set_variable = { name = spn_knows_hide_midnight value = $WHERE$ years = 10 }
 			if = {
-				limit = { exists = var:spn_knows_shrine_midnight }
+				limit = { has_variable = spn_knows_shrine_midnight }
 				remove_variable = spn_knows_shrine_midnight
 			}
 		}
@@ -1497,14 +1517,14 @@ spn_hide_learn_where_effect = {
 			set_variable = { name = spn_knows_shrine_alpha value = $WHERE$ years = 10 }
 			set_variable = { name = spn_hide_wants_alpha value = yes years = 10 }
 			if = {
-				limit = { exists = var:spn_knows_hide_alpha }
+				limit = { has_variable = spn_knows_hide_alpha }
 				remove_variable = spn_knows_hide_alpha
 			}
 		}
 		else = {
 			set_variable = { name = spn_knows_hide_alpha value = $WHERE$ years = 10 }
 			if = {
-				limit = { exists = var:spn_knows_shrine_alpha }
+				limit = { has_variable = spn_knows_shrine_alpha }
 				remove_variable = spn_knows_shrine_alpha
 			}
 		}
@@ -1707,15 +1727,15 @@ spn_hide_men_saw_send_effect = {
 
 spn_hide_battle_cleanup_effect = {
 	if = {
-		limit = { exists = var:spn_feat_budget }
+		limit = { has_variable = spn_feat_budget }
 		remove_variable = spn_feat_budget
 	}
 	if = {
-		limit = { exists = var:spn_feat_province }
+		limit = { has_variable = spn_feat_province }
 		remove_variable = spn_feat_province
 	}
 	if = {
-		limit = { exists = var:spn_feat_bond_this_battle }
+		limit = { has_variable = spn_feat_bond_this_battle }
 		remove_variable = spn_feat_bond_this_battle
 	}
 	if = {
@@ -1731,7 +1751,7 @@ spn_hide_battle_cleanup_effect = {
 		remove_character_flag = spn_feat_revealed
 	}
 	if = {
-		limit = { exists = var:spn_feat_kills }
+		limit = { has_variable = spn_feat_kills }
 		remove_variable = spn_feat_kills
 	}
 	if = {
@@ -1972,7 +1992,7 @@ spn_hide_wake_effect = {
 		}
 	}
 	if = {
-		limit = { exists = global_var:spn_hide_$HIDE$_heard_by }
+		limit = { has_global_variable = spn_hide_$HIDE$_heard_by }
 		remove_global_variable = spn_hide_$HIDE$_heard_by
 	}
 	if = {
@@ -2053,7 +2073,7 @@ spn_hide_yearly_net_effect = {
 			}
 		}
 		else_if = {
-			limit = { exists = var:spn_hide_idle_since }
+			limit = { has_variable = spn_hide_idle_since }
 			remove_variable = spn_hide_idle_since
 		}
 	}
@@ -3782,5 +3802,76 @@ spn_hide_field_clash_after_effect = {
 	}
 	else = {
 		scope:spn_clash_loser = { increase_wounds_no_death_effect = { REASON = fight } }
+	}
+}
+
+# 2.39 (Boot 3, 16 Oct): the white wolf's payout, moved whole out of spn_hide.0305's option so the hunt-window twin .0306 shares it.
+# Character scope: the hunter (root of either event).
+spn_hide_white_wolf_payout_effect = {
+	save_scope_as = spn_ww_winner
+	if = {
+		limit = { var:spn_hide_wolf_hide ?= flag:silverback }
+		if = {
+			limit = { has_global_variable = spn_hide_silverback_reserved }
+			remove_global_variable = spn_hide_silverback_reserved
+		}
+		spn_hide_create_effect = { HIDE = silverback OWNER = scope:spn_ww_winner }
+	}
+	if = {
+		limit = { var:spn_hide_wolf_hide ?= flag:timber }
+		if = {
+			limit = { has_global_variable = spn_hide_timber_reserved }
+			remove_global_variable = spn_hide_timber_reserved
+		}
+		spn_hide_create_effect = { HIDE = timber OWNER = scope:spn_ww_winner }
+	}
+	if = {
+		limit = { var:spn_hide_wolf_hide ?= flag:tundra }
+		if = {
+			limit = { has_global_variable = spn_hide_tundra_reserved }
+			remove_global_variable = spn_hide_tundra_reserved
+		}
+		spn_hide_create_effect = { HIDE = tundra OWNER = scope:spn_ww_winner }
+	}
+	if = {
+		limit = { var:spn_hide_wolf_hide ?= flag:graybeard }
+		if = {
+			limit = { has_global_variable = spn_hide_graybeard_reserved }
+			remove_global_variable = spn_hide_graybeard_reserved
+		}
+		spn_hide_create_effect = { HIDE = graybeard OWNER = scope:spn_ww_winner }
+	}
+	if = {
+		limit = { var:spn_hide_wolf_hide ?= flag:midnight }
+		if = {
+			limit = { has_global_variable = spn_hide_midnight_reserved }
+			remove_global_variable = spn_hide_midnight_reserved
+		}
+		spn_hide_create_effect = { HIDE = midnight OWNER = scope:spn_ww_winner }
+	}
+	if = {
+		limit = { var:spn_hide_wolf_hide ?= flag:alpha }
+		if = {
+			limit = { has_global_variable = spn_hide_alpha_reserved }
+			remove_global_variable = spn_hide_alpha_reserved
+		}
+		spn_hide_create_effect = { HIDE = alpha OWNER = scope:spn_ww_winner }
+	}
+	if = {
+		limit = { has_variable = spn_hide_wolf_hide }
+		remove_variable = spn_hide_wolf_hide
+	}
+	if = {
+		limit = { has_character_flag = spn_hide_outcome_pending }
+		remove_character_flag = spn_hide_outcome_pending
+	}
+	if = {
+		limit = {
+			exists = scope:spn_new_hide
+			spn_can_bear_hide_trigger = yes
+			spn_is_champion_trigger = no
+		}
+		scope:spn_new_hide = { equip_artifact_to_owner_replace = yes }
+		spn_hide_make_champion_dispatch_effect = { ARTIFACT = scope:spn_new_hide }
 	}
 }

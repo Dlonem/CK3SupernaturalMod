@@ -1,0 +1,399 @@
+﻿namespace = spn_zecchia
+
+# Supernatural 2.38 -- "The Blue Rose": Zecchia, a minor demon who steals for a fee (WORK-ORDER-2.38 §11).
+# Loc: localization/english/event_localization/spn_zecchia_l_english.yml.
+# Every delayed event re-checks the world in its trigger. Every job variable is years = 1; busy is days = 240.
+
+# .0001 -- A Thief Answers. The first meeting.
+spn_zecchia.0001 = {
+	type = character_event
+	title = spn_zecchia.0001.t
+	desc = {
+		desc = spn_zecchia.0001.desc
+		triggered_desc = {
+			trigger = { spn_wears_seal_trigger = yes }
+			desc = spn_zecchia.0001.desc_seal
+		}
+	}
+	theme = witchcraft
+	override_background = { reference = mc_shadows }
+	left_portrait = { character = root animation = shock }
+	right_portrait = { character = global_var:spn_zecchia animation = schadenfreude }
+	trigger = {
+		is_alive = yes
+		global_var:spn_zecchia ?= { is_alive = yes }
+	}
+	option = {
+		name = spn_zecchia.0001.a
+		trigger_event = spn_zecchia.0010
+		ai_chance = {
+			base = 50
+			modifier = { add = 30 has_trait = greedy }
+			modifier = { add = 20 has_trait = vengeful }
+		}
+	}
+	option = {
+		name = spn_zecchia.0001.b
+		spn_zecchia_dismiss_effect = yes
+		ai_chance = {
+			base = 50
+			modifier = { add = 30 has_trait = honest }
+			modifier = { add = 20 has_trait = content }
+		}
+	}
+}
+
+# .0005 -- A Name in the Margin. The Black Grimoire's outcome (E2).
+spn_zecchia.0005 = {
+	type = character_event
+	title = spn_zecchia.0005.t
+	desc = spn_zecchia.0005.desc
+	theme = learning
+	override_background = { reference = study }
+	left_portrait = { character = root animation = reading }
+	trigger = {
+		is_alive = yes
+		NOT = { has_character_flag = spn_knows_zecchia }
+	}
+	option = {
+		name = spn_zecchia.0005.a
+		add_character_flag = spn_knows_zecchia
+	}
+}
+
+# .0010 -- How Much Will You Take? The deal. Re-fired by its own two side options (the Council, who hired her).
+spn_zecchia.0010 = {
+	type = character_event
+	title = spn_zecchia.0010.t
+	desc = {
+		desc = spn_zecchia.0010.desc
+		first_valid = {
+			triggered_desc = {
+				trigger = { var:spn_zecchia_price ?= flag:wine }
+				desc = spn_zecchia.0010.price_wine
+			}
+			triggered_desc = {
+				trigger = { var:spn_zecchia_price ?= flag:cloak }
+				desc = spn_zecchia.0010.price_cloak
+			}
+			desc = spn_zecchia.0010.price_hair
+		}
+		triggered_desc = {
+			trigger = { spn_wears_seal_trigger = yes }
+			desc = spn_zecchia.0010.desc_seal
+		}
+		triggered_desc = {
+			trigger = { exists = scope:spn_zt_seal }
+			desc = spn_zecchia.0010.desc_seal_told
+		}
+		triggered_desc = {
+			trigger = { has_character_flag = spn_zecchia_council_pays }
+			desc = spn_zecchia.0010.desc_council
+		}
+	}
+	theme = witchcraft
+	override_background = { reference = mc_shadows }
+	left_portrait = { character = root animation = scheme }
+	right_portrait = { character = global_var:spn_zecchia animation = personality_greedy }
+	trigger = {
+		is_alive = yes
+		global_var:spn_zecchia ?= { is_alive = yes }
+		OR = {
+			NOT = { exists = global_var:spn_zecchia_busy }
+			global_var:spn_zecchia_busy ?= root
+		}
+		NOT = { exists = var:spn_zecchia_count }
+	}
+	immediate = {
+		if = {
+			limit = { NOT = { global_var:spn_zecchia_busy ?= root } }
+			set_global_variable = { name = spn_zecchia_busy value = root days = 240 }
+			# Each job is numbered, so its backstop can never end a later one (review, 9 Oct).
+			spn_zecchia_new_job_effect = yes
+			global_var:spn_zecchia = { trigger_event = { id = spn_zecchia.0029 days = 200 } }
+		}
+		if = {
+			limit = { NOT = { has_variable = spn_zecchia_price } }
+			random_list = {
+				1 = { set_variable = { name = spn_zecchia_price value = flag:wine years = 1 } }
+				1 = { set_variable = { name = spn_zecchia_price value = flag:cloak years = 1 } }
+				1 = { set_variable = { name = spn_zecchia_price value = flag:hair years = 1 } }
+			}
+		}
+		# She names the Seal's shrine, once per hirer (§9.7).
+		if = {
+			limit = {
+				exists = global_var:spn_seal_county
+				NOT = { has_character_flag = spn_zecchia_told_seal }
+			}
+			add_character_flag = spn_zecchia_told_seal
+			global_var:spn_seal_county = { save_scope_as = spn_zt_seal }
+			spn_seal_learn_effect = yes
+		}
+	}
+	option = {
+		name = spn_zecchia.0010.a
+		spn_zecchia_set_job_effect = { COUNT = 1 }
+		ai_chance = { base = 10 }
+	}
+	option = {
+		name = spn_zecchia.0010.b
+		spn_zecchia_set_job_effect = { COUNT = 2 }
+		ai_chance = { base = 30 }
+	}
+	option = {
+		name = spn_zecchia.0010.c
+		spn_zecchia_set_job_effect = { COUNT = 3 }
+		ai_chance = {
+			base = 30
+			modifier = { add = 20 has_trait = greedy }
+		}
+	}
+	option = {
+		name = spn_zecchia.0010.d
+		trigger = { gold >= 400 }
+		spn_zecchia_set_job_effect = { COUNT = 4 }
+		ai_chance = {
+			base = 15
+			modifier = { add = 20 has_trait = greedy }
+		}
+	}
+	option = {
+		name = spn_zecchia.0010.e
+		trigger = { gold >= 500 }
+		spn_zecchia_set_job_effect = { COUNT = 5 }
+		ai_chance = {
+			base = 5
+			modifier = { add = 20 has_trait = ambitious }
+		}
+	}
+	# The Chancellor may make the Council pay.
+	option = {
+		name = spn_zecchia.0010.f
+		trigger = {
+			global_var:current_admin_global ?= root
+			exists = global_var:mc_gold_global
+			global_var:mc_gold_global >= 100
+			NOT = { has_character_flag = spn_zecchia_council_pays }
+		}
+		add_character_flag = { flag = spn_zecchia_council_pays years = 1 }
+		trigger_event = spn_zecchia.0010
+		ai_chance = {
+			base = 0
+			modifier = { add = 40 has_trait = deceitful }
+		}
+	}
+	# Who hired you against me? The one crack in client privilege.
+	option = {
+		name = spn_zecchia.0010.g
+		trigger = {
+			global_var:spn_zecchia.var:spn_zecchia_hair_of ?= {
+				is_alive = yes
+				root = { is_target_in_variable_list = { name = spn_zecchia_privilege target = prev } }
+			}
+		}
+		global_var:spn_zecchia.var:spn_zecchia_hair_of = { save_scope_as = spn_zt_hirer }
+		add_opinion = { target = scope:spn_zt_hirer modifier = spn_robbed_by_zecchia_opinion }
+		global_var:spn_zecchia = { remove_variable = spn_zecchia_hair_of }
+		trigger_event = spn_zecchia.0010
+		ai_chance = { base = 0 }
+	}
+	option = {
+		name = spn_zecchia.0010.h
+		spn_zecchia_clear_job_effect = yes
+		spn_zecchia_dismiss_effect = yes
+		ai_chance = {
+			base = 5
+			modifier = { add = 100 gold < 100 }
+		}
+	}
+}
+
+# .0020 -- Zecchia Delivers. The hirer, ninety days after naming the target.
+spn_zecchia.0020 = {
+	type = character_event
+	title = spn_zecchia.0020.t
+	desc = {
+		desc = spn_zecchia.0020.desc
+		triggered_desc = {
+			trigger = { has_character_flag = spn_zecchia_council_pays }
+			desc = spn_zecchia.0020.desc_council
+		}
+	}
+	theme = intrigue
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = happiness }
+	right_portrait = { character = global_var:spn_zecchia animation = schadenfreude }
+	lower_right_portrait = scope:spn_zd_target
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		OR = {
+			is_landed = yes
+			is_landless_adventurer = yes
+		}
+		exists = var:spn_zecchia_count
+		var:spn_zecchia_target ?= {
+			is_alive = yes
+			spn_wears_seal_trigger = no
+		}
+		global_var:spn_zecchia ?= { is_alive = yes }
+	}
+	on_trigger_fail = {
+		if = {
+			limit = { is_alive = yes }
+			spn_zecchia_clear_job_effect = yes
+		}
+		if = {
+			limit = { global_var:spn_zecchia_busy ?= root }
+			spn_zecchia_dismiss_effect = yes
+		}
+	}
+	immediate = {
+		spn_zecchia_deliver_effect = yes
+	}
+	option = {
+		name = spn_zecchia.0020.a
+	}
+}
+
+# .0029 -- (hidden backstop) sent to Zecchia herself: a job that went nowhere sets her free (§11.3, "void").
+spn_zecchia.0029 = {
+	type = character_event
+	hidden = yes
+	trigger = {
+		exists = global_var:spn_zecchia_busy
+		exists = scope:spn_zj_n
+		exists = global_var:spn_zecchia_job_n
+		global_var:spn_zecchia_job_n = scope:spn_zj_n
+	}
+	immediate = {
+		global_var:spn_zecchia_busy = { save_scope_as = spn_zb_hirer }
+		if = {
+			limit = {
+				OR = {
+					scope:spn_zb_hirer = { is_alive = no }
+					scope:spn_zb_hirer = { NOT = { var:spn_zecchia_target ?= { is_alive = yes } } }
+				}
+			}
+			scope:spn_zb_hirer = {
+				if = {
+					limit = { is_alive = yes }
+					spn_zecchia_clear_job_effect = yes
+				}
+			}
+			spn_zecchia_dismiss_effect = yes
+		}
+	}
+}
+
+# .0030 -- Zecchia Is Getting Bored. The hirer, ninety days after the deal, if he never named anyone.
+spn_zecchia.0030 = {
+	type = character_event
+	title = spn_zecchia.0030.t
+	desc = spn_zecchia.0030.desc
+	theme = intrigue
+	override_background = { reference = mc_shadows }
+	left_portrait = { character = root animation = worry }
+	right_portrait = { character = global_var:spn_zecchia animation = boredom }
+	trigger = {
+		is_alive = yes
+		exists = var:spn_zecchia_count
+		NOT = { exists = var:spn_zecchia_target }
+		global_var:spn_zecchia ?= { is_alive = yes }
+		global_var:spn_zecchia_busy ?= root
+	}
+	option = {
+		name = spn_zecchia.0030.a
+		trigger = { NOT = { has_character_flag = spn_zecchia_extended } }
+		add_character_flag = { flag = spn_zecchia_extended years = 1 }
+		trigger_event = { id = spn_zecchia.0030 days = 30 }
+		ai_chance = { base = 50 }
+	}
+	option = {
+		name = spn_zecchia.0030.b
+		remove_short_term_gold = {
+			value = var:spn_zecchia_fee
+			divide = 2
+		}
+		spn_zecchia_clear_job_effect = yes
+		spn_zecchia_dismiss_effect = yes
+		ai_chance = { base = 40 }
+	}
+	option = {
+		name = spn_zecchia.0030.c
+		if = {
+			limit = {
+				spn_wears_seal_trigger = yes
+				NOT = { has_character_flag = spn_zecchia_extended }
+			}
+			custom_tooltip = spn_zecchia.0030.c_seal_tt
+			add_character_flag = { flag = spn_zecchia_extended years = 1 }
+			trigger_event = { id = spn_zecchia.0030 days = 30 }
+		}
+		# The Seal: she will not rob its wearer (§11.4). She goes home with nothing.
+		else_if = {
+			limit = { spn_wears_seal_trigger = yes }
+			custom_tooltip = spn_zecchia.0030.c_seal_leave_tt
+			spn_zecchia_clear_job_effect = yes
+			spn_zecchia_dismiss_effect = yes
+		}
+		else = {
+			custom_tooltip = spn_zecchia.0030.c_tt
+			spn_zecchia_betray_effect = yes
+		}
+		ai_chance = {
+			base = 10
+			modifier = { add = 30 has_trait = arrogant }
+			modifier = { add = 20 has_trait = greedy }
+		}
+	}
+}
+
+# .0040 -- The Ledger Does Not Lie. The Grand Magus; the Council paid for a theft. scope:spn_zd_hirer.
+spn_zecchia.0040 = {
+	type = character_event
+	title = spn_zecchia.0040.t
+	desc = spn_zecchia.0040.desc
+	theme = realm
+	override_background = { reference = council_chamber }
+	left_portrait = { character = root animation = anger }
+	right_portrait = { character = scope:spn_zd_hirer animation = worry }
+	trigger = {
+		is_alive = yes
+		global_var:current_archmage_global ?= root
+		scope:spn_zd_hirer ?= {
+			is_alive = yes
+			NOT = { this = root }
+		}
+	}
+	option = {
+		name = spn_zecchia.0040.a
+		trigger = { scope:spn_zd_hirer = { has_variable = mc_member_var } }
+		scope:spn_zd_hirer = { remove_from_mc_effect = yes }
+		if = {
+			limit = {
+				spn_is_order_member_trigger = yes
+				scope:spn_zd_hirer = { spn_is_order_member_trigger = yes }
+			}
+			scope:spn_zd_hirer = { spn_order_broke_rules_effect = yes }
+		}
+		ai_chance = {
+			base = 50
+			modifier = { add = 30 has_trait = just }
+			modifier = { add = 20 has_trait = wrathful }
+		}
+	}
+	option = {
+		name = spn_zecchia.0040.b
+		add_opinion = { target = scope:spn_zd_hirer modifier = spn_robbed_by_zecchia_opinion }
+		ai_chance = { base = 30 }
+	}
+	option = {
+		name = spn_zecchia.0040.c
+		ai_chance = {
+			base = 20
+			modifier = { add = 30 has_trait = forgiving }
+		}
+	}
+}

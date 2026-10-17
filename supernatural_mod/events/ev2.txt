@@ -2003,6 +2003,7 @@ magic_ev2.10 = {
 			NOT = { this = root }
 			any_character_artifact = { has_variable = magic1 }
 			in_diplomatic_range = root
+			spn_ai_artifact_motive_trigger = { ACTOR = root } # 2.39 (Supernatural): a reason to rob him (Thomas, 16 Oct)
 		}
 	}
 
@@ -2012,6 +2013,11 @@ magic_ev2.10 = {
 				any_character_artifact = { has_variable = magic1 }
 				NOT = { root = this }
 				in_diplomatic_range = root
+				spn_ai_artifact_motive_trigger = { ACTOR = root } # 2.39 (Supernatural): a reason to rob him (Thomas, 16 Oct)
+			}
+			weight = { # 2.39 (Supernatural): the one he wants most is the likeliest (Boot 3, 16 Oct)
+				base = 0
+				modifier = { add = spn_ai_artifact_desire_value }
 			}
 			save_scope_as = target
 		}
@@ -2078,9 +2084,14 @@ magic_ev2.10 = {
 			
 			modifier = {
 				add = 10
+				has_trait = brave # 2.39 (Supernatural): was brave or just (Thomas, 16 Oct)
+			}
+			modifier = { # 2.39 (Supernatural): the just, the content and the compassionate do not go to war for a trinket
+				add = -50
 				OR = {
-					has_trait = brave
 					has_trait = just
+					has_trait = content
+					has_trait = compassionate
 				}
 			}
 			modifier = {
@@ -2688,9 +2699,13 @@ magic_ev2.14 = {
 				OR = {
 					is_true_mage = yes
 					has_focus = arcane_focus
-					AND = {
-						has_trait = witch_hunter
-						is_ai = no
+					has_trait = witch_hunter # 2.39 (Supernatural): any witch hunter, not only a player (Thomas, 16 Oct)
+				}
+				in_diplomatic_range = root # 2.39 (Supernatural): in its reach, not anywhere in the world
+				NOT = { # 2.39 (Supernatural): not someone it likes
+					reverse_opinion = {
+						target = root
+						value >= medium_positive_opinion
 					}
 				}
 				NOR = {
@@ -4847,8 +4862,11 @@ magic_ev2.26 = {
 		custom_tooltip = ev2.26.c_ct
 		trigger_event = magic_ev.18
 		hidden_effect = {
-			scope:demon_child = {
-				death = natural
+			scope:demon_child ?= {
+				if = { # 2.38f (Supernatural): the child may already be dead
+					limit = { is_alive = yes }
+					death = natural
+				}
 			}
 		}
 	}
@@ -5983,6 +6001,35 @@ magic_ev2.41 = {
 		}
 		ai_chance = {
 			base = 0
+		}
+	}
+	# 2.39 (Supernatural): the Draught of a Clear Mind (WORK-ORDER-2.39 F17 U3). Sparing on purpose: base 1 like its
+	# neighbours, +4 for one who knows a vampire's or an Order member's secret, +2 for a defector.
+	option = {
+		name = spn_ev2.41.mind
+		send_interface_toast = {
+			title = ev2.41.title
+			add_character_modifier = {
+				modifier = spn_clear_mind_modifier
+				years = 3
+			}
+		}
+		ai_chance = {
+			base = 1
+			modifier = {
+				add = 4
+				any_known_secret = {
+					OR = {
+						secret_type = spn_secret_vampire
+						secret_type = spn_secret_hybrid
+						secret_type = spn_secret_blue_rose
+					}
+				}
+			}
+			modifier = {
+				add = 2
+				has_character_flag = spn_order_defector
+			}
 		}
 	}
 	option = {

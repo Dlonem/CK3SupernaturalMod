@@ -296,11 +296,9 @@ spn_hide_holy_site_changed = {
 # BROKEN (§8.2). Root = the artifact; scope:owner. Vanilla destroys it afterwards for a living owner only
 # (artifact.0021); an enshrined hide has none, so it is destroyed here or it would survive while recorded lost.
 # ==================================================================================================
-on_artifact_broken_through_effect = {
-	on_actions = {
-		spn_hide_broken
-	}
-}
+# 2.38e: on_artifact_broken_through_effect is no longer hooked. In a siege the artifact is gone before it runs (40 errors in
+# Thomas's 73-year run). A hide with an owner is destroyed by vanilla (artifact.0021) and the yearly net records it lost; an
+# enshrined hide broken by a siege now survives, and its shrine mends it (+25 a year, spn_hide_yearly_net_effect).
 
 on_artifact_broken_through_decay = {
 	on_actions = {
@@ -618,7 +616,8 @@ spn_gathering_pulse = {
 	random_events = {
 		# 2.37 (Thomas, 3 Oct): 70 -> 35 and eight more events. The Run is three weekly pulses, so about two Run events a
 		# Gathering instead of one, and none of them twice (spn_run_seen_*, gathering_events.py).
-		chance_of_no_event = 35
+		# 2.39 (Boot 1, 16 Oct): 35 -> 20, and the Run is four weekly pulses: about three Run events (Thomas: "pretty quick").
+		chance_of_no_event = 20
 		100 = spn_gathering.0200
 		100 = spn_gathering.0201
 		100 = spn_gathering.0202
@@ -633,5 +632,28 @@ spn_gathering_pulse = {
 		100 = spn_gathering.0211
 		100 = spn_gathering.0212
 		100 = spn_gathering.0213
+	}
+}
+
+# 2.38e -- the wolf's year, off random_yearly_everyone_pulse (10_spn_on_actions.txt): one wolf at a time, spread over the
+# year. A wolf with no pack may be asked to join one (spn_pack_lone_wolf_year_effect). 2.38g: the yearly power is a
+# Champion's only (Thomas, 9 Oct), and comes with his Bond (spn_hide_yearly_bond_one_effect).
+spn_wolf_year = {
+	trigger = {
+		spn_is_wolf_trigger = yes
+	}
+	effect = {
+		if = {
+			limit = {
+				spn_packs_on_trigger = yes
+				is_adult = yes
+				is_imprisoned = no
+				NOT = { exists = var:spn_pack }
+			}
+			random = {
+				chance = 20
+				spn_pack_lone_wolf_year_effect = yes
+			}
+		}
 	}
 }

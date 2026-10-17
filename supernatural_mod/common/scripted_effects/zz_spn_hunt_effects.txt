@@ -150,6 +150,11 @@ spn_hunt_early_warning_effect = {
 						# cannot: word runs ahead of him and every creature standing here hears it. Up to
 						# +40, which is the largest single term in this roll and is entirely self-inflicted.
 						scope:spn_hunter = { add = { value = spn_hunter_reputation_value multiply = 8 } }
+						# 2.38 (§9.3): the Bell of the Dead Hour rings for the one who wears it.
+						if = {
+							limit = { any_equipped_character_artifact = { var:spn_relic ?= flag:bell } }
+							add = 40
+						}
 						max = 90
 					}
 					trigger_event = { id = spn_hunt.0020 days = { 2 6 } }
@@ -299,6 +304,20 @@ spn_hunt_compute_fight_bonus_effect = {
 				change_variable = { name = spn_hunt_fight_bonus add = -10 }
 			}
 		}
+		# 2.38 (§9.3): the Enchanted Blade counts as silver against a wolf when silver was not chosen; never twice.
+		if = {
+			limit = {
+				NOT = { has_activity_option = { category = spn_hunt_preparations option = spn_hunt_prep_silver } }
+				scope:spn_hunter = { spn_wears_blade_trigger = yes }
+				scope:spn_defender = {
+					OR = {
+						has_trait = supernatural_werewolf
+						has_trait = supernatural_hybrid
+					}
+				}
+			}
+			change_variable = { name = spn_hunt_fight_bonus add = 15 }
+		}
 		every_attending_character = {
 			limit = { has_trait = supernatural_hunter  NOT = { this = scope:spn_hunter } }
 			scope:spn_hunt_activity = { change_variable = { name = spn_hunt_fight_bonus add = 5 } }
@@ -416,6 +435,16 @@ spn_hunt_count_the_pack_effect = {
 # ----------------------------------------------------------------------------------------------------------
 spn_hunt_fight_effect = {
 	$DEFENDER$ = { save_scope_as = spn_defender }
+	# 2.38 (§12.9): bound to the Vade Maecum. Without the Enchanted Blade the hunter cannot win (the 2.37 card's shape:
+	# skip the fight, the defender's win).
+	if = {
+		limit = {
+			scope:spn_defender = { has_trait = spn_vade_bound }
+			scope:spn_hunter = { spn_wears_blade_trigger = no }
+		}
+		scope:spn_defender = { spn_hunt_defender_won_effect = yes }
+	}
+	else = {
 	scope:spn_defender = {
 		duel = {
 			skill = prowess
@@ -452,6 +481,12 @@ spn_hunt_fight_effect = {
 					has_trait = spn_true_alpha
 					spn_is_champion_trigger = no
 				}
+				# 2.38 (§12.9): the bound, with the Blade against him and no champion beside the hunter.
+				modifier = {
+					add = 60
+					has_trait = spn_vade_bound
+					scope:spn_hunt_activity = { NOT = { any_attending_character = { spn_is_champion_trigger = yes } } }
+				}
 				min = 10
 				spn_hunt_defender_won_effect = yes
 			}
@@ -465,6 +500,7 @@ spn_hunt_fight_effect = {
 				spn_hunt_hunter_won_effect = yes
 			}
 		}
+	}
 	}
 }
 
@@ -586,6 +622,13 @@ spn_hunt_hunter_won_effect = {
 				limit = { has_trait = supernatural_hunter  NOT = { this = scope:spn_hunter } }
 				increase_wounds_no_death_effect = { REASON = fight }
 			}
+		}
+	}
+	# 2.38 (§13): a member of the Order slain or taken: the hunter learns the chapter. Before the death block.
+	scope:spn_defender ?= {
+		if = {
+			limit = { spn_is_order_member_trigger = yes }
+			spn_order_hunter_learns_effect = yes
 		}
 	}
 	# 2.35 PART TWO (§6.3) -- THE SWEEP CONTINUES. If a coven sweep is running, the next door is picked and

@@ -1,0 +1,686 @@
+﻿namespace = spn_order
+
+# Supernatural 2.39 -- Imperium and the council's works (WORK-ORDER-2.39 F12, F13). spn_order.1000-.1006, .1008, .1009
+# (.1007 is F11's). Effects: common/scripted_effects/zz_spn_imperium_effects.txt; the state model is at the top of
+# common/scripted_triggers/zz_spn_imperium_triggers.txt. Loc: zz_spn_239_imperium_l_english.yml.
+# Council business: none of these checks the F14 flavor gate, and only The Ground Splits marks it.
+# Every delayed event re-checks its situation in its own trigger.
+
+# ==================================================================================================
+# THE MOTION
+# ==================================================================================================
+# .1000 -- The Council's Business. The Grand Magus, from the meeting's second part (upstream I1), or from the debug event.
+# Saved scopes from Witchcraft's meeting (amage, bmage, loremaster, admin) travel with it.
+spn_order.1000 = {
+	type = character_event
+	title = spn_order.1000.t
+	desc = {
+		desc = spn_order.1000.desc
+		triggered_desc = {
+			trigger = { exists = scope:spn_rm_ruler }
+			desc = spn_order.1000.desc_work
+		}
+	}
+	theme = diplomacy
+	override_background = { reference = council_chamber }
+	left_portrait = { character = root animation = personality_rational }
+	trigger = {
+		is_alive = yes
+		spn_order_on_trigger = yes
+		global_var:current_archmage_global ?= root
+		spn_is_order_member_trigger = yes
+	}
+	# Left the chair the same day: the meeting simply goes on, as Witchcraft's own first option would take it.
+	on_trigger_fail = {
+		if = {
+			limit = { has_variable = spn_imp_in_meeting }
+			remove_variable = spn_imp_in_meeting
+		}
+		scope:loremaster ?= { trigger_event = magic_ev10.86 }
+	}
+	immediate = {
+		save_scope_as = spn_imp_gm
+		clear_saved_scope = spn_rm_ruler
+		if = {
+			limit = { spn_council_work_due_trigger = yes }
+			global_var:spn_respondeo_magna_target = { save_scope_as = spn_rm_ruler }
+		}
+	}
+	# a. Imperium.
+	option = {
+		name = spn_order.1000.a
+		trigger = { spn_imperium_askable_trigger = yes }
+		custom_tooltip = spn_order.1000.a.tt
+		hidden_effect = { spn_imperium_open_effect = { CRISIS = flag:none MOTION = flag:imperium } }
+		ai_chance = {
+			base = 10
+		}
+	}
+	# b. The Great Respondeo (F13), when one is due. The target is checked again now (one realm, once).
+	option = {
+		name = spn_order.1000.b
+		trigger = {
+			exists = scope:spn_rm_ruler
+			spn_imperium_has_voter_trigger = yes
+			custom_tooltip = {
+				text = spn_rm_target_ok_tt
+				spn_respondeo_magna_target_ok_trigger = { RULER = scope:spn_rm_ruler }
+			}
+			custom_tooltip = {
+				text = spn_rm_gm_pays_tt
+				can_spend_huge_ps_trigger = yes
+			}
+		}
+		show_as_unavailable = { exists = scope:spn_rm_ruler }
+		custom_tooltip = spn_order.1000.b.tt
+		hidden_effect = { spn_imperium_open_effect = { CRISIS = flag:none MOTION = flag:respondeo } }
+		ai_chance = {
+			base = 30
+		}
+	}
+	# c. Then let us hear the others: exactly what Witchcraft's ev10.85.a does, so the meeting goes on.
+	option = {
+		name = spn_order.1000.c
+		hidden_effect = {
+			if = {
+				limit = { has_variable = spn_imp_in_meeting }
+				remove_variable = spn_imp_in_meeting
+			}
+			scope:loremaster ?= { trigger_event = magic_ev10.86 }
+		}
+		ai_chance = {
+			base = 1
+		}
+	}
+}
+
+# .1001 -- Before the Council Votes. A player Grand Magus picks one lever (Witchcraft's Seeking Support shape, ev7.111).
+# Each option then starts the vote.
+spn_order.1001 = {
+	type = character_event
+	title = spn_order.1001.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { NOT = { spn_imperium_ballot_live_trigger = yes } }
+				desc = spn_order.1001.desc_lapsed
+			}
+			desc = spn_order.1001.desc
+		}
+	}
+	theme = diplomacy
+	override_background = { reference = council_chamber }
+	left_portrait = { character = root animation = scheme }
+	trigger = { is_alive = yes }
+	option = {
+		name = spn_order.1001.a
+		trigger = {
+			spn_imperium_ballot_live_trigger = yes
+			any_in_list = {
+				variable = spn_imp_voters
+				scope:spn_imp_gm = { has_usable_hook = prev }
+			}
+		}
+		custom_tooltip = spn_order.1001.a.tt
+		hidden_effect = { spn_imperium_player_lever_effect = { LEVER = flag:hooks } }
+	}
+	option = {
+		name = spn_order.1001.b
+		trigger = { spn_imperium_ballot_live_trigger = yes }
+		custom_tooltip = spn_order.1001.b.tt
+		hidden_effect = { spn_imperium_player_lever_effect = { LEVER = flag:favour } }
+	}
+	option = {
+		name = spn_order.1001.c
+		trigger = {
+			spn_imperium_ballot_live_trigger = yes
+			gold >= spn_imperium_gold_need_value
+		}
+		show_as_unavailable = { spn_imperium_ballot_live_trigger = yes }
+		custom_tooltip = spn_order.1001.c.tt
+		hidden_effect = { spn_imperium_player_lever_effect = { LEVER = flag:gold } }
+	}
+	option = {
+		name = spn_order.1001.d
+		trigger = { spn_imperium_ballot_live_trigger = yes }
+		custom_tooltip = spn_order.1001.d.tt
+		hidden_effect = { spn_imperium_player_lever_effect = { LEVER = flag:talk } }
+	}
+	option = {
+		name = spn_order.1001.e
+		trigger = { spn_imperium_ballot_live_trigger = yes }
+		hidden_effect = { spn_imperium_player_lever_effect = { LEVER = flag:none } }
+	}
+	# The motion's 60 days ran out before he answered (review LOW-2): the vote never started and nothing was counted.
+	option = {
+		name = spn_order.1001.lapsed
+		trigger = { NOT = { spn_imperium_ballot_live_trigger = yes } }
+		hidden_effect = { spn_imperium_lapse_effect = yes }
+	}
+}
+
+# .1002 -- The Grand Magus Asks for Imperium. Each player seat in turn, with the running count; also in an emergency
+# session. A window still open after the count only says so.
+spn_order.1002 = {
+	type = character_event
+	title = spn_order.1002.t
+	desc = {
+		desc = spn_order.1002.desc
+		triggered_desc = {
+			trigger = {
+				scope:spn_imp_gm ?= {
+					exists = var:spn_imp_crisis
+					NOT = { var:spn_imp_crisis = flag:none }
+				}
+			}
+			desc = spn_order.1002.desc_crisis
+		}
+		triggered_desc = {
+			trigger = { has_character_flag = spn_imp_bound }
+			desc = spn_order.1002.desc_bound
+		}
+		triggered_desc = {
+			trigger = { has_character_flag = spn_imp_favour }
+			desc = spn_order.1002.desc_favour
+		}
+		triggered_desc = {
+			trigger = { has_character_flag = spn_imp_paid }
+			desc = spn_order.1002.desc_paid
+		}
+		triggered_desc = {
+			trigger = { has_character_flag = spn_imp_spoke }
+			desc = spn_order.1002.desc_spoke
+		}
+		triggered_desc = {
+			trigger = { spn_imperium_knows_rift_trigger = yes }
+			desc = spn_order.1002.desc_rift
+		}
+		triggered_desc = { # the running count, only while the vote runs
+			trigger = { spn_imperium_ballot_live_trigger = yes }
+			desc = spn_order.1002.desc_count
+		}
+	}
+	theme = diplomacy
+	override_background = { reference = council_chamber }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_imp_gm animation = personality_bold }
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_imp_gm
+	}
+	option = {
+		name = spn_order.1002.a
+		trigger = { spn_imperium_ballot_live_trigger = yes }
+		hidden_effect = { spn_imperium_player_vote_effect = { VOTE = flag:aye } }
+	}
+	option = {
+		name = spn_order.1002.b
+		trigger = {
+			spn_imperium_ballot_live_trigger = yes
+			custom_tooltip = {
+				text = spn_imp_bound_tt
+				OR = { # the secret wins over the hook, as for an AI seat (red team L24, review LOW-1)
+					NOT = { has_character_flag = spn_imp_bound }
+					spn_imperium_knows_rift_trigger = yes
+				}
+			}
+		}
+		show_as_unavailable = { spn_imperium_ballot_live_trigger = yes }
+		hidden_effect = { spn_imperium_player_vote_effect = { VOTE = flag:nay } }
+	}
+	option = {
+		name = spn_order.1002.c
+		trigger = {
+			spn_imperium_ballot_live_trigger = yes
+			custom_tooltip = {
+				text = spn_imp_bound_tt
+				OR = { # the secret wins over the hook, as for an AI seat (red team L24, review LOW-1)
+					NOT = { has_character_flag = spn_imp_bound }
+					spn_imperium_knows_rift_trigger = yes
+				}
+			}
+		}
+		show_as_unavailable = { spn_imperium_ballot_live_trigger = yes }
+		hidden_effect = { spn_imperium_player_vote_effect = { VOTE = flag:blank } }
+	}
+	option = {
+		name = spn_imperium_counted_opt
+		trigger = {
+			NOT = { spn_imperium_ballot_live_trigger = yes }
+			scope:spn_imp_gm ?= { is_alive = yes }
+		}
+	}
+	option = { # the Grand Magus died before the count: the motion died with him and nothing was counted
+		name = spn_imperium_gm_dead_opt
+		trigger = {
+			NOT = { spn_imperium_ballot_live_trigger = yes }
+			NOT = { scope:spn_imp_gm ?= { is_alive = yes } }
+		}
+	}
+}
+
+# .1003 -- The Council Has Spoken. A player Grand Magus, right after the count. Refused, he may take the dark road once
+# per refusal. The meeting ends after his choice, the way Extraordinary Measures ends it.
+spn_order.1003 = {
+	type = character_event
+	title = spn_order.1003.t
+	desc = {
+		triggered_desc = { # banked at the count (review LOW-3)
+			trigger = {
+				exists = scope:spn_imp_was_crisis
+				NOT = { scope:spn_imp_was_crisis = flag:none }
+			}
+			desc = spn_order.1003.desc_crisis
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_imp_result ?= flag:granted }
+				desc = spn_order.1003.desc_granted
+			}
+			desc = spn_order.1003.desc_refused
+		}
+		triggered_desc = {
+			trigger = {
+				scope:spn_imp_result ?= flag:refused
+				scope:spn_imp_dissenter ?= { is_alive = yes }
+			}
+			desc = spn_order.1003.desc_dissenter
+		}
+	}
+	theme = diplomacy
+	override_background = { reference = council_chamber }
+	left_portrait = { character = root animation = personality_rational }
+	right_portrait = {
+		trigger = { scope:spn_imp_dissenter ?= { is_alive = yes } }
+		character = scope:spn_imp_dissenter
+		animation = disapproval
+	}
+	trigger = { is_alive = yes }
+	option = {
+		name = spn_order.1003.a
+		trigger = { scope:spn_imp_result ?= flag:granted }
+		custom_tooltip = spn_order.1003.a.tt
+	}
+	option = {
+		name = spn_order.1003.b
+		trigger = { NOT = { scope:spn_imp_result ?= flag:granted } }
+	}
+	# The dark road: "Then the danger will come to them." It needs a Nay voter, the refusal on record, and the means.
+	option = {
+		name = spn_order.1003.c
+		trigger = {
+			scope:spn_imp_result ?= flag:refused
+			scope:spn_imp_dissenter ?= { is_alive = yes }
+			global_var:spn_imperium_refused ?= root
+			custom_tooltip = {
+				text = spn_imp_means_tt
+				spn_imperium_stage_means_trigger = yes
+			}
+		}
+		show_as_unavailable = {
+			scope:spn_imp_result ?= flag:refused
+			scope:spn_imp_dissenter ?= { is_alive = yes }
+			global_var:spn_imperium_refused ?= root
+		}
+		custom_tooltip = spn_order.1003.c.tt
+		if = {
+			limit = { has_character_modifier = spn_fors_factorum_modifier }
+			custom_tooltip = spn_order.1003.c.tt_fors
+		}
+		else = {
+			show_as_tooltip = { spend_huge_ps_effect = yes }
+		}
+		hidden_effect = { spn_imperium_stage_effect = yes }
+		stress_and_fulfillment_impact = {
+			compassionate = medium_stress_impact_gain
+			honest = minor_stress_impact_gain
+		}
+	}
+	after = {
+		hidden_effect = { spn_imperium_meeting_end_effect = yes }
+	}
+}
+
+# .1004 -- The Council Pledges (F13). Each player seat in turn: pledge its part (an Aye that pays if the work is carried),
+# Aye, Nay, or a blank slip. A window still open after the count only says so.
+spn_order.1004 = {
+	type = character_event
+	title = spn_order.1004.t
+	desc = {
+		desc = spn_order.1004.desc
+		first_valid = {
+			triggered_desc = {
+				trigger = { global_var:current_admin_global ?= root }
+				desc = spn_order.1004.desc_funds
+			}
+			desc = spn_order.1004.desc_power
+		}
+		triggered_desc = { # the running count, only while the vote runs
+			trigger = { spn_imperium_ballot_live_trigger = yes }
+			desc = spn_order.1004.desc_count
+		}
+	}
+	theme = witchcraft
+	override_background = { reference = council_chamber }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_imp_gm animation = personality_rational }
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_imp_gm
+		exists = scope:spn_rm_ruler
+	}
+	option = {
+		name = spn_order.1004.a
+		trigger = {
+			spn_imperium_ballot_live_trigger = yes
+			custom_tooltip = {
+				text = spn_rm_can_pledge_tt
+				spn_respondeo_magna_can_pledge_trigger = yes
+			}
+		}
+		show_as_unavailable = { spn_imperium_ballot_live_trigger = yes }
+		if = {
+			limit = { global_var:current_admin_global ?= root }
+			custom_tooltip = spn_order.1004.a.tt_funds
+		}
+		else = {
+			custom_tooltip = spn_order.1004.a.tt_power
+		}
+		hidden_effect = { spn_imperium_player_vote_effect = { VOTE = flag:pledge } }
+	}
+	option = {
+		name = spn_order.1004.b
+		trigger = { spn_imperium_ballot_live_trigger = yes }
+		hidden_effect = { spn_imperium_player_vote_effect = { VOTE = flag:aye } }
+	}
+	option = {
+		name = spn_order.1004.c
+		trigger = { spn_imperium_ballot_live_trigger = yes }
+		hidden_effect = { spn_imperium_player_vote_effect = { VOTE = flag:nay } }
+	}
+	option = {
+		name = spn_order.1004.d
+		trigger = { spn_imperium_ballot_live_trigger = yes }
+		hidden_effect = { spn_imperium_player_vote_effect = { VOTE = flag:blank } }
+	}
+	option = {
+		name = spn_imperium_counted_opt
+		trigger = {
+			NOT = { spn_imperium_ballot_live_trigger = yes }
+			scope:spn_imp_gm ?= { is_alive = yes }
+		}
+	}
+	option = { # the Grand Magus died before the count: the motion died with him and nothing was counted
+		name = spn_imperium_gm_dead_opt
+		trigger = {
+			NOT = { spn_imperium_ballot_live_trigger = yes }
+			NOT = { scope:spn_imp_gm ?= { is_alive = yes } }
+		}
+	}
+}
+
+# ==================================================================================================
+# THE DARK ROAD
+# ==================================================================================================
+# .1005 -- The Ground Splits. The councillor who voted Nay, 30-90 days after the stager chose it. Re-checks everything
+# when it fires (red team M6): if the stager is gone, out of the chair, already holds Imperium, or the refusal is no longer
+# on record (a natural crisis reconsidered it first), nothing happens and no secret is recorded. Otherwise the crime is
+# recorded FIRST, then the councillor answers. No answer kills anyone outright (D-I3): the danger is Witchcraft's own
+# escaped demon, which hunts him as A Rift Opens does. Then the emergency session opens.
+spn_order.1005 = {
+	type = character_event
+	title = spn_order.1005.t
+	desc = {
+		desc = spn_order.1005.desc
+		triggered_desc = {
+			trigger = { exists = scope:spn_imp_sensed }
+			desc = spn_order.1005.desc_sensed
+		}
+	}
+	theme = dread
+	left_portrait = { character = root animation = fear }
+	trigger = {
+		is_alive = yes
+		scope:spn_imp_stager ?= {
+			is_alive = yes
+			global_var:current_archmage_global ?= this
+			spn_is_order_member_trigger = yes
+			NOT = { has_character_modifier = mage_council_support_modifier }
+		}
+		global_var:spn_imperium_refused ?= scope:spn_imp_stager
+	}
+	immediate = {
+		hidden_effect = {
+			save_scope_as = spn_imp_struck
+			# The bank first: the crime is recorded the moment it happens.
+			scope:spn_imp_stager = {
+				add_secret = {
+					type = spn_secret_staged_rift
+					target = scope:spn_imp_struck
+				}
+			}
+			# Witchcraft's demon_escapes_effect aims at scope:this0 when one exists: make it him, whatever came before.
+			save_scope_as = this0
+			# Magical Senses know the hand behind it (deterministic; no odds).
+			if = {
+				limit = { spn_senses_magic_trigger = yes }
+				scope:spn_imp_stager = {
+					random_secret = {
+						limit = {
+							secret_type = spn_secret_staged_rift
+							secret_target ?= scope:spn_imp_struck
+							NOT = { is_known_by = scope:spn_imp_struck }
+						}
+						reveal_to = scope:spn_imp_struck
+					}
+				}
+				save_scope_value_as = { name = spn_imp_sensed value = yes }
+			}
+			spn_flavor_mark_effect = yes
+			scope:spn_imp_stager = {
+				if = {
+					limit = { is_ai = no }
+					send_interface_toast = {
+						type = event_toast_effect_neutral
+						title = spn_imperium_toast_staged
+						left_icon = scope:spn_imp_struck
+					}
+				}
+			}
+		}
+	}
+	# a. A Mage closes it at the cost of power and blood. Nothing comes through.
+	option = {
+		name = spn_order.1005.a
+		trigger = {
+			has_trait = archmage
+			can_spend_standard_ps_trigger = yes
+		}
+		spend_standard_ps_effect = yes
+		increase_wounds_no_death_effect = { REASON = fight }
+		custom_tooltip = spn_order.1005.a.tt
+		ai_chance = {
+			base = 0
+			modifier = {
+				add = 100
+				has_trait = archmage
+			}
+		}
+	}
+	# b. A creature drives it back: a hidden roll on his strength (never shown).
+	option = {
+		name = spn_order.1005.b
+		trigger = { spn_has_supernatural_trait = yes }
+		custom_tooltip = spn_order.1005.b.tt
+		hidden_effect = {
+			random = {
+				chance = spn_imperium_drive_back_chance_value
+				save_scope_value_as = { name = spn_imp_held value = yes }
+			}
+			if = {
+				limit = { exists = scope:spn_imp_held }
+				send_interface_toast = {
+					type = event_toast_effect_good
+					title = spn_imperium_toast_rift_held
+					left_icon = root
+				}
+			}
+			else = {
+				increase_wounds_no_death_effect = { REASON = fight }
+				demon_escapes_effect = yes
+				send_interface_toast = {
+					type = event_toast_effect_bad
+					title = spn_imperium_toast_rift_failed
+					left_icon = root
+				}
+			}
+		}
+		ai_chance = {
+			base = 0
+			modifier = {
+				add = 40
+				has_trait = brave
+			}
+			modifier = {
+				add = 10
+				spn_has_supernatural_trait = yes
+			}
+		}
+	}
+	# c. Get everyone out.
+	option = {
+		name = spn_order.1005.c
+		custom_tooltip = spn_order.1005.c.tt
+		hidden_effect = { demon_escapes_effect = yes }
+		ai_chance = {
+			base = 10
+			modifier = {
+				add = 30
+				has_trait = brave
+			}
+			modifier = {
+				add = 10
+				has_trait = compassionate
+			}
+		}
+	}
+	# d. Run.
+	option = {
+		name = spn_order.1005.d
+		add_stress = medium_stress_gain
+		custom_tooltip = spn_order.1005.c.tt
+		hidden_effect = { demon_escapes_effect = yes }
+		ai_chance = {
+			base = 10
+			modifier = {
+				add = 40
+				has_trait = craven
+			}
+		}
+	}
+	# Then the emergency session, with him as the councillor it struck (+25 for Aye if he is AI).
+	after = {
+		hidden_effect = { spn_imperium_crisis_effect = { CRISIS = flag:rift } }
+	}
+}
+
+# ==================================================================================================
+# THE GREAT RESPONDEO'S RESULT
+# ==================================================================================================
+# .1006 -- A Realm Forgets. Every player seat and the Grand Magus, and when it passed the realm's player members.
+spn_order.1006 = {
+	type = character_event
+	title = spn_order.1006.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_rm_result ?= flag:passed }
+				desc = spn_order.1006.desc_passed
+			}
+			triggered_desc = {
+				trigger = { scope:spn_rm_result ?= flag:failed }
+				desc = spn_order.1006.desc_failed
+			}
+			desc = spn_order.1006.desc_refused
+		}
+		triggered_desc = {
+			trigger = {
+				scope:spn_rm_result ?= flag:passed
+				exists = scope:spn_rm_pledges # banked at the count (review LOW-3)
+				scope:spn_rm_pledges >= 2
+			}
+			desc = spn_order.1006.desc_two
+		}
+		triggered_desc = {
+			trigger = {
+				scope:spn_rm_result ?= flag:passed
+				exists = scope:spn_rm_pledges
+				scope:spn_rm_pledges >= 3
+			}
+			desc = spn_order.1006.desc_three
+		}
+		triggered_desc = {
+			trigger = {
+				scope:spn_rm_result ?= flag:passed
+				NOT = { has_variable = mc_member_var }
+			}
+			desc = spn_order.1006.desc_member
+		}
+	}
+	theme = witchcraft
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = thinking }
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_rm_ruler
+	}
+	option = {
+		name = spn_order.1006.a
+		trigger = { scope:spn_rm_result ?= flag:passed }
+	}
+	option = {
+		name = spn_order.1006.b
+		trigger = { NOT = { scope:spn_rm_result ?= flag:passed } }
+	}
+}
+
+# ==================================================================================================
+# HIDDEN STEPS
+# ==================================================================================================
+# .1008 -- (hidden) the emergency session after a seat holder's death (upstream I4), seven days on, so Witchcraft's own
+# remover has emptied his seat first. Re-checks: the Grand Magus is alive, still in the chair, a member, without
+# Imperium, and no other vote is running.
+spn_order.1008 = {
+	type = character_event
+	hidden = yes
+	trigger = {
+		is_alive = yes
+		spn_order_on_trigger = yes
+		global_var:current_archmage_global ?= root
+		spn_is_order_member_trigger = yes
+		NOT = { has_character_modifier = mage_council_support_modifier }
+		NOT = { spn_imperium_vote_running_trigger = yes }
+	}
+	immediate = {
+		spn_imperium_open_effect = { CRISIS = flag:death MOTION = flag:imperium }
+	}
+}
+
+# .1009 -- (hidden) the fallback count, 30 days after a vote starts: counts whatever was cast, once (spn_imp_counted), if
+# this is still the same vote (its number) and nobody has counted it. A Grand Magus who has died takes the motion with him.
+spn_order.1009 = {
+	type = character_event
+	hidden = yes
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_imp_ballot
+		spn_imperium_vote_running_trigger = yes
+		exists = var:spn_imp_vote_id
+		var:spn_imp_vote_id >= scope:spn_imp_ballot
+		var:spn_imp_vote_id <= scope:spn_imp_ballot
+	}
+	immediate = {
+		save_scope_as = spn_imp_gm
+		spn_imperium_count_effect = yes
+	}
+}

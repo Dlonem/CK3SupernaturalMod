@@ -1,0 +1,217 @@
+﻿# Supernatural 2.39 -- the Order's politics: Invocare (WORK-ORDER-2.39 F1), Break the Order of the Blue Rose (F2), the
+# watch list, and A Sister on Trial (F11). Effects: zz_spn_order_politics_effects.txt. Values: zz_spn_order_politics_values.txt.
+#
+# The B6 rule: a requirement line or an option never turns on another man's secret. A prisoner counts as a Temple Magus,
+# and the Grand Magus counts as held, only when the Blue Rose secret of that man is known to the one asking (the council is
+# hidden from outsiders unless Witchcraft has revealed it, window_high_council.gui:48).
+
+# ==================================================================================================
+# INVOCARE (F1)
+# ==================================================================================================
+
+# A second for the motion: another Temple Magus, alive, who dislikes the chair or is the caller's friend. In any scope;
+# $CALLER$ is the one calling it. spn_order_chapters holds every Temple Magus (zz_spn_order_effects.txt:11).
+spn_invocare_second_trigger = {
+	any_in_global_list = {
+		variable = spn_order_chapters
+		is_alive = yes
+		exists = var:spn_order_chapter
+		NOT = { this = $CALLER$ }
+		NOT = { global_var:current_archmage_global ?= this }
+		OR = {
+			opinion = { target = global_var:current_archmage_global value <= -10 }
+			has_relation_friend = $CALLER$
+		}
+	}
+}
+
+# Somebody can host the Conclave that hears it: the caller, if he holds land, or another landed Temple Magus who is free
+# and is not the Grand Magus (spn_conclave_call_effect's own fallback, with the Grand Magus left out). Either way not one
+# still on the Conclave's own cooldown (5 years, zz_spn_conclave.txt), or the motion would wait for a Conclave that cannot
+# start (review M-1; the call effect makes the same test). $CALLER$ as above.
+spn_invocare_host_exists_trigger = {
+	OR = {
+		$CALLER$ = {
+			is_landed = yes
+			NOT = { is_activity_type_on_cooldown = spn_conclave }
+		}
+		any_in_global_list = {
+			variable = spn_order_chapters
+			is_alive = yes
+			is_landed = yes
+			is_imprisoned = no
+			exists = var:spn_order_chapter
+			NOT = { global_var:current_archmage_global ?= this }
+			NOT = { is_activity_type_on_cooldown = spn_conclave }
+		}
+	}
+}
+
+# Activity scope (the Conclave). The motion can be heard now: the call was Invocare, the Grand Magus it named is still in
+# the chair and holds no Imperium (F12: Imperium's first power), the caller is still a member, and it was not heard yet.
+spn_invocare_can_open_trigger = {
+	var:spn_cv_reason ?= flag:invocare
+	exists = var:spn_iv_magus
+	exists = var:spn_iv_caller
+	NOT = { exists = var:spn_iv_yes }
+	exists = global_var:current_archmage_global
+	global_var:current_archmage_global = var:spn_iv_magus
+	var:spn_iv_magus = {
+		is_alive = yes
+		spn_imperium_holds_trigger = no
+	}
+	var:spn_iv_caller = {
+		is_alive = yes
+		spn_is_order_member_trigger = yes
+	}
+}
+
+# ==================================================================================================
+# BREAK THE ORDER (F2)
+# ==================================================================================================
+
+# He knows the Order is there (any one of these). In his own scope. A searched Collegium cellar (F15) and a lost
+# encounter set var:spn_hunter_knows_chapter; Witchcraft's revealed council sets mc_revealed (00_variety_magic_effects.txt:11345).
+spn_order_break_knows_trigger = {
+	OR = {
+		any_known_secret = { secret_type = spn_secret_blue_rose }
+		exists = var:spn_hunter_knows_chapter
+		exists = global_var:mc_revealed
+		has_character_flag = spn_order_defector
+		has_character_flag = spn_order_wronged_kin
+	}
+}
+
+# One of the roads to breaking it, shown as one requirement line. In his own scope: a hunter (the mod's, or Witchcraft's
+# by is_witch_hunter: the trait, the novice modifier, the track or his own witch-hunter secret), the antimage perk, the head
+# of a faith whose rite condemns witchcraft, Witchcraft's Chief Inquisitor (inq_modifier), wronged kin, a defector.
+spn_order_break_road_trigger = {
+	OR = {
+		spn_has_hunter_trait = yes
+		is_witch_hunter = yes # 2.39 (review L-7): the work order's hunter test; it includes the witch_hunter trait
+		has_perk = antimage_perk
+		AND = {
+			faith.religious_head ?= this
+			trait_is_criminal_in_rite_trigger = { TRAIT = trait:witch RITE = this.rite GENDER_CHARACTER = this }
+		}
+		has_character_modifier = inq_modifier
+		has_character_flag = spn_order_wronged_kin
+		has_character_flag = spn_order_defector
+	}
+}
+
+# He knows the Temple Magi of half the temples (rounded up), and of one at least. In his own scope.
+spn_order_break_heads_trigger = {
+	spn_order_break_heads_known_value >= 1
+	spn_order_break_heads_known_value >= spn_order_break_half_temples_value
+}
+
+# A temple has fallen to him or to a hunter at his court (the sweep's counter), or a Temple Magus he knows for one sits in
+# his dungeon. In his own scope; $WHO$ is the same man, written so the secret test can be read inside the prisoner.
+spn_order_break_fallen_trigger = {
+	OR = {
+		AND = {
+			exists = var:spn_order_temples_swept
+			var:spn_order_temples_swept >= 1
+		}
+		any_courtier_or_guest = {
+			exists = var:spn_order_temples_swept
+			var:spn_order_temples_swept >= 1
+		}
+		any_prisoner = {
+			spn_is_temple_magus_trigger = yes
+			any_secret = {
+				secret_type = spn_secret_blue_rose
+				is_known_by = $WHO$
+			}
+		}
+	}
+}
+
+# The Grand Magus sits in $WHO$'s dungeon, and $WHO$ knows him for what he is (or Witchcraft revealed the council).
+spn_order_break_holds_magus_trigger = {
+	global_var:current_archmage_global ?= {
+		is_imprisoned_by = $WHO$
+		OR = {
+			exists = global_var:mc_revealed
+			any_secret = {
+				secret_type = spn_secret_blue_rose
+				is_known_by = $WHO$
+			}
+		}
+	}
+}
+
+# The Break's price can still be paid (his own scope): 1,000 piety for the head of a faith, else 1,000 prestige. The
+# decision shows it as a requirement line; the hidden step (spn_order.0984) checks it again, since the night between may
+# have spent it (review L-4).
+spn_order_break_price_trigger = {
+	trigger_if = {
+		limit = { faith.religious_head ?= this }
+		piety >= 1000
+	}
+	trigger_else = {
+		prestige >= 1000
+	}
+}
+
+# The chair: empty, or its holder in $WHO$'s dungeon.
+spn_order_break_chair_trigger = {
+	OR = {
+		NOT = { exists = global_var:current_archmage_global }
+		spn_order_break_holds_magus_trigger = { WHO = $WHO$ }
+	}
+}
+
+# ==================================================================================================
+# THE WATCH LIST (F2): global variable list spn_order_watched. Walked once a year and by the council's war on hunters
+# (F11); never a world walk.
+# ==================================================================================================
+
+# Still worth watching: alive, on the road, and not since come into the Order (a neophyte has a chapter too).
+spn_order_watch_keep_trigger = {
+	is_alive = yes
+	NOT = { exists = var:spn_order_chapter }
+	spn_order_break_road_trigger = yes
+}
+
+# Halfway along the road: on it, and one of the Break's own deeds done (the heads known, a temple fallen, the Grand Magus
+# taken). An empty chair is the world's doing, not his, so it does not count here. $WHO$ as above.
+spn_order_watch_halfway_trigger = {
+	spn_order_break_road_trigger = yes
+	OR = {
+		spn_order_break_heads_trigger = yes
+		spn_order_break_fallen_trigger = { WHO = $WHO$ }
+		spn_order_break_holds_magus_trigger = { WHO = $WHO$ }
+	}
+}
+
+# ==================================================================================================
+# A SISTER ON TRIAL (F11)
+# ==================================================================================================
+
+# He holds the Powder of the Order (spn_relic_powder_interaction's own test, worn or carried, never a borrowed one).
+spn_order_holds_powder_trigger = {
+	any_character_artifact = {
+		var:spn_relic ?= flag:powder
+		NOT = { has_variable = spn_borrowed_from }
+	}
+}
+
+# Root: the one A Sister on Trial was sent to. Still her keeper: her Temple Magus (or, when she was the Temple Magus, the
+# master of the Order). A dead sister has left the chapter (on_death removes her), so then he need only still be a Temple
+# Magus: she was of his temple when the trial began.
+spn_order_sister_keeper_trigger = {
+	is_alive = yes
+	trigger_if = {
+		limit = { scope:spn_st_role ?= flag:master }
+		global_var:spn_order_master ?= root
+	}
+	trigger_else = {
+		spn_is_temple_magus_trigger = yes
+		trigger_if = {
+			limit = { scope:spn_st_sister = { is_alive = yes } }
+			scope:spn_st_sister.var:spn_order_chapter ?= { story_owner = root }
+		}
+	}
+}

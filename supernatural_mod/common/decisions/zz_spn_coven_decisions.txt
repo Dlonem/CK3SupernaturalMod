@@ -1,0 +1,165 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": covens (WORK-ORDER-2.38 §7).
+# found_witch_coven_decision OVERRIDES vanilla's by key (80_major_decisions.txt:2311-2388), Witchcraft's own pattern
+# (magic_dec_overwritten.txt). Three changes only: one member rule, the coven's story after vanilla's effect, and the AI.
+# Loc: localization/english/spn_coven_l_english.yml (vanilla's own keys are kept where the text is vanilla's).
+
+found_witch_coven_decision = {
+	picture = {
+		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
+	}
+	decision_group_type = major
+	ai_check_interval = 60
+	desc = found_witch_coven_decision_desc
+
+	is_shown = {
+		OR = {
+			has_trait = witch
+			any_secret = { type = secret_witch }
+		}
+		exists = house
+		NOT = { house ?= { has_house_modifier = witch_coven } } # 2.38a2: after the exists (a houseless witch logged 21 errors)
+	}
+
+	is_valid = {
+		is_house_head = yes
+		trigger_if = {
+			limit = {
+				player_heir ?= {
+					is_child_of = root
+					house = root.house
+				}
+			}
+			player_heir = {
+				is_witch_known_by_trigger = { CHARACTER = root }
+			}
+		}
+		# 2.38 (§7.1): you and at least two other adult witches of your house whom you know to be witches.
+		house = {
+			custom_tooltip = {
+				text = spn_found_coven_members_tt
+				any_adult_house_member = {
+					count >= 3
+					OR = {
+						this = root
+						is_witch_known_by_trigger = { CHARACTER = root }
+					}
+				}
+			}
+		}
+	}
+
+	is_valid_showing_failures_only = {
+	}
+
+	effect = {
+		found_witch_coven_decision_effects = yes
+		house = { spn_coven_started_effect = yes }
+	}
+
+	ai_potential = {
+		is_ai = yes
+		spn_coven_on_trigger = yes
+	}
+
+	ai_will_do = {
+		base = 0
+		modifier = { add = 30 has_trait = ambitious }
+		modifier = {
+			add = 30
+			age >= 50
+		}
+		modifier = {
+			add = 10
+			house = {
+				any_adult_house_member = {
+					count >= 4
+					is_witch_known_by_trigger = { CHARACTER = root }
+				}
+			}
+		}
+		modifier = {
+			add = 10
+			house = {
+				any_adult_house_member = {
+					count >= 5
+					is_witch_known_by_trigger = { CHARACTER = root }
+				}
+			}
+		}
+		modifier = { add = -50 has_trait = content }
+		modifier = {
+			factor = 0
+			any_in_global_list = {
+				variable = spn_covens
+				count >= spn_coven_cap_value
+			}
+		}
+	}
+}
+
+# Leave the Coven (§7.3): a member who is not its owner. For good: the yearly re-list skips him from now on.
+spn_coven_leave_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_coven_leave_decision_desc
+	selection_tooltip = spn_coven_leave_decision_tooltip
+	confirm_text = spn_coven_leave_decision_confirm
+	ai_check_interval = 120
+	is_shown = {
+		exists = var:spn_coven
+		var:spn_coven ?= { NOT = { story_owner = root } }
+	}
+	effect = {
+		custom_tooltip = spn_coven_leave_decision_effect_tt
+		var:spn_coven = { save_scope_as = spn_cl_story }
+		add_character_flag = spn_coven_left
+		spn_coven_clear_member_effect = { STORY = scope:spn_cl_story }
+		scope:spn_cl_story = {
+			spn_coven_refresh_effect = yes
+			spn_coven_sync_mirrors_effect = yes
+		}
+	}
+	ai_potential = {
+		exists = var:spn_coven
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 20
+			opinion = { target = var:spn_coven.story_owner value <= -40 }
+		}
+	}
+}
+
+# Disband the Coven (§7.3): its owner ends it. Never for the AI.
+spn_coven_disband_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_coven_disband_decision_desc
+	selection_tooltip = spn_coven_disband_decision_tooltip
+	confirm_text = spn_coven_disband_decision_confirm
+	ai_check_interval = 0
+	is_shown = {
+		exists = var:spn_coven
+		var:spn_coven ?= { story_owner = root }
+		exists = house
+	}
+	effect = {
+		custom_tooltip = spn_coven_disband_decision_effect_tt
+		var:spn_coven = {
+			var:spn_coven_house ?= { save_scope_as = spn_cd_house }
+		}
+		if = {
+			limit = { exists = scope:spn_cd_house }
+			scope:spn_cd_house = {
+				if = {
+					limit = { has_house_modifier = witch_coven }
+					remove_house_modifier = witch_coven
+				}
+				spn_coven_ended_effect = yes
+			}
+		}
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}

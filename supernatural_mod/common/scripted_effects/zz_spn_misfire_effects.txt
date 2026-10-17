@@ -1,0 +1,68 @@
+﻿# Supernatural 2.39 -- "The Hermetic Order of the Blue Rose, Part 2": Bound as Witness, spells that go wrong
+# (WORK-ORDER-2.39 F3; Alyssa's curse, S1E09 and season 2).
+#
+# Extends the existing witness bond (spn_vade_witness_bond_modifier, written only by spn_vade_set_witness_effect) and
+# Witchcraft's own set_spell_id, the first line of every Witchcraft spell. apply_upstream_edits.py's 2.39 F3 entry puts one
+# call to spn_vade_misfire_roll_effect inside set_spell_id's hidden_effect, so no tooltip ever shows the odds.
+# Settled (WORK-ORDER-2.39 F3): a countered spell can still misfire (it is the book's doing, not the spell's); a witness
+# freed by Break the Witness's Bond is not bound again by a new Contract (only a new Name as Witness binds); Supernatural's
+# own Workings (the Transference, the Unmaking, Ask to Unbind, Tear the Hide Away) never call set_spell_id, so never
+# misfire. Vade rule Off: no witness can exist, and the roll checks the rule as well (guarded twice).
+
+# Caster scope (set_spell_id runs in it). Only records the roll and schedules "The Spell Goes Wrong" a day later.
+spn_vade_misfire_roll_effect = {
+	if = {
+		limit = {
+			has_character_modifier = spn_vade_witness_bond_modifier # cheapest first: almost no one carries it
+			# The caster only. Soul Transfer stamps its number on the target too (00_magic_interactions.txt, ID 19).
+			OR = {
+				NOT = { exists = scope:actor }
+				scope:actor = this
+			}
+			# 2.39 review L1: Witchcraft's create_mage_effect (00_variety_magic_effects.txt) stamps a random spell number on
+			# the ruler it makes a Mage (saved as scope:new_mage). Not a cast.
+			NOT = { scope:new_mage ?= this }
+			spn_vade_on_trigger = yes
+			NOT = { exists = global_var:spn_vade_destroyed } # any part of the book survives
+			NOT = { has_character_flag = spn_vade_misfire_rolled } # once a day: Inception and Soul Transfer set the number twice
+			exists = var:spell_id
+			NOT = { var:spell_id = 27 } # the mage duel: it has its own outcomes
+			NOT = { var:spell_id = 98 } # a demon being made, not a cast
+		}
+		add_character_flag = { flag = spn_vade_misfire_rolled days = 1 }
+		random = {
+			chance = spn_vade_misfire_chance_value
+			spn_vade_misfire_clear_effect = yes
+			set_variable = { name = spn_mf_spell value = var:spell_id days = 30 }
+			if = {
+				limit = {
+					exists = scope:recipient
+					NOT = { scope:recipient = this }
+				}
+				set_variable = { name = spn_mf_target value = scope:recipient days = 30 }
+			}
+			# Bless the Land, Thorn Walls and the Singularity save their county as scope:ttile just before set_spell_id.
+			if = {
+				limit = { exists = scope:ttile }
+				set_variable = { name = spn_mf_title value = scope:ttile days = 30 }
+			}
+			trigger_event = { id = spn_vade.0600 days = 1 }
+		}
+	}
+}
+
+# Caster scope: the misfire's record is gone (the event banked it, or the event can no longer fire).
+spn_vade_misfire_clear_effect = {
+	if = {
+		limit = { has_variable = spn_mf_spell }
+		remove_variable = spn_mf_spell
+	}
+	if = {
+		limit = { has_variable = spn_mf_target }
+		remove_variable = spn_mf_target
+	}
+	if = {
+		limit = { has_variable = spn_mf_title }
+		remove_variable = spn_mf_title
+	}
+}

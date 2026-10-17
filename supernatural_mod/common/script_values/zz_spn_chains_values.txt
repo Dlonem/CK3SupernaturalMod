@@ -1,0 +1,104 @@
+﻿# Supernatural 2.39 -- Break the Chains and Release Me: every knob in one file (WORK-ORDER-2.39 F5, F16).
+# Change a number here and nothing else needs to move. No number here is ever shown to a player.
+
+# ==================================================================================================
+# BREAK THE CHAINS (F5). Root = the champion; scope:imprisoner banked by spn_hide.0400.
+# The break mirrors vanilla's escape roll (prison.9000): a weight for "breaks" against a weight for "holds".
+#   Breaks: 20 + Hide Strength x 40 + (prowess - the average), Tundra diplomacy instead of prowess, Alpha +15 in a pack.
+#   Holds:  50, +25 in a dungeon (never for Graybeard), +25 for a hunter gaoler, +10 for each hunter at his court (3 max).
+# Worked: a raw champion in house arrest is 80 against 50 (62%); a Silverback at Bond 100 in the dungeon of a hunter with
+# two hunter courtiers is 130 against 120 (52%), before prowess.
+# ==================================================================================================
+spn_btc_break_base_value = 20
+spn_btc_break_strength_mult_value = 40
+spn_btc_hold_base_value = 50
+spn_btc_bond_gain_value = 5
+
+spn_btc_break_weight_value = {
+	value = spn_btc_break_base_value
+	add = {
+		value = spn_hide_strength_value                     # zz_spn_hide_values.txt
+		multiply = spn_btc_break_strength_mult_value
+	}
+	# Experience already counts here: every lycanthropy tier adds prowess (10_spn_traits.txt). Tundra talks its way out.
+	if = {
+		limit = { has_trait = spn_champion_tundra }
+		add = {
+			value = diplomacy
+			subtract = average_skill_rating                 # vanilla 00_basic_values.txt
+		}
+	}
+	else = {
+		add = {
+			value = prowess
+			subtract = average_skill_rating
+		}
+	}
+	# Alpha, while it runs with a pack.
+	if = {
+		limit = {
+			has_trait = spn_champion_alpha
+			spn_in_pack_trigger = yes                       # zz_spn_hide_triggers.txt
+		}
+		add = 15
+	}
+	min = 5
+}
+
+spn_btc_hold_weight_value = {
+	value = spn_btc_hold_base_value
+	# Graybeard has known worse cells than this one.
+	if = {
+		limit = {
+			is_in_prison_type = dungeon
+			NOT = { has_trait = spn_champion_graybeard }
+		}
+		add = 25
+	}
+	if = {
+		limit = { scope:imprisoner ?= { spn_has_hunter_trait = yes } }
+		add = 25
+	}
+	if = {
+		limit = { scope:imprisoner ?= { any_courtier = { count >= 1 spn_has_hunter_trait = yes } } }
+		add = 10
+	}
+	if = {
+		limit = { scope:imprisoner ?= { any_courtier = { count >= 2 spn_has_hunter_trait = yes } } }
+		add = 10
+	}
+	if = {
+		limit = { scope:imprisoner ?= { any_courtier = { count >= 3 spn_has_hunter_trait = yes } } }
+		add = 10
+	}
+	min = 5
+}
+
+# Seen or unseen (Thomas, Round 2: "a chance the secret doesn't get exposed... the older, the more likely... the guards
+# seem dazed"). "Older" is how far along the wolf is (its own track, or a hybrid's higher one) plus Hide Bond, never
+# years of age: a sixty-year-old bitten last year is a Fledgling, and immortals do not age. Rolled once, in spn_hide.0400;
+# the one banked result serves the success and the failure alike.
+#   New champion (Bond 0, track 10) in house arrest 13%; Seasoned (Bond 50, track 60) in a dungeon 33%;
+#   Elder (Bond 100, track 100) in house arrest 70%; Elder Timber in a hunter's dungeon 60%; Elder Midnight 55%.
+spn_btc_unseen_chance_value = {
+	value = 10
+	add = { value = spn_hide_bond_value multiply = 0.3 }              # 0-30, zz_spn_hide_values.txt
+	add = { value = spn_hunt_creature_track_value multiply = 0.3 }    # 0-30, 20_spn_utility_values.txt
+	if = { limit = { has_trait = spn_champion_timber } add = 15 }     # hides best (its war reveal is 10 against 25)
+	if = { limit = { has_trait = spn_champion_midnight } add = -15 }  # wants to be seen
+	if = { limit = { scope:imprisoner ?= { spn_has_hunter_trait = yes } } add = -15 }
+	if = { limit = { is_in_prison_type = dungeon } add = -10 }
+	min = 5
+	max = 75
+}
+
+# ==================================================================================================
+# RELEASE ME (F16). Root = the jailed vampire (scope:actor, entered). The chance the gaoler simply lets him walk out and
+# believes he chose to, against coming to himself in front of an empty cell. Older blood leaves more quietly:
+# 32% at vampirism 20, 56% at 60, 80% at 100. Whether the order takes at all is the existing acceptance ladder.
+# ==================================================================================================
+spn_compel_cell_quiet_chance_value = {
+	value = 20
+	add = { value = spn_vampiric_reserve_value multiply = 0.6 }      # 20_spn_utility_values.txt
+	max = 85
+}

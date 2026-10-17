@@ -1,0 +1,293 @@
+﻿# Supernatural 2.39 -- Imperium and the council's works (WORK-ORDER-2.39 F12, F13). Triggers and the state model:
+# zz_spn_imperium_triggers.txt.
+
+# ==================================================================================================
+# IMPERIUM (F12)
+# ==================================================================================================
+# How likely an AI seat holder is to grant Imperium (findings/imperium_endgame.md §4.4). Voter scope; reads
+# scope:spn_imp_gm. Resolved with random = { chance = ... }. A hook called in (forced Aye) and the staged-rift secret
+# (forced Nay) are decided before this value is read (spn_imperium_ai_vote_effect).
+spn_imperium_aye_chance_value = {
+	value = 35
+	# His opinion of the Grand Magus.
+	if = {
+		limit = { opinion = { target = scope:spn_imp_gm value >= 40 } }
+		add = 25
+	}
+	else_if = {
+		limit = { opinion = { target = scope:spn_imp_gm value >= 0 } }
+		add = 5
+	}
+	else_if = {
+		limit = { opinion = { target = scope:spn_imp_gm value <= -50 } }
+		add = -40
+	}
+	else_if = {
+		limit = { opinion = { target = scope:spn_imp_gm value <= -20 } }
+		add = -20
+	}
+	if = {
+		limit = {
+			OR = {
+				has_relation_friend = scope:spn_imp_gm
+				has_relation_lover = scope:spn_imp_gm
+			}
+		}
+		add = 40
+	}
+	if = {
+		limit = {
+			OR = {
+				has_relation_rival = scope:spn_imp_gm
+				has_relation_nemesis = scope:spn_imp_gm
+			}
+		}
+		add = -60
+	}
+	# The Grand Magus's own record.
+	if = {
+		limit = {
+			scope:spn_imp_gm = {
+				exists = var:spn_order_standing
+				var:spn_order_standing >= 75
+			}
+		}
+		add = 10
+	}
+	if = {
+		limit = { scope:spn_imp_gm = { has_character_flag = spn_order_broke_rules } }
+		add = -30
+		if = {
+			limit = { has_trait = just }
+			add = -15
+		}
+	}
+	# Renewal fatigue: he held Imperium by vote in the last ten years.
+	if = {
+		limit = { global_var:spn_imperium_last ?= scope:spn_imp_gm }
+		add = -25
+	}
+	# The voter's own nature.
+	if = {
+		limit = { has_trait = ambitious }
+		add = -10
+	}
+	if = {
+		limit = { has_character_flag = spn_order_aspires_chair }
+		add = -20
+	}
+	if = {
+		limit = { has_trait = paranoid }
+		add = -15
+	}
+	if = {
+		limit = { has_trait = trusting }
+		add = 15
+	}
+	if = {
+		limit = { has_trait = content }
+		add = 10
+	}
+	if = {
+		limit = { has_trait = craven }
+		add = 10
+	}
+	if = {
+		limit = {
+			has_dread_level_towards = {
+				target = scope:spn_imp_gm
+				level = 1
+			}
+		}
+		add = 20
+	}
+	# The levers that reached him (Before the Council Votes).
+	if = {
+		limit = { has_character_flag = spn_imp_paid }
+		add = 25
+	}
+	if = {
+		limit = { has_character_flag = spn_imp_favour }
+		add = 35
+	}
+	if = {
+		limit = { has_character_flag = spn_imp_spoke }
+		add = 15
+	}
+	# An emergency session, after a death, a rift, a plague or hunters at the door.
+	if = {
+		limit = {
+			scope:spn_imp_gm = {
+				exists = var:spn_imp_crisis
+				NOT = { var:spn_imp_crisis = flag:none }
+			}
+		}
+		add = 50
+	}
+	# He was the councillor the rift struck (Kepler).
+	if = {
+		limit = { scope:spn_imp_gm.var:spn_imp_struck ?= this }
+		add = 25
+	}
+	# A Witchcraft world crisis is running (set on the Grand Magus by the meeting's second part).
+	if = {
+		limit = { scope:spn_imp_gm = { has_character_flag = mc_crisises_flag } }
+		add = 15
+	}
+	min = 5
+	max = 95
+}
+
+# The most opposed Nay voter, named by the result: 100 minus his opinion of the Grand Magus. Voter scope.
+spn_imperium_dissent_value = {
+	value = "opinion(scope:spn_imp_gm)"
+	multiply = -1
+	add = 100
+}
+
+# Turn order of the seats, Witchcraft's own: the Adeptus Major, the Keeper, the Chancellor (ordered_in_list takes the
+# highest first). Voter scope; the seat is banked when the vote opens.
+spn_imperium_turn_value = {
+	value = 0
+	if = {
+		limit = { exists = var:spn_imp_seat }
+		add = var:spn_imp_seat
+	}
+}
+
+# "Gold opens doors": medium_gold_value_check (vanilla, 100) for each voter, the Seeking Support price (ev7.111.c).
+# Grand Magus scope.
+spn_imperium_gold_need_value = {
+	value = 0
+	every_in_list = {
+		variable = spn_imp_voters
+		add = medium_gold_value_check
+	}
+}
+
+# An AI Grand Magus who was refused stages a rift (0-40). Only with the means, and never against a friend, lover or close
+# family (spn_imperium_ai_stage_effect checks both). Grand Magus scope.
+spn_imperium_ai_stage_chance_value = {
+	value = 0
+	if = {
+		limit = { has_trait = callous }
+		add = 15
+	}
+	if = {
+		limit = { has_trait = sadistic }
+		add = 15
+	}
+	if = {
+		limit = { has_character_modifier = spn_fors_factorum_modifier }
+		add = 15
+	}
+	if = {
+		limit = { has_trait = arbitrary }
+		add = 10
+	}
+	if = {
+		limit = { has_trait = ambitious }
+		add = 10
+	}
+	if = {
+		limit = { has_trait = deceitful }
+		add = 10
+	}
+	if = {
+		limit = {
+			OR = {
+				has_trait = honest
+				has_trait = just
+				has_trait = compassionate
+			}
+		}
+		multiply = 0
+	}
+	min = 0
+	max = 40
+}
+
+# "Drive it back" in The Ground Splits: a hidden roll on the creature's strength (20-80; never shown). Struck scope.
+spn_imperium_drive_back_chance_value = {
+	value = 30
+	add = {
+		value = prowess
+		multiply = 2
+	}
+	min = 20
+	max = 80
+}
+
+# At a Conclave, how likely the AI who knows is to say aloud what the Grand Magus did. Knower scope; reads scope:spn_cv_gm.
+spn_conclave_unmask_ai_chance_value = {
+	value = 20
+	if = {
+		limit = { opinion = { target = scope:spn_cv_gm value <= -20 } }
+		add = 30
+	}
+	if = {
+		limit = {
+			OR = {
+				has_relation_rival = scope:spn_cv_gm
+				has_relation_nemesis = scope:spn_cv_gm
+			}
+		}
+		add = 40
+	}
+	if = {
+		limit = { has_trait = just }
+		add = 20
+	}
+	if = {
+		limit = { has_trait = vengeful }
+		add = 20
+	}
+	if = {
+		limit = { has_trait = craven }
+		add = -30
+	}
+	# It was his own rift.
+	if = {
+		limit = {
+			any_known_secret = {
+				secret_type = spn_secret_staged_rift
+				secret_owner = scope:spn_cv_gm
+				secret_target ?= prev
+			}
+		}
+		add = 30
+	}
+	min = 0
+	max = 95
+}
+
+# ==================================================================================================
+# THE GREAT RESPONDEO (F13)
+# ==================================================================================================
+# An AI seat pledges its part (§5.3): base 50, +20 if a member of his own temple lives in that realm, +15 paranoid,
+# -20 compassionate. Voter scope; reads scope:spn_rm_ruler.
+spn_respondeo_magna_pledge_chance_value = {
+	value = 50
+	if = {
+		limit = {
+			var:spn_order_chapter ?= {
+				any_in_list = {
+					variable = spn_order_members
+					is_alive = yes
+					top_liege ?= scope:spn_rm_ruler
+				}
+			}
+		}
+		add = 20
+	}
+	if = {
+		limit = { has_trait = paranoid }
+		add = 15
+	}
+	if = {
+		limit = { has_trait = compassionate }
+		add = -20
+	}
+	min = 0
+	max = 100
+}

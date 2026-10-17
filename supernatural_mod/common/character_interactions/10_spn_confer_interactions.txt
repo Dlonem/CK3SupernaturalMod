@@ -46,6 +46,8 @@
 	ai_frequency = 4
 
 	is_shown = {
+		scope:recipient = { is_adult = yes } # 2.39 (Thomas's call, 17 Oct): a child is never turned (Thomas)
+		scope:actor = { is_adult = yes } # 2.39 (Boot 3, 16 Oct): a child does not
 		NOT = { scope:recipient = scope:actor}
 		scope:recipient = {
 			NOR = {
@@ -316,6 +318,8 @@ spn_turn_into_vampire = { #Turn Character Into Vampire
 	ai_frequency = 8
 
 	is_shown = {
+		scope:recipient = { is_adult = yes } # 2.39 (Thomas's call, 17 Oct): a child is never turned (Thomas)
+		scope:actor = { is_adult = yes } # 2.39 (Boot 3, 16 Oct): a child does not
 		NOT = { scope:recipient = scope:actor}
 		scope:recipient = {
 			spn_has_supernatural_trait = no
@@ -578,6 +582,8 @@ spn_offer_gift = { #Offer Gift - begin werewolf turning incubation (consensual)
 	ai_frequency = 36
 
 	is_shown = {
+		scope:recipient = { is_adult = yes } # 2.39 (Thomas's call, 17 Oct): a child is never turned (Thomas)
+		scope:actor = { is_adult = yes } # 2.39 (Boot 3, 16 Oct): a child does not
 		NOT = { scope:recipient = scope:actor}
 		scope:recipient = {
 			spn_has_supernatural_trait = no
@@ -815,6 +821,8 @@ spn_force_gift = { #Force Gift - forcibly begin werewolf turning incubation (hos
 	ai_frequency = 12
 
 	is_shown = {
+		scope:recipient = { is_adult = yes } # 2.39 (Thomas's call, 17 Oct): a child is never turned (Thomas)
+		scope:actor = { is_adult = yes } # 2.39 (Boot 3, 16 Oct): a child does not
 		NOT = { scope:recipient = scope:actor }
 		scope:actor = {
 			OR = {
@@ -974,6 +982,8 @@ spn_turn_into_hybrid = { #Turn Character Into Hybrid
 	ai_frequency = 15
 
 	is_shown = {
+		scope:recipient = { is_adult = yes } # 2.39 (Thomas's call, 17 Oct): a child is never turned (Thomas)
+		scope:actor = { is_adult = yes } # 2.39 (Boot 3, 16 Oct): a child does not
 		NOT = { scope:recipient = scope:actor}
 		scope:recipient = {
 				has_trait = supernatural_werewolf
@@ -2403,11 +2413,20 @@ spn_ask_to_turn_into_vampire = { #Ask Character to Turn You Into Vampire
 	desc = spn_ask_to_turn_into_vampire_interaction_desc
 
 	is_shown = {
+		scope:actor = { is_adult = yes } # 2.39 (Boot 3, 16 Oct): a child does not
 		NOT = { scope:recipient = scope:actor}
 		scope:actor = {
 			spn_has_supernatural_trait = no
 			NOT = { has_trait = supernatural_hunter }
-			spn_knows_about_character_being_vampire_trigger = { CHARACTER = scope:recipient }
+		}
+		# 2.39 (WORK-ORDER-2.39 B5): was spn_knows_about_character_being_vampire_trigger on the actor (the Known trait or
+		# the secret). Spouse, close family, maker and progeny know without holding the secret.
+		scope:recipient = {
+			OR = {
+				has_trait = supernatural_vampire
+				has_trait = supernatural_hybrid
+			}
+			spn_host_knows_supernatural_trigger = { HOST = scope:actor }
 		}
 	}
 
@@ -2803,7 +2822,14 @@ spn_ask_to_not_turn_into_vampire = { #Ask Character to Not Turn You Into Vampire
 			spn_has_supernatural_trait = no
 			NOT = { has_trait = supernatural_hunter }
 			has_character_flag = vampire_blood_in_system
-			spn_knows_about_character_being_vampire_trigger = { CHARACTER = scope:recipient }
+		}
+		# 2.39 (WORK-ORDER-2.39 B5): the same knowledge test as Ask to be Turned.
+		scope:recipient = {
+			OR = {
+				has_trait = supernatural_vampire
+				has_trait = supernatural_hybrid
+			}
+			spn_host_knows_supernatural_trigger = { HOST = scope:actor }
 		}
 	}
 
@@ -3005,11 +3031,33 @@ spn_ask_for_gift = { #Ask a werewolf to claw you - begin turning incubation (con
 	desc = spn_ask_for_gift_interaction_desc
 
 	is_shown = {
+		scope:actor = { is_adult = yes } # 2.39 (Boot 3, 16 Oct): a child does not
 		NOT = { scope:recipient = scope:actor}
 		scope:actor = {
 			spn_has_supernatural_trait = no
 			NOT = { has_trait = supernatural_hunter }
-			spn_knows_about_character_being_lycan_trigger = { CHARACTER = scope:recipient }
+		}
+		# 2.39 (WORK-ORDER-2.39 B5): was spn_knows_about_character_being_lycan_trigger on the actor (the Known trait or the
+		# secret). The wolf twin of the feeding rule: spouse and close family know, and so do the one he clawed and the one
+		# who clawed him.
+		scope:recipient = {
+			OR = {
+				has_trait = supernatural_werewolf
+				has_trait = supernatural_hybrid
+			}
+			# The feeding rule's people and the bite's own relations, as spn_host_knows_supernatural_trigger lists them for
+			# the vampire side. Not spn_host_knows_wolf_trigger: its pack and same-court clauses are wolves knowing wolves
+			# (a ruler's court_owner is himself, so it would offer this on every wolf at a mortal's own court).
+			OR = {
+				has_trait = spn_known_werewolf
+				has_trait = spn_known_hybrid
+				any_secret = { type = spn_secret_werewolf is_known_by = scope:actor }
+				any_secret = { type = spn_secret_hybrid is_known_by = scope:actor }
+				is_spouse_of = scope:actor
+				is_close_family_of = scope:actor
+				has_relation_ww_clawed = scope:actor
+				has_relation_ww_clawed_by = scope:actor
+			}
 		}
 	}
 	is_valid = {
@@ -3120,6 +3168,7 @@ spn_ask_to_turn_into_hybrid = { #Ask Character to Make You Into Hybrid
 	desc = spn_ask_to_turn_into_hybrid_interaction_desc
 
 	is_shown = {
+		scope:actor = { is_adult = yes } # 2.39 (Boot 3, 16 Oct): a child does not
 		NOT = { scope:recipient = scope:actor}
 		#scope:actor = {
 		#	has_trait = supernatural_hybrid
@@ -3136,7 +3185,7 @@ spn_ask_to_turn_into_hybrid = { #Ask Character to Make You Into Hybrid
 				has_trait = supernatural_hybrid
 				has_trait = supernatural_vampire
 			}
-			spn_knows_about_character_being_vampire_trigger = { CHARACTER = scope:recipient }
+			spn_host_knows_supernatural_trigger = { HOST = scope:actor } # 2.39 (WORK-ORDER-2.39 B5): was the recipient's knowledge of himself
 		}
 		scope:actor = {
 		has_trait = supernatural_werewolf

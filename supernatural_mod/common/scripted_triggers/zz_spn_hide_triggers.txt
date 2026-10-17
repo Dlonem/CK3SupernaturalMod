@@ -189,6 +189,15 @@ spn_host_knows_wolf_trigger = {
 			var:spn_pack = $HOST$.var:spn_pack
 		}
 		trigger_else = { always = no }
+		# 2.38 (§8.2b): wolves in the same court know each other. Both sides guarded, as above.
+		trigger_if = {
+			limit = {
+				exists = court_owner
+				$HOST$ = { exists = court_owner }
+			}
+			court_owner = $HOST$.court_owner
+		}
+		trigger_else = { always = no }
 	}
 }
 
@@ -197,9 +206,9 @@ spn_pack_politics_built_trigger = {
 	always = yes
 }
 
-# The membership mirror (§4.7): only if the boot shows a member who is not the alpha cannot see the pack.
+# The membership mirror (§4.7). 2.38 (§8.1, C2): on. A member who is not the alpha sees his pack through it.
 spn_pack_use_mirrors_trigger = {
-	always = no
+	always = yes
 }
 
 # ---- War (§12) ----
@@ -922,7 +931,7 @@ spn_ai_challenge_not_close_trigger = {
 }
 
 # A cruel wolf: the vices a pack would not follow.
-spn_ai_cruel_wolf_trigger = {
+spn_ai_cruel_trigger = { # 2.38: renamed from spn_ai_cruel_wolf_trigger (the book reads it too)
 	OR = {
 		has_trait = sadistic
 		has_trait = callous
@@ -1003,8 +1012,8 @@ spn_ai_alpha_weak_trigger = {
 # deceitful); or he has come to dislike the alpha (-20); or two of the pack have.
 spn_ai_alpha_cruel_trigger = {
 	spn_ai_same_pack_trigger = { WHO = $ALPHA$ }
-	spn_ai_cruel_wolf_trigger = no
-	$ALPHA$ = { spn_ai_cruel_wolf_trigger = yes }
+	spn_ai_cruel_trigger = no
+	$ALPHA$ = { spn_ai_cruel_trigger = yes }
 	OR = {
 		AND = {
 			has_trait = compassionate
@@ -1063,5 +1072,15 @@ spn_ai_wolf_challenge_cause_trigger = {
 	OR = {
 		spn_ai_feud_trigger = { FOE = $FOE$ }
 		spn_ai_climb_trigger = { FOE = $FOE$ }
+	}
+}
+
+# 2.38e: a wolf who practises magic (Thomas, 9 Oct): a true Mage, a True Witch, or one born with the Source.
+spn_wolf_practitioner_trigger = {
+	OR = {
+		is_true_mage = yes
+		has_trait = true_witch
+		has_trait = source
+		has_trait = source2
 	}
 }

@@ -1,0 +1,40 @@
+﻿# Supernatural 2.39 -- why an AI acts against someone (Thomas's call, 16 Oct; tool/pkgs/PB/HANDOFF.md §8).
+#
+# After the mage duel (zz_spn_mage_duel_triggers.txt), Thomas asked for the same treatment for "any other AI in the
+# witchcraft part of the mod that would improve things". An audit found Witchcraft AI that stole, warred, dominated or
+# made enemies with no reason but power, strength or chance, and sometimes anywhere in the world. These triggers are the
+# reasons. They are read by generator entries in Witchcraft's own files (tool/pkgs/PB/upstream.py) and are never shown.
+
+# CHARACTER scope (the other person); $ACTOR$ = the AI. Someone the AI would not move against: a friend, a lover, a
+# soulmate, a spouse, close or extended family, or someone it likes (vanilla's medium_positive_opinion, 40).
+spn_ai_spares_trigger = {
+	OR = {
+		has_relation_friend = $ACTOR$
+		has_relation_best_friend = $ACTOR$
+		has_relation_lover = $ACTOR$
+		has_relation_soulmate = $ACTOR$
+		is_spouse_of = $ACTOR$
+		is_close_or_extended_family_of = $ACTOR$
+		reverse_opinion = {
+			target = $ACTOR$
+			value >= medium_positive_opinion
+		}
+	}
+}
+
+# CHARACTER scope (the holder of a magic item); $ACTOR$ = the AI that wants it, which must be ROOT (every caller passes
+# root/ROOT). Layered since Boot 3: spn_ai_artifact_desire_value (zz_spn_239_ai_artifact_values.txt) weighs the grudge,
+# a claim, his nature, his practice, his station, what he has already, the bond between them and the Order, and is 0 for
+# someone he spares. Enough of it is a reason.
+spn_ai_artifact_motive_trigger = {
+	$ACTOR$ = { this = root }
+	spn_ai_artifact_desire_value >= spn_ai_artifact_desire_threshold_value
+}
+
+# CHARACTER scope (the AI). Inclined to demand obedience.
+spn_ai_domineering_trigger = {
+	OR = {
+		has_trait = ambitious
+		has_trait = arrogant
+	}
+}

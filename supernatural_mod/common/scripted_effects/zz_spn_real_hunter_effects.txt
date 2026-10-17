@@ -59,6 +59,16 @@ spn_find_or_make_hunter_effect = {
 	# 5. Nobody real is in reach. Make one, as the mod always did.
 	else = {
 		spn_create_skilled_hunter_effect = { WHO = root }
+		# 2.39 (WORK-ORDER-2.39 B10): mark him as invented, as spn_find_or_make_witch_effect marks its witch (2.35a). Only he
+		# may be vanished by "Time of Need" and "Brutal Struggle"; a real hunter walks away. 60 days outlasts both events;
+		# the chain removes it where it keeps him (Time of Need's "train with me", Training Complete, Brutal Struggle's
+		# survival), so a hunter you kept is never vanished by a later chain.
+		scope:spn_created_hunter ?= { set_variable = { name = spn_invented_hunter value = yes days = 60 } }
+		# The variable alone is not enough: the confrontation and gain-power chains also call this finder, keep their man
+		# and never clear the mark, so one of theirs recruited to a court within 60 days would still carry it. This
+		# event-local value says THIS event invented him; it lives only in this event and the events it sends on, and both
+		# vanish events are sent only by spn_embrace.3001, which never calls the finder. Both vanish blocks test it.
+		save_scope_value_as = { name = spn_hunter_was_invented value = yes }
 	}
 }
 

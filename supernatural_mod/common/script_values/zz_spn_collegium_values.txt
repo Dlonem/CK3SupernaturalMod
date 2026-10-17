@@ -1,0 +1,74 @@
+﻿# Supernatural 2.39 -- the Collegium's numbers (WORK-ORDER-2.39 F15). Every roll here is hidden from the player.
+
+# The rumour (spn_order_rumour_yearly_effect): a player near a temple hears of the Order one year in five; a player who
+# holds a county where a temple meets beneath the Collegium, two years in five. Player scope.
+spn_order_rumour_chance_value = {
+	value = 20
+	if = {
+		limit = {
+			any_held_county = {
+				any_county_province = { exists = var:spn_order_hall_of }
+			}
+		}
+		add = 20
+	}
+}
+
+# The Cellar That Isn't There, "Have the cellars searched": 30, plus three times the lord's intrigue, less three times the
+# Temple Magus's, +20 for a hunter, -20 while the hall is warded; 10 to 80. The lord's scope; scope:spn_hl_ch the temple.
+spn_order_hall_search_chance_value = {
+	value = 30
+	add = {
+		value = intrigue
+		multiply = 3
+	}
+	if = {
+		limit = { exists = scope:spn_hl_ch.story_owner }
+		subtract = {
+			value = scope:spn_hl_ch.story_owner.intrigue
+			multiply = 3
+		}
+	}
+	if = {
+		limit = {
+			OR = {
+				spn_has_hunter_trait = yes
+				is_witch_hunter = yes
+			}
+		}
+		add = 20
+	}
+	if = {
+		limit = { scope:spn_hl_ch ?= { has_variable = spn_order_hall_warded } }
+		subtract = 20
+	}
+	min = 10
+	max = 80
+}
+
+# The Corridor, "Walk through it", without a sigil: 50, +25 brave, -25 craven, +15 if he knows the temple, -20 while the
+# hall is warded; 10 to 90 (harder, never locked: expert call T5). The hunter's scope; scope:spn_cor_ch the temple.
+spn_hunt_corridor_chance_value = {
+	value = 50
+	if = {
+		limit = { has_trait = brave }
+		add = 25
+	}
+	if = {
+		limit = { has_trait = craven }
+		subtract = 25
+	}
+	if = {
+		limit = {
+			exists = scope:spn_cor_ch
+			var:spn_hunter_knows_chapter ?= scope:spn_cor_ch
+		}
+		add = 15
+	}
+	if = {
+		limit = { scope:spn_cor_ch ?= { has_variable = spn_order_hall_warded } }
+		subtract = 20
+	}
+	min = 10
+	max = 90
+}

@@ -1,0 +1,132 @@
+﻿# Supernatural 2.39 -- the Collegium: a house of learning that a temple of the Order may meet beneath
+# (WORK-ORDER-2.39 F15; findings/temple_building.md §5.1, corrected by the v3 red team H1 and L20).
+#
+# A REGULAR holding building on purpose. A special building needs the province's one special slot (the Mage's Study
+# already takes it in a Mage's capital), shows on the Economy map mode, and its slot can never be removed by script.
+#
+# T17 and the B6 rule: a name a stranger can read never names the Order, and nothing a stranger can see points at it.
+# ANY non-tribal ruler may raise a Collegium in his own capital (red team H1: if only members could, every Collegium on
+# the map would point at a Temple Magus). No requirement line mentions the Order. Its own modifiers are what ANY holder
+# gets. Whether a temple meets beneath it is decided on completion by the Order's own scripts (on_complete ->
+# spn_order_hall_complete_effect, zz_spn_collegium_effects.txt), and everything the temple gets from it is read through
+# spn_order_hall_stands_trigger, so an outsider's tooltip never shows an Order line. The Order's hooks run inside
+# hidden_effect, so the building's own text is the same for everyone.
+#
+# One level only (no next_building). No is_enabled and no show_disabled: a disabled building would show its failing
+# condition to whoever inherited it.
+spn_order_collegium_01 = {
+	construction_time = standard_construction_time	# vanilla value (00_building_values.txt:1775)
+	type_icon = "icon_building_university.dds"		# vanilla's university icon (00_special_buildings.txt:3862)
+
+	# In the build menu of any ruler, in his own capital (vanilla's capital pattern, tgp_great_project_buildings.txt:21-24).
+	# The game rule hides it for everyone alike when the Order is Off (WORK-ORDER-2.39 §6, "Rules off").
+	can_construct_potential = {
+		NOT = { has_game_rule = spn_order_off }
+		scope:holder ?= { capital_province = root }
+		OR = { # 2.39 (Thomas's call, 16 Oct): an AI's ordinary Collegium is rare; a player and a temple's hall are never held back
+			scope:holder ?= { is_ai = no }
+			scope:holder ?= { spn_order_collegium_wanted_trigger = yes }
+			NOT = { spn_order_collegium_ordinary_full_trigger = yes }
+			# one already begun here is never held back by its own count or timer
+			is_target_in_global_variable_list = { name = spn_collegia target = root }
+		}
+	}
+	can_construct_showing_failures_only = {
+		building_requirement_tribal = no				# vanilla trigger (00_building_requirement_triggers.txt:5)
+	}
+
+	cost_gold = expensive_building_tier_2_cost		# vanilla value: 350 (00_building_values.txt:1286)
+
+	# What any holder gets: about a third of a university (a university is 1000 gold, a special slot and six years).
+	character_modifier = {
+		monthly_learning_lifestyle_xp_gain_mult = 0.05
+	}
+	county_modifier = {
+		development_growth_factor = 0.1
+	}
+	province_modifier = {
+		monthly_income = poor_building_tax_tier_1		# vanilla value (00_building_values.txt:1311): the scholars' fees
+	}
+	# Vanilla's learning flag (00_special_buildings.txt:20), as the work order asks. A marker only on a regular building:
+	# vanilla builds its learning point-of-interest list from special-building provinces alone
+	# (travel_point_of_interest_types.txt:265-272), so it adds no travel stop. It is readable by has_building_with_flag.
+	flag = travel_point_of_interest_learning
+
+	# _buildings.info: root = the province, scope:holder = the barony's holder. A temple's hall is always wanted; any other
+	# Collegium is rare (2.39 (Thomas's call, 16 Oct): at most 7 ordinary ones, the AI beginning at most one every two years;
+	# zz_spn_239_collegium_rarity_triggers.txt). Never shown to anyone.
+	ai_value = {
+		base = 6 # 2.39 (Boot 2, 16 Oct): vanilla's range (1-12); 20 put 124 Collegia on the map by 1087
+		# Vanilla's guard in every building's ai_value (scripted_modifiers/00_building_modifiers.txt:3-15): a conqueror
+		# keeps his war chest. Its -2 for a province outside the capital never applies here.
+		ai_general_building_modifier = yes
+		modifier = {
+			add = 4 # 2.39 (Boot 2, 16 Oct): was 20
+			scope:holder ?= { learning >= 12 }
+		}
+		modifier = {
+			add = 20
+			scope:holder ?= { spn_order_collegium_wanted_trigger = yes } # 2.39 (Thomas's call, 16 Oct): a temple's hall (a patron, or a courtier Magus's lord)
+		}
+		modifier = { # 2.39 (Thomas's call, 16 Oct): any other Collegium is rare
+			factor = 0
+			scope:holder ?= { NOT = { spn_order_collegium_wanted_trigger = yes } }
+			spn_order_collegium_ordinary_full_trigger = yes
+		}
+	}
+
+	# _buildings.info: root = the province, scope:character = whoever paid. on_start marks the temple's pending hall (four
+	# years) only for an eligible builder; on_cancelled clears it (red team L20); on_complete lets the Order decide.
+	on_start = {
+		hidden_effect = {
+			spn_collegium_register_effect = yes # 2.39 (Thomas's call, 16 Oct): the world list
+			scope:character ?= {
+				if = { # 2.39 (Thomas's call, 16 Oct): an AI's ordinary Collegium starts the two-year wait
+					limit = {
+						is_ai = yes
+						NOT = { spn_order_collegium_wanted_trigger = yes }
+					}
+					set_global_variable = { name = spn_collegium_ai_recent value = yes years = 2 }
+				}
+				else_if = { # 2.39 (Thomas's call, 16 Oct): one begun for a temple is not counted as ordinary
+					limit = { spn_order_collegium_wanted_trigger = yes }
+					root = { set_variable = { name = spn_collegium_for_hall value = yes years = 4 } }
+				}
+			}
+			scope:character ?= {
+				if = {
+					limit = { spn_order_hall_patron_trigger = yes }
+					var:spn_order_chapter = { set_variable = { name = spn_order_hall_building value = root years = 4 } }
+				}
+			}
+		}
+	}
+	on_cancelled = {
+		hidden_effect = {
+			spn_collegium_unregister_effect = yes # 2.39 (Thomas's call, 16 Oct): the world list
+			if = { # 2.39 (Boot 4, 16 Oct): the temple's mark goes with the building
+				limit = { has_variable = spn_collegium_for_hall }
+				remove_variable = spn_collegium_for_hall
+			}
+			scope:character ?= {
+				if = {
+					limit = { is_alive = yes } # 2.39 (Boot 1, 16 Oct): a dead builder holds no variables
+					var:spn_order_chapter ?= {
+						if = {
+							limit = { var:spn_order_hall_building ?= root }
+							remove_variable = spn_order_hall_building
+						}
+					}
+				}
+			}
+		}
+	}
+	on_complete = {
+		hidden_effect = {
+			spn_collegium_register_effect = yes # 2.39 (Thomas's call, 16 Oct): the world list
+			spn_order_hall_complete_effect = yes
+		}
+		# Vanilla's boon for any regular building (00_standard_economy_buildings.txt, every building's on_complete).
+		creator_mandala_built_regular_building_piety_effect = yes
+	}
+}

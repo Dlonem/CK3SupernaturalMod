@@ -1,0 +1,1044 @@
+﻿# Supernatural 2.39 -- the Order's politics (WORK-ORDER-2.39 F1 Invocare, F2 Break the Order, F11 the Order inside two
+# Witchcraft events). Triggers: zz_spn_order_politics_triggers.txt. Values: zz_spn_order_politics_values.txt. Events:
+# zz_spn_invocare_events.txt (spn_conclave.0240-.0260) and zz_spn_order_break_events.txt (spn_order.0980-.0984, .1007).
+#
+# House rules: bank first, anything irreversible (removal, a seat or chair emptied, a temple dissolved) last; every delayed
+# step re-checks its own situation; nothing here walks the world (the watch list is a short global list).
+#
+# NEW STATE (each with its expiry, or said to be identity state):
+#   global spn_invocare_called (2 years: a motion waiting for its Conclave), spn_invocare_cd (10 years: one Invocare a
+#     decade, taken when the motion is heard), spn_order_chair_dated + spn_order_chair_year (identity: who sits in the chair
+#     and the year the yearly pulse first saw him, or three years back for the first face it sees in an older save),
+#     spn_order_chair_looked (identity: the pulse has looked at the chair once in this game), spn_order_break_pending
+#     (31 days), spn_order_breaking (1 day), spn_order_broken (20 years; holds the breaker), spn_order_temples_swept
+#     (20 years, refreshed by each fallen temple), list spn_order_watched (pruned every year: the dead, those off the road,
+#     those since joined).
+#   host: spn_conclave_iv_magus, spn_conclave_iv_caller, spn_conclave_chair_after (2 years, the life of the call; the last
+#     marks a chair call kept behind a waiting Invocare).
+#   activity: spn_iv_magus, spn_iv_caller, spn_iv_charges, spn_iv_yes, spn_iv_no, spn_iv_counted, spn_iv_yielded (end with
+#     the activity).
+#   character: flags spn_iv_def_hooks / _coffers / _power / _yield, spn_iv_spoke_well, spn_iv_feared (2 years, the life of
+#     the call they answer; cleared at the next call); spn_iv_power, spn_iv_bound, spn_iv_paid (1 year, set when the motion
+#     is heard; bound and paid are cleared when the next motion opens); spn_order_recalled (1 year; removed when the same
+#     Conclave's vote closes); spn_order_am_coming (400 days), spn_order_am_visited (5 years), spn_order_wronged_kin
+#     (50 years), spn_order_on_trial (21 days), spn_order_trial_told (30 days); variables spn_order_temples_swept
+#     (20 years), spn_order_st_tries (60 days).
+
+# ==================================================================================================
+# INVOCARE (F1)
+# ==================================================================================================
+
+# The Grand Magus's marks from an earlier motion (they last two years; a motion that lapsed may leave them). His scope.
+spn_invocare_clear_defence_effect = {
+	if = {
+		limit = { has_character_flag = spn_iv_def_hooks }
+		remove_character_flag = spn_iv_def_hooks
+	}
+	if = {
+		limit = { has_character_flag = spn_iv_def_coffers }
+		remove_character_flag = spn_iv_def_coffers
+	}
+	if = {
+		limit = { has_character_flag = spn_iv_def_power }
+		remove_character_flag = spn_iv_def_power
+	}
+	if = {
+		limit = { has_character_flag = spn_iv_def_yield }
+		remove_character_flag = spn_iv_def_yield
+	}
+	if = {
+		limit = { has_character_flag = spn_iv_spoke_well }
+		remove_character_flag = spn_iv_spoke_well
+	}
+	if = {
+		limit = { has_character_flag = spn_iv_power }
+		remove_character_flag = spn_iv_power
+	}
+	if = {
+		limit = { has_character_flag = spn_iv_feared }
+		remove_character_flag = spn_iv_feared
+	}
+}
+
+# An AI Grand Magus chooses his defence at the call, by his nature (a player answers in The Chair Is Questioned). What
+# it costs is taken when the motion is heard (spn_invocare_defence_effect); the speech is made now.
+spn_invocare_ai_defend_effect = {
+	random_list = {
+		# Then they will remember what they owe me.
+		0 = {
+			trigger = {
+				any_hooked_character = { spn_conclave_voter_trigger = yes }
+			}
+			modifier = { add = 100 }
+			modifier = {
+				add = 20
+				has_trait = ambitious
+			}
+			add_character_flag = { flag = spn_iv_def_hooks years = 2 }
+		}
+		# Open the council's coffers.
+		30 = {
+			trigger = {
+				mc_gold_global_avaiable_trigger = yes
+				NOT = { global_var:current_admin_global ?= scope:spn_iv_caller }
+			}
+			modifier = {
+				add = -20
+				has_trait = greedy
+			}
+			modifier = {
+				add = 20
+				has_trait = generous
+			}
+			add_character_flag = { flag = spn_iv_def_coffers years = 2 }
+		}
+		# Let me remind them what the Order has done under me.
+		30 = {
+			modifier = {
+				add = 20
+				learning >= 15
+			}
+			modifier = {
+				add = 20
+				has_trait = gregarious
+			}
+			modifier = {
+				add = -20
+				has_trait = shy
+			}
+			random = {
+				chance = spn_order_coin_chance_learning_value
+				add_character_flag = { flag = spn_iv_spoke_well years = 2 }
+			}
+		}
+		# A show of power.
+		20 = {
+			trigger = { can_spend_huge_ps_trigger = yes }
+			modifier = {
+				add = 20
+				has_trait = arrogant
+			}
+			add_character_flag = { flag = spn_iv_def_power years = 2 }
+		}
+		# Let them see who they are crossing.
+		30 = {
+			trigger = { dread >= 40 }
+			modifier = {
+				add = 20
+				OR = {
+					has_trait = sadistic
+					has_trait = wrathful
+				}
+			}
+			modifier = {
+				add = -30
+				has_trait = compassionate
+			}
+			add_character_flag = { flag = spn_iv_feared years = 2 }
+		}
+		# I will not wait to be pushed.
+		0 = {
+			modifier = {
+				add = 40
+				has_trait = content
+			}
+			modifier = {
+				add = 30
+				has_trait = humble
+			}
+			modifier = {
+				add = 20
+				has_trait = craven
+			}
+			modifier = {
+				factor = 0
+				OR = {
+					has_trait = arrogant
+					has_trait = stubborn
+				}
+			}
+			add_character_flag = { flag = spn_iv_def_yield years = 2 }
+		}
+		# Let the masks decide.
+		10 = {
+		}
+	}
+}
+
+# Activity scope, at the top of The Reckoning, before anyone is judged (red team M3). If the motion can be heard, the two
+# charges the masks will weigh are banked on the activity (spn_iv_charges: 2 = broke the rules, +1 = favouritism), and the
+# Grand Magus is saved as spn_iv_held so the judging block passes him by: the vote is his judgment.
+spn_invocare_bank_effect = {
+	if = {
+		limit = { spn_invocare_can_open_trigger = yes }
+		var:spn_iv_magus = { save_scope_as = spn_iv_held }
+		set_variable = { name = spn_iv_charges value = 0 }
+		if = {
+			limit = { scope:spn_iv_held = { has_character_flag = spn_order_broke_rules } }
+			change_variable = { name = spn_iv_charges add = 2 }
+		}
+		if = {
+			limit = { scope:spn_iv_held = { has_character_flag = spn_order_favouritism } }
+			change_variable = { name = spn_iv_charges add = 1 }
+		}
+	}
+}
+
+# Host scope, at the end of The Reckoning (after the judging and the favouritism blocks). The motion is heard, or lapses.
+# The call is spent either way. Heard: the price is taken now (the caller's 20 standing, the 10-year world lock, the Grand
+# Magus's chosen defence or nothing if he can no longer pay for it); then every voter in the room casts.
+spn_invocare_open_effect = {
+	if = {
+		limit = { scope:activity = { var:spn_cv_reason ?= flag:invocare } }
+		if = {
+			limit = { has_global_variable = spn_invocare_called }
+			remove_global_variable = spn_invocare_called
+		}
+		if = {
+			limit = { scope:activity = { spn_invocare_can_open_trigger = yes } }
+			scope:activity = {
+				var:spn_iv_magus = { save_scope_as = spn_iv_magus }
+				var:spn_iv_caller = { save_scope_as = spn_iv_caller }
+			}
+			# The price.
+			set_global_variable = { name = spn_invocare_cd value = yes years = 10 }
+			scope:spn_iv_caller = { spn_order_add_standing_effect = { VALUE = -20 } }
+			# Review L-5: a voter bought or bound for an earlier motion is free again before this one's defence is paid.
+			scope:activity = {
+				every_attending_character = {
+					limit = {
+						OR = {
+							has_character_flag = spn_iv_bound
+							has_character_flag = spn_iv_paid
+						}
+					}
+					if = {
+						limit = { has_character_flag = spn_iv_bound }
+						remove_character_flag = spn_iv_bound
+					}
+					if = {
+						limit = { has_character_flag = spn_iv_paid }
+						remove_character_flag = spn_iv_paid
+					}
+				}
+			}
+			scope:spn_iv_magus = { spn_invocare_defence_effect = yes }
+			# He stood down before the vote: nothing to count, and The Vote below simply fills the chair.
+			if = {
+				limit = { scope:activity = { has_variable = spn_iv_yielded } }
+				save_scope_value_as = { name = spn_iv_result value = flag:yielded }
+				spn_invocare_tell_effect = yes
+			}
+			else = {
+				scope:activity = {
+					set_variable = { name = spn_iv_yes value = 0 }
+					set_variable = { name = spn_iv_no value = 0 }
+					every_attending_character = {
+						limit = { spn_conclave_voter_trigger = yes }
+						if = {
+							limit = { this = scope:spn_iv_caller }
+							scope:activity = { change_variable = { name = spn_iv_yes add = 1 } }
+						}
+						else_if = {
+							limit = { this = scope:spn_iv_magus }
+							scope:activity = { change_variable = { name = spn_iv_no add = 1 } }
+						}
+						else_if = {
+							limit = { is_ai = no }
+							trigger_event = spn_conclave.0250
+						}
+						else_if = {
+							limit = { has_character_flag = spn_iv_bound }
+							scope:activity = { change_variable = { name = spn_iv_no add = 1 } }
+						}
+						else = {
+							spn_invocare_ai_vote_effect = yes
+						}
+					}
+				}
+			}
+		}
+		# Review L-9: it lapsed (the Grand Magus left the chair or took Imperium, or the caller left the Order). The caller
+		# and the Grand Magus heard it called, so they hear it lapse, if they are players.
+		else = {
+			scope:activity = {
+				var:spn_iv_caller ?= {
+					if = {
+						limit = {
+							is_alive = yes
+							is_ai = no
+						}
+						send_interface_toast = {
+							type = event_toast_text_neutral
+							title = spn_invocare_toast_lapsed
+							desc = spn_invocare_toast_lapsed_desc
+							left_icon = this
+						}
+					}
+				}
+				var:spn_iv_magus ?= {
+					if = {
+						limit = {
+							is_alive = yes
+							is_ai = no
+						}
+						send_interface_toast = {
+							type = event_toast_text_neutral
+							title = spn_invocare_toast_lapsed
+							desc = spn_invocare_toast_lapsed_desc
+							left_icon = this
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+# The Grand Magus's defence, paid now or lapsed (red team L25). His scope; scope:spn_iv_magus, scope:spn_iv_caller.
+spn_invocare_defence_effect = {
+	if = {
+		limit = { has_character_flag = spn_iv_def_hooks }
+		# Every voter in the room he holds a usable hook on is called in, and votes to keep him.
+		scope:activity = {
+			every_attending_character = {
+				limit = {
+					spn_conclave_voter_trigger = yes
+					NOT = { this = scope:spn_iv_magus }
+					NOT = { this = scope:spn_iv_caller }
+					scope:spn_iv_magus = { has_usable_hook = prev }
+				}
+				scope:spn_iv_magus = { use_hook = prev }
+				add_character_flag = { flag = spn_iv_bound years = 1 }
+			}
+		}
+	}
+	else_if = {
+		limit = {
+			has_character_flag = spn_iv_def_coffers
+			mc_gold_global_avaiable_trigger = yes
+			NOT = { global_var:current_admin_global ?= scope:spn_iv_caller }
+		}
+		# 100 gold from the council's funds, to the three masks most open to him who are not already bound.
+		decrease_mc_funds_effect = { VALUE = 100 }
+		scope:activity = {
+			ordered_attending_character = {
+				limit = {
+					spn_conclave_voter_trigger = yes
+					NOT = { this = scope:spn_iv_magus }
+					NOT = { this = scope:spn_iv_caller }
+					NOT = { has_character_flag = spn_iv_bound }
+					is_ai = yes # 2.39 (final pass, 17 Oct): only an AI vote can be bought (spn_invocare_yes_chance_value)
+				}
+				order_by = spn_invocare_waver_value # 2.39 (final pass, 17 Oct): the wavering votes (F1), was his warmest friends
+				max = 3
+				check_range_bounds = no
+				add_character_flag = { flag = spn_iv_paid years = 1 }
+			}
+		}
+	}
+	else_if = {
+		limit = {
+			has_character_flag = spn_iv_def_power
+			can_spend_huge_ps_trigger = yes
+		}
+		spend_huge_ps_effect = yes
+		add_character_flag = { flag = spn_iv_power years = 1 }
+	}
+	else_if = {
+		limit = { has_character_flag = spn_iv_def_yield }
+		# He steps down with dignity: standing first, the chair last.
+		spn_order_add_standing_effect = { VALUE = 10 }
+		scope:activity = { set_variable = spn_iv_yielded }
+		add_character_flag = { flag = spn_order_recalled years = 1 } # 2.39 (final pass, 17 Oct): not in the election that replaces him (D4)
+		if = { limit = { has_character_modifier = mage_council_support_modifier } remove_character_modifier = mage_council_support_modifier } # 2.39 (WORK-ORDER-2.39 F12): Imperium ends with the chair on the Order's own routes
+		remove_from_mc_effect = yes
+		spn_order_master_refresh_effect = yes
+		spn_order_toast_members_effect = { TITLE = spn_order_toast_chair_vacated }
+	}
+}
+
+# One AI voter casts (voter scope). The roll is hidden: Aye at spn_invocare_yes_chance_value, Nay at the rest.
+spn_invocare_ai_vote_effect = {
+	random_list = {
+		0 = {
+			modifier = {
+				add = { value = spn_invocare_yes_chance_value }
+			}
+			scope:activity = { change_variable = { name = spn_iv_yes add = 1 } }
+		}
+		0 = {
+			modifier = {
+				add = { value = spn_invocare_no_chance_value }
+			}
+			scope:activity = { change_variable = { name = spn_iv_no add = 1 } }
+		}
+	}
+}
+
+# Host scope, the first line of The Vote's opening (spn_conclave_vote_open_effect), so the chair is empty, if it falls,
+# before the election below it runs. Counts once. A tie keeps him (Witchcraft's own rule: ms_vote_yes > ms_vote_no).
+spn_conclave_invocare_close_effect = {
+	if = {
+		limit = {
+			scope:activity = {
+				exists = var:spn_iv_yes
+				NOT = { exists = var:spn_iv_counted }
+			}
+		}
+		scope:activity = {
+			set_variable = spn_iv_counted
+			var:spn_iv_magus ?= { save_scope_as = spn_iv_magus }
+			var:spn_iv_caller ?= { save_scope_as = spn_iv_caller }
+		}
+		if = {
+			limit = {
+				scope:spn_iv_magus ?= { is_alive = yes }
+				global_var:current_archmage_global ?= scope:spn_iv_magus
+				scope:activity = { var:spn_iv_yes > var:spn_iv_no }
+			}
+			# Passed. Bank the flag and the standing, then the chair falls empty (last).
+			save_scope_value_as = { name = spn_iv_result value = flag:passed }
+			scope:spn_iv_magus = {
+				add_character_flag = { flag = spn_order_recalled years = 1 }
+				spn_order_add_standing_effect = { VALUE = -25 }
+			}
+			scope:activity = {
+				add_activity_log_entry = {
+					key = spn_conclave_log_invocare_passed
+					show_in_conclusion = yes
+					character = scope:spn_iv_magus
+				}
+			}
+			spn_invocare_tell_effect = yes
+			scope:spn_iv_magus = {
+				if = { limit = { has_character_modifier = mage_council_support_modifier } remove_character_modifier = mage_council_support_modifier } # 2.39 (WORK-ORDER-2.39 F12): Imperium ends with the chair on the Order's own routes
+				remove_from_mc_effect = yes
+			}
+			spn_order_master_refresh_effect = yes
+			spn_order_toast_members_effect = { TITLE = spn_order_toast_chair_vacated }
+		}
+		else_if = {
+			limit = {
+				scope:spn_iv_magus ?= { is_alive = yes }
+				global_var:current_archmage_global ?= scope:spn_iv_magus
+			}
+			# Failed. The Grand Magus gains standing and a grudge; the caller pays again, and his seat goes last.
+			save_scope_value_as = { name = spn_iv_result value = flag:kept }
+			scope:spn_iv_magus = {
+				spn_order_add_standing_effect = { VALUE = 10 }
+				if = {
+					limit = { scope:spn_iv_caller ?= { is_alive = yes } }
+					add_opinion = {
+						target = scope:spn_iv_caller
+						modifier = spn_order_invocare_opinion
+					}
+				}
+			}
+			scope:activity = {
+				add_activity_log_entry = {
+					key = spn_conclave_log_invocare_kept
+					show_in_conclusion = yes
+					character = scope:spn_iv_magus
+				}
+			}
+			spn_invocare_tell_effect = yes
+			scope:spn_iv_caller ?= {
+				spn_order_add_standing_effect = { VALUE = -20 }
+				if = {
+					limit = {
+						has_variable = mc_member_var
+						NOT = { global_var:current_archmage_global ?= this }
+					}
+					remove_from_mc_effect = yes
+				}
+			}
+		}
+	}
+}
+
+# The Slips Are Counted, to the caller and the Grand Magus if they are players. scope:spn_iv_result says which ending.
+spn_invocare_tell_effect = {
+	scope:spn_iv_caller ?= {
+		if = {
+			limit = {
+				is_alive = yes
+				is_ai = no
+			}
+			trigger_event = spn_conclave.0260
+		}
+	}
+	scope:spn_iv_magus ?= {
+		if = {
+			limit = {
+				is_alive = yes
+				is_ai = no
+			}
+			trigger_event = spn_conclave.0260
+		}
+	}
+}
+
+# The call is spent without being heard (The Masks Must Meet found the Grand Magus gone, or the Conclave fell apart).
+# Host scope. Nobody pays for a motion that was never heard.
+spn_invocare_clear_call_effect = {
+	if = {
+		limit = { has_character_flag = spn_conclave_may_call }
+		remove_character_flag = spn_conclave_may_call
+	}
+	if = {
+		limit = { has_variable = spn_conclave_reason }
+		remove_variable = spn_conclave_reason
+	}
+	if = {
+		limit = { has_variable = spn_conclave_iv_magus }
+		remove_variable = spn_conclave_iv_magus
+	}
+	if = {
+		limit = { has_variable = spn_conclave_iv_caller }
+		remove_variable = spn_conclave_iv_caller
+	}
+	if = {
+		limit = { has_variable = spn_conclave_chair_after }
+		remove_variable = spn_conclave_chair_after
+	}
+	if = {
+		limit = { has_global_variable = spn_invocare_called }
+		remove_global_variable = spn_invocare_called
+	}
+}
+
+# F14 (D15): the masks raise favouritism, a lesser charge, at The Reckoning. Host scope. Every attending member with the
+# flag loses 10 standing and the flag goes; only its own flag is removed (P4 sets it on junior and patron, 10 years). A
+# Grand Magus under Invocare had his banked first (spn_invocare_bank_effect), so the vote still weighs it.
+spn_conclave_favouritism_effect = {
+	scope:activity = {
+		every_attending_character = {
+			limit = {
+				spn_is_order_member_trigger = yes
+				has_character_flag = spn_order_favouritism
+			}
+			spn_order_add_standing_effect = { VALUE = -10 }
+			remove_character_flag = spn_order_favouritism
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_bad
+					title = spn_conclave_toast_favouritism
+					desc = spn_conclave_toast_favouritism_desc
+					left_icon = this
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# BREAK THE ORDER (F2)
+# ==================================================================================================
+
+# The Break itself (the hidden step, spn_order.0984, after every re-check). Root: the breaker. Everything is read and banked
+# first; then, in this order: unmask, the treasury, the council, the temples last. Every removal goes through the existing
+# primitives (remove_from_mc_effect, spn_order_dissolve_effect), which already handle loans, pledges, mirrors, tutors,
+# heirs and, from 2.39, the Collegium (F15). Every writer of the seats and the chapters was enumerated for this
+# (findings/order_politics.md §2.1).
+spn_order_break_effect = {
+	save_scope_as = spn_bk_breaker
+	# 1. BANK: every temple head, every living member, the chair and the seats, the treasury.
+	every_in_global_list = {
+		variable = spn_order_chapters
+		limit = { exists = var:spn_order_chapter }
+		add_to_temporary_list = spn_bk_heads
+		var:spn_order_chapter = {
+			every_in_list = {
+				variable = spn_order_members
+				limit = {
+					is_alive = yes
+					spn_is_order_member_trigger = yes
+				}
+				add_to_temporary_list = spn_bk_members
+			}
+		}
+	}
+	global_var:current_archmage_global ?= { add_to_temporary_list = spn_bk_council }
+	global_var:current_loremaster_global ?= {
+		if = {
+			limit = { NOT = { is_in_list = spn_bk_council } }
+			add_to_temporary_list = spn_bk_council
+		}
+	}
+	global_var:current_black_mage_global ?= {
+		if = {
+			limit = { NOT = { is_in_list = spn_bk_council } }
+			add_to_temporary_list = spn_bk_council
+		}
+	}
+	global_var:current_admin_global ?= {
+		if = {
+			limit = { NOT = { is_in_list = spn_bk_council } }
+			add_to_temporary_list = spn_bk_council
+		}
+	}
+	if = {
+		limit = {
+			mc_gold_global_exists_trigger = yes
+			global_var:mc_gold_global > 0
+		}
+		if = {
+			limit = { has_global_variable = spn_order_break_hid } # 2.39 (final pass, 17 Oct): the master hid half (The Rose Burns Its Letters)
+			save_scope_value_as = {
+				name = spn_bk_treasury
+				value = {
+					value = global_var:mc_gold_global
+					multiply = 0.5
+					floor = yes
+				}
+			}
+		}
+		else = {
+			save_scope_value_as = { name = spn_bk_treasury value = global_var:mc_gold_global }
+		}
+	}
+	if = {
+		limit = { has_global_variable = spn_order_break_hid }
+		remove_global_variable = spn_order_break_hid
+	}
+	every_in_list = {
+		list = spn_bk_members
+		every_secret = {
+			limit = { secret_type = spn_secret_blue_rose }
+			add_to_temporary_list = spn_bk_secrets
+		}
+	}
+	# 2. TELL the player members, while they still are members, and the player neophytes, whose pledge ends with their
+	# temple (review L-11: the dissolve removes them quietly).
+	every_in_list = {
+		list = spn_bk_members
+		limit = { is_ai = no }
+		trigger_event = spn_order.0981
+	}
+	every_player = {
+		limit = { spn_order_is_neophyte_trigger = yes }
+		send_interface_toast = {
+			type = event_toast_effect_neutral
+			title = spn_order_toast_order_broken
+			desc = spn_order_toast_pledge_ends_desc
+			left_icon = this
+		}
+	}
+	# 3. UNMASK. While spn_order_breaking stands (one day), an exposure paints no trail and sends no "One of Us Is Known"
+	# (the two guards in spn_order_exposed_effect), so sixty exposures are not sixty trails and sixty events.
+	set_global_variable = { name = spn_order_breaking value = yes days = 1 }
+	every_in_list = {
+		list = spn_bk_secrets
+		expose_secret = scope:spn_bk_breaker
+	}
+	# 4. THE TREASURY (Witchcraft's own effect).
+	if = {
+		limit = { exists = scope:spn_bk_treasury }
+		take_from_mc_funds_effect = { RECEIVER = scope:spn_bk_breaker VALUE = scope:spn_bk_treasury }
+	}
+	# 5. THE COUNCIL: the chair and the seats.
+	every_in_list = {
+		list = spn_bk_council
+		if = { limit = { has_character_modifier = mage_council_support_modifier } remove_character_modifier = mage_council_support_modifier } # 2.39 (WORK-ORDER-2.39 F12): Imperium ends with the chair on the Order's own routes
+		remove_from_mc_effect = yes
+	}
+	# 6. THE TEMPLES, last: each chapter's own dissolve (members out quietly, pledges back to their owners, story ended).
+	set_global_variable = { name = spn_order_broken value = scope:spn_bk_breaker years = 20 }
+	every_in_list = {
+		list = spn_bk_heads
+		var:spn_order_chapter ?= { spn_order_dissolve_effect = yes }
+	}
+	spn_order_master_refresh_effect = yes
+	add_prestige = major_prestige_gain
+	if = {
+		limit = { faith.religious_head ?= root }
+		add_piety = major_piety_gain
+	}
+}
+
+# The master's answer queues the hidden step a day later. Any scope; scope:spn_bk_breaker set. Only while the Break is still
+# his (an answer that comes after the step ran does nothing).
+spn_order_break_answered_effect = {
+	scope:spn_bk_breaker ?= {
+		if = {
+			limit = {
+				is_alive = yes
+				global_var:spn_order_break_pending ?= this
+			}
+			trigger_event = { id = spn_order.0984 days = 1 }
+		}
+	}
+}
+
+# "Send the Adeptus Major": The Adeptus Major Moves reaches the breaker tonight. His own answer queues the hidden step
+# (spn_order_am_stood_effect, spn_order_am_gave_way_effect); the 30-day backstop covers a player who never answers.
+spn_order_break_send_am_effect = {
+	scope:spn_bk_breaker ?= {
+		if = {
+			limit = {
+				is_alive = yes
+				global_var:spn_order_break_pending ?= this
+			}
+			add_character_flag = { flag = spn_order_am_coming days = 400 }
+			trigger_event = spn_order.0710
+		}
+	}
+}
+
+# "Let the temples scatter": every temple closes tonight before he can strike. Members leave quietly, so their secrets
+# are gone and their magic stays (the quiet removal, zz_spn_order_effects.txt:202-208); the council goes dark; the Order
+# is broken all the same (the gather waits twenty years). The hidden step then finds no Order to break, and costs the
+# breaker nothing. Master scope; scope:spn_bk_breaker set. Bank first, the temples last.
+spn_order_break_scatter_effect = {
+	if = {
+		limit = {
+			scope:spn_bk_breaker ?= { global_var:spn_order_break_pending ?= this }
+			NOT = { exists = global_var:spn_order_broken }
+		}
+		every_in_global_list = {
+			variable = spn_order_chapters
+			limit = { exists = var:spn_order_chapter }
+			add_to_temporary_list = spn_sc_heads
+		}
+		global_var:current_archmage_global ?= { add_to_temporary_list = spn_sc_council }
+		global_var:current_loremaster_global ?= {
+			if = {
+				limit = { NOT = { is_in_list = spn_sc_council } }
+				add_to_temporary_list = spn_sc_council
+			}
+		}
+		global_var:current_black_mage_global ?= {
+			if = {
+				limit = { NOT = { is_in_list = spn_sc_council } }
+				add_to_temporary_list = spn_sc_council
+			}
+		}
+		global_var:current_admin_global ?= {
+			if = {
+				limit = { NOT = { is_in_list = spn_sc_council } }
+				add_to_temporary_list = spn_sc_council
+			}
+		}
+		spn_order_toast_members_effect = { TITLE = spn_order_toast_temples_scatter }
+		# Review L-11: a player neophyte is told too (the dissolve removes him quietly).
+		every_player = {
+			limit = { spn_order_is_neophyte_trigger = yes }
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = spn_order_toast_temples_scatter
+				desc = spn_order_toast_pledge_ends_desc
+				left_icon = this
+			}
+		}
+		set_global_variable = { name = spn_order_broken value = scope:spn_bk_breaker years = 20 }
+		every_in_list = {
+			list = spn_sc_council
+			if = { limit = { has_character_modifier = mage_council_support_modifier } remove_character_modifier = mage_council_support_modifier } # 2.39 (WORK-ORDER-2.39 F12): Imperium ends with the chair on the Order's own routes
+			remove_from_mc_effect = yes
+		}
+		every_in_list = {
+			list = spn_sc_heads
+			var:spn_order_chapter ?= { spn_order_dissolve_effect = yes }
+		}
+		spn_order_master_refresh_effect = yes
+		scope:spn_bk_breaker = { trigger_event = { id = spn_order.0984 days = 1 } }
+	}
+}
+
+# An AI master answers "The Rose Burns Its Letters" by his nature. Master scope; scope:spn_bk_breaker set.
+spn_order_break_ai_answer_effect = {
+	random_list = {
+		# Send the Adeptus Major.
+		60 = {
+			trigger = { scope:spn_bk_breaker ?= { is_alive = yes } }
+			modifier = {
+				add = 20
+				OR = {
+					has_trait = brave
+					has_trait = wrathful
+					has_trait = vengeful
+				}
+			}
+			modifier = {
+				add = -40
+				has_trait = craven
+			}
+			spn_order_break_send_am_effect = yes
+		}
+		# Hide what can be hidden.
+		25 = {
+			modifier = {
+				add = 20
+				has_trait = content
+			}
+			if = {
+				limit = { exists = global_var:spn_order_break_pending } # 2.39 (final pass, 17 Oct): the Break takes half the coffers
+				set_global_variable = { name = spn_order_break_hid value = yes days = 31 }
+			}
+			spn_order_break_answered_effect = yes
+		}
+		# Let the temples scatter: likelier the more temples have already fallen to the hunters.
+		10 = {
+			modifier = {
+				add = 25
+				has_trait = craven
+			}
+			modifier = {
+				add = 20
+				has_trait = paranoid
+			}
+			modifier = {
+				exists = global_var:spn_order_temples_swept
+				add = {
+					value = global_var:spn_order_temples_swept
+					multiply = 5
+					max = 30
+				}
+			}
+			spn_order_break_scatter_effect = yes
+		}
+	}
+}
+
+# ==================================================================================================
+# THE WATCH LIST (F2) -- for P8 and every other caller: spn_order_watch_add_effect = { WHO = <character> }
+# ==================================================================================================
+
+# Put $WHO$ on the Order's watch list, if he is on the road and not of the Order. When he is already halfway along it, the
+# hunters are closing in: F12's crisis (spn_imperium_crisis_effect does nothing unless a refusal of Imperium is on record).
+spn_order_watch_add_effect = {
+	$WHO$ = { save_scope_as = spn_ow_who }
+	if = {
+		limit = {
+			spn_order_on_trigger = yes
+			scope:spn_ow_who = { spn_order_watch_keep_trigger = yes }
+		}
+		if = {
+			limit = {
+				NOT = { is_target_in_global_variable_list = { name = spn_order_watched target = scope:spn_ow_who } }
+			}
+			add_to_global_variable_list = { name = spn_order_watched target = scope:spn_ow_who }
+		}
+		if = {
+			limit = {
+				scope:spn_ow_who = { spn_order_watch_halfway_trigger = { WHO = scope:spn_ow_who } }
+			}
+			spn_imperium_crisis_effect = { CRISIS = flag:hunters }
+		}
+	}
+}
+
+# A temple has fallen to this hunter (his scope): the end of a sweep that got past the culprit, or The Corridor walked
+# (F15). Once per sweep (the hunt activity is marked). Raises his own counter (the Break's "a temple has fallen" line) and
+# the world's (read by an AI master's answer to a Break), and puts him on the watch list.
+spn_order_temple_swept_effect = {
+	if = {
+		limit = {
+			NOT = { scope:spn_hunt_activity ?= { has_variable = spn_order_temple_counted } }
+		}
+		scope:spn_hunt_activity ?= { set_variable = spn_order_temple_counted }
+		set_variable = {
+			name = spn_order_temples_swept
+			years = 20
+			value = {
+				value = 1
+				if = {
+					limit = { exists = var:spn_order_temples_swept }
+					add = var:spn_order_temples_swept
+				}
+			}
+		}
+		set_global_variable = {
+			name = spn_order_temples_swept
+			years = 20
+			value = {
+				value = 1
+				if = {
+					limit = { exists = global_var:spn_order_temples_swept }
+					add = global_var:spn_order_temples_swept
+				}
+			}
+		}
+		spn_order_watch_add_effect = { WHO = this }
+	}
+}
+
+# The Adeptus Major is sent on purpose (the watch list, the council's war, a sister avenged, The Rose Remembers). Target
+# scope. A visit sent on purpose always comes (The Adeptus Major Moves reads spn_order_am_coming); the walks themselves
+# skip anyone visited in the last five years.
+spn_order_am_send_effect = {
+	add_character_flag = { flag = spn_order_am_coming days = 400 }
+	trigger_event = { id = spn_order.0710 days = { $MIN$ $MAX$ } }
+}
+
+# Once a year (spn_order_yearly; no world walk). The list is pruned of the dead, of those off the road and of those since
+# joined; an outsider halfway along the road, not visited lately, is sent The Adeptus Major Moves, and the hunters are
+# closing in (F12's crisis).
+spn_order_watch_yearly_effect = {
+	if = {
+		limit = { has_global_variable_list = spn_order_watched }
+		every_in_global_list = {
+			variable = spn_order_watched
+			add_to_temporary_list = spn_ow_all
+		}
+		every_in_list = {
+			list = spn_ow_all
+			save_temporary_scope_as = spn_ow_one
+			if = {
+				limit = { spn_order_watch_keep_trigger = no }
+				remove_list_global_variable = { name = spn_order_watched target = scope:spn_ow_one }
+			}
+			else_if = {
+				limit = {
+					global_var:spn_order_master ?= { is_alive = yes }
+					NOT = { has_character_flag = spn_order_am_visited }
+					NOT = { has_character_flag = spn_order_am_coming }
+					spn_order_watch_halfway_trigger = { WHO = scope:spn_ow_one }
+				}
+				spn_order_am_send_effect = { MIN = 30 MAX = 120 }
+				spn_imperium_crisis_effect = { CRISIS = flag:hunters }
+			}
+		}
+	}
+}
+
+# The Adeptus Major Moves, answered. Root: the one he visited.
+# Took the gold, or asked to join: off the watch list, and a Break he meant to make tomorrow is off.
+spn_order_am_gave_way_effect = {
+	if = {
+		limit = { is_target_in_global_variable_list = { name = spn_order_watched target = root } }
+		remove_list_global_variable = { name = spn_order_watched target = root }
+	}
+	if = {
+		limit = { global_var:spn_order_break_pending ?= root }
+		remove_global_variable = spn_order_break_pending
+	}
+}
+# Stood his ground (won or lost): a Break he meant to make goes to its hidden step a day later, which re-checks everything.
+spn_order_am_stood_effect = {
+	if = {
+		limit = { global_var:spn_order_break_pending ?= root }
+		trigger_event = { id = spn_order.0984 days = 1 }
+	}
+}
+# "I would rather be one of you": what Seek Out the Order does (near the top of the next Selection, spn_order_sought), and
+# the Selection's reach for one who is not a Mage (spn_order_eyes_open). He forgets nothing.
+spn_order_am_joined_effect = {
+	add_character_flag = { flag = spn_order_sought years = 5 }
+	add_character_flag = { flag = spn_order_eyes_open years = 10 }
+	spn_order_am_gave_way_effect = yes
+}
+
+# Wronged kin (F2): the close family of one the Order made vanish or wiped. $WHO$ is the victim.
+spn_order_wronged_kin_effect = {
+	$WHO$ = {
+		every_close_family_member = {
+			limit = { is_alive = yes }
+			add_character_flag = { flag = spn_order_wronged_kin years = 50 }
+		}
+	}
+}
+
+# ==================================================================================================
+# F11: THE ORDER INSIDE TWO WITCHCRAFT EVENTS
+# ==================================================================================================
+
+# The council's war on hunters (magic_ev10.84 a "Find them and kill them" and c "bounties"; generator entries in
+# apply_upstream_edits.py). With the Order on, the Adeptus Major also goes to the hunters on the watch list: the hunters
+# the Order actually knows about. Re-checked here, at send time; The Adeptus Major Moves carries B12 e's guard.
+spn_order_council_hunters_effect = {
+	if = {
+		limit = {
+			spn_order_on_trigger = yes
+			global_var:spn_order_master ?= { is_alive = yes }
+			has_global_variable_list = spn_order_watched
+		}
+		every_in_global_list = {
+			variable = spn_order_watched
+			limit = {
+				spn_order_watch_keep_trigger = yes
+				OR = {
+					spn_has_hunter_trait = yes
+					is_witch_hunter = yes
+				}
+				NOT = { has_character_flag = spn_order_am_visited }
+				NOT = { has_character_flag = spn_order_am_coming }
+			}
+			spn_order_am_send_effect = { MIN = 7 MAX = 30 }
+		}
+	}
+}
+
+# A sister on trial (Witchcraft's witch_trial, on_accept; generator entry). Witchcraft decides the trial in immediate
+# events, so this is an aftermath: her keeper hears 3-7 days later what became of her (spn_order.1007). Her keeper is her
+# Temple Magus; when she is the Temple Magus, the master of the Order. scope:actor is the accuser, scope:recipient the
+# accused. A trial with a player in it can stay open past the week, so she carries spn_order_on_trial for three weeks
+# (the engine cannot see an open event window; an AI trial is settled the same day).
+spn_order_trial_begun_effect = {
+	hidden_effect = {
+		if = {
+			limit = {
+				spn_order_on_trigger = yes
+				scope:recipient ?= {
+					is_alive = yes
+					spn_is_order_member_trigger = yes
+					exists = var:spn_order_chapter
+					NOT = { has_character_flag = spn_order_trial_told }
+				}
+			}
+			scope:recipient = { save_scope_as = spn_st_sister }
+			scope:actor = { save_scope_as = spn_st_accuser }
+			scope:spn_st_sister.var:spn_order_chapter.story_owner ?= {
+				if = {
+					limit = {
+						is_alive = yes
+						NOT = { this = scope:spn_st_sister }
+						NOT = { this = scope:spn_st_accuser } # review L-8: never to the one who accused her
+					}
+					save_scope_as = spn_st_keeper
+					save_scope_value_as = { name = spn_st_role value = flag:head }
+				}
+			}
+			if = {
+				limit = { NOT = { exists = scope:spn_st_keeper } }
+				global_var:spn_order_master ?= {
+					if = {
+						limit = {
+							is_alive = yes
+							NOT = { this = scope:spn_st_sister }
+							NOT = { this = scope:spn_st_accuser } # review L-8
+						}
+						save_scope_as = spn_st_keeper
+						save_scope_value_as = { name = spn_st_role value = flag:master }
+					}
+				}
+			}
+			if = {
+				limit = { exists = scope:spn_st_keeper }
+				scope:spn_st_sister = {
+					add_character_flag = { flag = spn_order_trial_told days = 30 }
+					if = {
+						limit = {
+							OR = {
+								is_ai = no
+								scope:spn_st_accuser = { is_ai = no }
+							}
+						}
+						add_character_flag = { flag = spn_order_on_trial days = 21 }
+					}
+				}
+				scope:spn_st_keeper = { trigger_event = { id = spn_order.1007 days = { 3 7 } } }
+			}
+		}
+	}
+}
+
+# A Sister on Trial has been answered (or has lapsed): the retry count goes. Sister scope.
+spn_order_sister_done_effect = {
+	if = {
+		limit = { has_variable = spn_order_st_tries }
+		remove_variable = spn_order_st_tries
+	}
+}

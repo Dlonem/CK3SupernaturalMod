@@ -1,0 +1,340 @@
+﻿namespace = spn_conclave
+
+# Supernatural 2.39 -- Invocare, the vote against the Grand Magus (WORK-ORDER-2.39 F1). The decision and the effects:
+# zz_spn_order_politics_decisions.txt, zz_spn_order_politics_effects.txt. Loc: zz_spn_239_order_politics_l_english.yml.
+# Council business: these neither check nor mark the flavor gate (F14), like Imperium's.
+
+# .0240 -- The Chair Is Questioned. A player Grand Magus, at the call: he always answers first. What his answer costs is
+# taken when the motion is heard at the Reckoning; one he can no longer pay for then simply comes to nothing. His answer
+# lasts two years, the life of the call (review L-1).
+spn_conclave.0240 = {
+	type = character_event
+	title = spn_conclave.0240.t
+	desc = spn_conclave.0240.desc
+	theme = intrigue
+	override_background = { reference = mc_shadows }
+	left_portrait = { character = root animation = worry }
+	right_portrait = {
+		character = scope:spn_iv_caller
+		trigger = { exists = scope:spn_iv_caller }
+		animation = personality_bold
+	}
+	trigger = {
+		is_alive = yes
+		global_var:current_archmage_global ?= root
+		scope:spn_iv_caller ?= {
+			is_alive = yes
+			spn_is_order_member_trigger = yes
+		}
+	}
+	# Then they will remember what they owe me.
+	option = {
+		name = spn_conclave.0240.a
+		trigger = {
+			any_hooked_character = { spn_conclave_voter_trigger = yes }
+		}
+		custom_tooltip = spn_conclave.0240.a.tt
+		add_character_flag = { flag = spn_iv_def_hooks years = 2 }
+	}
+	# Open the council's coffers.
+	option = {
+		name = spn_conclave.0240.b
+		trigger = {
+			mc_gold_global_avaiable_trigger = yes
+			NOT = { global_var:current_admin_global ?= scope:spn_iv_caller }
+		}
+		custom_tooltip = spn_conclave.0240.b.tt
+		add_character_flag = { flag = spn_iv_def_coffers years = 2 }
+	}
+	# Let me remind them what the Order has done under me.
+	option = {
+		name = spn_conclave.0240.c
+		duel = {
+			skill = learning
+			value = 14
+			60 = {
+				desc = spn_conclave.0240.c.success
+				compare_modifier = { value = scope:duel_value multiplier = 3 }
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_conclave.0240.c.success
+					desc = spn_conclave.0240.c.success_desc
+					left_icon = root
+					add_character_flag = { flag = spn_iv_spoke_well years = 2 }
+				}
+			}
+			40 = {
+				desc = spn_conclave.0240.c.failure
+				compare_modifier = { value = scope:duel_value multiplier = -3 }
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_conclave.0240.c.failure
+					desc = spn_conclave.0240.c.failure_desc
+					left_icon = root
+				}
+			}
+		}
+	}
+	# A show of power.
+	option = {
+		name = spn_conclave.0240.d
+		trigger = { can_spend_huge_ps_trigger = yes }
+		custom_tooltip = spn_conclave.0240.d.tt
+		add_character_flag = { flag = spn_iv_def_power years = 2 }
+	}
+	# Let them see who they are crossing.
+	option = {
+		name = spn_conclave.0240.e
+		trigger = { dread >= 40 }
+		custom_tooltip = spn_conclave.0240.e.tt
+		add_character_flag = { flag = spn_iv_feared years = 2 }
+	}
+	# I will not wait to be pushed.
+	option = {
+		name = spn_conclave.0240.f
+		custom_tooltip = spn_conclave.0240.f.tt
+		add_character_flag = { flag = spn_iv_def_yield years = 2 }
+	}
+	# Let the masks decide.
+	option = {
+		name = spn_conclave.0240.g
+		custom_tooltip = spn_conclave.0240.g.tt
+	}
+}
+
+# .0250 -- Invocare. A player voter at the Reckoning (spn_invocare_open_effect): Aye, Nay or a blank slip. One the Grand
+# Magus has called a hook on can only vote to keep him (what a hook means in vanilla). An answer that comes after the count
+# changes nothing.
+spn_conclave.0250 = {
+	type = activity_event
+	title = spn_conclave.0250.t
+	desc = {
+		desc = spn_conclave.0250.desc
+		triggered_desc = {
+			trigger = {
+				scope:activity = {
+					exists = var:spn_iv_charges
+					var:spn_iv_charges >= 2
+				}
+			}
+			desc = spn_conclave.0250.desc_broke
+		}
+		triggered_desc = {
+			trigger = {
+				scope:activity = {
+					OR = {
+						var:spn_iv_charges ?= 1
+						var:spn_iv_charges ?= 3
+					}
+				}
+			}
+			desc = spn_conclave.0250.desc_favour
+		}
+		triggered_desc = {
+			trigger = { has_character_flag = spn_iv_bound }
+			desc = spn_conclave.0250.desc_bound
+		}
+	}
+	theme = intrigue
+	override_background = { reference = mc_shadows }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = {
+		character = scope:spn_iv_magus
+		trigger = { exists = scope:spn_iv_magus }
+		animation = personality_rational
+	}
+	lower_left_portrait = { # 2.39 (Boot 2, 16 Oct): the one who said Invocare
+		character = scope:spn_iv_caller
+		trigger = {
+			scope:spn_iv_caller ?= { is_alive = yes }
+			NOT = { scope:spn_iv_caller = root }
+		}
+	}
+	trigger = {
+		is_alive = yes
+		scope:activity ?= {
+			exists = var:spn_iv_yes
+			NOT = { exists = var:spn_iv_counted }
+		}
+	}
+	option = {
+		name = spn_conclave.0250.a
+		trigger = {
+			custom_tooltip = {
+				text = spn_conclave.0250.bound_tt
+				NOT = { has_character_flag = spn_iv_bound }
+			}
+		}
+		show_as_unavailable = { always = yes }
+		if = {
+			limit = {
+				scope:activity ?= {
+					exists = var:spn_iv_yes
+					NOT = { exists = var:spn_iv_counted }
+				}
+			}
+			scope:activity = { change_variable = { name = spn_iv_yes add = 1 } }
+		}
+		else = {
+			custom_tooltip = spn_conclave.0250.late_tt
+		}
+	}
+	option = {
+		name = spn_conclave.0250.b
+		if = {
+			limit = {
+				scope:activity ?= {
+					exists = var:spn_iv_yes
+					NOT = { exists = var:spn_iv_counted }
+				}
+			}
+			scope:activity = { change_variable = { name = spn_iv_no add = 1 } }
+		}
+		else = {
+			custom_tooltip = spn_conclave.0250.late_tt
+		}
+	}
+	option = {
+		name = spn_conclave.0250.c
+		trigger = {
+			custom_tooltip = {
+				text = spn_conclave.0250.bound_tt
+				NOT = { has_character_flag = spn_iv_bound }
+			}
+		}
+		show_as_unavailable = { always = yes }
+		custom_tooltip = spn_conclave.0250.c.tt
+	}
+}
+
+# .0260 -- The Slips Are Counted. The caller and the Grand Magus, if players (spn_invocare_tell_effect).
+# scope:spn_iv_result: flag:passed | flag:kept | flag:yielded.
+spn_conclave.0260 = {
+	type = character_event
+	title = spn_conclave.0260.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					scope:spn_iv_result ?= flag:passed
+					scope:spn_iv_magus ?= root
+				}
+				desc = spn_conclave.0260.desc_passed_magus
+			}
+			triggered_desc = {
+				trigger = { scope:spn_iv_result ?= flag:passed }
+				desc = spn_conclave.0260.desc_passed_caller
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_iv_result ?= flag:kept
+					scope:spn_iv_magus ?= root
+				}
+				desc = spn_conclave.0260.desc_kept_magus
+			}
+			triggered_desc = {
+				trigger = { scope:spn_iv_result ?= flag:kept }
+				desc = spn_conclave.0260.desc_kept_caller
+			}
+			triggered_desc = {
+				trigger = { scope:spn_iv_magus ?= root }
+				desc = spn_conclave.0260.desc_yielded_magus
+			}
+			desc = spn_conclave.0260.desc_yielded_caller
+		}
+	}
+	theme = intrigue
+	override_background = { reference = mc_shadows }
+	left_portrait = {
+		character = root
+		triggered_animation = { # 2.39 (final pass, 17 Oct): the loser and the winner
+			trigger = {
+				OR = {
+					AND = {
+						scope:spn_iv_result ?= flag:passed
+						scope:spn_iv_magus ?= this
+					}
+					AND = {
+						scope:spn_iv_result ?= flag:kept
+						scope:spn_iv_caller ?= this
+					}
+				}
+			}
+			animation = shame
+		}
+		triggered_animation = {
+			trigger = {
+				OR = {
+					AND = {
+						scope:spn_iv_result ?= flag:passed
+						scope:spn_iv_caller ?= this
+					}
+					AND = {
+						scope:spn_iv_result ?= flag:kept
+						scope:spn_iv_magus ?= this
+					}
+				}
+			}
+			animation = personality_bold
+		}
+		triggered_animation = {
+			trigger = { always = yes }
+			animation = personality_rational
+		}
+	}
+	right_portrait = {
+		character = scope:spn_iv_other
+		trigger = { exists = scope:spn_iv_other }
+		triggered_animation = { # 2.39 (final pass, 17 Oct): the loser and the winner
+			trigger = {
+				OR = {
+					AND = {
+						scope:spn_iv_result ?= flag:passed
+						scope:spn_iv_magus ?= this
+					}
+					AND = {
+						scope:spn_iv_result ?= flag:kept
+						scope:spn_iv_caller ?= this
+					}
+				}
+			}
+			animation = shame
+		}
+		triggered_animation = {
+			trigger = {
+				OR = {
+					AND = {
+						scope:spn_iv_result ?= flag:passed
+						scope:spn_iv_caller ?= this
+					}
+					AND = {
+						scope:spn_iv_result ?= flag:kept
+						scope:spn_iv_magus ?= this
+					}
+				}
+			}
+			animation = personality_bold
+		}
+		triggered_animation = {
+			trigger = { always = yes }
+			animation = personality_bold
+		}
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_iv_result
+	}
+	immediate = {
+		# The other party: the caller for the Grand Magus, the Grand Magus for the caller.
+		if = {
+			limit = { scope:spn_iv_magus ?= root }
+			scope:spn_iv_caller ?= { save_scope_as = spn_iv_other }
+		}
+		else = {
+			scope:spn_iv_magus ?= { save_scope_as = spn_iv_other }
+		}
+	}
+	option = {
+		name = spn_conclave.0260.a
+	}
+}

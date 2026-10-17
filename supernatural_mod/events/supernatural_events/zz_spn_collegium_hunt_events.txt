@@ -1,0 +1,125 @@
+﻿namespace = spn_hunt
+
+# Supernatural 2.39 -- The Corridor (WORK-ORDER-2.39 F15; findings/temple_building.md §5.5). Number 0173 (checked free;
+# the witch trail's events are 0170-0172 in 10_spn_witch_trail_events.txt).
+#
+# A hunter's temple sweep ("They answer to a temple") in the county of the culprit temple's standing hall meets the fear
+# corridor in place of the SECOND door (spn_hunt_coven_next_effect, through spn_hunt_corridor_due_trigger), once per
+# sweep. The show (S2E3): one entrance, a passage under an inscription that only an amulet or a Magistratus's sigil gets
+# you through; the rest wake somewhere else. Harder, never locked (expert call T5): no sigil is needed, only luck and
+# nerve. Nothing here wounds or kills.
+
+# ==================================================================================================
+# The Corridor. Root = the hunter, sent one day after the first door, in the sweep's own way (spn_hunt.0172's shape).
+# ==================================================================================================
+spn_hunt.0173 = {
+	type = activity_event
+	title = spn_hunt.0173.t
+	desc = spn_hunt.0173.desc
+	theme = secret
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = stress }
+
+	# The sweep must still be running and the hall still standing. If it is not (the hall released or walked in the night
+	# between), the sweep goes on as if The Corridor had never been there: a sweep that stops silently has no outcome.
+	# The temple is the one banked when the sweep began: the culprit is usually dead by now (review H-2, 16 Oct).
+	trigger = {
+		is_alive = yes
+		scope:spn_hunt_activity ?= { has_variable = spn_hunt_coven_running }
+		scope:spn_hunt_activity.var:spn_hunt_sweep_ch ?= { spn_order_hall_stands_trigger = yes }
+	}
+	on_trigger_fail = {
+		if = {
+			limit = {
+				is_alive = yes
+				scope:spn_hunt_activity ?= { has_variable = spn_hunt_coven_running }
+			}
+			scope:spn_hunt_activity = { change_variable = { name = spn_hunt_coven_round add = -1 } }
+			spn_hunt_coven_next_effect = yes
+		}
+	}
+
+	immediate = {
+		spn_hunt_bind_scopes_effect = yes
+		scope:spn_hunt_activity.var:spn_hunt_sweep_ch = { save_scope_as = spn_cor_ch }
+		# The sigil (S2E3): a Magistratus or higher of that temple in his dungeon (red team L11).
+		random_prisoner = {
+			limit = {
+				var:spn_order_chapter ?= scope:spn_cor_ch
+				spn_order_magistratus_plus_trigger = yes
+			}
+			save_scope_as = spn_cor_sigil
+		}
+	}
+
+	# Walk through it. The same tooltip whatever happens (no odds, and nothing about his prisoners is told before he
+	# commits); the outcome is a toast after.
+	option = {
+		name = spn_hunt.0173.a
+		custom_tooltip = spn_hunt.0173.a.tt
+		hidden_effect = {
+			if = {
+				limit = { exists = scope:spn_cor_sigil }
+				# He used the sigil, so he knows whose it was.
+				spn_order_reveal_membership_effect = { WHO = scope:spn_cor_sigil TO = root }
+				if = {
+					limit = { is_ai = no }
+					send_interface_toast = {
+						type = event_toast_text_good
+						title = spn_hunt_toast_corridor_sigil
+						desc = spn_hunt_toast_corridor_sigil.desc
+						left_icon = root
+						right_icon = scope:spn_cor_sigil
+					}
+				}
+				spn_hunt_corridor_pass_effect = yes
+			}
+			else = {
+				random = {
+					chance = spn_hunt_corridor_chance_value
+					save_scope_value_as = { name = spn_cor_pass value = yes }
+				}
+				if = {
+					limit = { exists = scope:spn_cor_pass }
+					if = {
+						limit = { is_ai = no }
+						send_interface_toast = {
+							type = event_toast_text_good
+							title = spn_hunt_toast_corridor_pass
+							desc = spn_hunt_toast_corridor_pass.desc
+							left_icon = root
+						}
+					}
+					spn_hunt_corridor_pass_effect = yes
+				}
+				else = {
+					spn_hunt_corridor_fail_effect = yes
+				}
+			}
+		}
+		ai_chance = {
+			base = 50
+			modifier = { add = 30 has_trait = brave }
+			modifier = { add = 25 has_trait = zealous }
+			modifier = { add = -35 has_trait = craven }
+			modifier = { add = -20 has_trait = content }
+		}
+	}
+	# Turn back. The sweep ends with no prestige cost (spn_hunt_corridor_turned: spn_hunt_coven_end_effect skips its
+	# withdrawal penalty).
+	option = {
+		name = spn_hunt.0173.b
+		custom_tooltip = spn_hunt.0173.b.tt
+		hidden_effect = {
+			scope:spn_hunt_activity = { set_variable = { name = spn_hunt_corridor_turned value = yes } }
+			spn_hunt_coven_end_effect = yes
+		}
+		ai_chance = {
+			base = 30
+			modifier = { add = 40 has_trait = craven }
+			modifier = { add = 25 has_trait = content }
+			modifier = { add = -30 has_trait = brave }
+			modifier = { add = -25 has_trait = zealous }
+		}
+	}
+}

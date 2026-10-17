@@ -1,0 +1,480 @@
+﻿namespace = spn_relic
+
+# Supernatural 2.38 -- "The Blue Rose": lesser relics and the Seal of Solomon (WORK-ORDER-2.38 §9).
+# Loc: localization/english/event_localization/spn_relic_l_english.yml.
+# Every delayed event re-checks the world in its trigger.
+
+# .0002 -- (hidden, no root) the Seal of Solomon is placed, whatever the rules (§9.7).
+spn_relic.0002 = {
+	scope = none
+	hidden = yes
+	trigger = {
+		NOT = { exists = global_var:spn_seal_seeded }
+	}
+	immediate = {
+		spn_seal_seed_effect = yes
+	}
+}
+
+# .0050 -- Where Will You Pledge It? A member of both a chapter and a coven; scope:spn_pp_art (§9.4).
+spn_relic.0050 = {
+	type = character_event
+	title = spn_relic.0050.t
+	desc = spn_relic.0050.desc
+	theme = learning
+	override_background = { reference = study }
+	left_portrait = { character = root animation = thinking }
+	artifact = {
+		target = scope:spn_pp_art
+		position = lower_right_portrait
+		trigger = { exists = scope:spn_pp_art }
+	}
+	trigger = {
+		is_alive = yes
+		exists = var:spn_order_chapter
+		exists = var:spn_coven
+		scope:spn_pp_art ?= {
+			artifact_owner ?= root
+			NOT = { has_variable = spn_pledged_to }
+		}
+	}
+	option = {
+		name = spn_relic.0050.a
+		spn_relic_pledge_effect = { ART = scope:spn_pp_art TO = root.var:spn_order_chapter }
+		ai_chance = { base = 60 }
+	}
+	option = {
+		name = spn_relic.0050.b
+		spn_relic_pledge_effect = { ART = scope:spn_pp_art TO = root.var:spn_coven }
+		ai_chance = { base = 40 }
+	}
+	option = {
+		name = spn_relic.0050.c
+		ai_chance = { base = 0 }
+	}
+}
+
+# .0100 -- Under the Glove. The prisoner; scope:spn_gl_asker (§9.3).
+spn_relic.0100 = {
+	type = character_event
+	title = spn_relic.0100.t
+	desc = spn_relic.0100.desc
+	theme = prison
+	override_background = { reference = dungeon }
+	left_portrait = { character = root animation = fear }
+	right_portrait = { character = scope:spn_gl_asker animation = scheme }
+	trigger = {
+		is_alive = yes
+		scope:spn_gl_asker ?= { is_alive = yes }
+		is_imprisoned_by = scope:spn_gl_asker
+	}
+	immediate = {
+		# Word gets out (25%, every use).
+		random = {
+			chance = 25
+			liege ?= {
+				if = {
+					limit = { NOT = { this = scope:spn_gl_asker } }
+					add_opinion = { target = scope:spn_gl_asker modifier = spn_burned_under_the_glove_opinion }
+					if = {
+						limit = { is_ai = no }
+						send_interface_toast = {
+							type = event_toast_effect_bad
+							title = spn_relic_toast_glove_word
+							left_icon = scope:spn_gl_asker
+							right_icon = root
+						}
+					}
+				}
+			}
+			scope:spn_gl_asker = {
+				if = {
+					limit = { exists = location.county }
+					location.county = { save_scope_as = spn_gl_county }
+					spn_mark_menace_effect = { COUNTY = scope:spn_gl_county CULPRIT = scope:spn_gl_asker KIND = witch SEVERITY = prowl }
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_relic.0100.a
+		if = {
+			limit = {
+				any_secret = { NOT = { is_known_by = scope:spn_gl_asker } }
+			}
+			random_secret = {
+				limit = { NOT = { is_known_by = scope:spn_gl_asker } }
+				reveal_to = scope:spn_gl_asker
+			}
+		}
+		else_if = {
+			limit = {
+				any_known_secret = {
+					NOT = { is_known_by = scope:spn_gl_asker }
+					NOT = { secret_owner = scope:spn_gl_asker }
+				}
+			}
+			random_known_secret = {
+				limit = {
+					NOT = { is_known_by = scope:spn_gl_asker }
+					NOT = { secret_owner = scope:spn_gl_asker }
+				}
+				reveal_to = scope:spn_gl_asker
+			}
+		}
+		else = {
+			custom_tooltip = spn_relic.0100.a_nothing
+		}
+		ai_chance = {
+			base = 50
+			modifier = { add = 30 has_trait = craven }
+			modifier = { add = 20 has_trait = honest }
+		}
+	}
+	option = {
+		name = spn_relic.0100.b
+		increase_wounds_no_death_effect = { REASON = fight }
+		stress_impact = { base = major_stress_impact_gain }
+		scope:spn_gl_asker = {
+			add_hook = {
+				type = threat_hook
+				target = root
+			}
+		}
+		add_opinion = { target = scope:spn_gl_asker modifier = spn_burned_under_the_glove_opinion }
+		ai_chance = {
+			base = 50
+			modifier = { add = 30 has_trait = brave }
+			modifier = { add = 20 has_trait = stubborn }
+			modifier = { add = 20 has_trait = deceitful }
+		}
+	}
+	option = {
+		name = spn_relic.0100.c
+		trigger = { spn_is_wolf_trigger = yes }
+		scope:spn_gl_asker = { add_prestige = -20 }
+		ai_chance = { base = 200 }
+	}
+}
+
+# .0200 -- Call the Dead. The caller; scope:spn_nc_phone (the Necrophone). Three calls and it cracks (§9.3).
+spn_relic.0200 = {
+	type = character_event
+	title = spn_relic.0200.t
+	desc = {
+		desc = spn_relic.0200.desc
+		triggered_desc = {
+			trigger = { scope:spn_nc_phone ?= { var:spn_necrophone_calls ?= 2 } }
+			desc = spn_relic.0200.desc_cracking
+		}
+	}
+	theme = witchcraft
+	override_background = { reference = study }
+	left_portrait = { character = root animation = pondering }
+	artifact = {
+		target = scope:spn_nc_phone
+		position = lower_right_portrait
+		trigger = { exists = scope:spn_nc_phone }
+	}
+	trigger = {
+		is_alive = yes
+		scope:spn_nc_phone ?= { artifact_owner ?= root }
+	}
+	# How long until a lost hide wakes: read now, so the option's line can show it.
+	immediate = {
+		if = {
+			limit = { has_variable = spn_nc_wake }
+			remove_variable = spn_nc_wake
+		}
+		if = {
+			limit = { exists = global_var:spn_hide_alpha_lost }
+			set_variable = { name = spn_nc_wake value = global_var:spn_hide_alpha_lost }
+		}
+		else_if = {
+			limit = { exists = global_var:spn_hide_graybeard_lost }
+			set_variable = { name = spn_nc_wake value = global_var:spn_hide_graybeard_lost }
+		}
+		else_if = {
+			limit = { exists = global_var:spn_hide_midnight_lost }
+			set_variable = { name = spn_nc_wake value = global_var:spn_hide_midnight_lost }
+		}
+		else_if = {
+			limit = { exists = global_var:spn_hide_silverback_lost }
+			set_variable = { name = spn_nc_wake value = global_var:spn_hide_silverback_lost }
+		}
+		else_if = {
+			limit = { exists = global_var:spn_hide_timber_lost }
+			set_variable = { name = spn_nc_wake value = global_var:spn_hide_timber_lost }
+		}
+		else_if = {
+			limit = { exists = global_var:spn_hide_tundra_lost }
+			set_variable = { name = spn_nc_wake value = global_var:spn_hide_tundra_lost }
+		}
+		if = {
+			limit = { exists = var:spn_nc_wake }
+			change_variable = { name = spn_nc_wake subtract = current_year }
+			if = {
+				limit = { var:spn_nc_wake < 1 }
+				set_variable = { name = spn_nc_wake value = 1 }
+			}
+		}
+	}
+	# Where is a page of the book? One held, unguarded, not by you.
+	option = {
+		name = spn_relic.0200.a
+		trigger = {
+			spn_vade_on_trigger = yes
+			OR = {
+				spn_relic_page_nameable_trigger = { N = 1 }
+				spn_relic_page_nameable_trigger = { N = 2 }
+				spn_relic_page_nameable_trigger = { N = 3 }
+				spn_relic_page_nameable_trigger = { N = 4 }
+			}
+		}
+		if = {
+			limit = { spn_relic_page_nameable_trigger = { N = 1 } }
+			global_var:spn_vade_page_1_art.artifact_owner = { save_scope_as = spn_nc_named }
+		}
+		else_if = {
+			limit = { spn_relic_page_nameable_trigger = { N = 2 } }
+			global_var:spn_vade_page_2_art.artifact_owner = { save_scope_as = spn_nc_named }
+		}
+		else_if = {
+			limit = { spn_relic_page_nameable_trigger = { N = 3 } }
+			global_var:spn_vade_page_3_art.artifact_owner = { save_scope_as = spn_nc_named }
+		}
+		else = {
+			global_var:spn_vade_page_4_art.artifact_owner = { save_scope_as = spn_nc_named }
+		}
+		set_variable = { name = spn_knows_page_holder value = scope:spn_nc_named years = 10 }
+		spn_order_deed_heard_effect = yes
+		custom_tooltip = spn_relic.0200.a_tt
+		spn_relic_necrophone_used_effect = yes
+	}
+	# Where is the lost hide?
+	option = {
+		name = spn_relic.0200.b
+		trigger = {
+			OR = {
+				exists = global_var:spn_hide_alpha_lost
+				exists = global_var:spn_hide_graybeard_lost
+				exists = global_var:spn_hide_midnight_lost
+				exists = global_var:spn_hide_silverback_lost
+				exists = global_var:spn_hide_timber_lost
+				exists = global_var:spn_hide_tundra_lost
+			}
+		}
+		custom_tooltip = spn_relic.0200.b_tt
+		spn_relic_necrophone_used_effect = yes
+	}
+	# Where is the Seal of Solomon?
+	option = {
+		name = spn_relic.0200.c
+		trigger = { exists = global_var:spn_seal }
+		spn_seal_learn_effect = yes
+		custom_tooltip = spn_relic.0200.c_tt
+		spn_relic_necrophone_used_effect = yes
+	}
+	option = {
+		name = spn_relic.0200.d
+	}
+}
+
+# .0310 -- (hidden) the bound partner dies, a day after the other was killed (§9.3, C13). Never inside on_death.
+spn_relic.0310 = {
+	type = character_event
+	hidden = yes
+	trigger = { is_alive = yes }
+	immediate = {
+		if = {
+			limit = { scope:spn_fates_killer ?= { is_alive = yes } }
+			death = { death_reason = spn_death_fates_bound killer = scope:spn_fates_killer }
+		}
+		else = {
+			death = { death_reason = spn_death_fates_bound }
+		}
+	}
+}
+
+# .0400 -- A Lesser Thing. The host of a Search for Magical Artifacts (§9.6). One a search.
+spn_relic.0400 = {
+	type = activity_event
+	title = spn_relic.0400.t
+	desc = spn_relic.0400.desc
+	theme = learning
+	left_portrait = { character = root animation = interested }
+	artifact = {
+		target = scope:spn_new_relic
+		position = lower_right_portrait
+		trigger = { exists = scope:spn_new_relic }
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:activity
+		NOT = { scope:activity = { has_variable = spn_relic_found } }
+	}
+	immediate = {
+		scope:activity = { set_variable = spn_relic_found }
+		spn_relic_make_random_effect = { OWNER = root }
+	}
+	option = {
+		name = spn_relic.0400.a
+	}
+}
+
+# .0600 -- The Ring Beneath the Altar. The occupant of the Seal's county; scope:spn_seal_siege_county (§9.7).
+spn_relic.0600 = {
+	type = character_event
+	title = spn_relic.0600.t
+	desc = spn_relic.0600.desc
+	theme = war
+	override_background = { reference = temple }
+	left_portrait = { character = root animation = interested }
+	artifact = {
+		target = global_var:spn_seal
+		position = lower_right_portrait
+		trigger = { exists = global_var:spn_seal }
+	}
+	trigger = {
+		is_alive = yes
+		exists = global_var:spn_seal
+		global_var:spn_seal_county ?= scope:spn_seal_siege_county
+	}
+	option = {
+		name = spn_relic.0600.a
+		scope:spn_seal_siege_county.holder ?= { save_scope_as = spn_ss_keeper }
+		global_var:spn_seal = {
+			if = {
+				limit = { exists = scope:spn_ss_keeper }
+				set_owner = {
+					target = root
+					history = {
+						type = taken_in_siege
+						actor = scope:spn_ss_keeper
+						recipient = root
+						location = scope:spn_seal_siege_county.title_province
+					}
+				}
+			}
+			else = {
+				set_owner = {
+					target = root
+					history = {
+						type = taken_in_siege
+						recipient = root
+						location = scope:spn_seal_siege_county.title_province
+					}
+				}
+			}
+			spn_seal_unmark_effect = yes
+		}
+		ai_chance = {
+			base = 70
+			modifier = { add = 30 has_trait = archmage }
+		}
+	}
+	option = {
+		name = spn_relic.0600.b
+		ai_chance = {
+			base = 0
+			modifier = {
+				add = 30
+				has_trait = zealous
+				faith = { religion = { is_in_family = rf_abrahamic } }
+			}
+		}
+	}
+}
+
+# .0610 -- The Ring at [Site]. A pilgrim who knows; scope:spn_seal_pilgrim_county (§9.7). A hidden intrigue roll.
+spn_relic.0610 = {
+	type = character_event
+	title = spn_relic.0610.t
+	desc = spn_relic.0610.desc
+	theme = faith
+	override_background = { reference = temple }
+	left_portrait = { character = root animation = scheme }
+	artifact = {
+		target = global_var:spn_seal
+		position = lower_right_portrait
+		trigger = { exists = global_var:spn_seal }
+	}
+	trigger = {
+		is_alive = yes
+		exists = global_var:spn_seal
+		global_var:spn_seal_county ?= scope:spn_seal_pilgrim_county
+	}
+	option = {
+		name = spn_relic.0610.a
+		custom_tooltip = spn_relic.0610.a_tt
+		hidden_effect = {
+			random = {
+				chance = spn_seal_pilgrim_chance_value
+				save_scope_value_as = { name = spn_sp_pass value = yes }
+			}
+			scope:spn_seal_pilgrim_county.holder ?= { save_scope_as = spn_sp_keeper }
+			if = {
+				limit = { exists = scope:spn_sp_pass }
+				global_var:spn_seal = {
+					if = {
+						limit = { exists = scope:spn_sp_keeper }
+						set_owner = {
+							target = root
+							history = {
+								type = stolen
+								actor = scope:spn_sp_keeper
+								recipient = root
+							}
+						}
+					}
+					else = {
+						set_owner = {
+							target = root
+							history = {
+								type = stolen
+								recipient = root
+							}
+						}
+					}
+					spn_seal_unmark_effect = yes
+				}
+				if = {
+					limit = { is_ai = no }
+					send_interface_toast = {
+						type = event_toast_effect_good
+						title = spn_relic_toast_seal_taken
+						left_icon = root
+						right_icon = global_var:spn_seal
+					}
+				}
+			}
+			else = {
+				add_character_flag = { flag = spn_seal_thief years = 5 }
+				scope:spn_sp_keeper ?= {
+					add_opinion = { target = root modifier = spn_seal_thief_opinion }
+				}
+				if = {
+					limit = { is_ai = no }
+					send_interface_toast = {
+						type = event_toast_effect_bad
+						title = spn_relic_toast_seal_caught
+						left_icon = root
+					}
+				}
+			}
+		}
+		ai_chance = {
+			base = 50
+			modifier = { add = 30 has_trait = greedy }
+			modifier = { add = 20 has_trait = deceitful }
+		}
+	}
+	option = {
+		name = spn_relic.0610.b
+		ai_chance = {
+			base = 50
+			modifier = { add = 30 has_trait = honest }
+			modifier = { add = 30 has_trait = zealous }
+		}
+	}
+}

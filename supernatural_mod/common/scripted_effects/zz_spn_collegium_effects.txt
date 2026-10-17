@@ -1,0 +1,584 @@
+﻿# Supernatural 2.39 -- the Collegium: the hall a temple of the Order meets beneath (WORK-ORDER-2.39 F15;
+# findings/temple_building.md §5, with the v3 red team's H1, M6, M7, L11 and L20).
+#
+# THE DATA. Identity state (no expiry; removed only by the one remover below):
+#   On the chapter story:  var:spn_order_hall (the building's province); var:spn_order_hall_lord (the county's holder the
+#                          temple last saw, so A New Lord Above the Hall comes once per change of holder).
+#   On the province:       var:spn_order_hall_of (the chapter story).
+#   On a mirror story:     a copy of spn_order_hall (spn_order_sync_mirrors_effect), for the member's own panel line.
+# Timed:
+#   story spn_order_hall_building  4 years   a hall being raised by an eligible builder (on_start; on_cancelled/adopt clear)
+#   story spn_order_hall_profaned  10 years  a hunter walked The Corridor (spn_hunt_corridor_pass_effect)
+#   story spn_order_hall_warded    10 years  a Mage renewed the ward over the arch (Beneath the Collegium)
+#   flag  spn_order_hall_noticed   50 years  a lord over a hall: The Cellar That Isn't There, or an AI hunter's look
+#   flag  spn_cm_seen_0164         10 years  Beneath the Collegium, set when it arrives (F14)
+#   activity spn_hunt_corridor_done / spn_hunt_corridor_turned: the life of one hunt
+#   global spn_order_halls_seeded            once per game
+# EVERY WRITER of spn_order_hall, spn_order_hall_of and spn_order_hall_lord: spn_order_hall_adopt_effect (callers: the
+# building's completion, the chapter's year step 2c, a temple founded in an old Collegium, the seed); spn_order_hall_lord
+# also in step 2d. spn_order_seat gains adopt as a third writer (its others: the founding, the mirrors).
+# THE ONE REMOVER: spn_order_hall_release_effect (callers: the dissolve, step 2b, "Let the hall go" and its AI twin, and
+# adopt's own defensive pre-clear). It removes the Order's own variables only. No script here ever removes a building:
+# after a Break or a dissolve the Collegia stand on as ordinary houses of learning.
+# Nothing here kills or wounds: The Corridor's failure is stress; Respondeo in the hall's county skips its wound.
+
+# ==================================================================================================
+# THE BUILDING'S COMPLETION
+# ==================================================================================================
+# Province scope (spn_order_collegium_01's on_complete, inside hidden_effect). The builder's temple takes the hall when
+# he may raise it (spn_order_hall_patron_trigger). Otherwise it stands as an ordinary Collegium, and a player member whose
+# temple already meets beneath another is told so. scope:character is whoever paid; the county's holder if the engine
+# gave none (add_building, §8.0 row 6: then the seed's own adopt finds the hall already set, and skips).
+spn_order_hall_complete_effect = {
+	save_scope_as = spn_hall_prov
+	# 2.39 (Boot 1, 16 Oct): the builder while he lives; a hall finished after his death falls to the county's holder.
+	if = {
+		limit = { scope:character ?= { is_alive = yes } }
+		scope:character = { save_scope_as = spn_hall_builder }
+	}
+	else_if = {
+		limit = { exists = county.holder }
+		county.holder = { save_scope_as = spn_hall_builder }
+	}
+	if = {
+		limit = {
+			NOT = { exists = var:spn_order_hall_of }
+			scope:spn_hall_builder ?= { spn_order_hall_patron_trigger = yes }
+		}
+		scope:spn_hall_builder.var:spn_order_chapter = { spn_order_hall_adopt_effect = { PROV = scope:spn_hall_prov } }
+	}
+	else_if = {
+		limit = {
+			scope:spn_hall_builder ?= {
+				is_ai = no
+				spn_is_order_member_trigger = yes
+				var:spn_order_chapter ?= {
+					exists = var:spn_order_hall
+					NOT = { var:spn_order_hall = scope:spn_hall_prov }
+				}
+			}
+		}
+		scope:spn_hall_builder = {
+			send_interface_toast = {
+				type = event_toast_text_neutral
+				title = spn_order_toast_hall_has_one
+				desc = spn_order_toast_hall_has_one.desc
+				left_icon = this
+			}
+		}
+	}
+	# The raising is over either way: a pending mark for this province goes (adopt has already cleared its own).
+	scope:spn_hall_builder ?= {
+		var:spn_order_chapter ?= {
+			if = {
+				limit = { var:spn_order_hall_building ?= scope:spn_hall_prov }
+				remove_variable = spn_order_hall_building
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE ONE WRITER, THE ONE REMOVER
+# ==================================================================================================
+# Story scope (a chapter). $PROV$ = a province with a Collegium. The temple meets beneath it: the hall and the province's
+# back-pointer, the seat moved to its county (the temple is where its hall is), the lord above it, the cap re-read (+10
+# while it stands), the players told, the panel and the mirrors refreshed.
+spn_order_hall_adopt_effect = {
+	save_scope_as = spn_ha_ch
+	$PROV$ = { save_scope_as = spn_ha_prov }
+	# Defensive: every caller already tests that the temple has no hall.
+	if = {
+		limit = { exists = var:spn_order_hall }
+		spn_order_hall_release_effect = yes
+	}
+	scope:spn_ha_prov.county = { save_scope_as = spn_ha_county }
+	set_variable = { name = spn_order_hall value = scope:spn_ha_prov }
+	set_variable = { name = spn_order_seat value = scope:spn_ha_county }
+	if = {
+		limit = { exists = scope:spn_ha_county.holder }
+		set_variable = { name = spn_order_hall_lord value = scope:spn_ha_county.holder }
+	}
+	if = {
+		limit = { has_variable = spn_order_hall_building }
+		remove_variable = spn_order_hall_building
+	}
+	scope:spn_ha_prov = { set_variable = { name = spn_order_hall_of value = scope:spn_ha_ch } }
+	set_variable = { name = spn_order_cap value = spn_order_cap_value }
+	every_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_ai = no
+			is_alive = yes
+		}
+		send_interface_toast = {
+			type = event_toast_text_good
+			title = spn_order_toast_hall_raised
+			desc = spn_order_toast_hall_raised.desc
+			left_icon = this
+		}
+	}
+	spn_order_refresh_effect = yes
+}
+
+# Story scope (a chapter). THE ONLY REMOVER. The Order's own variables only; the building above is never touched. In the
+# dissolve it runs first, while the story still exists (end_story destroys the scope).
+spn_order_hall_release_effect = {
+	save_scope_as = spn_hr_ch
+	var:spn_order_hall ?= {
+		if = {
+			limit = { var:spn_order_hall_of ?= scope:spn_hr_ch }
+			remove_variable = spn_order_hall_of
+		}
+	}
+	if = {
+		limit = { has_variable = spn_order_hall }
+		remove_variable = spn_order_hall
+	}
+	if = {
+		limit = { has_variable = spn_order_hall_lord }
+		remove_variable = spn_order_hall_lord
+	}
+	if = {
+		limit = { has_variable = spn_order_hall_profaned }
+		remove_variable = spn_order_hall_profaned
+	}
+	if = {
+		limit = { has_variable = spn_order_hall_warded }
+		remove_variable = spn_order_hall_warded
+	}
+	set_variable = { name = spn_order_cap value = spn_order_cap_value }
+}
+
+# ==================================================================================================
+# THE TEMPLE'S YEAR (spn_order_chapter_year_effect, after step 2; story scope; scope:spn_yr_ch, scope:spn_yr_head).
+# Three short steps. Every scope is banked in an effect block before a limit reads it (§8.0 row 5: a scope saved inside a
+# limit is not trusted).
+# ==================================================================================================
+spn_order_hall_year_effect = {
+	# 2b. The Collegium is gone (the holding razed, or any other loss). The absence of the BUILDING is the only test, and
+	#     every way it can be absent means the same thing for the temple, so releasing is right. Only the Order's own
+	#     variables go.
+	if = {
+		limit = {
+			exists = var:spn_order_hall
+			NOT = { var:spn_order_hall = { has_building = spn_order_collegium_01 } }
+		}
+		every_in_list = {
+			variable = spn_order_members
+			limit = {
+				is_ai = no
+				is_alive = yes
+			}
+			send_interface_toast = {
+				type = event_toast_text_bad
+				title = spn_order_toast_hall_lost
+				desc = spn_order_toast_hall_lost.desc
+				left_icon = this
+			}
+		}
+		spn_order_hall_release_effect = yes
+	}
+	# 2c. A Collegium standing empty beneath the head's lord is adopted (a temple that lost its hall, an heir's, a scholar's).
+	#     2.39 (Boot 1, 16 Oct): or, for a head who holds no land, in the capital of the court he serves (expert call
+	#     T4 widened; spn_order_hall_home_effect). Boot 4: the capital first, then anywhere the lord holds.
+	if = {
+		limit = { NOT = { exists = var:spn_order_hall } }
+		if = {
+			limit = { exists = scope:spn_hh_prov }
+			clear_saved_scope = spn_hh_prov
+		}
+		scope:spn_yr_head = { spn_order_hall_home_effect = yes }
+		if = {
+			limit = {
+				scope:spn_hh_prov ?= {
+					has_building = spn_order_collegium_01
+					NOT = { exists = var:spn_order_hall_of }
+				}
+			}
+			spn_order_hall_adopt_effect = { PROV = scope:spn_hh_prov }
+		}
+		# 2.39 (Boot 3, 16 Oct): the Order raises its own hall: one year in five, the council pays, in the place the home effect
+		# found (Boot 4: past a full capital, so it may stand in a holding no ruler would have built it in; the Order's doing)
+		else_if = {
+			limit = {
+				exists = scope:spn_hh_prov
+				NOT = { exists = var:spn_order_hall_building }
+				scope:spn_yr_head = { is_ai = yes }
+				# Boot 4: the place spn_order_hall_home_effect found, under an AI lord and an AI holder (never a player's land)
+				scope:spn_hh_prov = { spn_order_hall_room_trigger = yes }
+				scope:spn_hh_lord ?= { spn_order_hall_council_lord_trigger = yes }
+				scope:spn_hh_prov.province_owner ?= { is_ai = yes }
+				# Boot 4 review: not while the lord is raising the temple's Collegium himself (on_start marks the province)
+				NOT = {
+					scope:spn_hh_lord ?= {
+						any_directly_owned_province = {
+							has_variable = spn_collegium_for_hall
+							NOT = { has_building = spn_order_collegium_01 }
+						}
+					}
+				}
+				exists = global_var:mc_gold_global
+				global_var:mc_gold_global >= spn_order_hall_council_cost_value
+			}
+			random = {
+				chance = 20
+				decrease_mc_funds_effect = { VALUE = spn_order_hall_council_cost_value }
+				scope:spn_hh_prov = {
+					add_building = spn_order_collegium_01
+					spn_collegium_register_effect = yes
+				}
+				if = {
+					limit = {
+						NOT = { exists = var:spn_order_hall }
+						scope:spn_hh_prov = { NOT = { exists = var:spn_order_hall_of } } # one hall, one temple
+					}
+					spn_order_hall_adopt_effect = { PROV = scope:spn_hh_prov }
+				}
+			}
+		}
+	}
+	# 2d. A new lord above the hall: once per change of holder.
+	if = {
+		limit = { exists = var:spn_order_hall }
+		save_scope_as = spn_hl_ch
+		var:spn_order_hall = { save_scope_as = spn_hl_prov }
+		scope:spn_hl_prov.county = { save_scope_as = spn_hl_county }
+		scope:spn_hl_county.holder ?= { save_scope_as = spn_hl_new }
+	}
+	if = {
+		limit = {
+			exists = scope:spn_hl_new
+			NOT = { var:spn_order_hall_lord ?= scope:spn_hl_new }
+		}
+		set_variable = { name = spn_order_hall_lord value = scope:spn_hl_new }
+		if = {
+			limit = { scope:spn_hl_new = { NOT = { var:spn_order_chapter ?= scope:spn_hl_ch } } }
+			# The temple's master answers first: a player in A New Lord Above the Hall, an AI by his nature.
+			scope:spn_yr_head = {
+				if = {
+					limit = { is_ai = no }
+					trigger_event = { id = spn_order.0165 days = { 1 30 } }
+				}
+				else = {
+					spn_order_hall_ai_lord_effect = yes
+				}
+			}
+			# Then the lord, while the hall is still the temple's. A player gets The Cellar That Isn't There (a report of a
+			# change: it is not held back by the flavor gate); an AI hunter looks on arrival.
+			if = {
+				limit = { exists = var:spn_order_hall }
+				scope:spn_hl_new = {
+					if = {
+						limit = {
+							is_ai = no
+							NOT = { has_character_flag = spn_order_hall_noticed }
+						}
+						add_character_flag = { flag = spn_order_hall_noticed years = 50 }
+						trigger_event = { id = spn_order.0166 days = { 60 300 } }
+					}
+					else_if = {
+						limit = {
+							is_ai = yes
+							NOT = { has_character_flag = spn_order_hall_noticed }
+							OR = {
+								spn_has_hunter_trait = yes
+								is_witch_hunter = yes
+							}
+						}
+						add_character_flag = { flag = spn_order_hall_noticed years = 50 }
+						random = {
+							chance = 25
+							spn_order_hall_searched_effect = { CH = scope:spn_hl_ch }
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+# CHARACTER scope (a Temple Magus). 2.39 (Boot 1, 16 Oct): saves scope:spn_hh_prov, where his temple may meet, beneath
+# his lord: himself when he holds land, else the court he serves, else (Boot 4) the holder of his family estate's county.
+# Nothing for a wanderer, a guest or a landless adventurer (no court of his own to meet beneath).
+# 2.39 (Boot 4, 16 Oct): the lord (scope:spn_hh_lord), then a place under him (scope:spn_hh_prov). The caller clears spn_hh_prov.
+spn_order_hall_home_effect = {
+	if = {
+		limit = { exists = scope:spn_hh_lord }
+		clear_saved_scope = spn_hh_lord
+	}
+	if = {
+		limit = { exists = scope:spn_hh_first }
+		clear_saved_scope = spn_hh_first
+	}
+	if = {
+		limit = { is_landed = yes }
+		save_scope_as = spn_hh_lord
+		capital_province ?= { save_scope_as = spn_hh_first }
+	}
+	else_if = {
+		limit = { is_courtier = yes }
+		court_owner ?= {
+			save_scope_as = spn_hh_lord
+			capital_province ?= { save_scope_as = spn_hh_first }
+		}
+	}
+	else_if = {
+		# The head of a family with an estate and no court above him (an administrative realm): beneath the estate.
+		limit = {
+			is_landless_adventurer = no
+			domicile ?= { domicile_location ?= { county ?= { holder ?= { is_alive = yes } } } }
+		}
+		domicile.domicile_location = {
+			save_scope_as = spn_hh_first
+			county.holder = { save_scope_as = spn_hh_lord }
+		}
+	}
+	# 1. A Collegium no temple meets beneath: the first place, then anywhere the lord holds.
+	if = {
+		limit = { scope:spn_hh_first ?= { spn_order_hall_free_trigger = yes } }
+		scope:spn_hh_first = { save_scope_as = spn_hh_prov }
+	}
+	else_if = {
+		limit = { scope:spn_hh_lord ?= { any_directly_owned_province = { spn_order_hall_free_trigger = yes } } }
+		scope:spn_hh_lord = {
+			random_directly_owned_province = {
+				limit = { spn_order_hall_free_trigger = yes }
+				save_scope_as = spn_hh_prov
+			}
+		}
+	}
+	# 2. A holding with room for one: the first place, then anywhere the lord holds, then the first place's county.
+	else_if = {
+		limit = { scope:spn_hh_first ?= { spn_order_hall_room_trigger = yes } }
+		scope:spn_hh_first = { save_scope_as = spn_hh_prov }
+	}
+	else_if = {
+		limit = { scope:spn_hh_lord ?= { any_directly_owned_province = { spn_order_hall_room_trigger = yes } } }
+		scope:spn_hh_lord = {
+			random_directly_owned_province = {
+				limit = { spn_order_hall_room_trigger = yes }
+				save_scope_as = spn_hh_prov
+			}
+		}
+	}
+	else_if = {
+		limit = { scope:spn_hh_first ?= { county ?= { any_county_province = { spn_order_hall_room_trigger = yes } } } }
+		scope:spn_hh_first.county = {
+			random_county_province = {
+				limit = { spn_order_hall_room_trigger = yes }
+				save_scope_as = spn_hh_prov
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE NEW LORD
+# ==================================================================================================
+# Root: an AI Temple Magus (step 2d); scope:spn_hl_new, scope:spn_hl_ch. A New Lord Above the Hall, decided by his nature.
+spn_order_hall_ai_lord_effect = {
+	random_list = {
+		40 = {
+			trigger = { scope:spn_hl_new = { spn_order_hall_can_bring_in_trigger = yes } }
+			modifier = {
+				add = 20
+				has_trait = gregarious
+			}
+			spn_order_hall_bring_in_effect = yes
+		}
+		50 = {
+			modifier = {
+				add = 20
+				OR = {
+					has_trait = paranoid
+					has_trait = deceitful
+				}
+			}
+			# The scholars go on as they always have.
+		}
+		10 = {
+			modifier = {
+				add = 30
+				OR = {
+					has_trait = content
+					has_trait = craven
+				}
+			}
+			scope:spn_hl_prov = { set_variable = { name = spn_order_hall_let_go value = yes years = 20 } } # 2.39 (final pass, 17 Oct): bricked up
+			scope:spn_hl_ch = {
+				spn_order_hall_release_effect = yes
+				spn_order_refresh_effect = yes
+			}
+		}
+	}
+}
+
+# Root: the Temple Magus; scope:spn_hl_new, the lord. "Bring him in": the existing sponsor flag (+60 in the Selection) and,
+# for a player lord, the rumour. If he cannot join, a player master is told so with a neutral toast, and nothing is
+# revealed (B6, red team M7).
+spn_order_hall_bring_in_effect = {
+	if = {
+		limit = { scope:spn_hl_new = { spn_order_hall_can_bring_in_trigger = yes } }
+		scope:spn_hl_new = {
+			add_character_flag = { flag = spn_order_sponsored years = 5 }
+			if = {
+				limit = {
+					is_ai = no
+					NOT = { has_character_flag = spn_order_whispered }
+				}
+				spn_order_whisper_effect = yes
+			}
+		}
+	}
+	else_if = {
+		limit = { is_ai = no }
+		send_interface_toast = {
+			type = event_toast_text_neutral
+			title = spn_order_toast_hall_refused
+			desc = spn_order_toast_hall_refused.desc
+			left_icon = scope:spn_hl_new
+		}
+	}
+}
+
+# Root: the lord who searched; $CH$: the temple. The first half of spn_order_hunter_learns_effect
+# (zz_spn_order_effects.txt:2894-2903), without the relic and without Tell Me About the Rose: he knows the temple for ten
+# years (F2's spn_order_break_knows_trigger reads it) and learns its master's Blue Rose secret.
+spn_order_hall_searched_effect = {
+	save_scope_as = spn_hs_who
+	$CH$ = { save_scope_as = spn_hs_ch }
+	set_variable = { name = spn_hunter_knows_chapter value = scope:spn_hs_ch years = 10 }
+	scope:spn_hs_ch.story_owner ?= {
+		random_secret = {
+			limit = {
+				secret_type = spn_secret_blue_rose
+				NOT = { is_known_by = scope:spn_hs_who }
+			}
+			reveal_to = scope:spn_hs_who
+		}
+	}
+}
+
+# ==================================================================================================
+# THE CORRIDOR (spn_hunt.0173). Root: the hunter; the sweep's scopes bound; scope:spn_cor_ch, the temple.
+# ==================================================================================================
+# He came through: the temple is profaned for ten years and counts as fallen (F2), and the sweep goes on. The round is
+# put back by one, so the next door is still the second; spn_hunt_corridor_done keeps The Corridor from coming again.
+spn_hunt_corridor_pass_effect = {
+	scope:spn_cor_ch = {
+		set_variable = { name = spn_order_hall_profaned value = yes years = 10 }
+		# The temple's players learn it the way a temple would: the hall gives them nothing for ten years.
+		every_in_list = {
+			variable = spn_order_members
+			limit = {
+				is_ai = no
+				is_alive = yes
+			}
+			send_interface_toast = {
+				type = event_toast_text_bad
+				title = spn_order_toast_hall_profaned
+				desc = spn_order_toast_hall_profaned.desc
+				left_icon = this
+			}
+		}
+	}
+	spn_order_temple_swept_effect = yes
+	scope:spn_hunt_activity = { change_variable = { name = spn_hunt_coven_round add = -1 } }
+	spn_hunt_coven_next_effect = yes
+}
+
+# He woke on the stair with the night gone: stress, never a wound; the Order has his name now (F2's watch list); the sweep
+# ends the ordinary way, last.
+spn_hunt_corridor_fail_effect = {
+	add_stress = major_stress_impact_gain
+	if = {
+		limit = { is_ai = no }
+		send_interface_toast = {
+			type = event_toast_text_bad
+			title = spn_hunt_toast_corridor_fail
+			desc = spn_hunt_toast_corridor_fail.desc
+			left_icon = this
+		}
+	}
+	spn_order_watch_add_effect = { WHO = this }
+	spn_hunt_coven_end_effect = yes
+}
+
+# ==================================================================================================
+# THE SEED: once per game (spn_order_yearly_older_save). Every AI temple whose head's capital has a free slot gets its
+# Collegium (expert call T4: Belgrave's temple was old), and for each one, the most learned AI ruler outside the Order
+# with a free slot in his capital gets one too (red team H1), so the Collegia on the map are no list of Temple Magi.
+# A player head chooses his own slot. No world walk: the temples' global list, and one ordered walk of the independent
+# rulers per temple (about twenty), once.
+# ==================================================================================================
+spn_order_hall_seed_effect = {
+	set_global_variable = spn_order_halls_seeded
+	every_in_global_list = {
+		variable = spn_order_chapters
+		limit = {
+			spn_is_temple_magus_trigger = yes
+			var:spn_order_chapter ?= { NOT = { exists = var:spn_order_hall } }
+			OR = {
+				spn_order_hall_seed_site_trigger = yes
+				# 2.39 (Boot 1, 16 Oct): an AI courtier head: the capital of the AI court he serves (T4 widened)
+				AND = {
+					is_ai = yes
+					is_landed = no
+					is_courtier = yes
+					court_owner ?= { spn_order_hall_seed_site_trigger = yes }
+				}
+			}
+		}
+		# The site is re-read here, not trusted from the list: two heads may serve the same court, or a courtier head the
+		# landed head of another temple, and the first one's Collegium takes the slot (review of PB, 16 Oct).
+		if = {
+			limit = { exists = scope:spn_hs_prov }
+			clear_saved_scope = spn_hs_prov
+		}
+		if = {
+			limit = { spn_order_hall_seed_site_trigger = yes }
+			capital_province = { save_scope_as = spn_hs_prov }
+		}
+		else_if = {
+			limit = {
+				is_landed = no
+				is_courtier = yes
+				court_owner ?= { spn_order_hall_seed_site_trigger = yes }
+			}
+			court_owner.capital_province = { save_scope_as = spn_hs_prov }
+		}
+		scope:spn_hs_prov ?= {
+			add_building = spn_order_collegium_01
+			spn_collegium_register_effect = yes # 2.39 (Thomas's call, 16 Oct): the world list
+		}
+		# §8.0 row 6: if add_building ran the building's on_complete, the hall is already set and this is skipped.
+		var:spn_order_chapter = {
+			if = {
+				limit = {
+					NOT = { exists = var:spn_order_hall }
+					scope:spn_hs_prov ?= { NOT = { exists = var:spn_order_hall_of } } # 2.39 (Boot 1, 16 Oct): one hall, one temple
+				}
+				spn_order_hall_adopt_effect = { PROV = scope:spn_hs_prov }
+			}
+		}
+		ordered_independent_ruler = {
+			limit = {
+				spn_order_hall_seed_site_trigger = yes
+				NOT = { exists = var:spn_order_chapter }
+			}
+			order_by = learning
+			save_scope_as = spn_hs_court
+		}
+		if = { # 2.39 (Thomas's call, 16 Oct): no more than 7 ordinary Collegia
+			limit = { spn_collegia_ordinary_value < spn_collegia_ordinary_cap_value }
+			scope:spn_hs_court ?= {
+				capital_province = {
+					add_building = spn_order_collegium_01
+					spn_collegium_register_effect = yes
+				}
+			}
+		}
+		clear_saved_scope = spn_hs_court
+	}
+}

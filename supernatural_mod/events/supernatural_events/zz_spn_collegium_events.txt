@@ -1,0 +1,226 @@
+﻿namespace = spn_order
+
+# Supernatural 2.39 -- the Collegium's Order events (WORK-ORDER-2.39 F15). Numbers 0164-0166 (checked free).
+# The Corridor, the hunter's side, is spn_hunt.0173 in zz_spn_collegium_hunt_events.txt. Effects, values and the data
+# model: zz_spn_collegium_effects.txt, zz_spn_collegium_values.txt, zz_spn_collegium_triggers.txt.
+
+# ==================================================================================================
+# .0164 -- Beneath the Collegium. A chapter moment (F14): one branch of the chapter's yearly moment list, chosen through
+# spn_order_cm_hall_ok_trigger. Flavor: it checks and marks the 60-day gate, and is seen once in ten years, the flag set
+# when it arrives.
+# ==================================================================================================
+spn_order.0164 = {
+	type = character_event
+	title = spn_order.0164.t
+	desc = spn_order.0164.desc
+	theme = witchcraft
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = personality_rational }
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_flavor_ready_trigger = yes
+		spn_order_cm_hall_ok_trigger = yes
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_cm_seen_0164 years = 10 }
+		var:spn_order_chapter = { save_scope_as = spn_bc_ch }
+		scope:spn_bc_ch.var:spn_order_hall.county = { save_scope_as = spn_bc_county }
+	}
+	# Walk the corridor with the neophytes.
+	option = {
+		name = spn_order.0164.a
+		custom_tooltip = spn_order.0164.a.tt
+		spn_order_add_standing_effect = { VALUE = 5 }
+		stress_and_fulfillment_impact = {
+			craven = minor_stress_impact_gain
+		}
+		ai_chance = { base = 50 }
+	}
+	# A Mage renews the ward over the arch: the hall is warded for ten years (searches and The Corridor are harder).
+	option = {
+		name = spn_order.0164.b
+		trigger = { has_trait = archmage }
+		custom_tooltip = spn_order.0164.b.tt
+		spend_minor_ps_effect = yes
+		scope:spn_bc_ch = { set_variable = { name = spn_order_hall_warded value = yes years = 10 } }
+		spn_order_add_standing_effect = { VALUE = 3 }
+		ai_chance = { base = 30 }
+	}
+	# That is the Magistrati's work.
+	option = {
+		name = spn_order.0164.c
+		ai_chance = { base = 20 }
+	}
+}
+
+# ==================================================================================================
+# .0165 -- A New Lord Above the Hall. A player Temple Magus, once per change of the hall county's holder to someone
+# outside the temple (spn_order_hall_year_effect, step 2d); scope:spn_hl_ch, spn_hl_prov, spn_hl_county, spn_hl_new.
+# Management: it neither checks nor marks the flavor gate (F14). Red team M6: on arrival the new lord must still hold the
+# county and the hall must still stand. Red team M7 / B6: "Bring him in" is always shown; a refusal is a neutral toast.
+# ==================================================================================================
+spn_order.0165 = {
+	type = character_event
+	title = spn_order.0165.t
+	desc = spn_order.0165.desc
+	theme = secret
+	override_background = { reference = study }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = {
+		character = scope:spn_hl_new
+		trigger = { exists = scope:spn_hl_new }
+		animation = idle
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_hl_ch
+		exists = scope:spn_hl_prov
+		exists = scope:spn_hl_new
+		scope:spn_hl_ch = {
+			story_owner = root
+			var:spn_order_hall ?= scope:spn_hl_prov
+			var:spn_order_hall_lord ?= scope:spn_hl_new
+		}
+		scope:spn_hl_prov = {
+			has_building = spn_order_collegium_01
+			county ?= { holder ?= scope:spn_hl_new }
+		}
+		scope:spn_hl_new = {
+			is_alive = yes
+			NOT = { var:spn_order_chapter ?= scope:spn_hl_ch }
+		}
+	}
+	# Bring him in.
+	option = {
+		name = spn_order.0165.a
+		custom_tooltip = spn_order.0165.a.tt
+		hidden_effect = { spn_order_hall_bring_in_effect = yes }
+		ai_chance = { base = 40 }
+	}
+	# The scholars go on as they always have.
+	option = {
+		name = spn_order.0165.b
+		custom_tooltip = spn_order.0165.b.tt
+		ai_chance = { base = 50 }
+	}
+	# Let the hall go.
+	option = {
+		name = spn_order.0165.c
+		custom_tooltip = spn_order.0165.c.tt
+		hidden_effect = {
+			scope:spn_hl_prov = { set_variable = { name = spn_order_hall_let_go value = yes years = 20 } } # 2.39 (final pass, 17 Oct): bricked up
+			scope:spn_hl_ch = {
+				spn_order_hall_release_effect = yes
+				spn_order_refresh_effect = yes
+			}
+		}
+		ai_chance = { base = 10 }
+	}
+}
+
+# ==================================================================================================
+# .0166 -- The Cellar That Isn't There. A player lord who holds a hall's county and is not of its temple, once per fifty
+# years (flag spn_order_hall_noticed, set when it is sent); scope:spn_hl_ch, spn_hl_prov, spn_hl_county. A report of a
+# change of holder: it never waits on the flavor gate, and marks it (F14). Red team M6: on arrival he must still hold the
+# county and the hall must still be that temple's; otherwise nothing fires and the fifty-year flag is given back.
+# The show's tour-guide joke (S1E01): "The library doesn't even have a basement."
+# ==================================================================================================
+spn_order.0166 = {
+	type = character_event
+	title = spn_order.0166.t
+	desc = spn_order.0166.desc
+	theme = secret
+	override_background = { reference = study }
+	left_portrait = { character = root animation = thinking }
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_hl_ch
+		exists = scope:spn_hl_prov
+		scope:spn_hl_prov = {
+			has_building = spn_order_collegium_01
+			var:spn_order_hall_of ?= scope:spn_hl_ch
+			county ?= { holder ?= root }
+		}
+		NOT = { var:spn_order_chapter ?= scope:spn_hl_ch }
+	}
+	on_trigger_fail = {
+		if = {
+			limit = { has_character_flag = spn_order_hall_noticed }
+			remove_character_flag = spn_order_hall_noticed
+		}
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		save_scope_as = spn_hs_lord
+		scope:spn_hl_prov.county = { save_scope_as = spn_hl_county }
+	}
+	# Scholars keep odd hours.
+	option = {
+		name = spn_order.0166.a
+		ai_chance = { base = 50 }
+	}
+	# Have the cellars searched (a hidden roll).
+	option = {
+		name = spn_order.0166.b
+		custom_tooltip = spn_order.0166.b.tt
+		hidden_effect = {
+			random = {
+				chance = spn_order_hall_search_chance_value
+				save_scope_value_as = { name = spn_hs_found value = yes }
+			}
+			if = {
+				limit = { exists = scope:spn_hs_found }
+				spn_order_hall_searched_effect = { CH = scope:spn_hl_ch }
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order_toast_cellar_found
+					desc = spn_order_toast_cellar_found.desc
+					left_icon = root
+				}
+			}
+			else = {
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_order_toast_cellar_nothing
+					desc = spn_order_toast_cellar_nothing.desc
+					left_icon = root
+				}
+				# The temple heard the digging: a player master is told, and the Order has his name (F2's watch list).
+				scope:spn_hl_ch.story_owner ?= {
+					if = {
+						limit = { is_ai = no }
+						send_interface_toast = {
+							type = event_toast_text_bad
+							title = spn_order_toast_hall_searched
+							desc = spn_order_toast_hall_searched.desc
+							left_icon = scope:spn_hs_lord
+						}
+					}
+				}
+				spn_order_watch_add_effect = { WHO = root }
+			}
+		}
+		ai_chance = { base = 30 }
+	}
+	# Ask the master of the Collegium what is taught there at night. Always shown (B6): whether he could ever be one of
+	# them is read in the effect, and the answer he gets is the same either way.
+	option = {
+		name = spn_order.0166.c
+		custom_tooltip = spn_order.0166.c.tt
+		hidden_effect = {
+			if = {
+				limit = { spn_order_hall_can_bring_in_trigger = yes }
+				add_character_flag = { flag = spn_order_eyes_open years = 10 }
+			}
+			send_interface_toast = {
+				type = event_toast_text_neutral
+				title = spn_order_toast_master_talks
+				desc = spn_order_toast_master_talks.desc
+				left_icon = root
+			}
+		}
+		ai_chance = { base = 20 }
+	}
+}

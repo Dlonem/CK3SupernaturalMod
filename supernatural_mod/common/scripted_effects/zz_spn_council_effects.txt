@@ -1,0 +1,90 @@
+﻿# Supernatural 2.39 -- the Gnostic Council's seats (WORK-ORDER-2.39 B3 D). Called once a year from spn_order_yearly
+# (zz_spn_order_on_actions.txt), before the Order's own block, so it runs whatever the Order rule says.
+
+# A man who holds two seats gives up the lower one. The chair is kept over any seat, then the Keeper of the Reliquary
+# (loremaster), then the Adeptus Major (black_mage), then the Chancellor (admin). The Order offers the freed seat the
+# same year (spn_order_chair_yearly_effect, inside the Order block that runs after this).
+#
+# Writers of the four seat variables, all of them: Witchcraft's appoint_as_archmage_effect and appoint_to_mc1/2/3_effect
+# (00_variety_magic_effects.txt), and nothing else in Witchcraft or the mod. remove_from_mc_effect is NOT used: it empties
+# every seat the man holds and takes mc_member_var with them, and he keeps one seat. Only the lower seat's global variable
+# and its modifier go; mc_member_var stays.
+#
+# Reads first, removals last: every holder is banked before any seat is emptied.
+# A player who gives up a seat gets a toast naming it (review L7); the AI needs none.
+spn_council_dedupe_effect = {
+	global_var:current_archmage_global ?= { save_temporary_scope_as = spn_cd_chair }
+	global_var:current_loremaster_global ?= { save_temporary_scope_as = spn_cd_keeper }
+	global_var:current_black_mage_global ?= { save_temporary_scope_as = spn_cd_adeptus }
+	global_var:current_admin_global ?= { save_temporary_scope_as = spn_cd_chancellor }
+	# The Keeper's seat, if he also holds the chair.
+	if = {
+		limit = {
+			exists = scope:spn_cd_keeper
+			scope:spn_cd_chair ?= scope:spn_cd_keeper
+		}
+		scope:spn_cd_keeper = {
+			remove_global_variable = current_loremaster_global
+			remove_character_modifier = mc_loremaster_modifier
+			# 2.39 (review L7): a player is told which seat he gave up, and why.
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_council_dedupe_toast
+					left_icon = this
+					custom_tooltip = spn_council_dedupe_keeper_tt
+				}
+			}
+		}
+	}
+	# The Adeptus Major's seat, if he also holds the chair or the Keeper's seat.
+	if = {
+		limit = {
+			exists = scope:spn_cd_adeptus
+			OR = {
+				scope:spn_cd_chair ?= scope:spn_cd_adeptus
+				scope:spn_cd_keeper ?= scope:spn_cd_adeptus
+			}
+		}
+		scope:spn_cd_adeptus = {
+			remove_global_variable = current_black_mage_global
+			remove_character_modifier = mc_black_mage_modifier
+			# 2.39 (review L7): a player is told which seat he gave up, and why.
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_council_dedupe_toast
+					left_icon = this
+					custom_tooltip = spn_council_dedupe_adeptus_tt
+				}
+			}
+		}
+	}
+	# The Chancellor's seat, if he also holds the chair or either higher seat.
+	if = {
+		limit = {
+			exists = scope:spn_cd_chancellor
+			OR = {
+				scope:spn_cd_chair ?= scope:spn_cd_chancellor
+				scope:spn_cd_keeper ?= scope:spn_cd_chancellor
+				scope:spn_cd_adeptus ?= scope:spn_cd_chancellor
+			}
+		}
+		scope:spn_cd_chancellor = {
+			remove_global_variable = current_admin_global
+			remove_character_modifier = mc_admin_modifier
+			# 2.39 (review L7): a player is told which seat he gave up, and why.
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_council_dedupe_toast
+					left_icon = this
+					custom_tooltip = spn_council_dedupe_chancellor_tt
+				}
+			}
+		}
+	}
+}

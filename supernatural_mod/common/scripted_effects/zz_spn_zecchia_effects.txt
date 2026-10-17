@@ -1,0 +1,428 @@
+﻿# Supernatural 2.38 -- Zecchia, a minor demon who steals for a fee (WORK-ORDER-2.38 §11, C5).
+#
+# One persistent woman: global_var:spn_zecchia. Summoned into a court with add_courtier, sent home with move_to_pool
+# (never Witchcraft's demon_escapes_effect, which makes a NEW hostile demon). If she is ever dead, the next summoning
+# makes a new Zecchia. global_var:spn_zecchia_busy holds the hirer while a job runs (days = 240: a stuck job cannot lock
+# her away from the world).
+# On the hirer: var:spn_zecchia_count (1-5), var:spn_zecchia_target, var:spn_zecchia_fee, var:spn_zecchia_price
+# (flag:wine|cloak|hair), the flags spn_zecchia_council_pays and spn_zecchia_extended. Every one years = 1.
+
+# Fetch her into $HIRER$'s court, or make her.
+spn_zecchia_get_effect = {
+	$HIRER$ = { save_scope_as = spn_zg_hirer }
+	if = {
+		limit = { global_var:spn_zecchia ?= { is_alive = yes } }
+		scope:spn_zg_hirer = { add_courtier = global_var:spn_zecchia }
+	}
+	else = {
+		create_character = {
+			template = spn_zecchia_character
+			employer = scope:spn_zg_hirer
+			save_scope_as = spn_new_zecchia
+			after_creation = {
+				give_witch_secret_or_trait_effect2 = yes
+				set_source4demon = yes
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_new_zecchia }
+			set_global_variable = { name = spn_zecchia value = scope:spn_new_zecchia }
+		}
+	}
+	global_var:spn_zecchia ?= { save_scope_as = spn_zecchia }
+}
+
+# Back where she came from.
+spn_zecchia_dismiss_effect = {
+	if = {
+		limit = { has_global_variable = spn_zecchia_busy }
+		remove_global_variable = spn_zecchia_busy
+	}
+	global_var:spn_zecchia ?= {
+		if = {
+			limit = { is_alive = yes }
+			move_to_pool = yes
+		}
+	}
+}
+
+# The Summon Demon roll's new entry (E1). Witchcraft's own scope: scope:this0 is the summoner, as for its siblings.
+spn_ms_zecchia_demon_effect = {
+	scope:this0 = {
+		if = {
+			limit = { has_character_flag = no_complications }
+			remove_character_flag = no_complications
+		}
+		spn_zecchia_get_effect = { HIRER = scope:this0 }
+		if = {
+			limit = { has_character_flag = spn_knows_zecchia }
+			trigger_event = spn_zecchia.0010
+		}
+		else = {
+			add_character_flag = spn_knows_zecchia
+			trigger_event = spn_zecchia.0001
+		}
+	}
+}
+
+# Rob $VICTIM$ of up to $COUNT$ things she will take, for $THIEF$ (who receives them). The best first (illustrious,
+# famed, masterwork, common). Collect first, then move. She takes pledged items: her story in the show. Vanilla's own
+# theft effect does the moving (00_ep1_artifact_effects.txt:112): stolen history, and the victim a personal claim. For a
+# hirer, spn_zecchia_quiet_steal_effect moves it the same way without the claim (final pass, 17 Oct).
+spn_zecchia_rob_effect = {
+	$VICTIM$ = { save_scope_as = spn_zr_victim }
+	$THIEF$ = { save_scope_as = spn_zr_thief }
+	# 2.39 (Boot 3, 16 Oct): the item she was hired for goes first, then the best of the rest
+	if = {
+		limit = {
+			scope:spn_zr_thief.var:spn_zecchia_want ?= {
+				artifact_owner ?= scope:spn_zr_victim
+				spn_zecchia_takeable_trigger = yes
+			}
+		}
+		scope:spn_zr_thief.var:spn_zecchia_want = { add_to_temporary_list = spn_zr_items }
+	}
+	scope:spn_zr_victim = {
+		ordered_character_artifact = {
+			limit = {
+				spn_zecchia_takeable_trigger = yes
+				NOT = { is_in_list = spn_zr_items }
+			}
+			order_by = spn_artifact_worth_value
+			max = {
+				value = $COUNT$
+				if = {
+					limit = { any_in_list = { list = spn_zr_items count >= 1 } }
+					subtract = 1
+				}
+			}
+			check_range_bounds = no
+			add_to_temporary_list = spn_zr_items
+		}
+	}
+	set_variable = { name = spn_zr_worth value = 0 }
+	every_in_list = {
+		list = spn_zr_items
+		save_scope_as = spn_z_art
+		if = {
+			limit = { rarity = illustrious }
+			root = { change_variable = { name = spn_zr_worth add = 4 } }
+		}
+		else_if = {
+			limit = { rarity = famed }
+			root = { change_variable = { name = spn_zr_worth add = 3 } }
+		}
+		else_if = {
+			limit = { rarity = masterwork }
+			root = { change_variable = { name = spn_zr_worth add = 2 } }
+		}
+		else = {
+			root = { change_variable = { name = spn_zr_worth add = 1 } }
+		}
+		if = {
+			limit = { has_variable = spn_borrowed_from }
+			remove_variable = spn_borrowed_from
+			remove_variable = spn_borrow_timer
+			if = {
+				limit = { is_target_in_global_variable_list = { name = spn_relic_loans target = this } }
+				remove_list_global_variable = { name = spn_relic_loans target = this }
+			}
+		}
+		spn_relic_unpledge_taken_effect = { ART = scope:spn_z_art }
+		# 2.39 (Boot 3, 16 Oct): for a hirer the victim must not learn of, vanilla's own "You lost it to <owner>" toast (artifact.0011,
+		# on the change of owner) is suppressed the way vanilla suppresses it (00_ep1_artifact_effects.txt:12), and the
+		# victim is told only that it was taken. Her betrayal (she is the thief) keeps vanilla's toast: it names her.
+		if = {
+			limit = { NOT = { global_var:spn_zecchia ?= scope:spn_zr_thief } }
+			set_variable = { name = suppress_artifact_notifications value = yes days = 1 }
+		}
+		if = {
+			limit = { global_var:spn_zecchia ?= scope:spn_zr_thief }
+			steal_artifact_in_event_effect = { VICTIM = scope:spn_zr_victim THIEF = scope:spn_zr_thief ARTIFACT = scope:spn_z_art }
+		}
+		else = { # 2.39 (final pass, 17 Oct): no claim: it would name the hirer
+			spn_zecchia_quiet_steal_effect = { VICTIM = scope:spn_zr_victim THIEF = scope:spn_zr_thief ARTIFACT = scope:spn_z_art }
+		}
+		if = {
+			limit = {
+				NOT = { global_var:spn_zecchia ?= scope:spn_zr_thief }
+				scope:spn_zr_victim = { is_ai = no }
+			}
+			scope:spn_zr_victim = {
+				send_interface_toast = {
+					type = msg_artifact_lost
+					title = artifact_lost_toast
+					left_icon = scope:spn_z_art
+					custom_tooltip = spn_zecchia_victim_tt
+				}
+			}
+		}
+	}
+}
+
+# 2.39 (final pass, 17 Oct): vanilla's steal_artifact_in_event_effect (00_ep1_artifact_effects.txt, 1.20.1.1) without its last
+# step, the victim's claim: gaining one sends vanilla's "Gained Artifact Claim" with the new owner's portrait.
+spn_zecchia_quiet_steal_effect = {
+	if = {
+		limit = { exists = $VICTIM$.capital_province }
+		set_local_variable = {
+			name = location
+			value = $VICTIM$.capital_province
+		}
+	}
+	else_if = {
+		limit = { exists = $VICTIM$.location }
+		set_local_variable = {
+			name = location
+			value = $VICTIM$.location
+		}
+	}
+	$ARTIFACT$ = {
+		hidden_effect = {
+			if = {
+				limit = { exists = local_var:location }
+				set_owner = {
+					target = $THIEF$
+					history = {
+						type = stolen
+						actor = $VICTIM$
+						recipient = $THIEF$
+						location = local_var:location
+					}
+				}
+			}
+			else = {
+				set_owner = {
+					target = $THIEF$
+					history = {
+						type = conquest
+						actor = $THIEF$
+						recipient = $VICTIM$
+					}
+				}
+			}
+			if = {
+				limit = { NOT = { has_variable = stolen_artifact } }
+				set_variable = {
+					name = stolen_artifact
+					value = 1
+				}
+			}
+			else = {
+				change_variable = {
+					name = stolen_artifact
+					add = 1
+				}
+			}
+		}
+	}
+}
+
+# Zecchia Delivers (§11.3). Root: the hirer. Bank first: the count, the target, the fee.
+spn_zecchia_deliver_effect = {
+	save_scope_as = spn_zd_hirer
+	var:spn_zecchia_target = { save_scope_as = spn_zd_target }
+	save_scope_value_as = { name = spn_zd_count value = var:spn_zecchia_count }
+	spn_zecchia_rob_effect = { VICTIM = scope:spn_zd_target THIEF = root COUNT = scope:spn_zd_count }
+	# The fee: 100 x count promised, plus 50 x the worth of each thing taken.
+	save_scope_value_as = { name = spn_zd_fee value = spn_zecchia_fee_value }
+	if = {
+		limit = {
+			has_character_flag = spn_zecchia_council_pays
+			global_var:mc_gold_global >= scope:spn_zd_fee
+		}
+		decrease_mc_funds_effect = { VALUE = scope:spn_zd_fee }
+		if = {
+			limit = {
+				NOT = { global_var:current_archmage_global ?= root }
+				global_var:current_archmage_global ?= { is_alive = yes }
+			}
+			random = {
+				chance = 30
+				global_var:current_archmage_global = { trigger_event = { id = spn_zecchia.0040 days = { 10 60 } } }
+			}
+		}
+	}
+	else = {
+		remove_short_term_gold = scope:spn_zd_fee
+	}
+	# Her own price.
+	if = {
+		limit = { var:spn_zecchia_price ?= flag:wine }
+		add_stress = major_stress_impact_gain
+		remove_short_term_gold = medium_gold_value
+	}
+	else_if = {
+		limit = { var:spn_zecchia_price ?= flag:cloak }
+		if = {
+			limit = {
+				any_character_artifact = {
+					spn_is_magic_item_trigger = no
+					OR = {
+						rarity = common
+						rarity = masterwork
+					}
+				}
+			}
+			ordered_character_artifact = {
+				limit = {
+					spn_is_magic_item_trigger = no
+					OR = {
+						rarity = common
+						rarity = masterwork
+					}
+				}
+				order_by = spn_artifact_worth_value
+				destroy_artifact = this
+			}
+		}
+		else = {
+			add_prestige = -100
+		}
+	}
+	else = {
+		global_var:spn_zecchia ?= { set_variable = { name = spn_zecchia_hair_of value = root } }
+	}
+	# The victim will not let her be set on him by this hirer again for ten years.
+	scope:spn_zd_target = {
+		add_to_variable_list = { name = spn_zecchia_privilege target = root years = 10 }
+	}
+	# Sending her after a brother breaks the Order's rules (§11.5); a member victim knows her work at 50%.
+	if = {
+		limit = {
+			spn_is_order_member_trigger = yes
+			scope:spn_zd_target = { spn_is_order_member_trigger = yes }
+			OR = {
+				scope:spn_zd_target.var:spn_order_chapter ?= root.var:spn_order_chapter
+				spn_order_knows_member_trigger = { WHO = scope:spn_zd_target }
+			}
+		}
+		random = {
+			chance = 50
+			spn_order_broke_rules_effect = yes
+		}
+	}
+	spn_zecchia_clear_job_effect = yes
+	spn_zecchia_dismiss_effect = yes
+}
+
+# Every job variable off the hirer. Root: the hirer.
+spn_zecchia_clear_job_effect = {
+	remove_variable = spn_zecchia_count
+	remove_variable = spn_zecchia_target
+	remove_variable = spn_zecchia_fee
+	remove_variable = spn_zecchia_price
+	remove_variable = spn_zr_worth
+	remove_variable = spn_zecchia_want # 2.39 (Boot 3, 16 Oct): the item she was hired for
+	if = {
+		limit = { has_character_flag = spn_zecchia_council_pays }
+		remove_character_flag = spn_zecchia_council_pays
+	}
+	if = {
+		limit = { has_character_flag = spn_zecchia_extended }
+		remove_character_flag = spn_zecchia_extended
+	}
+}
+
+# The AI hirer names his target at once (§11.3): a rival who passes the send rule and whom he does not spare. Root: the hirer.
+spn_zecchia_ai_pick_target_effect = {
+	# 2.39 (Boot 3, 16 Oct): first the one who holds what he wants (an item he claims, or the page he knows of); else a rival, as before
+	if = {
+		limit = { exists = scope:spn_za_target }
+		clear_saved_scope = spn_za_target
+	}
+	if = {
+		limit = { exists = scope:spn_za_want }
+		clear_saved_scope = spn_za_want
+	}
+	random_claimed_artifact = {
+		limit = { spn_zecchia_wanted_item_trigger = { HIRER = root } }
+		save_scope_as = spn_za_want
+		artifact_owner = { save_scope_as = spn_za_target }
+	}
+	if = {
+		limit = {
+			NOT = { exists = scope:spn_za_target }
+			var:spn_knows_page_holder ?= { spn_zecchia_wanted_page_holder_trigger = { HIRER = root } }
+		}
+		var:spn_knows_page_holder = {
+			save_scope_as = spn_za_target
+			random_character_artifact = {
+				limit = { spn_zecchia_page_she_takes_trigger = yes }
+				save_scope_as = spn_za_want
+			}
+		}
+	}
+	# The item she is hired for goes first in the job (spn_zecchia_rob_effect).
+	if = {
+		limit = { exists = scope:spn_za_want }
+		set_variable = { name = spn_zecchia_want value = scope:spn_za_want years = 1 }
+	}
+	if = {
+		limit = { NOT = { exists = scope:spn_za_target } }
+		random_relation = {
+			type = rival
+			limit = {
+				spn_zecchia_wanted_victim_trigger = { HIRER = root } # 2.39 (Boot 4, 16 Oct): never one he spares (was the send rule alone)
+				any_character_artifact = { # 2.39 (final pass, 17 Oct): something she can take (the decision's ai_potential)
+					spn_is_magic_item_trigger = yes
+					spn_zecchia_takeable_trigger = yes
+				}
+			}
+			save_scope_as = spn_za_target
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_za_target }
+		set_variable = { name = spn_zecchia_target value = scope:spn_za_target years = 1 }
+		trigger_event = { id = spn_zecchia.0020 days = 90 }
+	}
+	else = {
+		spn_zecchia_clear_job_effect = yes
+		spn_zecchia_dismiss_effect = yes
+	}
+}
+
+# The deal struck at $COUNT$ things (How Much Will You Take?, §11.3). Root: the hirer. The promised part of the fee is
+# banked; an AI hirer names his target at once; a player has ninety days before she gets bored.
+spn_zecchia_set_job_effect = {
+	set_variable = { name = spn_zecchia_count value = $COUNT$ years = 1 }
+	set_variable = {
+		name = spn_zecchia_fee
+		value = {
+			value = $COUNT$
+			multiply = 100
+		}
+		years = 1
+	}
+	custom_tooltip = spn_zecchia_job_tt
+	if = {
+		limit = { is_ai = yes }
+		spn_zecchia_ai_pick_target_effect = yes
+	}
+	else = {
+		trigger_event = { id = spn_zecchia.0030 days = spn_zecchia_wait_days_value }
+	}
+}
+
+# The pact breaks (Zecchia Is Getting Bored, "I want more than we agreed."): she robs the hirer and keeps it. Root: the hirer.
+spn_zecchia_betray_effect = {
+	save_scope_value_as = { name = spn_zb_count value = var:spn_zecchia_count }
+	global_var:spn_zecchia ?= { save_scope_as = spn_zb_zecchia }
+	if = {
+		limit = { exists = scope:spn_zb_zecchia }
+		spn_zecchia_rob_effect = { VICTIM = root THIEF = scope:spn_zb_zecchia COUNT = scope:spn_zb_count }
+	}
+	spn_zecchia_clear_job_effect = yes
+	spn_zecchia_dismiss_effect = yes
+}
+
+# A new job's number (the backstop's stamp, .0029). Saves scope:spn_zj_n, which the backstop event carries.
+spn_zecchia_new_job_effect = {
+	if = {
+		limit = { NOT = { exists = global_var:spn_zecchia_job_n } }
+		set_global_variable = { name = spn_zecchia_job_n value = 0 }
+	}
+	change_global_variable = { name = spn_zecchia_job_n add = 1 }
+	save_scope_value_as = { name = spn_zj_n value = global_var:spn_zecchia_job_n }
+}

@@ -9,6 +9,7 @@ spn_embrace_vampirism_decision = {
 	selection_tooltip = spn_embrace_vampirism_decision_tooltip
 
 	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
 		has_game_rule = spn_yes_embrace_decision
 		spn_has_supernatural_trait = no
 		spn_has_hunter_trait = no
@@ -97,6 +98,7 @@ spn_embrace_lycanthropy_decision = {
 	selection_tooltip = spn_embrace_lycanthropy_decision_tooltip
 
 	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
 		has_game_rule = spn_yes_embrace_decision
 		spn_has_supernatural_trait = no
 		spn_has_hunter_trait = no
@@ -195,6 +197,7 @@ spn_embrace_hybrid_decision = {
 	selection_tooltip = spn_embrace_hybrid_decision_tooltip
 
 	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
 		has_game_rule = spn_yes_embrace_decision
 		spn_has_supernatural_trait = no
 		spn_has_hunter_trait = no
@@ -282,6 +285,7 @@ spn_embrace_hunter_decision = {
 	selection_tooltip = spn_embrace_hunter_decision_tooltip
 
 	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
 		has_game_rule = spn_yes_embrace_decision
 		spn_has_supernatural_trait = no
 		spn_has_hunter_trait = no
@@ -360,6 +364,128 @@ spn_abandon_hunter_decision = {
 	}
 }
 
+#Embrace Witchcraft (2.39)
+# 2.39 (WORK-ORDER-2.39 F8): the shape of Embrace Vampirism (no cost, the AI never takes it), behind the same rule. It
+# calls the mod's one door to becoming a witch, so the tooltip says truthfully whether you gain the trait or the secret
+# (what your rite thinks of witches decides). Hidden from both kinds of hunter. A vampire, werewolf or hybrid may take it:
+# a witch is a craft, not a species (D10). The species gate is the AGOT patch's hook (WO 6, compatibility).
+spn_embrace_witchcraft_decision = {
+	decision_group_type = supernatural
+	ai_check_interval = 0
+	picture = {
+		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
+	}
+	desc = spn_embrace_witchcraft_decision_desc
+	selection_tooltip = spn_embrace_witchcraft_decision_tooltip
+
+	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
+		has_game_rule = spn_yes_embrace_decision
+		NOR = {
+			has_trait = witch
+			any_secret = { type = secret_witch }
+		}
+		spn_has_hunter_trait = no
+		is_witch_hunter = no
+	}
+
+	is_valid = {
+		NOR = {
+			has_trait = witch
+			any_secret = { type = secret_witch }
+		}
+		custom_description = {
+			text = spn_cannot_be_turned_custom
+			spn_is_valid_supernatural_target = yes
+		}
+	}
+
+	effect = {
+		give_witch_secret_or_trait_effect2 = yes
+	}
+
+	ai_potential = {
+		always = no
+	}
+
+	ai_will_do = {
+		base = 0
+	}
+}
+
+#Embrace the Mage (2.39)
+# 2.39 (WORK-ORDER-2.39 F8): exactly what the Order's "I am a Mage now" runs (spn_order.0140.a): turn_into_mage_effect,
+# which makes a witch first if need be and adds the ten perks in tree order, so the Mage's trait, memory, focus and
+# follow-up events all come from the perks themselves. That includes Witchcraft's own risk on the first perk (about one
+# in five comes away injured), kept on purpose (D10); the tooltip names the risk and gives no odds. B2's red warning
+# shows first. A Warlock or True Witch sees it greyed out, with the capstone text (the 2.38e one-path rule, which
+# turn_into_mage_effect does not check itself). Hidden from both kinds of hunter; turn_into_mage_effect would do
+# nothing for them anyway.
+spn_embrace_mage_decision = {
+	decision_group_type = supernatural
+	ai_check_interval = 0
+	picture = {
+		reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds"
+	}
+	desc = spn_embrace_mage_decision_desc
+	selection_tooltip = spn_embrace_mage_decision_tooltip
+
+	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
+		has_game_rule = spn_yes_embrace_decision
+		NOT = { has_trait = archmage }
+		spn_has_hunter_trait = no
+		is_witch_hunter = no
+	}
+
+	is_valid = {
+		NOT = { has_trait = archmage }
+		custom_description = {
+			text = spn_capstone_another_path
+			NOR = {
+				has_trait = warlock
+				has_trait = true_witch
+			}
+		}
+		custom_description = {
+			text = spn_cannot_be_turned_custom
+			spn_is_valid_supernatural_target = yes
+		}
+	}
+
+	effect = {
+		custom_tooltip = archmage_perk_tt
+		if = {
+			limit = {
+				NOR = {
+					has_trait = witch
+					any_secret = { type = secret_witch }
+				}
+			}
+			custom_tooltip = spn_msg_tooltip_embrace_mage_desc
+		}
+		else = {
+			custom_tooltip = spn_msg_tooltip_embrace_mage_witch_desc
+		}
+		turn_into_mage_effect = yes
+		# Parity with spn_order.0140.a: a member who becomes a Mage is taught, so the teaching count is finished with.
+		hidden_effect = {
+			if = {
+				limit = { has_variable = spn_order_taught_years }
+				remove_variable = spn_order_taught_years
+			}
+		}
+	}
+
+	ai_potential = {
+		always = no
+	}
+
+	ai_will_do = {
+		base = 0
+	}
+}
+
 #############################################
 ### Vampire Feeding | Satiate Bloodthirst ###
 #############################################
@@ -423,6 +549,7 @@ spn_satiate_bloodlust_decision = {
 	}
 
 	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
 		has_trait = supernatural_vampire
 	}
 
@@ -527,6 +654,7 @@ spn_satiate_hunger_decision = {
 		modifier = { add = 15 any_courtier = { is_adult = yes } }
 	}
  	is_shown = {
+ 		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
 		has_trait = supernatural_werewolf
 	}
 
@@ -627,6 +755,7 @@ spn_satiate_bloodhunger_decision = {
 		modifier = { add = 15 any_courtier = { is_adult = yes } }
 	}
  	is_shown = {
+ 		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
 		has_trait = supernatural_hybrid
  	}
 	

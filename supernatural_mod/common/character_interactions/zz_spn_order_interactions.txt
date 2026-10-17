@@ -1,0 +1,427 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": the Order's interactions (WORK-ORDER-2.38 §5.8, §5.10, §5.19, §11.6, §12.7).
+# Loc: localization/english/spn_order_l_english.yml. All in the mod's Supernatural menu.
+
+# Name Your Successor in the Temple (§5.8). A player Temple Magus names a Magistratus of his chapter. (The order called this
+# a decision; picking a person is an interaction's job, so it is one: the same variable, read the same way.)
+spn_order_name_successor_interaction = {
+	category = interaction_category_favorites
+	icon = icon_archmage
+	desc = spn_order_name_successor_interaction_desc
+	auto_accept = yes
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			is_ai = no
+			spn_order_on_trigger = yes
+			spn_is_temple_magus_trigger = yes
+		}
+		scope:recipient = {
+			var:spn_order_rank ?= flag:magistratus
+			var:spn_order_chapter ?= scope:actor.var:spn_order_chapter
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:recipient = { is_alive = yes }
+		custom_tooltip = {
+			text = spn_order_already_heir_tt
+			NOT = { scope:actor.var:spn_order_chapter.var:spn_order_heir ?= scope:recipient }
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_order_name_successor_interaction_tt
+		scope:actor.var:spn_order_chapter = {
+			set_variable = { name = spn_order_heir value = scope:recipient }
+		}
+	}
+	ai_will_do = { base = 0 }
+}
+
+# 2.39 (Boot 3, 16 Oct): Invite into the Order. A player Temple Magus names someone himself (HANDOFF §9).
+spn_order_invite_interaction = {
+	category = interaction_category_favorites
+	icon = icon_archmage
+	desc = spn_order_invite_interaction_desc
+	auto_accept = yes
+	use_diplomatic_range = yes
+	cooldown = { months = 6 }
+	cooldown_against_recipient = { years = 10 }
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			is_ai = no
+			spn_order_on_trigger = yes
+			spn_is_temple_magus_trigger = yes
+		}
+		scope:recipient = {
+			age >= 12
+			# Only what he knows: a member he knows of is not invited. Anything secret is decided in the effect (B6).
+			NOT = { scope:actor = { spn_order_knows_member_trigger = { WHO = scope:recipient } } }
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_order_invite_free_tt
+				is_imprisoned = no
+			}
+		}
+		scope:actor.var:spn_order_chapter = { spn_order_has_room_trigger = yes }
+	}
+	on_accept = {
+		custom_tooltip = spn_order_invite_interaction_tt
+		hidden_effect = {
+			scope:recipient = {
+				if = {
+					limit = {
+						NOT = { exists = var:spn_order_chapter }
+						NOT = { has_character_flag = spn_order_refused }
+						NOT = { has_character_flag = spn_order_picked }
+						spn_order_can_join_trigger = yes
+					}
+					if = {
+						limit = { has_character_flag = spn_order_passed_over }
+						remove_character_flag = spn_order_passed_over
+					}
+					add_character_flag = { flag = spn_order_picked years = 1 }
+					set_variable = { name = spn_order_picker value = scope:actor.var:spn_order_chapter years = 1 }
+					spn_order_send_note_effect = yes
+				}
+				# Otherwise nothing at all: no answer is exactly what a refusal of the Note looks like to him (B6).
+			}
+		}
+	}
+	ai_will_do = { base = 0 }
+}
+
+# Expel from the Order (§5.10). A Temple Magus casts out a member of his chapter; the member answers in Cast Out (.0192).
+# The AI head does this in the chapter's year (step 10b), so the interaction is for players.
+spn_order_expel_interaction = {
+	category = interaction_category_favorites
+	icon = icon_archmage
+	desc = spn_order_expel_interaction_desc
+	auto_accept = yes
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			spn_order_on_trigger = yes
+			spn_is_temple_magus_trigger = yes
+		}
+		scope:recipient = {
+			exists = var:spn_order_chapter
+			var:spn_order_chapter = scope:actor.var:spn_order_chapter
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_order_expel_interaction_tt
+		# 2.38b: his friends in the temple will not forget it (DESIGN-2.38b §6), unless he broke its rules.
+		if = {
+			limit = { scope:recipient = { NOT = { has_character_flag = spn_order_broke_rules } } }
+			custom_tooltip = spn_order_expel_friends_tt
+			hidden_effect = {
+				scope:actor.var:spn_order_chapter ?= {
+					every_in_list = {
+						variable = spn_order_members
+						limit = {
+							is_alive = yes
+							NOT = { this = scope:actor }
+							NOT = { this = scope:recipient }
+							opinion = { target = scope:recipient value >= 40 }
+						}
+						add_opinion = { target = scope:actor modifier = spn_order_expelled_friend_opinion }
+					}
+				}
+			}
+		}
+		scope:recipient = { trigger_event = spn_order.0192 }
+	}
+	ai_will_do = { base = 0 }
+}
+
+# Heal by Elemental Transference (§5.19). Move a deadly illness out of the recipient into five members who agree to carry it.
+spn_order_transference_interaction = {
+	category = interaction_category_favorites
+	icon = icon_magic
+	desc = spn_order_transference_interaction_desc
+	use_diplomatic_range = yes
+	ai_targets = {
+		ai_recipients = courtiers
+		ai_recipients = vassals
+		ai_recipients = family
+		max = 10
+	}
+	ai_targets = {
+		ai_recipients = scripted_relations
+		ai_recipients = liege
+		max = 10
+	}
+	ai_frequency = 36
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			spn_order_on_trigger = yes
+			spn_order_magistratus_plus_trigger = yes
+			has_trait = archmage
+		}
+		scope:recipient = { spn_order_deadly_disease_trigger = yes }
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			can_spend_standard_ps_trigger = yes
+			custom_tooltip = {
+				text = spn_transference_cd_tt
+				NOT = { has_character_flag = spn_transference_cd }
+				NOT = { exists = var:spn_transference_patient }
+			}
+			custom_tooltip = {
+				text = spn_transference_five_tt
+				spn_transference_caster_trigger = yes
+			}
+		}
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_transference_already_tt
+				NOT = { exists = var:spn_transference_pending }
+				NOT = { exists = var:spn_transference_disease }
+			}
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_order_transference_interaction_tt
+		spn_transference_begin_effect = { CASTER = scope:actor PATIENT = scope:recipient }
+	}
+	ai_accept = {
+		base = 100
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 60
+			scope:recipient = {
+				var:spn_order_chapter ?= scope:actor.var:spn_order_chapter
+			}
+			scope:actor = { opinion = { target = scope:recipient value >= 20 } }
+		}
+		modifier = {
+			add = 20
+			scope:actor = { has_trait = compassionate }
+		}
+		modifier = {
+			factor = 0
+			scope:actor = { spn_transference_caster_trigger = no }
+		}
+		modifier = { # 2.39 (WORK-ORDER-2.39 F4): the Blue Fever alone passes by itself; the AI works it only on its carrier
+			factor = 0
+			scope:recipient = {
+				has_trait = spn_blue_fever
+				NOR = {
+					has_trait = cancer
+					has_trait = consumption
+					has_trait = leper
+					has_trait = great_pox
+				}
+				NOT = { global_var:spn_beetle_carrier ?= this }
+			}
+		}
+	}
+}
+
+# Borrow from the Reliquary (§11.6). A demon with a Compact borrows a pledged item from a Temple Magus or the master; a
+# favor is owed, for the prerogative of the day.
+spn_order_demon_borrow_interaction = {
+	category = interaction_category_favorites
+	icon = artifact
+	desc = spn_order_demon_borrow_interaction_desc
+	target_type = artifact
+	target_filter = recipient_artifacts
+	use_diplomatic_range = yes
+	ai_targets = {
+		ai_recipients = scripted_relations
+		ai_recipients = neighboring_rulers
+		ai_recipients = liege
+		max = 10
+	}
+	ai_frequency = 36
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			is_a_demon_trigger = yes
+			exists = var:spn_order_compact
+			NOT = { exists = var:spn_order_favor_owed }
+		}
+		scope:recipient = {
+			OR = {
+				spn_is_temple_magus_trigger = yes
+				spn_order_is_master_trigger = yes
+			}
+		}
+		scope:actor = { spn_order_knows_member_trigger = { WHO = scope:recipient } }
+	}
+	can_be_picked_artifact = {
+		scope:target = {
+			artifact_owner ?= scope:recipient
+			exists = var:spn_pledged_to
+			NOT = { has_variable = spn_borrowed_from }
+			NOT = { has_variable = spn_relic_borrow_cd }
+			NOT = { var:spn_relic ?= flag:powder }
+			NOT = { var:spn_relic ?= flag:beetle } # 2.39 (WORK-ORDER-2.39 F4): the beetle is never lent
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_order_demon_borrow_interaction_tt
+		spn_relic_lend_effect = { ART = scope:target LENDER = scope:recipient BORROWER = scope:actor }
+		scope:actor = {
+			if = {
+				limit = { exists = global_var:spn_order_prerogative }
+				set_variable = { name = spn_order_favor_owed value = global_var:spn_order_prerogative years = 3 }
+			}
+			else = {
+				set_variable = { name = spn_order_favor_owed value = flag:recover years = 3 }
+			}
+			set_variable = { name = spn_order_favor_to value = scope:recipient years = 3 }
+			trigger_event = { id = spn_order.0909 days = { 180 540 } }
+		}
+	}
+	ai_accept = {
+		base = 30
+		opinion_modifier = {
+			who = scope:recipient
+			opinion_target = scope:actor
+			multiplier = 0.5
+		}
+		modifier = {
+			add = 30
+			desc = spn_ai_accept_pit
+			spn_order_prerogative_is_trigger = { P = flag:pit }
+		}
+		modifier = {
+			add = -30
+			desc = spn_ai_accept_zealous
+			scope:recipient = { has_trait = zealous }
+		}
+		modifier = {
+			add = -20
+			desc = spn_ai_accept_paranoid
+			scope:recipient = { has_trait = paranoid }
+		}
+	}
+	ai_will_do = {
+		base = 20
+		modifier = {
+			add = 30
+			scope:actor = { has_trait = greedy }
+		}
+	}
+}
+
+# The Unmaking (§12.7). The Grand Magus and two other seat holders unmake a bound master. The one thing in the mod that
+# targets him by name.
+spn_order_unmaking_interaction = {
+	category = interaction_category_hostile
+	icon = icon_magic
+	desc = spn_order_unmaking_interaction_desc
+	auto_accept = yes
+	use_diplomatic_range = yes
+	ai_targets = {
+		ai_recipients = neighboring_rulers
+		ai_recipients = scripted_relations
+		max = 10
+	}
+	ai_frequency = 24
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = { global_var:current_archmage_global ?= this }
+		scope:recipient = { has_trait = spn_vade_bound }
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = { can_spend_huge_ps_trigger = yes }
+		custom_tooltip = {
+			text = spn_order_unmaking_two_tt
+			spn_order_unmaking_seats_trigger = { MAGUS = scope:actor }
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_order_unmaking_interaction_tt
+		scope:actor = {
+			spend_huge_ps_effect = yes
+			save_scope_as = spn_un_magus
+		}
+		# Two seat holders stand with him, not three (§12.7). Chosen first, then they pay.
+		global_var:current_loremaster_global ?= {
+			if = {
+				limit = {
+					spn_order_unmaking_seat_ok_trigger = { MAGUS = scope:actor }
+					NOT = { this = scope:recipient }
+				}
+				add_to_temporary_list = spn_un_two
+			}
+		}
+		global_var:current_black_mage_global ?= {
+			if = {
+				limit = {
+					spn_order_unmaking_seat_ok_trigger = { MAGUS = scope:actor }
+					NOT = { this = scope:recipient }
+				}
+				add_to_temporary_list = spn_un_two
+			}
+		}
+		global_var:current_admin_global ?= {
+			if = {
+				limit = {
+					spn_order_unmaking_seat_ok_trigger = { MAGUS = scope:actor }
+					NOT = { this = scope:recipient }
+					NOT = { any_in_list = { list = spn_un_two count >= 2 } }
+				}
+				add_to_temporary_list = spn_un_two
+			}
+		}
+		every_in_list = {
+			list = spn_un_two
+			if = {
+				limit = { can_spend_standard_ps_trigger = yes }
+				spend_standard_ps_effect = yes
+			}
+		}
+		scope:recipient = { trigger_event = spn_vade.0340 }
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 50
+			scope:recipient = { spn_ai_cruel_trigger = yes }
+		}
+	}
+}
+
+# 2.38b: Ask About the Blue Rose (DESIGN-2.38b §8). A prisoner of yours whose membership you know. He names at most two
+# others of his temple and, if you want in, the temple he belongs to.
+spn_order_ask_about_rose_interaction = {
+	category = interaction_category_prison
+	icon = prison
+	desc = spn_order_ask_about_rose_interaction_desc
+	auto_accept = yes
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = { spn_order_on_trigger = yes }
+		scope:recipient = {
+			is_imprisoned_by = scope:actor
+			spn_is_order_member_trigger = yes
+			any_secret = {
+				secret_type = spn_secret_blue_rose
+				is_known_by = scope:actor
+			}
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_order_ask_about_rose_asked_tt
+				NOT = { has_character_flag = spn_order_rose_asked }
+			}
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_order_ask_about_rose_interaction_tt
+		scope:actor = { trigger_event = spn_order.0095 }
+	}
+	ai_will_do = { base = 0 }
+}

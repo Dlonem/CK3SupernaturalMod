@@ -5833,6 +5833,34 @@ magic_ev9.66 = {
 			base = 0
 		}
 	}
+	# 2.39 (Supernatural): the Draught of a Clear Mind (WORK-ORDER-2.39 F17 U4). Three years, as in magic_ev2.41.
+	option = {
+		name = spn_ev2.41.mind
+		send_interface_toast = {
+			title = ev2.41.title
+			add_character_modifier = {
+				modifier = spn_clear_mind_modifier
+				years = 3
+			}
+		}
+		ai_chance = {
+			base = 1
+			modifier = {
+				add = 4
+				any_known_secret = {
+					OR = {
+						secret_type = spn_secret_vampire
+						secret_type = spn_secret_hybrid
+						secret_type = spn_secret_blue_rose
+					}
+				}
+			}
+			modifier = {
+				add = 2
+				has_character_flag = spn_order_defector
+			}
+		}
+	}
 	option = {
 		name = ev9.66.0.a
 		trigger = {
@@ -6510,7 +6538,7 @@ magic_ev9.73 = {
 		is_alive = yes
 		has_variable = mage_defeated_list
 		any_in_list = {
-			list = mage_defeated_list
+			variable = mage_defeated_list # 2.38 (Supernatural): a variable list (add_to_variable_list), not a saved list
 			has_trait = archmage
 		}
 		scope:activity = {
@@ -7948,10 +7976,13 @@ magic_ev9.92 = {
 			is_the_choosen_one_trigger = yes
 			custom_description = {
 				text = power_needed_custom2
-				has_trait_xp = {
-					trait = archmage
-					track = power_saturation
-					value > 99
+				OR = {
+					spn_casts_without_price_trigger = yes # 2.38c (Supernatural): Bound casts free
+					has_trait_xp = {
+						trait = archmage
+						track = power_saturation
+						value > 99
+					}
 				}
 			}
 			custom_description = {
@@ -7963,10 +7994,13 @@ magic_ev9.92 = {
 			is_true_mage = yes
 			is_the_choosen_one_trigger = yes
 		}
-		add_trait_xp = {
-			trait = archmage
-			track = power_saturation
-			value = -100
+		if = { # 2.38c (Supernatural): Bound casts free
+			limit = { spn_casts_without_price_trigger = no }
+			add_trait_xp = {
+				trait = archmage
+				track = power_saturation
+				value = -100
+			}
 		}
 
 		custom_tooltip = ev9.92.0.c_ct

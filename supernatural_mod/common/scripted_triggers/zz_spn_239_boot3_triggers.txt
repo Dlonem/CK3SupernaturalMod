@@ -1,0 +1,84 @@
+﻿# Supernatural 2.39 -- Boot 3 (16 Oct; tool/pkgs/PB/HANDOFF.md §9). Who knows of the Vade Maecum, and who may learn the
+# Fors Factorum.
+
+# CHARACTER scope. He knows what the Vade Maecum is. Thomas, as the Champion of Alpha (a werewolf outside the Order), was
+# told that someone held "a page of the Vade Maecum" with no word of what that was. A champion who does not know is told
+# first (spn_vade.0099, The Hide Remembers), and hears of the pages the next year.
+spn_vade_lore_known_trigger = {
+	OR = {
+		has_character_flag = spn_vade_lore
+		spn_is_order_member_trigger = yes
+		is_witch_trigger = yes
+		has_trait = archmage
+		exists = var:spn_knows_page_holder
+		any_character_artifact = {
+			OR = {
+				has_variable = spn_vade_page
+				has_variable = spn_vade_book
+			}
+		}
+	}
+}
+
+# CHARACTER scope. May he learn the Fors Factorum? Thomas: "in the show it is reserved for the Grand Magus and the Temple
+# Magus, not a normal practitioner, unless their magical research led them to discover it." The Grand Magus, the
+# Order's master, a Temple Magus, or a Magistratus or higher whose own research reached Witchcraft's Master of Metamagic
+# (master_metamagic_modifier: restored power after casting, the first step toward magic without price). It was any
+# seat on the Gnostic Council (2.38). A member who already knows it keeps it.
+spn_order_fors_eligible_trigger = {
+	spn_is_order_member_trigger = yes
+	OR = {
+		global_var:current_archmage_global ?= this
+		has_character_modifier = mc_archmage_modifier
+		spn_order_is_master_trigger = yes
+		spn_is_temple_magus_trigger = yes
+		AND = {
+			spn_order_magistratus_plus_trigger = yes
+			has_character_modifier = master_metamagic_modifier
+		}
+	}
+}
+
+# CHARACTER scope. Was it his own research that led him there (the text of The Most Secret Spell)?
+spn_order_fors_by_research_trigger = {
+	NOR = {
+		global_var:current_archmage_global ?= this
+		has_character_modifier = mc_archmage_modifier
+		spn_order_is_master_trigger = yes
+		spn_is_temple_magus_trigger = yes
+	}
+}
+
+# Zecchia for the one who wants it (Boot 3; HANDOFF §9). TARGET scope: someone Zecchia may be sent after for $HIRER$,
+# whom $HIRER$ does not spare (a friend, a lover, kin, someone he likes).
+spn_zecchia_wanted_victim_trigger = {
+	spn_zecchia_can_target_trigger = { HIRER = $HIRER$ }
+	NOT = { spn_ai_spares_trigger = { ACTOR = $HIRER$ } }
+}
+# ARTIFACT scope: an item $HIRER$ claims, which she can take, held by someone she may be sent after.
+spn_zecchia_wanted_item_trigger = {
+	spn_is_magic_item_trigger = yes
+	spn_zecchia_takeable_trigger = yes
+	artifact_owner ?= { spn_zecchia_wanted_victim_trigger = { HIRER = $HIRER$ } }
+}
+# ARTIFACT scope: a page of the book (or the book) that she can take.
+spn_zecchia_page_she_takes_trigger = {
+	OR = {
+		has_variable = spn_vade_page
+		has_variable = spn_vade_book
+	}
+	spn_zecchia_takeable_trigger = yes
+}
+# TARGET scope: the page holder $HIRER$ knows of, who still holds a page she can take, and whom she may be sent after.
+spn_zecchia_wanted_page_holder_trigger = {
+	spn_zecchia_wanted_victim_trigger = { HIRER = $HIRER$ }
+	any_character_artifact = { spn_zecchia_page_she_takes_trigger = yes }
+}
+# CHARACTER scope (the AI who knows her name). There is an item he wants, and someone holds it in her reach.
+spn_zecchia_ai_wants_trigger = {
+	save_temporary_scope_as = spn_zw_hirer
+	OR = {
+		any_claimed_artifact = { spn_zecchia_wanted_item_trigger = { HIRER = scope:spn_zw_hirer } }
+		var:spn_knows_page_holder ?= { spn_zecchia_wanted_page_holder_trigger = { HIRER = scope:spn_zw_hirer } }
+	}
+}

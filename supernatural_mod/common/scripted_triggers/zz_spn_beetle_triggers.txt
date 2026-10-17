@@ -1,0 +1,55 @@
+﻿# Supernatural 2.39 -- "The Hermetic Order of the Blue Rose, Part 2": the Homunculus Beetle (WORK-ORDER-2.39 F4).
+# The beetle is relic #9 of the 2.38 relic system (var:spn_relic = flag:beetle). Its state lives in globals:
+#   spn_beetle_state   flag:jar (an artifact holds it) or flag:inside (a carrier holds it; no artifact exists)
+#   spn_beetle_carrier, spn_beetle_user   while it is inside
+# Effects: common/scripted_effects/zz_spn_beetle_effects.txt.
+
+# Holds the beetle at all. Character scope. An artifact in an inventory is an open fact (anyone can see it), so a menu may
+# show on it without revealing anything.
+spn_beetle_holds_trigger = {
+	any_character_artifact = { var:spn_relic ?= flag:beetle }
+}
+
+# Holds the beetle free to use: not sealed in a Reliquary (a pledged beetle must be taken back first) and not on loan
+# (it can never be lent; the three lending checks exclude it, as they exclude the Powder). Character scope.
+spn_beetle_usable_trigger = {
+	any_character_artifact = {
+		var:spn_relic ?= flag:beetle
+		NOT = { has_variable = spn_pledged_to }
+		NOT = { has_variable = spn_borrowed_from }
+	}
+}
+
+# A beetle plague is running somewhere (any scope). At most one at a time: the beetle cannot be used while it runs.
+spn_beetle_plague_running_trigger = {
+	any_epidemic = { epidemic_type = epidemic_type:spn_blue_beetle }
+}
+
+# Target scope: someone $ACTOR$ could slip the beetle to. At his court, his guest, his spouse, or in the same place.
+spn_beetle_slip_reach_trigger = {
+	is_alive = yes
+	NOT = { this = $ACTOR$ }
+	OR = {
+		is_courtier_of = $ACTOR$
+		is_foreign_court_or_pool_guest_of = $ACTOR$
+		is_spouse_of = $ACTOR$
+		AND = {
+			exists = location
+			exists = $ACTOR$.location
+			location = $ACTOR$.location
+		}
+	}
+}
+
+# Target scope: shares a court with $ACTOR$ (his courtier, or both under one court owner). The AI slips the beetle only to
+# a rival at its own court (WORK-ORDER-2.39 F4, AI).
+spn_beetle_same_court_trigger = {
+	OR = {
+		is_courtier_of = $ACTOR$
+		AND = {
+			exists = court_owner
+			exists = $ACTOR$.court_owner
+			court_owner = $ACTOR$.court_owner
+		}
+	}
+}

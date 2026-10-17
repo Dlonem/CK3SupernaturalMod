@@ -1,0 +1,578 @@
+﻿namespace = spn_order
+
+# Supernatural 2.39 -- Break the Order of the Blue Rose (WORK-ORDER-2.39 F2) and A Sister on Trial (F11). The decision and
+# the effects: zz_spn_order_politics_decisions.txt, zz_spn_order_politics_effects.txt. Loc:
+# zz_spn_239_order_politics_l_english.yml. Every delayed event re-checks its situation in its own trigger.
+# Reports and scheduled steps mark the flavor gate (F14) and never check it.
+
+# ==================================================================================================
+# BREAK THE ORDER (F2)
+# ==================================================================================================
+
+# .0982 -- The Rose Burns Its Letters. A player master, the night before the Break: the Order always gets a reply. His
+# answer queues the hidden step a day later (or, for the Adeptus Major, the breaker's own answer does); a 30-day backstop
+# runs it anyway. An answer given after the step has run does nothing.
+spn_order.0982 = {
+	type = character_event
+	title = spn_order.0982.t
+	desc = spn_order.0982.desc
+	theme = intrigue
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = worry }
+	right_portrait = {
+		character = scope:spn_bk_breaker
+		trigger = { exists = scope:spn_bk_breaker }
+		animation = scheme
+	}
+	trigger = {
+		is_alive = yes
+		exists = global_var:spn_order_break_pending
+	}
+	immediate = {
+		global_var:spn_order_break_pending ?= { save_scope_as = spn_bk_breaker }
+	}
+	# Send the Adeptus Major.
+	option = {
+		name = spn_order.0982.a
+		trigger = {
+			scope:spn_bk_breaker ?= { is_alive = yes }
+		}
+		custom_tooltip = spn_order.0982.a.tt
+		hidden_effect = { spn_order_break_send_am_effect = yes }
+		ai_chance = {
+			base = 60
+			modifier = {
+				add = 20
+				OR = {
+					has_trait = brave
+					has_trait = wrathful
+					has_trait = vengeful
+				}
+			}
+			modifier = {
+				add = -40
+				has_trait = craven
+			}
+		}
+	}
+	# Hide what can be hidden.
+	option = {
+		name = spn_order.0982.b
+		custom_tooltip = spn_order.0982.b.tt
+		hidden_effect = {
+			if = {
+				limit = { exists = global_var:spn_order_break_pending } # 2.39 (final pass, 17 Oct): the Break takes half the coffers (spn_order_break_effect)
+				set_global_variable = { name = spn_order_break_hid value = yes days = 31 }
+			}
+			spn_order_break_answered_effect = yes
+		}
+		ai_chance = {
+			base = 25
+			modifier = {
+				add = 20
+				has_trait = content
+			}
+		}
+	}
+	# Let the temples scatter.
+	option = {
+		name = spn_order.0982.c
+		custom_tooltip = spn_order.0982.c.tt
+		hidden_effect = { spn_order_break_scatter_effect = yes }
+		ai_chance = {
+			base = 10
+			modifier = {
+				add = 25
+				has_trait = craven
+			}
+		}
+	}
+}
+
+# .0984 -- (hidden) the Break. Root: the breaker. Queued a day after the master's answer, or by the 30-day backstop. It runs
+# once: the pending mark is cleared first. Everything the night could undo is checked again, the price too (review L-4);
+# if the Adeptus Major made him forget, the Break fails, and it costs him nothing.
+spn_order.0984 = {
+	type = character_event
+	hidden = yes
+	trigger = {
+		global_var:spn_order_break_pending ?= root
+		is_alive = yes
+		is_imprisoned = no
+		exists = global_var:spn_order_master
+		NOT = { exists = global_var:spn_order_broken }
+		spn_order_break_heads_trigger = yes
+		spn_order_break_chair_trigger = { WHO = root }
+		spn_order_break_price_trigger = yes # review L-4: the night may have spent it
+	}
+	on_trigger_fail = {
+		if = {
+			limit = { global_var:spn_order_break_pending ?= root }
+			remove_global_variable = spn_order_break_pending
+			if = {
+				limit = {
+					is_alive = yes
+					is_ai = no
+				}
+				# The price is named only when an Order still stood to be broken (else there was nothing to strike at).
+				if = {
+					limit = {
+						spn_order_break_price_trigger = no
+						exists = global_var:spn_order_master
+						NOT = { exists = global_var:spn_order_broken }
+					}
+					send_interface_toast = {
+						type = event_toast_text_neutral
+						title = spn_order_toast_break_failed
+						desc = spn_order_toast_break_unpaid_desc
+						left_icon = root
+					}
+				}
+				else = {
+					send_interface_toast = {
+						type = event_toast_text_neutral
+						title = spn_order_toast_break_failed
+						desc = spn_order_toast_break_failed_desc
+						left_icon = root
+					}
+				}
+			}
+		}
+	}
+	immediate = {
+		remove_global_variable = spn_order_break_pending
+		# The price, now that it goes ahead.
+		if = {
+			limit = { faith.religious_head ?= root }
+			add_piety = -1000
+		}
+		else = {
+			add_prestige = -1000
+		}
+		spn_order_break_effect = yes
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_order.0980
+		}
+	}
+}
+
+# .0980 -- The Rose Is Broken. A player breaker, when it is done.
+spn_order.0980 = {
+	type = character_event
+	title = spn_order.0980.t
+	desc = spn_order.0980.desc
+	theme = intrigue
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = personality_bold }
+	trigger = { is_alive = yes }
+	immediate = { spn_flavor_mark_effect = yes }
+	option = {
+		name = spn_order.0980.a
+	}
+}
+
+# .0981 -- The Masks Are Torn Away. Each player member, as the Break begins (before he stops being one).
+spn_order.0981 = {
+	type = character_event
+	title = spn_order.0981.t
+	desc = spn_order.0981.desc
+	theme = secret
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = shock }
+	right_portrait = {
+		character = scope:spn_bk_breaker
+		trigger = { exists = scope:spn_bk_breaker }
+		animation = schadenfreude
+	}
+	trigger = { is_alive = yes }
+	immediate = { spn_flavor_mark_effect = yes }
+	option = {
+		name = spn_order.0981.a
+		custom_tooltip = spn_order.0981.a.tt
+	}
+}
+
+# .0983 -- The Rose Remembers. The founder of a new temple while the Order still counts as broken (Found the Order Anew),
+# 30-90 days on: he may set the Adeptus Major on the one who broke it. Re-checks: the breaker is alive, and the founder is
+# still a Temple Magus.
+spn_order.0983 = {
+	type = character_event
+	title = spn_order.0983.t
+	desc = spn_order.0983.desc
+	theme = intrigue
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = personality_rational }
+	right_portrait = {
+		character = scope:spn_or_breaker
+		trigger = { exists = scope:spn_or_breaker }
+		animation = personality_bold
+	}
+	trigger = {
+		is_alive = yes
+		spn_is_temple_magus_trigger = yes
+		scope:spn_or_breaker ?= { is_alive = yes }
+	}
+	immediate = { spn_flavor_mark_effect = yes }
+	option = {
+		name = spn_order.0983.a
+		trigger = {
+			global_var:spn_order_master ?= { is_alive = yes }
+		}
+		custom_tooltip = spn_order.0983.a.tt
+		hidden_effect = {
+			scope:spn_or_breaker = {
+				spn_order_watch_add_effect = { WHO = this }
+				spn_order_am_send_effect = { MIN = 30 MAX = 90 }
+			}
+		}
+		ai_chance = {
+			base = 50
+			modifier = {
+				add = 30
+				OR = {
+					has_trait = vengeful
+					has_trait = wrathful
+				}
+			}
+			modifier = {
+				add = -30
+				has_trait = forgiving
+			}
+		}
+	}
+	option = {
+		name = spn_order.0983.b
+		custom_tooltip = spn_order.0983.b.tt
+		stress_and_fulfillment_impact = {
+			vengeful = minor_stress_impact_gain
+		}
+		ai_chance = {
+			base = 50
+			modifier = {
+				add = 30
+				OR = {
+					has_trait = forgiving
+					has_trait = compassionate
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# A SISTER ON TRIAL (F11). Her keeper (her Temple Magus, or the master when she is one), 3-7 days after Witchcraft's
+# witch_trial began (spn_order_trial_begun_effect). The choices follow what became of her: dead, in a cell, or free. A
+# trial with a player in it may still be open: then the event waits 7 days, at most four times. An AI gaoler only is
+# paid for her freedom; a player's prisoner is never freed without his say.
+# ==================================================================================================
+spn_order.1007 = {
+	type = character_event
+	title = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_st_sister = { is_female = no } }
+				desc = spn_order.1007.t_brother
+			}
+			desc = spn_order.1007.t
+		}
+	}
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_st_sister = { is_alive = no } }
+				desc = spn_order.1007.desc_dead
+			}
+			triggered_desc = {
+				trigger = { scope:spn_st_sister = { is_imprisoned = yes } }
+				desc = spn_order.1007.desc_cell
+			}
+			desc = spn_order.1007.desc_free
+		}
+	}
+	theme = secret
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = worry }
+	right_portrait = {
+		character = scope:spn_st_sister
+		trigger = { scope:spn_st_sister ?= { is_alive = yes } }
+		animation = fear
+	}
+	lower_right_portrait = { # 2.39 (Boot 2, 16 Oct): the accuser the text names
+		character = scope:spn_st_accuser
+		trigger = { scope:spn_st_accuser ?= { is_alive = yes } }
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_st_sister
+		exists = scope:spn_st_accuser
+		spn_order_sister_keeper_trigger = yes
+		scope:spn_st_sister = {
+			OR = {
+				is_alive = no
+				AND = {
+					spn_is_order_member_trigger = yes
+					NOT = { has_character_flag = spn_order_on_trial }
+				}
+			}
+		}
+	}
+	on_trigger_fail = {
+		# Only a trial that may still be open waits: 7 days, at most four times. Anything else ends it quietly.
+		if = {
+			limit = {
+				is_alive = yes
+				exists = scope:spn_st_sister
+				spn_order_sister_keeper_trigger = yes
+				scope:spn_st_sister = {
+					is_alive = yes
+					spn_is_order_member_trigger = yes
+					has_character_flag = spn_order_on_trial
+					OR = {
+						NOT = { exists = var:spn_order_st_tries }
+						var:spn_order_st_tries < 4
+					}
+				}
+			}
+			scope:spn_st_sister = {
+				set_variable = {
+					name = spn_order_st_tries
+					days = 60
+					value = {
+						value = 1
+						if = {
+							limit = { exists = var:spn_order_st_tries }
+							add = var:spn_order_st_tries
+						}
+					}
+				}
+			}
+			trigger_event = { id = spn_order.1007 days = 7 }
+		}
+		else = {
+			scope:spn_st_sister ?= { spn_order_sister_done_effect = yes }
+		}
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		scope:spn_st_sister = { spn_order_sister_done_effect = yes }
+	}
+
+	# --- She is dead.
+	option = {
+		name = spn_order.1007.a
+		trigger = {
+			scope:spn_st_sister = { is_alive = no }
+			scope:spn_st_accuser = { is_alive = yes }
+		}
+		custom_tooltip = spn_order.1007.a.tt
+		hidden_effect = {
+			scope:spn_st_accuser = {
+				spn_order_watch_add_effect = { WHO = this }
+				if = {
+					limit = { global_var:spn_order_master ?= { is_alive = yes } }
+					spn_order_am_send_effect = { MIN = 30 MAX = 90 }
+				}
+			}
+		}
+		ai_chance = {
+			base = 50
+			modifier = {
+				add = 30
+				has_trait = vengeful
+			}
+			modifier = {
+				add = 20
+				has_trait = wrathful
+			}
+			modifier = {
+				add = -30
+				has_trait = forgiving
+			}
+		}
+	}
+	option = {
+		name = spn_order.1007.b
+		trigger = {
+			scope:spn_st_sister = { is_alive = no }
+		}
+		custom_tooltip = spn_order.1007.b.tt
+		spn_order_deed_effect = { PREROGATIVE = flag:silence AMOUNT = 5 TOAST = yes }
+		stress_and_fulfillment_impact = {
+			vengeful = minor_stress_impact_gain
+		}
+		ai_chance = {
+			base = 50
+			modifier = {
+				add = 20
+				has_trait = calm
+			}
+			modifier = {
+				add = 20
+				has_trait = forgiving
+			}
+		}
+	}
+
+	# --- She is in a cell.
+	option = {
+		name = spn_order.1007.c
+		trigger = {
+			scope:spn_st_sister = {
+				is_alive = yes
+				is_imprisoned = yes
+			}
+			custom_tooltip = {
+				text = spn_order.1007.c.ai_tt
+				scope:spn_st_sister.imprisoner ?= { is_ai = yes }
+			}
+			short_term_gold >= medium_gold_value
+		}
+		show_as_unavailable = {
+			scope:spn_st_sister = {
+				is_alive = yes
+				is_imprisoned = yes
+			}
+		}
+		custom_tooltip = spn_order.1007.c.tt
+		scope:spn_st_sister.imprisoner ?= { save_scope_as = spn_st_gaoler }
+		if = {
+			limit = { exists = scope:spn_st_gaoler }
+			pay_short_term_gold = {
+				target = scope:spn_st_gaoler
+				gold = medium_gold_value
+			}
+			# Vanilla's own release (00_prison_interactions.txt:4352-4359), the release last.
+			scope:spn_st_sister = {
+				if = {
+					limit = { has_character_modifier = allowed_to_go_outside }
+					remove_character_modifier = allowed_to_go_outside
+				}
+				if = {
+					limit = { has_character_modifier = moldy_gruel_diet }
+					remove_character_modifier = moldy_gruel_diet
+				}
+				release_from_prison = yes
+			}
+		}
+		ai_chance = {
+			base = 40
+			modifier = {
+				add = 30
+				has_trait = generous
+			}
+			modifier = {
+				add = 20
+				has_trait = compassionate
+			}
+			modifier = {
+				add = -30
+				has_trait = greedy
+			}
+		}
+	}
+	option = {
+		name = spn_order.1007.d
+		trigger = {
+			scope:spn_st_sister = {
+				is_alive = yes
+				is_imprisoned = yes
+			}
+			spn_order_holds_powder_trigger = yes
+		}
+		custom_tooltip = spn_order.1007.d.tt
+		hidden_effect = {
+			random_character_artifact = {
+				limit = {
+					var:spn_relic ?= flag:powder
+					NOT = { has_variable = spn_borrowed_from }
+				}
+				save_scope_as = spn_st_powder
+			}
+			# A guarded mind does not take the powder (F17); the powder is spent all the same.
+			if = {
+				limit = {
+					scope:spn_st_accuser ?= {
+						is_alive = yes
+						has_immunity_for_magic_domination = no
+					}
+				}
+				spn_order_forget_secret_effect = { WHO = scope:spn_st_sister }
+				scope:spn_st_sister = { spn_order_forget_witch_secret_effect = yes }
+			}
+			scope:spn_st_powder ?= { destroy_artifact = this }
+		}
+		spn_order_deed_effect = { PREROGATIVE = flag:silence AMOUNT = 5 TOAST = yes }
+		ai_chance = {
+			base = 40
+			modifier = {
+				add = 20
+				has_trait = paranoid
+			}
+		}
+	}
+	option = {
+		name = spn_order.1007.e
+		trigger = {
+			scope:spn_st_sister = {
+				is_alive = yes
+				is_imprisoned = yes
+			}
+		}
+		custom_tooltip = spn_order.1007.e.tt
+		ai_chance = {
+			base = 20
+			modifier = {
+				add = 30
+				has_trait = callous
+			}
+			modifier = {
+				add = 20
+				has_trait = greedy
+			}
+		}
+	}
+
+	# --- She is free.
+	option = {
+		name = spn_order.1007.f
+		trigger = {
+			scope:spn_st_sister = {
+				is_alive = yes
+				is_imprisoned = no
+			}
+		}
+		custom_tooltip = spn_order.1007.f.tt
+		scope:spn_st_sister = { spn_order_add_standing_effect = { VALUE = 5 } }
+		ai_chance = {
+			base = 60
+			modifier = {
+				add = 20
+				has_trait = trusting
+			}
+		}
+	}
+	option = {
+		name = spn_order.1007.g
+		trigger = {
+			scope:spn_st_sister = {
+				is_alive = yes
+				is_imprisoned = no
+			}
+		}
+		custom_tooltip = spn_order.1007.g.tt
+		scope:spn_st_sister = { spn_order_add_standing_effect = { VALUE = -5 } }
+		add_opinion = {
+			target = scope:spn_st_sister
+			modifier = suspicion_opinion
+			opinion = -15
+		}
+		ai_chance = {
+			base = 30
+			modifier = {
+				add = 40
+				has_trait = paranoid
+			}
+		}
+	}
+}

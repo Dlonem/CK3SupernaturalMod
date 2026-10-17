@@ -1,0 +1,373 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": the Vade Maecum Infernal (WORK-ORDER-2.38 §12). All behind spn_vade_on_trigger.
+# Loc: localization/english/spn_vade_l_english.yml.
+
+# Bind the Vade Maecum (§12.6): four unsealed pages or the whole book, and a living firstborn son to pay with.
+spn_vade_bind_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_destiny_goal.dds" }
+	desc = spn_vade_bind_decision_desc
+	selection_tooltip = spn_vade_bind_decision_tooltip
+	confirm_text = spn_vade_bind_decision_confirm
+	ai_check_interval = 24
+	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
+		spn_vade_on_trigger = yes
+		has_trait = archmage
+		any_character_artifact = {
+			OR = {
+				has_variable = spn_vade_page
+				has_variable = spn_vade_book
+			}
+		}
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_vade_bind_four_tt
+			OR = {
+				any_character_artifact = { has_variable = spn_vade_book }
+				any_character_artifact = {
+					count >= 4
+					has_variable = spn_vade_page
+					NOT = { has_variable = spn_page_sealed }
+				}
+			}
+		}
+		trigger_if = {
+			limit = { var:spn_vade_firstborn ?= { is_alive = yes } }
+			custom_tooltip = {
+				text = spn_vade_bind_son_tt
+				always = yes
+			}
+		}
+		trigger_else = {
+			custom_tooltip = {
+				text = spn_vade_bind_no_son_tt
+				always = no
+			}
+		}
+		NOT = { has_trait = spn_vade_bound }
+		custom_tooltip = {
+			text = spn_vade_bind_running_tt
+			NOT = { exists = global_var:spn_vade_contract_running }
+		}
+	}
+	effect = {
+		custom_tooltip = spn_vade_bind_decision_effect_tt
+		spn_vade_bind_effect = yes
+	}
+	ai_potential = {
+		has_trait = archmage
+		OR = {
+			has_trait = callous
+			has_trait = sadistic
+		}
+	}
+	ai_will_do = {
+		base = 0
+		modifier = { add = 40 has_trait = ambitious }
+		modifier = { add = 30 has_trait = arrogant }
+		modifier = { add = 40 has_character_flag = spn_vade_tempted }
+	}
+}
+
+# Give the Finger (§12.6 step 2).
+spn_vade_finger_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_physician.dds" }
+	desc = spn_vade_finger_decision_desc
+	selection_tooltip = spn_vade_finger_decision_tooltip
+	confirm_text = spn_vade_finger_decision_confirm
+	ai_check_interval = 12
+	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
+		global_var:spn_vade_contract_running ?= root
+		NOT = { has_character_flag = spn_vade_finger_paid }
+	}
+	effect = {
+		add_character_modifier = spn_missing_finger_modifier
+		add_character_flag = spn_vade_finger_paid
+		random_owned_story = {
+			limit = { story_type = story_spn_vade_contract }
+			change_variable = { name = spn_vade_steps add = 1 }
+		}
+		spn_vade_step_felt_effect = yes
+	}
+	ai_potential = {
+		global_var:spn_vade_contract_running ?= root
+	}
+	ai_will_do = { base = 100 }
+}
+
+# Pay the Last Price (§12.6 step 3).
+spn_vade_price_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_prison.dds" }
+	desc = spn_vade_price_decision_desc
+	selection_tooltip = spn_vade_price_decision_tooltip
+	confirm_text = spn_vade_price_decision_confirm
+	ai_check_interval = 12
+	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
+		global_var:spn_vade_contract_running ?= root
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_vade_price_witness_tt
+			var:spn_vade_witness ?= { is_alive = yes }
+		}
+		custom_tooltip = {
+			text = spn_vade_price_finger_tt
+			has_character_flag = spn_vade_finger_paid
+		}
+		custom_tooltip = {
+			text = spn_vade_price_son_tt
+			var:spn_vade_firstborn ?= {
+				is_alive = yes
+				OR = {
+					court_owner ?= root
+					is_imprisoned_by = root
+				}
+			}
+		}
+	}
+	effect = {
+		spn_vade_step_felt_effect = yes
+		trigger_event = spn_vade.0310
+	}
+	ai_potential = {
+		global_var:spn_vade_contract_running ?= root
+	}
+	ai_will_do = { base = 100 }
+}
+
+# Tear It Apart (§12.10): the book's holder, not bound, no Contract running.
+spn_vade_tear_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_tale.dds" }
+	desc = spn_vade_tear_decision_desc
+	selection_tooltip = spn_vade_tear_decision_tooltip
+	confirm_text = spn_vade_tear_decision_confirm
+	ai_check_interval = 24
+	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
+		spn_vade_on_trigger = yes
+		any_character_artifact = { has_variable = spn_vade_book }
+		NOT = { has_trait = spn_vade_bound }
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_vade_bind_running_tt
+			NOT = { exists = global_var:spn_vade_contract_running }
+		}
+	}
+	effect = {
+		trigger_event = spn_vade.0400
+	}
+	ai_potential = {
+		any_character_artifact = { has_variable = spn_vade_book }
+	}
+	ai_will_do = {
+		base = 10
+		modifier = { add = 40 has_trait = just }
+		modifier = { add = 30 has_trait = honest }
+		modifier = { add = 20 has_trait = compassionate }
+		modifier = { factor = 0 has_character_flag = spn_vade_tempted }
+	}
+}
+
+# Burn a Page (§12.10): a page's holder, not bound, with a champion at his court (or himself one).
+spn_vade_burn_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds" }
+	desc = spn_vade_burn_decision_desc
+	selection_tooltip = spn_vade_burn_decision_tooltip
+	confirm_text = spn_vade_burn_decision_confirm
+	ai_check_interval = 24
+	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
+		spn_vade_on_trigger = yes
+		any_character_artifact = { has_variable = spn_vade_page }
+		NOT = { has_trait = spn_vade_bound }
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_vade_burn_champion_tt
+			OR = {
+				spn_is_champion_trigger = yes
+				any_courtier = { spn_is_champion_trigger = yes }
+				any_vassal = { spn_is_champion_trigger = yes }
+			}
+		}
+	}
+	effect = {
+		random_character_artifact = {
+			limit = { has_variable = spn_vade_page }
+			save_scope_as = spn_burn_page
+		}
+		if = {
+			limit = { exists = scope:spn_burn_page }
+			spn_vade_burn_effect = yes
+		}
+	}
+	ai_potential = {
+		any_character_artifact = { has_variable = spn_vade_page }
+	}
+	ai_will_do = {
+		base = 20
+		modifier = { add = 30 has_trait = zealous }
+		modifier = { add = 20 has_trait = just }
+		modifier = { factor = 0 has_trait = archmage has_trait = ambitious }
+	}
+}
+
+# Draw the Page from the Hide (§12.5): a Mage who owns a hide, unworn, that holds a page. That hide refuses him for life.
+spn_vade_draw_page_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_vade_draw_page_decision_desc
+	selection_tooltip = spn_vade_draw_page_decision_tooltip
+	confirm_text = spn_vade_draw_page_decision_confirm
+	ai_check_interval = 24
+	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
+		spn_vade_on_trigger = yes
+		has_trait = archmage
+		any_character_artifact = {
+			has_variable = spn_hide
+			has_variable = spn_holds_vade_page
+			is_equipped = no
+		}
+	}
+	effect = {
+		random_character_artifact = {
+			limit = {
+				has_variable = spn_hide
+				has_variable = spn_holds_vade_page
+				is_equipped = no
+			}
+			save_scope_as = spn_dpd_hide
+		}
+		spn_vade_draw_page_effect = { HIDE_ART = scope:spn_dpd_hide TO = root }
+		spn_hide_mark_refused_effect = { FROM = scope:spn_dpd_hide.var:spn_hide YEARS = 1000 } # 2.39 (Boot 4, 16 Oct): read from the hide itself
+	}
+	ai_potential = { has_trait = archmage }
+	ai_will_do = {
+		base = 40
+		modifier = { add = 20 has_trait = ambitious }
+	}
+}
+
+# The Names in the Book (§12.11): the holder reads the souls it keeps. A player's window.
+spn_vade_names_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_tale.dds" }
+	desc = spn_vade_names_decision_desc
+	selection_tooltip = spn_vade_names_decision_tooltip
+	ai_check_interval = 0
+	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
+		is_ai = no
+		any_character_artifact = { has_variable = spn_vade_book }
+	}
+	effect = {
+		trigger_event = spn_vade.0540
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# Open the Black Stone (§12.14): page 1 as seeded is sealed in obsidian; submission magic opens it.
+spn_vade_open_stone_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_vade_open_stone_decision_desc
+	selection_tooltip = spn_vade_open_stone_decision_tooltip
+	confirm_text = spn_vade_open_stone_decision_confirm
+	ai_check_interval = 24
+	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
+		any_character_artifact = {
+			var:spn_vade_page ?= 1
+			has_variable = spn_page_sealed
+		}
+	}
+	is_valid = {
+		has_perk = mind_control_p6_perk
+		can_spend_standard_ps_trigger = yes
+	}
+	effect = {
+		spend_standard_ps_effect = yes
+		random_character_artifact = {
+			limit = {
+				var:spn_vade_page ?= 1
+				has_variable = spn_page_sealed
+			}
+			remove_variable = spn_page_sealed
+		}
+		spn_order_deed_effect = { PREROGATIVE = flag:book AMOUNT = 20 TOAST = yes }
+		trigger_event = spn_vade.0560
+	}
+	ai_potential = { has_perk = mind_control_p6_perk }
+	ai_will_do = {
+		base = 20
+		modifier = {
+			add = 40
+			any_character_artifact = {
+				has_variable = spn_vade_page
+				NOT = { var:spn_vade_page ?= 1 }
+			}
+		}
+	}
+}
+
+# Break the Witness's Bond (§12.13): he, or a Mage at his court, pays; the ritual's price is his.
+spn_vade_break_bond_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds" }
+	desc = spn_vade_break_bond_decision_desc
+	selection_tooltip = spn_vade_break_bond_decision_tooltip
+	confirm_text = spn_vade_break_bond_decision_confirm
+	ai_check_interval = 36
+	is_shown = {
+		is_adult = yes # 2.39 (Boot 3, 16 Oct): a child does not
+		has_character_modifier = spn_vade_witness_bond_modifier
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_vade_break_bond_payer_tt
+			OR = {
+				can_spend_standard_ps_trigger = yes
+				court_owner ?= {
+					any_courtier = {
+						has_trait = archmage
+						can_spend_standard_ps_trigger = yes
+					}
+				}
+			}
+		}
+	}
+	effect = {
+		if = {
+			limit = { can_spend_standard_ps_trigger = yes }
+			save_scope_as = spn_bond_breaker
+		}
+		else = {
+			court_owner = {
+				random_courtier = {
+					limit = {
+						has_trait = archmage
+						can_spend_standard_ps_trigger = yes
+					}
+					save_scope_as = spn_bond_breaker
+				}
+			}
+		}
+		scope:spn_bond_breaker ?= { spend_standard_ps_effect = yes }
+		trigger_event = spn_vade.0550
+	}
+	ai_potential = { has_character_modifier = spn_vade_witness_bond_modifier }
+	ai_will_do = {
+		base = 40
+		modifier = { add = 30 has_trait = archmage }
+	}
+}

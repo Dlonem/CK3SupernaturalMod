@@ -1,0 +1,1605 @@
+﻿namespace = spn_order
+
+# Supernatural 2.39 -- the Order's new moments (WORK-ORDER-2.39 F14 §2-3). Loc:
+# localization/english/event_localization/zz_spn_239_flavor_l_english.yml.
+#
+# Every moment here re-checks its whole situation in its own trigger when it arrives (the Long Night lesson). The chapter
+# moments (.0350, .0351, .0360-.0363, .0370-.0372) are sent by the chapter's year (spn_order_chapter_year_effect, step
+# 10): each trigger is the flavor gate plus the branch's own spn_order_cm_*_ok_trigger, and each immediate marks the gate
+# and sets its ten-year "seen" flag, so a moment the gate turned away is not used up. The two follow-ups (.0352, .0353)
+# answer the player's own choice: they do not wait for the gate, but they mark it.
+#
+# No option shows a chance. Hidden rolls are hidden; the duels are the mod's own pattern (The Errand, .0321).
+
+# ==================================================================================================
+# ORDER ROMANCE (F14 §2)
+# ==================================================================================================
+# .0350 -- After the Others Have Gone. A player Temple Magus, Grand Magus or seat holder; an AI junior of his temple who
+# wants him.
+spn_order.0350 = {
+	type = character_event
+	title = spn_order.0350.t
+	desc = spn_order.0350.desc
+	theme = seduction
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_adv_junior animation = flirtation }
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_flavor_ready_trigger = yes
+		spn_order_cm_advance_senior_ok_trigger = yes
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_cm_seen_0350 years = 10 }
+		var:spn_order_chapter = {
+			random_in_list = {
+				variable = spn_order_members
+				limit = { spn_order_advance_junior_trigger = { SENIOR = root } }
+				save_scope_as = spn_adv_junior
+			}
+		}
+	}
+	# Lovers; the hook (spn_order_lover_set) lets the junior ask for a word later, if root is his patron.
+	option = {
+		name = spn_order.0350.a
+		scope:spn_adv_junior = {
+			set_relation_lover = {
+				target = root
+				reason = spn_rel_order_advance
+			}
+		}
+		had_sex_with_effect = {
+			CHARACTER = scope:spn_adv_junior
+			PREGNANCY_CHANCE = pregnancy_chance
+		}
+		stress_and_fulfillment_impact = {
+			chaste = minor_stress_impact_gain
+			zealous = minor_stress_impact_gain
+		}
+		if = {
+			limit = { is_married = yes }
+			stress_and_fulfillment_impact = { honest = minor_stress_impact_gain }
+		}
+	}
+	option = {
+		name = spn_order.0350.b
+		scope:spn_adv_junior = {
+			add_opinion = {
+				target = root
+				modifier = refusal_opinion
+				opinion = -10
+			}
+		}
+		stress_and_fulfillment_impact = { compassionate = minor_stress_impact_loss }
+	}
+	option = {
+		name = spn_order.0350.c
+		scope:spn_adv_junior = {
+			add_opinion = {
+				target = root
+				modifier = humiliated_opinion
+				opinion = -20
+			}
+			if = {
+				limit = { spn_is_order_member_trigger = yes }
+				custom_tooltip = spn_order.0350.c.tt
+				spn_order_flavor_standing_effect = { VALUE = -5 }
+			}
+		}
+		stress_and_fulfillment_impact = {
+			compassionate = minor_stress_impact_gain
+			callous = minor_stress_impact_loss
+			arrogant = minor_stress_impact_loss
+		}
+	}
+}
+
+# .0351 -- A Door Left Open. A player Neophyte, Acolyte or Medicum, 18 or older; the first AI senior who could hear it:
+# his own Temple Magus, the Grand Magus, then a seat holder (never his tutor: Late Lessons is that pair).
+spn_order.0351 = {
+	type = character_event
+	title = spn_order.0351.t
+	desc = spn_order.0351.desc
+	theme = seduction
+	override_background = { reference = study }
+	left_portrait = { character = root animation = worry }
+	right_portrait = { character = scope:spn_adv_senior animation = interested }
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_flavor_ready_trigger = yes
+		spn_order_cm_advance_junior_ok_trigger = yes
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_cm_seen_0351 years = 10 }
+		save_scope_as = spn_adv_junior
+		if = {
+			limit = {
+				var:spn_order_chapter ?= {
+					story_owner = { spn_order_advance_senior_trigger = { JUNIOR = root } }
+				}
+			}
+			var:spn_order_chapter.story_owner = { save_scope_as = spn_adv_senior }
+		}
+		else_if = {
+			limit = {
+				global_var:current_archmage_global ?= {
+					in_diplomatic_range = root
+					spn_order_advance_senior_trigger = { JUNIOR = root }
+				}
+			}
+			global_var:current_archmage_global = { save_scope_as = spn_adv_senior }
+		}
+		else_if = {
+			limit = {
+				global_var:current_loremaster_global ?= {
+					in_diplomatic_range = root
+					spn_order_advance_senior_trigger = { JUNIOR = root }
+				}
+			}
+			global_var:current_loremaster_global = { save_scope_as = spn_adv_senior }
+		}
+		else_if = {
+			limit = {
+				global_var:current_black_mage_global ?= {
+					in_diplomatic_range = root
+					spn_order_advance_senior_trigger = { JUNIOR = root }
+				}
+			}
+			global_var:current_black_mage_global = { save_scope_as = spn_adv_senior }
+		}
+		else = {
+			global_var:current_admin_global ?= { save_scope_as = spn_adv_senior }
+		}
+	}
+	# Say it. The senior decides by his nature and his opinion of you (spn_order_advance_accept_value), hidden.
+	option = {
+		name = spn_order.0351.a
+		custom_tooltip = spn_order.0351.a.tt
+		hidden_effect = {
+			scope:spn_adv_senior = {
+				random = {
+					chance = spn_order_advance_accept_value
+					save_scope_value_as = { name = spn_adv_yes value = yes }
+				}
+			}
+			if = {
+				limit = { exists = scope:spn_adv_yes }
+				scope:spn_adv_senior = {
+					set_relation_lover = {
+						target = root
+						reason = spn_rel_order_advance
+					}
+				}
+				had_sex_with_effect = {
+					CHARACTER = scope:spn_adv_senior
+					PREGNANCY_CHANCE = pregnancy_chance
+				}
+			}
+			else = {
+				add_stress = minor_stress_gain
+				scope:spn_adv_senior = {
+					add_opinion = {
+						target = root
+						modifier = annoyed_opinion
+						opinion = -10
+					}
+				}
+				random = {
+					chance = 25
+					save_scope_value_as = { name = spn_adv_talk value = yes }
+				}
+				if = {
+					limit = { exists = scope:spn_adv_talk }
+					spn_order_flavor_standing_effect = { VALUE = -5 }
+					send_interface_toast = {
+						type = event_toast_text_bad
+						title = spn_order.0351.talk
+						desc = spn_order.0351.talk_desc
+						left_icon = scope:spn_adv_senior
+					}
+				}
+				else = {
+					send_interface_toast = {
+						type = event_toast_text_neutral
+						title = spn_order.0351.no
+						desc = spn_order.0351.no_desc
+						left_icon = scope:spn_adv_senior
+					}
+				}
+			}
+		}
+	}
+	# Say it, and ask for his word as well. Only to a patron (his Temple Magus or the Grand Magus: seat holders do not
+	# decide promotions), and only from the ambitious, the greedy and the arbitrary. Refused by a just or honest senior,
+	# it is reported: the lesser charge (spn_order_favouritism), never spn_order_broke_rules. Trying to buy rank costs no
+	# more than being given it (WORK-ORDER-2.39 §5.4).
+	option = {
+		name = spn_order.0351.b
+		trigger = {
+			OR = {
+				has_trait = ambitious
+				has_trait = greedy
+				has_trait = arbitrary
+			}
+			scope:spn_adv_senior = { spn_order_patron_of_trigger = { JUNIOR = root } }
+		}
+		custom_tooltip = spn_order.0351.b.tt
+		hidden_effect = {
+			save_scope_value_as = { name = spn_adv_bold value = yes }
+			scope:spn_adv_senior = {
+				random = {
+					chance = spn_order_advance_accept_value
+					save_scope_value_as = { name = spn_adv_yes value = yes }
+				}
+			}
+			if = {
+				limit = { exists = scope:spn_adv_yes }
+				# The favour is settled here and now, so the hook finds nothing left to ask: the flag comes first.
+				add_character_flag = { flag = spn_order_favour_asked years = 10 }
+				scope:spn_adv_senior = {
+					set_relation_lover = {
+						target = root
+						reason = spn_rel_order_advance
+					}
+				}
+				had_sex_with_effect = {
+					CHARACTER = scope:spn_adv_senior
+					PREGNANCY_CHANCE = pregnancy_chance
+				}
+				spn_order_favour_effect = { JUNIOR = root PATRON = scope:spn_adv_senior }
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.0351.deal
+					desc = spn_order.0351.deal_desc
+					left_icon = scope:spn_adv_senior
+				}
+			}
+			else = {
+				scope:spn_adv_senior = {
+					add_opinion = {
+						target = root
+						modifier = insulted_opinion
+					}
+				}
+				if = {
+					limit = {
+						scope:spn_adv_senior = {
+							OR = {
+								has_trait = just
+								has_trait = honest
+							}
+						}
+					}
+					add_character_flag = { flag = spn_order_favouritism years = 10 }
+					send_interface_toast = {
+						type = event_toast_text_bad
+						title = spn_order.0351.reported
+						desc = spn_order.0351.reported_desc
+						left_icon = scope:spn_adv_senior
+					}
+				}
+				else = {
+					send_interface_toast = {
+						type = event_toast_text_bad
+						title = spn_order.0351.cold
+						desc = spn_order.0351.cold_desc
+						left_icon = scope:spn_adv_senior
+					}
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_order.0351.c
+		add_learning_lifestyle_xp = minor_lifestyle_xp
+		stress_and_fulfillment_impact = {
+			lustful = minor_stress_impact_gain
+			chaste = minor_stress_impact_loss
+		}
+	}
+}
+
+# .0352 -- What Is It Worth? A player junior, 30-90 days after he became lovers with his patron (the hook). A follow-up:
+# it does not wait for the gate, and marks it. Re-checked: still lovers, both still in the Order, the patron still his.
+spn_order.0352 = {
+	type = character_event
+	title = spn_order.0352.t
+	desc = spn_order.0352.desc
+	theme = love
+	override_background = { reference = bedchamber }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_fv_patron animation = love }
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		NOT = { has_character_flag = spn_order_favour_asked }
+		scope:spn_fv_patron ?= {
+			is_alive = yes
+			spn_order_patron_of_trigger = { JUNIOR = root }
+		}
+		has_relation_lover = scope:spn_fv_patron
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		save_scope_as = spn_fv_junior
+	}
+	option = {
+		name = spn_order.0352.a
+		custom_tooltip = spn_order.0352.a.tt
+		add_character_flag = { flag = spn_order_favour_asked years = 10 }
+		hidden_effect = {
+			if = {
+				# A player patron answers for himself.
+				limit = { scope:spn_fv_patron = { is_ai = no } }
+				scope:spn_fv_patron = { trigger_event = { id = spn_order.0353 days = { 3 10 } } }
+			}
+			else = {
+				scope:spn_fv_patron = {
+					random = {
+						chance = spn_order_favour_grant_chance_value
+						save_scope_value_as = { name = spn_fv_yes value = yes }
+					}
+				}
+				if = {
+					limit = { exists = scope:spn_fv_yes }
+					spn_order_favour_effect = { JUNIOR = root PATRON = scope:spn_fv_patron }
+					send_interface_toast = {
+						type = event_toast_text_good
+						title = spn_order.0352.yes
+						desc = spn_order.0352.yes_desc
+						left_icon = scope:spn_fv_patron
+					}
+				}
+				else = {
+					scope:spn_fv_patron = {
+						add_opinion = {
+							target = root
+							modifier = annoyed_opinion
+							opinion = -10
+						}
+					}
+					send_interface_toast = {
+						type = event_toast_text_neutral
+						title = spn_order.0352.no
+						desc = spn_order.0352.no_desc
+						left_icon = scope:spn_fv_patron
+					}
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_order.0352.b
+		add_character_flag = { flag = spn_order_favour_asked years = 10 }
+		scope:spn_fv_patron = {
+			add_opinion = {
+				target = root
+				modifier = respect_opinion
+				opinion = 10
+			}
+		}
+		stress_and_fulfillment_impact = {
+			honest = minor_stress_impact_loss
+			just = minor_stress_impact_loss
+			ambitious = minor_stress_impact_gain
+		}
+	}
+}
+
+# .0353 -- Your Lover Asks a Favour. A player patron whose junior lover asked (an AI junior through the hook, or a player
+# junior through What Is It Worth?). A follow-up: no gate, marks it. Re-checked as .0352 is.
+spn_order.0353 = {
+	type = character_event
+	title = spn_order.0353.t
+	desc = spn_order.0353.desc
+	theme = love
+	override_background = { reference = bedchamber }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_fv_junior animation = flirtation }
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		scope:spn_fv_junior ?= {
+			is_alive = yes
+			has_relation_lover = root
+		}
+		spn_order_patron_of_trigger = { JUNIOR = scope:spn_fv_junior }
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+	}
+	option = {
+		name = spn_order.0353.a
+		custom_tooltip = spn_order.0353.a.tt
+		hidden_effect = {
+			spn_order_favour_effect = { JUNIOR = scope:spn_fv_junior PATRON = root }
+			scope:spn_fv_junior = {
+				if = {
+					limit = { is_ai = no }
+					send_interface_toast = {
+						type = event_toast_text_good
+						title = spn_order.0352.yes
+						desc = spn_order.0352.yes_desc
+						left_icon = root
+					}
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_order.0353.b
+		scope:spn_fv_junior = {
+			add_opinion = {
+				target = root
+				modifier = refusal_opinion
+				opinion = -15
+			}
+			if = {
+				limit = { is_ai = no }
+				hidden_effect = {
+					send_interface_toast = {
+						type = event_toast_text_neutral
+						title = spn_order.0353.no
+						desc = spn_order.0353.no_desc
+						left_icon = root
+					}
+				}
+			}
+		}
+	}
+	# The break-up is the option's last line.
+	option = {
+		name = spn_order.0353.c
+		lover_breakup_effect = {
+			BREAKER = root
+			LOVER = scope:spn_fv_junior
+		}
+	}
+}
+
+# ==================================================================================================
+# THE THREE WORDS (F14 §3): neophyte and acolyte stress
+# ==================================================================================================
+# .0360 -- The Masks Are Watching (Observance). A Neophyte or an Acolyte.
+spn_order.0360 = {
+	type = character_event
+	title = spn_order.0360.t
+	desc = spn_order.0360.desc
+	theme = secret
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = paranoia }
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_flavor_ready_trigger = yes
+		spn_order_cm_watching_ok_trigger = yes
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_cm_seen_0360 years = 10 }
+		# One mask he could put a face to: a member of his temple whose secret he does not know, a Magistratus for choice.
+		var:spn_order_chapter = {
+			random_in_list = {
+				variable = spn_order_members
+				limit = {
+					is_alive = yes
+					NOT = { this = root }
+					spn_is_order_member_trigger = yes
+					any_secret = {
+						secret_type = spn_secret_blue_rose
+						NOT = { is_known_by = root }
+					}
+				}
+				weight = {
+					base = 1
+					modifier = {
+						add = 3
+						spn_order_magistratus_plus_trigger = yes
+					}
+				}
+				save_scope_as = spn_mw_mask
+			}
+		}
+		var:spn_order_chapter.story_owner ?= {
+			if = {
+				limit = {
+					is_alive = yes
+					NOT = { this = root }
+				}
+				save_scope_as = spn_mw_magus
+			}
+		}
+	}
+	option = {
+		name = spn_order.0360.a
+		if = {
+			limit = { spn_is_order_member_trigger = yes }
+			custom_tooltip = spn_order.0360.a.tt
+			spn_order_flavor_standing_effect = { VALUE = 3 }
+		}
+		stress_and_fulfillment_impact = {
+			ambitious = minor_stress_impact_gain
+			arrogant = minor_stress_impact_gain
+			humble = minor_stress_impact_loss
+		}
+	}
+	option = {
+		name = spn_order.0360.b
+		duel = {
+			skill = intrigue
+			value = 12
+			60 = {
+				desc = spn_order.0360.b.success
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 3
+				}
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.0360.b.success
+					desc = {
+						first_valid = {
+							triggered_desc = {
+								trigger = { exists = scope:spn_mw_mask }
+								desc = spn_order.0360.b.success_desc
+							}
+							desc = spn_order.0360.b.success_none_desc
+						}
+					}
+					left_icon = root
+					add_intrigue_lifestyle_xp = minor_lifestyle_xp
+					hidden_effect = {
+						if = {
+							limit = { exists = scope:spn_mw_mask }
+							spn_order_reveal_membership_effect = { WHO = scope:spn_mw_mask TO = root }
+						}
+					}
+				}
+			}
+			40 = {
+				desc = spn_order.0360.b.failure
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -3
+				}
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_order.0360.b.failure
+					desc = spn_order.0360.b.failure_desc
+					left_icon = root
+					if = {
+						limit = { spn_is_order_member_trigger = yes }
+						spn_order_flavor_standing_effect = { VALUE = -5 }
+					}
+					else = {
+						add_stress = minor_stress_gain
+					}
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_order.0360.c
+		scope:spn_mw_magus ?= {
+			if = {
+				limit = {
+					root = {
+						OR = {
+							has_trait = brave
+							has_trait = arrogant
+							has_trait = ambitious
+						}
+					}
+				}
+				add_opinion = {
+					target = root
+					modifier = respect_opinion
+					opinion = 10
+				}
+			}
+			else = {
+				add_opinion = {
+					target = root
+					modifier = annoyed_opinion
+					opinion = -10
+				}
+			}
+		}
+		stress_and_fulfillment_impact = {
+			craven = minor_stress_impact_gain
+			paranoid = minor_stress_impact_gain
+			brave = minor_stress_impact_loss
+		}
+	}
+	# A vampire hears every heart in the room; his own trait, so nothing about anyone else shows (B6).
+	option = {
+		name = spn_order.0360.d
+		trigger = {
+			OR = {
+				has_trait = supernatural_vampire
+				has_trait = supernatural_hybrid
+			}
+		}
+		add_stress = minor_stress_loss
+		add_intrigue_lifestyle_xp = minor_lifestyle_xp
+	}
+}
+
+# .0361 -- Beneath Your Station (Subservience). A landed Acolyte; a senior of his temple hands him a bucket. Refusing is
+# no breach of the rules: spn_order_broke_rules would mean being cast out, far too heavy for a bucket.
+spn_order.0361 = {
+	type = character_event
+	title = spn_order.0361.t
+	desc = spn_order.0361.desc
+	theme = unfriendly
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = shame }
+	right_portrait = { character = scope:spn_bs_senior animation = schadenfreude }
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_flavor_ready_trigger = yes
+		spn_order_cm_station_ok_trigger = yes
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_cm_seen_0361 years = 10 }
+		var:spn_order_chapter = {
+			random_in_list = {
+				variable = spn_order_members
+				limit = { spn_order_station_senior_trigger = { ACOLYTE = root } }
+				weight = {
+					base = 1
+					modifier = {
+						add = 3
+						OR = {
+							has_trait = arrogant
+							has_trait = callous
+							has_trait = sadistic
+						}
+					}
+				}
+				save_scope_as = spn_bs_senior
+			}
+		}
+	}
+	option = {
+		name = spn_order.0361.a
+		custom_tooltip = spn_order.0361.a.tt
+		spn_order_flavor_standing_effect = { VALUE = 5 }
+		stress_and_fulfillment_impact = {
+			arrogant = medium_stress_impact_gain
+			ambitious = minor_stress_impact_gain
+			humble = minor_stress_impact_loss
+			diligent = minor_stress_impact_loss
+		}
+	}
+	option = {
+		name = spn_order.0361.b
+		trigger = { short_term_gold >= minor_gold_value }
+		remove_short_term_gold = minor_gold_value
+		custom_tooltip = spn_order.0361.b.tt
+		hidden_effect = {
+			random = {
+				chance = 50
+				save_scope_value_as = { name = spn_bs_noticed value = yes }
+			}
+			if = {
+				limit = { exists = scope:spn_bs_noticed }
+				spn_order_flavor_standing_effect = { VALUE = -5 }
+				scope:spn_bs_senior = {
+					add_opinion = {
+						target = root
+						modifier = annoyed_opinion
+						opinion = -10
+					}
+				}
+				send_interface_toast = {
+					type = event_toast_text_bad
+					title = spn_order.0361.noticed
+					desc = spn_order.0361.noticed_desc
+					left_icon = scope:spn_bs_senior
+				}
+			}
+			else = {
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.0361.unnoticed
+					desc = spn_order.0361.unnoticed_desc
+					left_icon = root
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_order.0361.c
+		custom_tooltip = spn_order.0361.c.tt
+		spn_order_flavor_standing_effect = { VALUE = -5 }
+		scope:spn_bs_senior = {
+			add_opinion = {
+				target = root
+				modifier = annoyed_opinion
+				opinion = -20
+			}
+			if = {
+				limit = { can_set_relation_potential_rival_trigger = { CHARACTER = root } }
+				set_relation_potential_rival = root
+			}
+		}
+		stress_and_fulfillment_impact = {
+			arrogant = minor_stress_impact_loss
+			stubborn = minor_stress_impact_loss
+		}
+	}
+}
+
+# .0362 -- The Same Night (the Order or your blood). A Neophyte or an Acolyte whose spouse, child or parent, outside the
+# Order, needs him on the night of a rite.
+spn_order.0362 = {
+	type = character_event
+	title = spn_order.0362.t
+	desc = spn_order.0362.desc
+	theme = family
+	override_background = { reference = sitting_room }
+	left_portrait = { character = root animation = stress }
+	right_portrait = { character = scope:spn_sn_kin animation = sadness }
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_flavor_ready_trigger = yes
+		spn_order_cm_night_ok_trigger = yes
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_cm_seen_0362 years = 10 }
+		# Spouse first, then a child, then a parent.
+		if = {
+			limit = { primary_spouse ?= { spn_order_same_night_kin_trigger = yes } }
+			primary_spouse = { save_scope_as = spn_sn_kin }
+		}
+		else_if = {
+			limit = {
+				any_child = {
+					age >= 10
+					spn_order_same_night_kin_trigger = yes
+				}
+			}
+			random_child = {
+				limit = {
+					age >= 10
+					spn_order_same_night_kin_trigger = yes
+				}
+				save_scope_as = spn_sn_kin
+			}
+		}
+		else = {
+			random_parent = {
+				limit = { spn_order_same_night_kin_trigger = yes }
+				save_scope_as = spn_sn_kin
+			}
+		}
+		var:spn_order_chapter.story_owner ?= {
+			if = {
+				limit = {
+					is_alive = yes
+					NOT = { this = root }
+				}
+				save_scope_as = spn_sn_magus
+			}
+		}
+	}
+	option = {
+		name = spn_order.0362.a
+		if = {
+			limit = { spn_is_order_member_trigger = yes }
+			custom_tooltip = spn_order.0362.a.tt
+			spn_order_flavor_standing_effect = { VALUE = 5 }
+		}
+		scope:spn_sn_kin = {
+			add_opinion = {
+				target = root
+				modifier = disappointed_opinion
+				opinion = -15
+			}
+		}
+		stress_and_fulfillment_impact = {
+			compassionate = minor_stress_impact_gain
+			ambitious = minor_stress_impact_loss
+		}
+	}
+	option = {
+		name = spn_order.0362.b
+		if = {
+			limit = { spn_is_order_member_trigger = yes }
+			custom_tooltip = spn_order.0362.b.tt
+			spn_order_flavor_standing_effect = { VALUE = -5 }
+		}
+		scope:spn_sn_kin = {
+			add_opinion = {
+				target = root
+				modifier = grateful_opinion
+				opinion = 15
+			}
+		}
+		stress_and_fulfillment_impact = {
+			compassionate = minor_stress_impact_loss
+			ambitious = minor_stress_impact_gain
+		}
+	}
+	# The lie: hidden, on his intrigue (50 + 2 a point, never above 85).
+	option = {
+		name = spn_order.0362.c
+		custom_tooltip = spn_order.0362.c.tt
+		hidden_effect = {
+			random = {
+				chance = {
+					value = 50
+					add = {
+						value = intrigue
+						multiply = 2
+					}
+					max = 85
+				}
+				save_scope_value_as = { name = spn_sn_held value = yes }
+			}
+			if = {
+				limit = { exists = scope:spn_sn_held }
+				scope:spn_sn_kin = {
+					add_opinion = {
+						target = root
+						modifier = grateful_opinion
+						opinion = 10
+					}
+				}
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.0362.held
+					desc = spn_order.0362.held_desc
+					left_icon = root
+				}
+			}
+			else = {
+				spn_order_flavor_standing_effect = { VALUE = -8 }
+				scope:spn_sn_magus ?= {
+					add_opinion = {
+						target = root
+						modifier = annoyed_opinion
+						opinion = -10
+					}
+				}
+				send_interface_toast = {
+					type = event_toast_text_bad
+					title = spn_order.0362.seen
+					desc = spn_order.0362.seen_desc
+					left_icon = root
+				}
+			}
+		}
+		stress_and_fulfillment_impact = {
+			honest = minor_stress_impact_gain
+			deceitful = minor_stress_impact_loss
+		}
+	}
+}
+
+# .0363 -- One of the Seniors. An Acolyte mocked by a senior who is not his tutor (The Tutor's Quarrel is that pair) and
+# not the Temple Magus.
+spn_order.0363 = {
+	type = character_event
+	title = spn_order.0363.t
+	desc = spn_order.0363.desc
+	theme = unfriendly
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = shame }
+	right_portrait = { character = scope:spn_ss_senior animation = laugh }
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_flavor_ready_trigger = yes
+		spn_order_cm_senior_ok_trigger = yes
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_cm_seen_0363 years = 10 }
+		var:spn_order_chapter = {
+			random_in_list = {
+				variable = spn_order_members
+				limit = { spn_order_bully_senior_trigger = { ACOLYTE = root } }
+				save_scope_as = spn_ss_senior
+			}
+		}
+		var:spn_order_chapter.story_owner ?= {
+			if = {
+				limit = {
+					is_alive = yes
+					NOT = { this = root }
+					NOT = { this = scope:spn_ss_senior }
+				}
+				save_scope_as = spn_ss_magus
+			}
+		}
+	}
+	option = {
+		name = spn_order.0363.a
+		custom_tooltip = spn_order.0363.a.tt
+		spn_order_flavor_standing_effect = { VALUE = 3 }
+		stress_and_fulfillment_impact = {
+			wrathful = minor_stress_impact_gain
+			arrogant = minor_stress_impact_gain
+			patient = minor_stress_impact_loss
+			humble = minor_stress_impact_loss
+		}
+	}
+	option = {
+		name = spn_order.0363.b
+		duel = {
+			skill = learning
+			value = 12
+			60 = {
+				desc = spn_order.0363.b.success
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 3
+				}
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.0363.b.success
+					desc = spn_order.0363.b.success_desc
+					left_icon = root
+					spn_order_flavor_standing_effect = { VALUE = 5 }
+					scope:spn_ss_senior = {
+						spn_order_flavor_standing_effect = { VALUE = -3 }
+						if = {
+							limit = { can_set_relation_potential_rival_trigger = { CHARACTER = root } }
+							set_relation_potential_rival = root
+						}
+					}
+				}
+			}
+			40 = {
+				desc = spn_order.0363.b.failure
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -3
+				}
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_order.0363.b.failure
+					desc = spn_order.0363.b.failure_desc
+					left_icon = root
+					spn_order_flavor_standing_effect = { VALUE = -3 }
+					add_stress = minor_stress_gain
+				}
+			}
+		}
+	}
+	# The Temple Magus sides with whichever of the two he thinks more of. Hidden until it is done, so the tooltip never
+	# tells the answer before the choice.
+	option = {
+		name = spn_order.0363.c
+		trigger = { exists = scope:spn_ss_magus }
+		custom_tooltip = spn_order.0363.c.tt
+		hidden_effect = {
+			scope:spn_ss_magus = {
+				save_scope_value_as = {
+					name = spn_ss_lean
+					value = {
+						value = "opinion(root)"
+						subtract = "opinion(scope:spn_ss_senior)"
+					}
+				}
+			}
+			if = {
+				limit = { scope:spn_ss_lean >= 0 }
+				scope:spn_ss_senior = { spn_order_flavor_standing_effect = { VALUE = -5 } }
+				scope:spn_ss_magus = {
+					add_opinion = {
+						target = root
+						modifier = respect_opinion
+						opinion = 5
+					}
+				}
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.0363.c.mine
+					desc = spn_order.0363.c.mine_desc
+					left_icon = scope:spn_ss_magus
+				}
+			}
+			else = {
+				spn_order_flavor_standing_effect = { VALUE = -3 }
+				scope:spn_ss_magus = {
+					add_opinion = {
+						target = root
+						modifier = disappointed_opinion
+						opinion = -10
+					}
+				}
+				send_interface_toast = {
+					type = event_toast_text_bad
+					title = spn_order.0363.c.his
+					desc = spn_order.0363.c.his_desc
+					left_icon = scope:spn_ss_magus
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_order.0363.d
+		duel = {
+			skill = intrigue
+			value = 14
+			60 = {
+				desc = spn_order.0363.d.success
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 3
+				}
+				# Banked before the reveal, so the toast's text does not read the secret as already known.
+				if = {
+					limit = {
+						scope:spn_ss_senior = {
+							any_secret = {
+								NOT = { secret_type = spn_secret_blue_rose }
+								NOT = { is_known_by = root }
+							}
+						}
+					}
+					save_scope_value_as = { name = spn_ss_found value = yes }
+				}
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.0363.d.success
+					desc = {
+						first_valid = {
+							triggered_desc = {
+								trigger = { exists = scope:spn_ss_found }
+								desc = spn_order.0363.d.success_desc
+							}
+							desc = spn_order.0363.d.success_none_desc
+						}
+					}
+					left_icon = root
+					hidden_effect = {
+						scope:spn_ss_senior = {
+							random_secret = {
+								limit = {
+									NOT = { secret_type = spn_secret_blue_rose }
+									NOT = { is_known_by = root }
+								}
+								reveal_to = root
+							}
+						}
+					}
+					add_intrigue_lifestyle_xp = minor_lifestyle_xp
+				}
+			}
+			40 = {
+				desc = spn_order.0363.d.failure
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -3
+				}
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_order.0363.d.failure
+					desc = spn_order.0363.d.failure_desc
+					left_icon = root
+					scope:spn_ss_senior = {
+						if = {
+							limit = { can_set_relation_potential_rival_trigger = { CHARACTER = root } }
+							set_relation_potential_rival = root
+						}
+					}
+				}
+			}
+		}
+	}
+	# A wolf lets him see what is in its eyes. Root's own trait, which is always visible, decides the option (B6); his
+	# own secret, if it is one, is then revealed to the senior, and the tooltip says so.
+	option = {
+		name = spn_order.0363.e
+		trigger = {
+			OR = {
+				has_trait = supernatural_werewolf
+				has_trait = supernatural_hybrid
+			}
+		}
+		scope:spn_ss_senior = {
+			add_opinion = {
+				target = root
+				modifier = scared_opinion
+				opinion = -20
+			}
+		}
+		add_dread = minor_dread_gain
+		custom_tooltip = spn_order.0363.e.tt
+		hidden_effect = {
+			every_secret = {
+				limit = {
+					OR = {
+						secret_type = spn_secret_werewolf
+						secret_type = spn_secret_hybrid
+					}
+					NOT = { is_known_by = scope:spn_ss_senior }
+				}
+				reveal_to = scope:spn_ss_senior
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# FOR A TEMPLE MAGUS OR THE COUNCIL (F14 §3)
+# ==================================================================================================
+# .0370 -- A Brother Asks for Help. A player Temple Magus; an AI member of his temple who broke the rules and has not yet
+# been judged. Under a player head the charge waits for the Conclave, which is what makes it his choice.
+# "I will see it buried" removes spn_order_broke_rules: its one writer is spn_order_broke_rules_effect
+# (zz_spn_order_effects.txt:1764) with eight 2.38 call sites, read by the Reckoning, The Accused, an AI head's cast-out and
+# Cast Out; the removal is the one The Accused's pardon already uses (WORK-ORDER-2.39 §6). 2.39 adds four: the beetle
+# (P5), the exposed staged rift (P7, the Grand Magus, whom spn_order_brother_asker_trigger never picks), and two here
+# (.0370 a's cover-up coming out, on the Temple Magus himself, and .0372's truth told).
+spn_order.0370 = {
+	type = character_event
+	title = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_ba_asker ?= { is_female = yes } }
+				desc = spn_order.0370.t_sister
+			}
+			desc = spn_order.0370.t
+		}
+	}
+	desc = spn_order.0370.desc
+	theme = intrigue
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_ba_asker animation = beg }
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_flavor_ready_trigger = yes
+		spn_order_cm_brother_ok_trigger = yes
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_cm_seen_0370 years = 10 }
+		var:spn_order_chapter = {
+			random_in_list = {
+				variable = spn_order_members
+				limit = { spn_order_brother_asker_trigger = { HEAD = root } }
+				save_scope_as = spn_ba_asker
+			}
+		}
+	}
+	option = {
+		name = spn_order.0370.a
+		custom_tooltip = spn_order.0370.a.tt
+		scope:spn_ba_asker = {
+			remove_character_flag = spn_order_broke_rules
+			add_opinion = {
+				target = root
+				modifier = grateful_opinion
+				opinion = 20
+			}
+		}
+		add_hook = {
+			type = favor_hook
+			target = scope:spn_ba_asker
+		}
+		custom_tooltip = spn_order.0370.a.risk_tt
+		# Vera's downfall: a cover-up can come out, and then it is the Temple Magus the masks judge. Hidden.
+		hidden_effect = {
+			random = {
+				chance = 20
+				spn_order_broke_rules_effect = yes
+			}
+		}
+		stress_and_fulfillment_impact = {
+			honest = minor_stress_impact_gain
+			just = minor_stress_impact_gain
+		}
+	}
+	option = {
+		name = spn_order.0370.b
+		custom_tooltip = spn_order.0370.b.tt
+		scope:spn_ba_asker = {
+			add_opinion = {
+				target = root
+				modifier = hate_opinion
+				opinion = -20
+			}
+		}
+		spn_order_flavor_standing_effect = { VALUE = 5 }
+		stress_and_fulfillment_impact = {
+			just = minor_stress_impact_loss
+			compassionate = minor_stress_impact_gain
+		}
+	}
+	option = {
+		name = spn_order.0370.c
+		scope:spn_ba_asker = {
+			add_opinion = {
+				target = root
+				modifier = disappointed_opinion
+				opinion = -10
+			}
+		}
+	}
+}
+
+# .0371 -- A Feud in the Chapter / A Feud on the Council. A player Temple Magus about two AI members of his temple, or a
+# player Grand Magus about two AI seat holders. Players are never the feuding pair.
+spn_order.0371 = {
+	type = character_event
+	title = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_fd_council }
+				desc = spn_order.0371.t_council
+			}
+			desc = spn_order.0371.t
+		}
+	}
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_fd_council }
+				desc = spn_order.0371.desc_council
+			}
+			desc = spn_order.0371.desc
+		}
+	}
+	theme = unfriendly
+	override_background = {
+		trigger = { exists = scope:spn_fd_council }
+		reference = council_chamber
+	}
+	override_background = {
+		trigger = { NOT = { exists = scope:spn_fd_council } }
+		reference = magic_temple
+	}
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_fd_a animation = anger }
+	lower_right_portrait = { character = scope:spn_fd_b animation = rage }
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_flavor_ready_trigger = yes
+		spn_order_cm_feud_ok_trigger = yes
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_cm_seen_0371 years = 10 }
+		# His own temple first; the council when the temple is at peace.
+		if = {
+			limit = { spn_order_chapter_feud_trigger = yes }
+			var:spn_order_chapter = {
+				random_in_list = {
+					variable = spn_order_members
+					limit = { spn_order_feud_has_partner_trigger = { HEAD = root } }
+					save_scope_as = spn_fd_a
+				}
+				random_in_list = {
+					variable = spn_order_members
+					limit = {
+						spn_order_feud_member_trigger = { HEAD = root }
+						spn_order_feuding_trigger = { WITH = scope:spn_fd_a }
+					}
+					save_scope_as = spn_fd_b
+				}
+			}
+		}
+		else = {
+			save_scope_value_as = { name = spn_fd_council value = yes }
+			if = {
+				limit = { spn_order_council_feud_pair_trigger = { A = global_var:current_loremaster_global B = global_var:current_black_mage_global } }
+				global_var:current_loremaster_global = { save_scope_as = spn_fd_a }
+				global_var:current_black_mage_global = { save_scope_as = spn_fd_b }
+			}
+			else_if = {
+				limit = { spn_order_council_feud_pair_trigger = { A = global_var:current_loremaster_global B = global_var:current_admin_global } }
+				global_var:current_loremaster_global = { save_scope_as = spn_fd_a }
+				global_var:current_admin_global = { save_scope_as = spn_fd_b }
+			}
+			else = {
+				global_var:current_black_mage_global ?= { save_scope_as = spn_fd_a }
+				global_var:current_admin_global ?= { save_scope_as = spn_fd_b }
+			}
+		}
+	}
+	option = {
+		name = spn_order.0371.a
+		trigger = { scope:spn_fd_a ?= { is_alive = yes } }
+		custom_tooltip = spn_order.0371.a.tt
+		scope:spn_fd_a = {
+			add_opinion = {
+				target = root
+				modifier = grateful_opinion
+				opinion = 15
+			}
+		}
+		scope:spn_fd_b ?= {
+			add_opinion = {
+				target = root
+				modifier = annoyed_opinion
+				opinion = -15
+			}
+			spn_order_flavor_standing_effect = { VALUE = -3 }
+		}
+	}
+	option = {
+		name = spn_order.0371.b
+		trigger = { scope:spn_fd_b ?= { is_alive = yes } }
+		custom_tooltip = spn_order.0371.b.tt
+		scope:spn_fd_b = {
+			add_opinion = {
+				target = root
+				modifier = grateful_opinion
+				opinion = 15
+			}
+		}
+		scope:spn_fd_a ?= {
+			add_opinion = {
+				target = root
+				modifier = annoyed_opinion
+				opinion = -15
+			}
+			spn_order_flavor_standing_effect = { VALUE = -3 }
+		}
+	}
+	option = {
+		name = {
+			trigger = { exists = scope:spn_fd_council }
+			text = spn_order.0371.c_council
+		}
+		name = {
+			trigger = { NOT = { exists = scope:spn_fd_council } }
+			text = spn_order.0371.c
+		}
+		trigger = {
+			scope:spn_fd_a ?= { is_alive = yes }
+			scope:spn_fd_b ?= { is_alive = yes }
+		}
+		duel = {
+			skill = diplomacy
+			value = 12
+			60 = {
+				desc = spn_order.0371.c.success
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 3
+				}
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.0371.c.success
+					desc = spn_order.0371.c.success_desc
+					left_icon = scope:spn_fd_a
+					right_icon = scope:spn_fd_b
+					scope:spn_fd_a = {
+						add_opinion = {
+							target = scope:spn_fd_b
+							modifier = friendliness_opinion
+							opinion = 15
+						}
+						add_opinion = {
+							target = root
+							modifier = respect_opinion
+							opinion = 10
+						}
+						spn_order_flavor_standing_effect = { VALUE = 3 }
+					}
+					scope:spn_fd_b = {
+						add_opinion = {
+							target = scope:spn_fd_a
+							modifier = friendliness_opinion
+							opinion = 15
+						}
+						add_opinion = {
+							target = root
+							modifier = respect_opinion
+							opinion = 10
+						}
+						spn_order_flavor_standing_effect = { VALUE = 3 }
+					}
+				}
+			}
+			40 = {
+				desc = spn_order.0371.c.failure
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -3
+				}
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_order.0371.c.failure
+					desc = spn_order.0371.c.failure_desc
+					left_icon = scope:spn_fd_a
+					right_icon = scope:spn_fd_b
+					scope:spn_fd_a = {
+						add_opinion = {
+							target = root
+							modifier = annoyed_opinion
+							opinion = -10
+						}
+					}
+					scope:spn_fd_b = {
+						add_opinion = {
+							target = root
+							modifier = annoyed_opinion
+							opinion = -10
+						}
+					}
+				}
+			}
+		}
+	}
+	# They settle it between them: a hidden even chance picks the loser, who takes a wound (never a death).
+	option = {
+		name = spn_order.0371.d
+		trigger = {
+			scope:spn_fd_a ?= { is_alive = yes }
+			scope:spn_fd_b ?= { is_alive = yes }
+		}
+		custom_tooltip = spn_order.0371.d.tt
+		hidden_effect = {
+			random_list = {
+				50 = {
+					scope:spn_fd_a = { save_scope_as = spn_fd_winner }
+					scope:spn_fd_b = { save_scope_as = spn_fd_loser }
+				}
+				50 = {
+					scope:spn_fd_b = { save_scope_as = spn_fd_winner }
+					scope:spn_fd_a = { save_scope_as = spn_fd_loser }
+				}
+			}
+			scope:spn_fd_winner = { spn_order_flavor_standing_effect = { VALUE = 5 } }
+			scope:spn_fd_loser = {
+				spn_order_flavor_standing_effect = { VALUE = -5 }
+				increase_wounds_no_death_effect = { REASON = fight }
+			}
+			send_interface_toast = {
+				type = event_toast_text_neutral
+				title = spn_order.0371.d.done
+				desc = spn_order.0371.d.done_desc
+				left_icon = scope:spn_fd_winner
+				right_icon = scope:spn_fd_loser
+			}
+		}
+		stress_and_fulfillment_impact = {
+			compassionate = minor_stress_impact_gain
+			sadistic = minor_stress_impact_loss
+		}
+	}
+}
+
+# .0372 -- Where Do You Go at Night? (Silence). Any member, with an AI spouse at his side who does not know. Telling the
+# truth is the full breach (D20): spn_order_broke_rules, the same rule as Ask About the Blue Rose, and the tooltip says
+# plainly what that can mean. "Ask the temple to consider her" is always shown (B6): whether she may join reads hidden
+# state (a defector's or a wiped mind's flag, a witch hunter's secret), so it is decided in the effect, hidden, and a
+# refusal is a neutral toast that names no reason.
+spn_order.0372 = {
+	type = character_event
+	title = spn_order.0372.t
+	desc = spn_order.0372.desc
+	theme = secret
+	override_background = { reference = bedchamber }
+	left_portrait = { character = root animation = worry }
+	right_portrait = { character = scope:spn_wg_spouse animation = disapproval }
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_flavor_ready_trigger = yes
+		spn_order_cm_where_ok_trigger = yes
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_cm_seen_0372 years = 10 }
+		primary_spouse = { save_scope_as = spn_wg_spouse }
+	}
+	option = {
+		name = spn_order.0372.a
+		duel = {
+			skill = intrigue
+			target = scope:spn_wg_spouse
+			60 = {
+				desc = spn_order.0372.a.success
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 3
+				}
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.0372.a.success
+					desc = spn_order.0372.a.success_desc
+					left_icon = scope:spn_wg_spouse
+					add_intrigue_lifestyle_xp = minor_lifestyle_xp
+				}
+			}
+			40 = {
+				desc = spn_order.0372.a.failure
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -3
+				}
+				send_interface_toast = {
+					type = event_toast_text_bad
+					title = spn_order.0372.a.failure
+					desc = spn_order.0372.a.failure_desc
+					left_icon = scope:spn_wg_spouse
+					scope:spn_wg_spouse = {
+						add_opinion = {
+							target = root
+							modifier = suspicion_opinion
+							opinion = -20
+						}
+					}
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_order.0372.b
+		custom_tooltip = spn_order.0372.b.tt
+		random_secret = {
+			limit = {
+				secret_type = spn_secret_blue_rose
+				NOT = { is_known_by = scope:spn_wg_spouse }
+			}
+			reveal_to = scope:spn_wg_spouse
+		}
+		scope:spn_wg_spouse = {
+			add_opinion = {
+				target = root
+				modifier = trust_opinion
+				opinion = 20
+			}
+		}
+		spn_order_broke_rules_effect = yes
+	}
+	option = {
+		name = spn_order.0372.c
+		custom_tooltip = spn_order.0372.c.tt
+		hidden_effect = {
+			if = {
+				limit = {
+					scope:spn_wg_spouse = {
+						is_alive = yes
+						NOT = { exists = var:spn_order_chapter }
+						spn_order_can_join_trigger = yes
+					}
+				}
+				scope:spn_wg_spouse = { add_character_flag = { flag = spn_order_sponsored years = 5 } }
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.0372.c.yes
+					desc = spn_order.0372.c.yes_desc
+					left_icon = scope:spn_wg_spouse
+				}
+			}
+			else = {
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_order.0372.c.no
+					desc = spn_order.0372.c.no_desc
+					left_icon = scope:spn_wg_spouse
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_order.0372.d
+		scope:spn_wg_spouse = {
+			add_opinion = {
+				target = root
+				modifier = suspicion_opinion
+				opinion = -30
+			}
+		}
+		stress_and_fulfillment_impact = { honest = minor_stress_impact_gain }
+	}
+}

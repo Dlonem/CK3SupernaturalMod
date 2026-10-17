@@ -1,0 +1,262 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": Seize Their Relics (WORK-ORDER-2.38 §10). Vanilla's artifact_war
+# (01_ep1_wars.txt:1, 1.20.0.3) copied whole; the changes are marked 2.38. ai_only_against_neighbors binds only the AI: a
+# player may declare across the world, and the march is the price. Loc: localization/english/spn_relic_l_english.yml.
+
+spn_relic_war = {
+	icon = artifact_war
+	group = artifact
+	ai_only_against_neighbors = yes
+	allow_hostages = no
+
+	allowed_for_character = {
+		is_landed = yes
+		OR = {
+			has_trait = archmage
+			spn_is_order_member_trigger = yes
+			spn_in_coven_trigger = yes
+			spn_order_break_road_trigger = yes # 2.39 (WORK-ORDER-2.39 F2): an enemy of the Order may take its relics
+		}
+		NOT = {
+			government_has_flag = government_is_landless_adventurer
+		}
+	}
+	allowed_against_character = {
+		# 2.38 (§10): three magical items or more, pledged or not; never over one trinket.
+		any_character_artifact = {
+			count >= spn_relic_war_min_items_value
+			spn_is_magic_item_trigger = yes
+			spn_relic_can_move_trigger = yes
+		}
+		# 2.39 (WORK-ORDER-2.39 F2): one who comes to it only by the road may aim it only at a member whose secret he knows.
+		trigger_if = {
+			limit = {
+				scope:attacker = {
+					NOT = { has_trait = archmage }
+					spn_is_order_member_trigger = no
+					spn_in_coven_trigger = no
+				}
+			}
+			scope:attacker = {
+				any_known_secret = {
+					secret_type = spn_secret_blue_rose
+					secret_owner = scope:defender
+				}
+			}
+		}
+	}
+
+	on_declaration = {
+		on_declared_war = yes
+	}
+
+	cost = {
+		prestige = {
+			value = 0
+			add = {
+				value = medium_prestige_value
+				desc = CB_BASE_COST
+			}
+
+			multiply = common_cb_prestige_cost_multiplier
+		}
+	}
+
+	on_victory_desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					scope:defender = { is_local_player = yes }
+				}
+				desc = spn_relic_war_victory_desc_defender
+			}
+			desc = spn_relic_war_victory_desc
+		}
+	}
+
+	on_victory = {
+		scope:attacker = {
+
+			show_pow_release_message_effect = yes
+			
+			# Legitimacy
+			add_legitimacy_attacker_victory_effect = yes
+
+			#EP2 accolade glory gain for winning against higher ranked enemy
+			accolade_attacker_war_end_glory_gain_med_effect = yes
+
+			# 2.38 (§10): every magical item he holds, collected first, then moved (unpledged, loans ended, a claim to the loser).
+			spn_relic_take_all_effect = { FROM = scope:defender TO = scope:attacker }
+		}
+
+		# Prestige for the attacker's war allies
+		add_from_contribution_attackers = {
+			prestige = medium_prestige_value
+			opinion = {
+				modifier = contributed_in_war
+			}
+		}
+
+		# Prestige for the defender's war allies
+		add_from_contribution_defenders = {
+			prestige = medium_prestige_value
+			opinion = {
+				modifier = contributed_in_war
+			}
+		}
+
+		# Truce
+		add_truce_attacker_victory_effect = yes
+
+		# EP3: note gold gained from military assistance/join war contracts and their war contribution threshold
+		laamp_as_mercenary_payout_tooltip_effect = yes
+
+		#Mandalas gain or lose piety/devotion depending on Decree
+		mandala_war_victory_effects = yes
+	}
+
+	on_white_peace_desc = {
+		desc = spn_relic_war_white_peace_desc
+	}
+
+	on_white_peace = {
+		scope:attacker = { show_pow_release_message_effect = yes }
+
+		#EP2 accolade glory gain for doing ok against higher ranked enemy
+		scope:defender = { accolade_defender_war_end_glory_gain_low_effect = yes }
+
+		# Prestige loss for the attacker
+		scope:attacker = {
+			add_prestige = {
+				value = minor_prestige_value
+				multiply = -1.0
+			}
+		}
+
+		# Prestige for the attacker's war allies
+		add_from_contribution_attackers = {
+			prestige = medium_prestige_value
+			opinion = {
+				modifier = contributed_in_war
+			}
+		}
+
+		# Prestige for the defender's war allies
+		add_from_contribution_defenders = {
+			prestige = medium_prestige_value
+			opinion = {
+				modifier = contributed_in_war
+			}
+		}
+
+		# Truce
+		add_truce_white_peace_effect = yes
+
+		# EP3: note gold gained from military assistance/join war contracts and their war contribution threshold
+		laamp_as_mercenary_payout_tooltip_effect = yes
+	}
+
+	on_defeat_desc = {
+		desc = spn_relic_war_defeat_desc
+	}
+
+	on_defeat = {
+		# Legitimacy
+		add_legitimacy_attacker_defeat_effect = yes
+		
+		scope:defender = { 
+			mandala_peacemaker_perk_serenity_effect = yes
+			#EP2 accolade glory gain for winning against higher ranked enemy
+			accolade_defender_war_end_glory_gain_high_effect = yes
+			# Prestige for Defender
+			add_prestige_war_defender_effect = {
+				PRESTIGE_VALUE = medium_prestige_value
+			}
+		}
+
+		# 2.38 (§10): vanilla strips the attacker's claims here; a lost relic war costs him none of his unrelated claims.
+		scope:attacker = {
+			show_pow_release_message_effect = yes
+		}
+
+		# Prestige loss for the attacker
+		scope:attacker = {
+			pay_short_term_gold_reparations_effect = {
+				GOLD_VALUE = 3
+			}
+			add_prestige = {
+				value = major_prestige_value
+				multiply = -1.0
+			}
+		}
+
+		# Prestige for the attacker's war allies
+		add_from_contribution_attackers = {
+			prestige = medium_prestige_value
+			opinion = {
+				modifier = contributed_in_war
+			}
+		}
+
+		# Prestige for the defender's war allies
+		add_from_contribution_defenders = {
+			prestige = medium_prestige_value
+			opinion = {
+				modifier = contributed_in_war
+			}
+		}
+
+		# Truce
+		add_truce_attacker_defeat_effect = yes
+
+		# EP3: note gold gained from military assistance/join war contracts and their war contribution threshold
+		laamp_as_mercenary_payout_tooltip_effect = yes
+
+		#Mandalas gain or lose piety/devotion depending on Decree
+		mandala_war_defeat_effects = yes
+	}
+
+	should_invalidate = {
+		# 2.38 (§10): the war ends when he holds nothing left to take.
+		NOT = {
+			scope:defender = {
+				any_character_artifact = {
+					spn_is_magic_item_trigger = yes
+					spn_relic_can_move_trigger = yes
+				}
+			}
+		}
+	}
+
+	on_invalidated = {
+	}
+
+	on_invalidated_desc = {
+		desc = spn_relic_war_invalidated_desc
+	}
+	on_primary_attacker_death = inherit
+	on_primary_defender_death = inherit
+
+	transfer_behavior = transfer
+
+	attacker_allies_inherit = yes
+	defender_allies_inherit = yes
+
+	war_name = "SPN_RELIC_WAR_NAME"
+	cb_name_no_target = "SPN_RELIC_WAR_NAME_FALLBACK"
+
+	interface_priority = 1000
+
+	ticking_war_score_targets_entire_realm = yes
+	max_defender_score_from_occupation = 150
+	max_attacker_score_from_occupation = 150
+	attacker_ticking_warscore = 0
+	attacker_wargoal_percentage = 0.8
+
+	max_ai_diplo_distance_to_title = 500
+
+	should_show_war_goal_subview = no
+
+	ai_score = {
+		value = spn_relic_war_ai_score_value
+	}
+}

@@ -1,0 +1,43 @@
+﻿# Supernatural 2.39 -- how rare the Collegium is (Thomas's call, 16 Oct; tool/pkgs/PB/HANDOFF.md §8).
+#
+# Thomas's Boot 2 save had 124 Collegia after 21 years, 3 of them halls. He wants it rare: "Ooh, your province has this
+# temple? Hell yeah. There's only like seven in the world." His choice (16 Oct): each temple's Collegium is always
+# allowed, plus at most 7 ordinary ones, and the AI raises at most one ordinary Collegium every two years. About half of
+# all Collegia then have no temple beneath them, so seeing one proves nothing (red team H1, B6).
+# The rest of the rule: common/buildings/zz_spn_order_buildings.txt (ai_value, on_start, on_cancelled, on_complete),
+# common/script_values/zz_spn_239_collegium_rarity_values.txt, common/scripted_effects/zz_spn_239_collegium_rarity_effects.txt.
+
+# CHARACTER scope (a ruler, the would-be builder). His Collegium would be a temple's hall:
+# - a patron (spn_order_hall_patron_trigger) whose temple is not already raising one; or
+# - the lord of a Temple Magus who holds no land, whose temple has no hall and none being raised. Step 2c of the
+#   chapter's year adopts a Collegium beneath that court (spn_order_hall_home_effect), so a courtier's temple gets
+#   its hall this way. Five of Boot 1's six Temple Magi were courtiers.
+# Read by the AI and the hidden hooks only, never a requirement line.
+spn_order_collegium_wanted_trigger = {
+	NOT = { has_game_rule = spn_order_off }
+	OR = {
+		AND = {
+			spn_order_hall_patron_trigger = yes
+			var:spn_order_chapter ?= { NOT = { exists = var:spn_order_hall_building } }
+		}
+		any_courtier = {
+			has_variable = spn_order_chapter
+			is_landed = no
+			spn_is_temple_magus_trigger = yes
+			var:spn_order_chapter ?= {
+				NOT = { exists = var:spn_order_hall }
+				NOT = { exists = var:spn_order_hall_building }
+			}
+		}
+	}
+}
+
+# Any scope. No more ordinary Collegia for the AI: one was begun by an AI in the last two years, 7 already stand, or the
+# world has not been counted yet (an older save, before its first year under this rule).
+spn_order_collegium_ordinary_full_trigger = {
+	OR = {
+		exists = global_var:spn_collegium_ai_recent
+		NOT = { exists = global_var:spn_collegia_counted }
+		spn_collegia_ordinary_value >= spn_collegia_ordinary_cap_value
+	}
+}

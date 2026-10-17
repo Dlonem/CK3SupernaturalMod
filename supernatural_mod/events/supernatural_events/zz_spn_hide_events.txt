@@ -179,10 +179,10 @@ spn_hide.0002 = {
 spn_hide.0003 = {
 	scope = artifact
 	hidden = yes
-	trigger = {
-		has_variable = spn_hide
-	}
+	# 2.38c: no trigger (it read a destroyed artifact in a siege); the check is the first thing immediate does.
 	immediate = {
+		if = { # 2.38c: the whole teardown, for a hide only (every broken artifact comes here)
+		limit = { has_variable = spn_hide }
 		save_scope_as = spn_broken_hide
 		spn_hide_save_champion_effect = yes
 		if = {
@@ -220,6 +220,7 @@ spn_hide.0003 = {
 		if = {
 			limit = { NOT = { scope:owner ?= { is_alive = yes } } }
 			destroy_artifact = this
+		}
 		}
 	}
 }
@@ -278,7 +279,7 @@ spn_hide.0009 = {
 			remove_character_flag = spn_hide_takes_hold_pending
 		}
 		if = {
-			limit = { exists = var:spn_hide_fever_hide }
+			limit = { has_variable = spn_hide_fever_hide }
 			remove_variable = spn_hide_fever_hide
 		}
 	}
@@ -1567,6 +1568,14 @@ spn_hide.0103 = {
 			}
 			desc = spn_hide.0103.desc_silverback
 		}
+		# 2.38 (§12.2): the page Silverback keeps.
+		triggered_desc = {
+			trigger = {
+				has_trait = spn_champion_silverback
+				any_character_artifact = { has_variable = spn_holds_vade_page }
+			}
+			desc = spn_hide.0103.desc_page
+		}
 	}
 	theme = dread
 	override_background = { reference = wilderness_forest }
@@ -2386,7 +2395,17 @@ spn_hide.0301 = {
 					NOT = { exists = var:legendary_proxy }
 				}
 			}
-			trigger_event = spn_hide.0305
+			if = { # 2.39 (Boot 3, 16 Oct): inside the hunt's window while he is still in it
+				limit = { involved_activity ?= scope:activity }
+				trigger_event = spn_hide.0306
+			}
+			else = {
+				trigger_event = spn_hide.0305
+			}
+		}
+		else_if = { # 2.39 (Boot 3, 16 Oct): inside the hunt's window while he is still in it
+			limit = { involved_activity ?= scope:activity }
+			trigger_event = spn_hide.0307
 		}
 		else = {
 			trigger_event = spn_hide.0302
@@ -2434,7 +2453,7 @@ spn_hide.0303 = {
 		custom_tooltip = spn_hide.0303.a.tt
 		if = {
 			limit = { spn_can_bear_hide_trigger = yes }
-			scope:spn_offered_hide = { equip_artifact_to_owner_replace = yes }
+			hidden_effect = { scope:spn_offered_hide = { equip_artifact_to_owner_replace = yes } } # 2.39 (Boot 1, 16 Oct): the line above says it
 		}
 		ai_chance = { base = 100 }
 	}
@@ -2446,14 +2465,16 @@ spn_hide.0303 = {
 
 # .0304 -- A Scent You Know. A werewolf on an ordinary hunt, while a hide is lost.
 spn_hide.0304 = {
-	type = character_event
+	type = activity_event # 2.39 (Boot 3, 16 Oct): in the hunt's own window (was character_event, theme hunting)
 	title = spn_hide.0304.t
 	desc = spn_hide.0304.desc
-	theme = hunting
+	theme = hunt_activity
 	override_background = { reference = wilderness_forest }
 	left_portrait = { character = root animation = interested }
 	trigger = {
 		is_alive = yes
+		exists = scope:activity # 2.39 (Boot 3, 16 Oct): an activity event needs its hunt, and him still in it
+		involved_activity ?= scope:activity
 		NOT = { has_character_flag = spn_hide_scent_seen }
 	}
 	immediate = {
@@ -2482,74 +2503,7 @@ spn_hide.0305 = {
 		custom_tooltip = spn_hide.0305.a.tt
 		# 2.37e: hidden. The hide this makes does not exist while the tooltip is built, and every line after the create
 		# read it unset, every frame the window was open (the Found a Pack class).
-		hidden_effect = {
-			save_scope_as = spn_ww_winner
-			if = {
-				limit = { var:spn_hide_wolf_hide ?= flag:silverback }
-				if = {
-					limit = { exists = global_var:spn_hide_silverback_reserved }
-					remove_global_variable = spn_hide_silverback_reserved
-				}
-				spn_hide_create_effect = { HIDE = silverback OWNER = scope:spn_ww_winner }
-			}
-			if = {
-				limit = { var:spn_hide_wolf_hide ?= flag:timber }
-				if = {
-					limit = { exists = global_var:spn_hide_timber_reserved }
-					remove_global_variable = spn_hide_timber_reserved
-				}
-				spn_hide_create_effect = { HIDE = timber OWNER = scope:spn_ww_winner }
-			}
-			if = {
-				limit = { var:spn_hide_wolf_hide ?= flag:tundra }
-				if = {
-					limit = { exists = global_var:spn_hide_tundra_reserved }
-					remove_global_variable = spn_hide_tundra_reserved
-				}
-				spn_hide_create_effect = { HIDE = tundra OWNER = scope:spn_ww_winner }
-			}
-			if = {
-				limit = { var:spn_hide_wolf_hide ?= flag:graybeard }
-				if = {
-					limit = { exists = global_var:spn_hide_graybeard_reserved }
-					remove_global_variable = spn_hide_graybeard_reserved
-				}
-				spn_hide_create_effect = { HIDE = graybeard OWNER = scope:spn_ww_winner }
-			}
-			if = {
-				limit = { var:spn_hide_wolf_hide ?= flag:midnight }
-				if = {
-					limit = { exists = global_var:spn_hide_midnight_reserved }
-					remove_global_variable = spn_hide_midnight_reserved
-				}
-				spn_hide_create_effect = { HIDE = midnight OWNER = scope:spn_ww_winner }
-			}
-			if = {
-				limit = { var:spn_hide_wolf_hide ?= flag:alpha }
-				if = {
-					limit = { exists = global_var:spn_hide_alpha_reserved }
-					remove_global_variable = spn_hide_alpha_reserved
-				}
-				spn_hide_create_effect = { HIDE = alpha OWNER = scope:spn_ww_winner }
-			}
-			if = {
-				limit = { has_variable = spn_hide_wolf_hide }
-				remove_variable = spn_hide_wolf_hide
-			}
-			if = {
-				limit = { has_character_flag = spn_hide_outcome_pending }
-				remove_character_flag = spn_hide_outcome_pending
-			}
-			if = {
-				limit = {
-					exists = scope:spn_new_hide
-					spn_can_bear_hide_trigger = yes
-					spn_is_champion_trigger = no
-				}
-				scope:spn_new_hide = { equip_artifact_to_owner_replace = yes }
-				spn_hide_make_champion_dispatch_effect = { ARTIFACT = scope:spn_new_hide }
-			}
-		}
+		hidden_effect = { spn_hide_white_wolf_payout_effect = yes } # 2.39 (Boot 3, 16 Oct): the payout, shared with .0306
 	}
 }
 
@@ -3285,3 +3239,76 @@ spn_hide.0381 = {
 	}
 }
 
+
+# 2.39 (Boot 3, 16 Oct): the white wolf's answer inside the hunt's own window (section 15 of tool/pkgs/PB/edits.py). Same text as .0305 and
+# .0302. .0306 pays in immediate: the hunt ends a few days after this, and nothing may hang on a click.
+spn_hide.0306 = {
+	type = activity_event
+	title = spn_hide.0305.t
+	desc = spn_hide.0305.desc
+	theme = hunt_activity
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = stunned }
+	trigger = {
+		is_alive = yes
+		exists = var:spn_hide_wolf_hide
+		exists = scope:activity
+		involved_activity ?= scope:activity
+	}
+	immediate = {
+		spn_hide_white_wolf_payout_effect = yes
+	}
+	option = {
+		name = spn_hide.0305.a
+		custom_tooltip = spn_hide.0305.a.tt
+	}
+}
+
+spn_hide.0307 = {
+	type = activity_event
+	title = spn_hide.0302.t
+	desc = spn_hide.0302.desc
+	theme = hunt_activity
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = disappointed }
+	trigger = {
+		exists = scope:activity
+		involved_activity ?= scope:activity
+	}
+	immediate = {
+		if = {
+			limit = { has_character_flag = spn_hide_outcome_pending }
+			remove_character_flag = spn_hide_outcome_pending
+		}
+	}
+	option = {
+		name = spn_hide.0302.a
+	}
+}
+
+# 2.39 (Boot 3, 16 Oct): .0311 -- A Tale on the Road. A player wolf travelling near a shrine that keeps a hide (zz_spn_239_hide_road_on_actions.txt).
+spn_hide.0311 = {
+	type = character_event
+	title = spn_hide.0311.t
+	desc = spn_hide.0311.desc
+	theme = travel
+	override_background = { reference = tavern }
+	left_portrait = { character = root animation = interested }
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_road_hide
+		exists = scope:spn_shrine_county
+		scope:spn_road_hide = { var:spn_hide_shrine_county ?= scope:spn_shrine_county }
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes # 2.39 (final pass, 17 Oct): flavor: marks the 60-day gate (F14)
+		scope:spn_shrine_county = { faith = { save_scope_as = spn_shrine_faith } }
+	}
+	option = {
+		name = spn_hide.0311.a
+		custom_tooltip = spn_hide.0311.a.tt
+		hidden_effect = {
+			spn_hide_learn_where_effect = { HIDE_SCOPE = scope:spn_road_hide WHERE = scope:spn_shrine_county WANTS = yes }
+		}
+	}
+}

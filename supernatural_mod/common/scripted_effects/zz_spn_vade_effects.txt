@@ -1,0 +1,1298 @@
+﻿# Supernatural 2.38 -- the Vade Maecum Infernal (WORK-ORDER-2.38 §12). All of it behind spn_vade_on_trigger.
+#
+# Four pages (var:spn_vade_page = 1-4) and the whole book (var:spn_vade_book), all vanilla `journal` items with the
+# spn_vade_template. The world's record lives in globals, so no event searches the world for them:
+#   spn_vade_page_<n>_state (flag:held|lost|in_hide|bound|burned), spn_vade_page_<n>_art, spn_vade_page_<n>_hide (the hide
+#   guarding it while in_hide), spn_vade_page_<n>_lost_until, spn_vade_book (the artifact), spn_vade_book_exists,
+#   spn_vade_destroyed, spn_vade_contract_running (the binder), and the souls (§12.11).
+# House rules: every create is followed by an exists guard; no death inside an on_action (the owner hook and on_death
+# schedule a death a day later); the bank comes before the irreversible step.
+
+# ==================================================================================================
+# PAGES (§12.1)
+# ==================================================================================================
+spn_vade_set_state_effect = {
+	set_global_variable = { name = spn_vade_page_$N$_state value = flag:$STATE$ }
+}
+
+spn_vade_create_page_effect = {
+	$OWNER$ = {
+		save_scope_as = spn_cp_owner
+		create_artifact = {
+			name = spn_vade_page_$N$_name
+			description = spn_vade_page_$N$_desc
+			template = spn_vade_template
+			type = journal
+			visuals = artifact_scroll
+			modifier = spn_vade_page_modifier
+			rarity = illustrious
+			decaying = no
+			history = { type = created_before_history }
+			save_scope_as = spn_new_page
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_new_page }
+		scope:spn_new_page = {
+			set_variable = { name = spn_vade_page value = $N$ }
+		}
+		set_global_variable = { name = spn_vade_page_$N$_art value = scope:spn_new_page }
+		if = {
+			limit = { has_global_variable = spn_vade_page_$N$_lost_until }
+			remove_global_variable = spn_vade_page_$N$_lost_until
+		}
+		if = {
+			limit = { has_global_variable = spn_vade_page_$N$_hide }
+			remove_global_variable = spn_vade_page_$N$_hide
+		}
+		spn_vade_set_state_effect = { N = $N$ STATE = held }
+		# Creation fires no owner hook: count the four now (§12.6).
+		scope:spn_cp_owner = {
+			spn_vade_check_four_effect = yes
+			if = {
+				limit = {
+					scope:spn_new_page = { var:spn_vade_page = 2 }
+					NOT = { has_character_modifier = spn_vade_sleeper_modifier }
+				}
+				add_character_modifier = spn_vade_sleeper_modifier
+			}
+		}
+		clear_saved_scope = spn_new_page
+	}
+}
+
+spn_vade_page_lost_effect = {
+	spn_vade_set_state_effect = { N = $N$ STATE = lost }
+	random_list = {
+		1 = { set_global_variable = { name = spn_vade_page_$N$_lost_until value = spn_years_on_10_value } }
+		1 = { set_global_variable = { name = spn_vade_page_$N$_lost_until value = spn_years_on_20_value } }
+		1 = { set_global_variable = { name = spn_vade_page_$N$_lost_until value = spn_years_on_30_value } }
+	}
+	if = {
+		limit = { has_global_variable = spn_vade_page_$N$_art }
+		remove_global_variable = spn_vade_page_$N$_art
+	}
+}
+
+# A page placed by the treasury rule (C6): 1 a theocracy's ruler, 2 a learned ruler, 3 a republic's ruler, 4 a learned ruler
+# other than page 2's. Creatures, hunters and anyone already holding a page are passed over. None found -> lost.
+spn_vade_place_page_effect = {
+	if = {
+		limit = { always = $THEO$ }
+		ordered_ruler = {
+			limit = {
+				spn_vade_page_holder_ok_trigger = yes
+				government_has_flag = government_is_theocracy
+			}
+			order_by = highest_held_title_tier
+			save_scope_as = spn_pp_holder
+		}
+	}
+	else_if = {
+		limit = { always = $REPUB$ }
+		ordered_ruler = {
+			limit = {
+				spn_vade_page_holder_ok_trigger = yes
+				government_has_flag = government_is_republic
+			}
+			order_by = highest_held_title_tier
+			save_scope_as = spn_pp_holder
+		}
+	}
+	else = {
+		ordered_ruler = {
+			limit = { spn_vade_page_holder_ok_trigger = yes }
+			order_by = learning
+			save_scope_as = spn_pp_holder
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_pp_holder }
+		spn_vade_create_page_effect = { N = $N$ OWNER = scope:spn_pp_holder }
+		clear_saved_scope = spn_pp_holder
+	}
+	else = {
+		spn_vade_page_lost_effect = { N = $N$ }
+	}
+}
+
+# ==================================================================================================
+# SEEDING (§12.2). on_game_start_after_lobby days = 3; an older save once from the yearly pulse. No root.
+# ==================================================================================================
+spn_vade_seed_effect = {
+	if = {
+		limit = {
+			spn_vade_on_trigger = yes
+			NOT = { exists = global_var:spn_vade_seeded }
+		}
+		set_global_variable = spn_vade_seeded
+		if = {
+			limit = { has_game_rule = spn_vade_lost }
+			spn_vade_page_lost_effect = { N = 1 }
+			spn_vade_page_lost_effect = { N = 2 }
+			spn_vade_page_lost_effect = { N = 3 }
+		}
+		else = {
+			spn_vade_place_page_effect = { N = 1 THEO = yes REPUB = no }
+			spn_vade_place_page_effect = { N = 2 THEO = no REPUB = no }
+			spn_vade_place_page_effect = { N = 3 THEO = no REPUB = yes }
+			# The Black Stone: seeded page 1 is sealed until a submission spell opens it (§12.14).
+			global_var:spn_vade_page_1_art ?= { set_variable = spn_page_sealed }
+		}
+		# Page 4 is always in Silverback (T2).
+		spn_vade_set_state_effect = { N = 4 STATE = in_hide }
+		set_global_variable = { name = spn_vade_page_4_hide value = flag:silverback }
+		random_artifact = {
+			limit = { var:spn_hide ?= flag:silverback }
+			set_variable = { name = spn_holds_vade_page value = 4 }
+		}
+	}
+}
+
+# ==================================================================================================
+# THE YEARLY PASS (§12.3, §12.4, §12.8, §12.10-12.14). No root. One every_artifact walk, filtered by variable.
+# ==================================================================================================
+spn_vade_yearly_effect = {
+	if = {
+		limit = {
+			spn_vade_on_trigger = yes
+			exists = global_var:spn_vade_seeded
+			NOT = { exists = global_var:spn_vade_destroyed }
+		}
+		# 1. Lost pages surface (§12.3): only in the year one does is the world walked.
+		spn_vade_surface_effect = { N = 1 }
+		spn_vade_surface_effect = { N = 2 }
+		spn_vade_surface_effect = { N = 3 }
+		spn_vade_surface_effect = { N = 4 }
+		# 2. The one walk: every page and the book.
+		every_artifact = {
+			limit = {
+				OR = {
+					has_variable = spn_vade_page
+					has_variable = spn_vade_book
+				}
+			}
+			add_to_temporary_list = spn_vade_items
+			if = {
+				limit = { has_variable = spn_vade_page }
+				add_to_temporary_list = spn_vade_pages
+			}
+		}
+		# The book's holder is remembered, so The Book Falls Apart can find the last one.
+		every_in_list = {
+			list = spn_vade_items
+			limit = {
+				has_variable = spn_vade_book
+				exists = artifact_owner
+			}
+			artifact_owner = { set_global_variable = { name = spn_vade_book_holder value = this } }
+		}
+		# A page recorded as held that is not in the world was destroyed: it is lost. Before the aniconist, whose scatter
+		# makes new pages this walk never saw (review, 9 Oct).
+		spn_vade_page_check_present_effect = { N = 1 }
+		spn_vade_page_check_present_effect = { N = 2 }
+		spn_vade_page_check_present_effect = { N = 3 }
+		spn_vade_page_check_present_effect = { N = 4 }
+		# 3. The aniconist (§12.10): the book is recorded whole but is not in the world.
+		if = {
+			limit = {
+				exists = global_var:spn_vade_book_exists
+				NOT = { any_in_list = { list = spn_vade_items has_variable = spn_vade_book } }
+			}
+			spn_vade_book_falls_apart_effect = yes
+		}
+		# 4. Every champion hears the pages (T29): once per page per champion, one event a year at most.
+		spn_vade_champion_hears_effect = { HIDE = silverback }
+		spn_vade_champion_hears_effect = { HIDE = timber }
+		spn_vade_champion_hears_effect = { HIDE = tundra }
+		spn_vade_champion_hears_effect = { HIDE = graybeard }
+		spn_vade_champion_hears_effect = { HIDE = midnight }
+		spn_vade_champion_hears_effect = { HIDE = alpha }
+		# 5. The holders: four-page holders' firstborn, the voices, the book's panel, the claims.
+		every_in_list = {
+			list = spn_vade_items
+			limit = { exists = artifact_owner }
+			artifact_owner = { add_to_temporary_list = spn_vade_holders }
+		}
+		every_in_list = {
+			list = spn_vade_holders
+			spn_vade_check_four_effect = yes
+			spn_vade_holder_year_effect = yes
+		}
+		# 6. The book's claims (§12.8): only while no Contract runs.
+		if = {
+			limit = {
+				exists = global_var:spn_vade_book_exists
+				NOT = { exists = global_var:spn_vade_contract_running }
+				global_var:spn_vade_book ?= { exists = artifact_owner }
+			}
+			spn_vade_claims_effect = yes
+		}
+		# 7. The witnesses' bonds end with the book (§12.13).
+		# 2.39 (WORK-ORDER-2.39 B9): DEAD CODE. This whole pass runs only while NOT global_var:spn_vade_destroyed (the gate
+		# at the top), so this limit can never be true. The bonds really end where the book is destroyed, in
+		# spn_vade_burn_effect. Kept as the record of the intent; it does nothing.
+		if = {
+			limit = { exists = global_var:spn_vade_destroyed }
+			every_in_global_list = {
+				variable = spn_vade_witnesses
+				limit = {
+					is_alive = yes
+					has_character_modifier = spn_vade_witness_bond_modifier
+				}
+				remove_character_modifier = spn_vade_witness_bond_modifier
+			}
+		}
+	}
+}
+
+spn_vade_surface_effect = {
+	if = {
+		limit = {
+			global_var:spn_vade_page_$N$_state ?= flag:lost
+			exists = global_var:spn_vade_page_$N$_lost_until
+			global_var:spn_vade_page_$N$_lost_until <= current_year
+		}
+		random_living_character = {
+			limit = {
+				is_ai = yes
+				has_trait = archmage
+				is_adult = yes
+				spn_vade_page_holder_ok_trigger = yes
+			}
+			save_scope_as = spn_sf_holder
+		}
+		if = {
+			limit = { exists = scope:spn_sf_holder }
+			spn_vade_create_page_effect = { N = $N$ OWNER = scope:spn_sf_holder }
+			clear_saved_scope = spn_sf_holder
+		}
+		else = {
+			set_global_variable = { name = spn_vade_page_$N$_lost_until value = spn_vade_five_years_on_value }
+		}
+	}
+}
+
+spn_vade_page_check_present_effect = {
+	if = {
+		limit = {
+			global_var:spn_vade_page_$N$_state ?= flag:held
+			NOT = { any_in_list = { list = spn_vade_pages var:spn_vade_page = $N$ } }
+		}
+		spn_vade_page_lost_effect = { N = $N$ }
+	}
+}
+
+# One champion's year with the pages. $HIDE$: the six 2.37 globals.
+spn_vade_champion_hears_effect = {
+	global_var:spn_hide_champion_$HIDE$ ?= {
+		if = {
+			limit = { is_alive = yes }
+			save_scope_as = spn_ch_champ
+			if = { # 2.39 (Boot 3, 16 Oct): he must know what the book is before he hears its pages
+				limit = { spn_vade_lore_known_trigger = yes }
+				# Pages within his reach he has not heard, not his own.
+				every_in_list = {
+					list = spn_vade_pages
+					limit = {
+						exists = artifact_owner
+						NOT = { artifact_owner = scope:spn_ch_champ }
+						artifact_owner = { in_diplomatic_range = scope:spn_ch_champ }
+						NOT = { is_target_in_variable_list = { name = spn_page_heard_by target = scope:spn_ch_champ } }
+					}
+					add_to_variable_list = { name = spn_page_heard_by target = scope:spn_ch_champ }
+					add_to_temporary_list = spn_ch_heard_$HIDE$
+				}
+				if = {
+					limit = { any_in_list = { list = spn_ch_heard_$HIDE$ count > 0 } }
+					random_in_list = {
+						list = spn_ch_heard_$HIDE$
+						artifact_owner = { save_scope_as = spn_vade_heard_holder }
+					}
+					if = {
+						limit = { any_in_list = { list = spn_ch_heard_$HIDE$ count > 1 } }
+						set_variable = { name = spn_vade_heard_many value = yes days = 400 }
+					}
+					trigger_event = { id = spn_vade.0100 days = { 1 200 } }
+				}
+			}
+			else_if = {
+				limit = {
+					spn_flavor_ready_trigger = yes # 2.39 (final pass, 17 Oct): flavor: the 60-day gate (F14)
+					NOT = { has_character_flag = spn_vade_lore_told }
+					any_in_list = {
+						list = spn_vade_pages
+						exists = artifact_owner
+						NOT = { artifact_owner = scope:spn_ch_champ }
+						artifact_owner = { in_diplomatic_range = scope:spn_ch_champ }
+					}
+				}
+				add_character_flag = { flag = spn_vade_lore_told years = 5 }
+				trigger_event = { id = spn_vade.0099 days = { 1 200 } }
+			}
+			# Two or more pages in his own hands wound him once a year (§12.4).
+			if = {
+				limit = {
+					any_character_artifact = {
+						count >= 2
+						has_variable = spn_vade_page
+					}
+				}
+				increase_wounds_no_death_effect = { REASON = fight }
+				trigger_event = spn_vade.0120
+			}
+			# The parts pull at each other (§12.14): his worn hide holds a page, and another page or the book is in his
+			# court.
+			else_if = {
+				limit = {
+					any_equipped_character_artifact = {
+						has_variable = spn_hide
+						has_variable = spn_holds_vade_page
+					}
+					OR = {
+						any_character_artifact = {
+							OR = {
+								has_variable = spn_vade_page
+								has_variable = spn_vade_book
+							}
+						}
+						any_in_list = {
+							list = spn_vade_items
+							artifact_owner ?= {
+								exists = court_owner
+								scope:spn_ch_champ = { exists = court_owner }
+								court_owner = scope:spn_ch_champ.court_owner
+							}
+						}
+					}
+				}
+				increase_wounds_no_death_effect = { REASON = fight }
+				trigger_event = spn_vade.0122
+			}
+		}
+	}
+}
+
+# Each holder's year (§12.11-12.14). Character scope.
+spn_vade_holder_year_effect = {
+	# The Sleeper's Page's modifier while he holds page 2.
+	if = {
+		limit = { any_character_artifact = { var:spn_vade_page ?= 2 } }
+		if = {
+			limit = { NOT = { has_character_modifier = spn_vade_sleeper_modifier } }
+			add_character_modifier = spn_vade_sleeper_modifier
+		}
+	}
+	else_if = {
+		limit = { has_character_modifier = spn_vade_sleeper_modifier }
+		remove_character_modifier = spn_vade_sleeper_modifier
+	}
+	# The whole book: the voices (§12.12), the panel for a player (§12.11).
+	if = {
+		limit = { any_character_artifact = { has_variable = spn_vade_book } }
+		if = {
+			limit = { is_ai = no }
+			spn_vade_book_story_sync_effect = yes
+		}
+		random = {
+			chance = 35
+			modifier = {
+				add = 15
+				has_trait = spn_vade_bound
+			}
+			trigger_event = { id = spn_vade.0500 days = { 1 300 } }
+		}
+	}
+}
+
+# The book's claims (§12.8). No root. Wolves near the holder, and the Order when the holder is a cruel binder.
+spn_vade_claims_effect = {
+	global_var:spn_vade_book = {
+		save_scope_as = spn_cl_book
+		artifact_owner = { save_scope_as = spn_cl_holder }
+	}
+	spn_vade_wolf_claim_effect = { WOLF = global_var:spn_hide_champion_silverback }
+	spn_vade_wolf_claim_effect = { WOLF = global_var:spn_hide_champion_timber }
+	spn_vade_wolf_claim_effect = { WOLF = global_var:spn_hide_champion_tundra }
+	spn_vade_wolf_claim_effect = { WOLF = global_var:spn_hide_champion_graybeard }
+	spn_vade_wolf_claim_effect = { WOLF = global_var:spn_hide_champion_midnight }
+	spn_vade_wolf_claim_effect = { WOLF = global_var:spn_hide_champion_alpha }
+	every_in_global_list = {
+		variable = spn_packs
+		limit = {
+			is_alive = yes
+			NOT = { this = scope:spn_cl_holder }
+			in_diplomatic_range = scope:spn_cl_holder
+		}
+		add_personal_artifact_claim = scope:spn_cl_book
+		add_opinion = { target = scope:spn_cl_holder modifier = spn_stinks_of_the_book_opinion }
+	}
+	if = {
+		limit = {
+			spn_order_on_trigger = yes
+			scope:spn_cl_holder = {
+				has_trait = spn_vade_bound
+				spn_ai_cruel_trigger = yes
+			}
+		}
+		every_in_global_list = {
+			variable = spn_order_chapters
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_cl_holder }
+			}
+			add_personal_artifact_claim = scope:spn_cl_book
+			add_opinion = { target = scope:spn_cl_holder modifier = spn_betrayed_the_order_opinion }
+		}
+		# Every council seat holder too (§12.8).
+		spn_vade_council_claim_effect = { SEAT = global_var:current_loremaster_global }
+		spn_vade_council_claim_effect = { SEAT = global_var:current_black_mage_global }
+		spn_vade_council_claim_effect = { SEAT = global_var:current_admin_global }
+		scope:spn_cl_holder = {
+			if = {
+				limit = { spn_is_order_member_trigger = yes }
+				spn_order_broke_rules_effect = yes
+			}
+		}
+	}
+	if = {
+		limit = {
+			global_var:current_archmage_global ?= {
+				is_alive = yes
+				has_trait = ambitious
+				NOT = { this = scope:spn_cl_holder }
+			}
+		}
+		global_var:current_archmage_global = { add_personal_artifact_claim = scope:spn_cl_book }
+	}
+}
+spn_vade_wolf_claim_effect = {
+	if = {
+		limit = {
+			exists = $WOLF$
+			$WOLF$ = {
+				is_alive = yes
+				NOT = { this = scope:spn_cl_holder }
+				in_diplomatic_range = scope:spn_cl_holder
+			}
+		}
+		$WOLF$ = {
+			add_personal_artifact_claim = scope:spn_cl_book
+			add_opinion = { target = scope:spn_cl_holder modifier = spn_stinks_of_the_book_opinion }
+		}
+	}
+}
+
+# ==================================================================================================
+# THE FOUR AND THE FIRSTBORN (§12.6, C3)
+# ==================================================================================================
+# Holder scope. Four unsealed pages or the whole book, and no living firstborn named yet -> the one search.
+spn_vade_check_four_effect = {
+	if = {
+		limit = {
+			spn_vade_on_trigger = yes
+			OR = {
+				any_character_artifact = { has_variable = spn_vade_book }
+				any_character_artifact = {
+					count >= 4
+					has_variable = spn_vade_page
+				}
+			}
+			NOT = { var:spn_vade_firstborn ?= { is_alive = yes } }
+			NOT = { has_character_flag = spn_vade_fb_none }
+		}
+		spn_vade_find_firstborn_effect = yes
+		# None found: no new world walk for two years (review, 9 Oct; §19).
+		if = {
+			limit = { NOT = { exists = var:spn_vade_firstborn } }
+			add_character_flag = { flag = spn_vade_fb_none years = 2 }
+		}
+	}
+}
+# A man: every living son of his blood, secret bastards too (real_father); a woman: her eldest living son.
+spn_vade_find_firstborn_effect = {
+	save_scope_as = spn_fb_parent
+	if = {
+		limit = { is_male = yes }
+		every_living_character = {
+			limit = {
+				is_male = yes
+				real_father ?= scope:spn_fb_parent
+			}
+			add_to_temporary_list = spn_fb_sons
+		}
+		ordered_in_list = {
+			list = spn_fb_sons
+			order_by = age
+			save_scope_as = spn_fb_son
+		}
+	}
+	else = {
+		ordered_child = {
+			limit = {
+				is_male = yes
+				is_alive = yes
+			}
+			order_by = age
+			save_scope_as = spn_fb_son
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_fb_son }
+		set_variable = { name = spn_vade_firstborn value = scope:spn_fb_son }
+	}
+	else = {
+		remove_variable = spn_vade_firstborn
+	}
+}
+
+# ==================================================================================================
+# BINDING (§12.6). The decision's effect. Root: the binder. Bank first.
+# ==================================================================================================
+spn_vade_bind_effect = {
+	save_scope_as = spn_bd_binder
+	# From four pages: the book is made first; only if it exists are the pages destroyed.
+	if = {
+		limit = { NOT = { any_character_artifact = { has_variable = spn_vade_book } } }
+		every_character_artifact = {
+			limit = {
+				has_variable = spn_vade_page
+				NOT = { has_variable = spn_page_sealed }
+			}
+			add_to_temporary_list = spn_bd_pages
+		}
+		create_artifact = {
+			name = spn_vade_book_name
+			description = spn_vade_book_desc
+			template = spn_vade_template
+			type = journal
+			visuals = pocket_book
+			modifier = spn_vade_book_modifier
+			rarity = illustrious
+			decaying = no
+			history = { type = created_before_history }
+			save_scope_as = spn_bd_book
+		}
+		if = {
+			limit = { exists = scope:spn_bd_book }
+			scope:spn_bd_book = { set_variable = spn_vade_book }
+			set_global_variable = { name = spn_vade_book value = scope:spn_bd_book }
+			set_global_variable = spn_vade_book_exists
+			every_in_list = {
+				list = spn_bd_pages
+				spn_vade_page_destroyed_effect = { STATE = bound }
+			}
+		}
+	}
+	else = {
+		random_character_artifact = {
+			limit = { has_variable = spn_vade_book }
+			save_scope_as = spn_bd_book
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_bd_book }
+		set_global_variable = { name = spn_vade_contract_running value = scope:spn_bd_binder }
+		scope:spn_bd_book = { set_variable = artifact_prevent_transfer }
+		create_story = {
+			type = story_spn_vade_contract
+			save_scope_as = spn_bd_story
+		}
+		if = {
+			limit = { exists = scope:spn_bd_story }
+			scope:spn_bd_story = {
+				set_variable = { name = spn_vade_days_left value = spn_vade_contract_days_value }
+				set_variable = { name = spn_vade_steps value = 0 }
+				set_variable = { name = spn_vade_witness_shown value = scope:spn_bd_binder }
+				set_variable = { name = spn_vade_son_shown value = scope:spn_bd_binder }
+				set_variable = { name = spn_vade_book_shown value = scope:spn_bd_book }
+			}
+		}
+		if = {
+			limit = { var:spn_vade_firstborn ?= { is_alive = yes } }
+			scope:spn_bd_story ?= { set_variable = { name = spn_vade_son_shown value = scope:spn_bd_binder.var:spn_vade_firstborn } }
+		}
+		if = {
+			limit = { NOT = { any_memory = { memory_type = spn_vade_bound_memory } } }
+			create_character_memory = { type = spn_vade_bound_memory }
+		}
+		trigger_event = { id = spn_vade.0300 days = 1 }
+		# The book's lust is felt (the step's sense, §12.6).
+		spn_vade_step_felt_effect = yes
+		# A cruel member who binds breaks the Order's rules (§5.14, §12.8).
+		if = {
+			limit = {
+				spn_is_order_member_trigger = yes
+				spn_ai_cruel_trigger = yes
+			}
+			spn_order_broke_rules_effect = yes
+		}
+	}
+}
+
+# A page leaves the world. Artifact scope. $STATE$: bound or burned.
+spn_vade_page_destroyed_effect = {
+	if = {
+		limit = { var:spn_vade_page = 1 }
+		spn_vade_set_state_effect = { N = 1 STATE = $STATE$ }
+		remove_global_variable = spn_vade_page_1_art
+	}
+	else_if = {
+		limit = { var:spn_vade_page = 2 }
+		spn_vade_set_state_effect = { N = 2 STATE = $STATE$ }
+		remove_global_variable = spn_vade_page_2_art
+		artifact_owner ?= {
+			if = {
+				limit = { has_character_modifier = spn_vade_sleeper_modifier }
+				remove_character_modifier = spn_vade_sleeper_modifier
+			}
+		}
+	}
+	else_if = {
+		limit = { var:spn_vade_page = 3 }
+		spn_vade_set_state_effect = { N = 3 STATE = $STATE$ }
+		remove_global_variable = spn_vade_page_3_art
+	}
+	else_if = {
+		limit = { var:spn_vade_page = 4 }
+		spn_vade_set_state_effect = { N = 4 STATE = $STATE$ }
+		remove_global_variable = spn_vade_page_4_art
+	}
+	destroy_artifact = this
+}
+
+# ==================================================================================================
+# THE CONTRACT (§12.6)
+# ==================================================================================================
+# Every 30 days. Story scope.
+spn_vade_contract_tick_effect = {
+	save_scope_as = spn_ct_story
+	story_owner = { save_scope_as = spn_ct_binder }
+	change_variable = { name = spn_vade_days_left add = -30 }
+	# The witness: alive and still his, unless a Councilor who offered (only alive).
+	if = {
+		limit = {
+			scope:spn_ct_binder = {
+				exists = var:spn_vade_witness
+				NOT = {
+					var:spn_vade_witness = {
+						is_alive = yes
+						OR = {
+							exists = scope:spn_ct_binder.var:spn_vade_councilor_witness
+							is_courtier_of = scope:spn_ct_binder
+							is_spouse_of = scope:spn_ct_binder
+							is_vassal_of = scope:spn_ct_binder
+						}
+					}
+				}
+			}
+		}
+		scope:spn_ct_binder = {
+			remove_variable = spn_vade_witness
+			remove_variable = spn_vade_councilor_witness
+		}
+		set_variable = { name = spn_vade_witness_shown value = scope:spn_ct_binder }
+		change_variable = { name = spn_vade_steps add = -1 }
+	}
+	# The yearly clock toast (three in a Contract).
+	if = {
+		limit = {
+			OR = {
+				var:spn_vade_days_left = 735
+				var:spn_vade_days_left = 375
+				var:spn_vade_days_left = 15
+			}
+			scope:spn_ct_binder = { is_ai = no }
+		}
+		if = {
+			limit = { var:spn_vade_days_left = 735 }
+			scope:spn_ct_binder = {
+				send_interface_toast = {
+					type = event_toast_effect_bad
+					title = spn_vade_toast_clock_2
+					left_icon = this
+				}
+			}
+		}
+		else_if = {
+			limit = { var:spn_vade_days_left = 375 }
+			scope:spn_ct_binder = {
+				send_interface_toast = {
+					type = event_toast_effect_bad
+					title = spn_vade_toast_clock_1
+					left_icon = this
+				}
+			}
+		}
+		else = {
+			scope:spn_ct_binder = {
+				send_interface_toast = {
+					type = event_toast_effect_bad
+					title = spn_vade_toast_clock_0
+					left_icon = this
+				}
+			}
+		}
+	}
+	if = {
+		limit = { var:spn_vade_days_left <= 0 }
+		scope:spn_ct_binder = { trigger_event = spn_vade.0320 }
+	}
+	# A Councilor Offers (§12.8): the first month and each year after, while no witness is named and he is not cruel.
+	else_if = {
+		limit = {
+			OR = {
+				var:spn_vade_days_left = 1065
+				var:spn_vade_days_left = 735
+				var:spn_vade_days_left = 375
+			}
+			scope:spn_ct_binder = {
+				NOT = { exists = var:spn_vade_witness }
+				spn_ai_cruel_trigger = no
+			}
+		}
+		spn_vade_councilor_offer_effect = yes
+	}
+}
+
+# The end of a Contract. Binder scope; $RESULT$ = bound | taken | died | lost. Bank first; the death is last, and is
+# never run here when the caller is an on_action (died, lost).
+spn_vade_contract_end_effect = {
+	save_scope_as = spn_ce_binder
+	global_var:spn_vade_book ?= { save_scope_as = spn_ce_book }
+	random_owned_story = {
+		limit = { story_type = story_spn_vade_contract }
+		end_story = yes
+	}
+	if = {
+		limit = { has_global_variable = spn_vade_contract_running }
+		remove_global_variable = spn_vade_contract_running
+	}
+	scope:spn_ce_book ?= { remove_variable = artifact_prevent_transfer }
+	remove_variable = spn_vade_witness
+	remove_variable = spn_vade_councilor_witness
+	remove_variable = spn_vade_firstborn
+	if = {
+		limit = { has_character_flag = spn_vade_finger_paid }
+		remove_character_flag = spn_vade_finger_paid
+	}
+	save_scope_value_as = { name = spn_ce_result value = flag:$RESULT$ }
+	if = {
+		limit = { scope:spn_ce_result = flag:bound }
+		add_trait = spn_vade_bound
+		add_character_modifier = master_defence_modifier
+		add_character_modifier = spn_vade_humanity_modifier
+		if = {
+			limit = {
+				NOR = {
+					has_trait = arrogant
+					has_trait = humble
+				}
+			}
+			add_trait = arrogant
+		}
+	}
+	else_if = {
+		limit = { scope:spn_ce_result = flag:taken }
+		spn_vade_take_soul_effect = yes
+		death = { death_reason = spn_death_book_took_him }
+	}
+	else_if = {
+		limit = { scope:spn_ce_result = flag:died }
+		spn_vade_take_soul_effect = yes
+	}
+	else = {
+		spn_vade_take_soul_effect = yes
+		trigger_event = { id = spn_vade.0325 days = 1 }
+	}
+}
+
+# ==================================================================================================
+# THE SOULS (§12.11). Character scope: the one the book takes. Written BEFORE the death it accompanies.
+# ==================================================================================================
+spn_vade_take_soul_effect = {
+	save_scope_as = spn_ts_soul
+	if = {
+		limit = { NOT = { is_target_in_global_variable_list = { name = spn_vade_souls target = scope:spn_ts_soul } } }
+		add_to_global_variable_list = { name = spn_vade_souls target = scope:spn_ts_soul }
+		if = {
+			limit = { NOT = { exists = global_var:spn_vade_soul_count } }
+			set_global_variable = { name = spn_vade_soul_count value = 0 }
+		}
+		change_global_variable = { name = spn_vade_soul_count add = 1 }
+		# The five most recent: 5 <- 4 <- 3 <- 2 <- 1 <- this.
+		if = {
+			limit = { exists = global_var:spn_vade_soul_4 }
+			set_global_variable = { name = spn_vade_soul_5 value = global_var:spn_vade_soul_4 }
+		}
+		if = {
+			limit = { exists = global_var:spn_vade_soul_3 }
+			set_global_variable = { name = spn_vade_soul_4 value = global_var:spn_vade_soul_3 }
+		}
+		if = {
+			limit = { exists = global_var:spn_vade_soul_2 }
+			set_global_variable = { name = spn_vade_soul_3 value = global_var:spn_vade_soul_2 }
+		}
+		if = {
+			limit = { exists = global_var:spn_vade_soul_1 }
+			set_global_variable = { name = spn_vade_soul_2 value = global_var:spn_vade_soul_1 }
+		}
+		set_global_variable = { name = spn_vade_soul_1 value = scope:spn_ts_soul }
+		set_global_variable = { name = spn_vade_soul_last value = scope:spn_ts_soul }
+		# The book's description names its newest soul from now on.
+		global_var:spn_vade_book ?= { set_artifact_description = spn_vade_book_desc_souls }
+		# Its holder hears it close.
+		global_var:spn_vade_book ?= {
+			artifact_owner ?= {
+				if = {
+					limit = { NOT = { this = scope:spn_ts_soul } }
+					if = {
+						limit = { NOT = { any_memory = { memory_type = spn_vade_soul_taken_memory } } }
+						create_character_memory = {
+							type = spn_vade_soul_taken_memory
+							participants = { taken = scope:spn_ts_soul }
+						}
+					}
+					if = {
+						limit = { is_ai = no }
+						send_interface_toast = {
+							type = event_toast_effect_bad
+							title = spn_vade_toast_soul
+							left_icon = this
+							right_icon = scope:spn_ts_soul
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE BOOK'S PANEL (§12.11). A player who holds the whole book owns story_spn_vade_book.
+# ==================================================================================================
+spn_vade_book_story_sync_effect = {
+	if = {
+		limit = {
+			any_character_artifact = { has_variable = spn_vade_book }
+			NOT = { any_owned_story = { story_type = story_spn_vade_book } }
+		}
+		create_story = story_spn_vade_book
+	}
+	random_owned_story = {
+		limit = { story_type = story_spn_vade_book }
+		spn_vade_book_story_year_effect = yes
+	}
+}
+# Story scope: the panel's copies, rebuilt; ended when its owner no longer holds the book.
+spn_vade_book_story_year_effect = {
+	if = {
+		limit = {
+			story_owner = { NOT = { any_character_artifact = { has_variable = spn_vade_book } } }
+		}
+		end_story = yes
+	}
+	else = {
+		global_var:spn_vade_book ?= { save_scope_as = spn_bs_book }
+		if = {
+			limit = { exists = scope:spn_bs_book }
+			set_variable = { name = spn_vade_book_shown value = scope:spn_bs_book }
+		}
+		save_scope_as = spn_bs_story
+		clear_variable_list = spn_vade_souls_shown
+		every_in_global_list = {
+			variable = spn_vade_souls
+			limit = { exists = this }
+			scope:spn_bs_story = { add_to_variable_list = { name = spn_vade_souls_shown target = prev } }
+		}
+	}
+}
+
+# ==================================================================================================
+# THE OWNER HOOK'S BOOK STEP (§12.4, §12.6). Artifact scope; scope:owner, scope:old_owner.
+# ==================================================================================================
+spn_vade_owner_changed_effect = {
+	save_scope_as = spn_vo_item
+	if = {
+		limit = { has_variable = spn_page_guarded }
+		remove_variable = spn_page_guarded
+	}
+	# The book left a binder mid-Contract: the failure's bank and clean-up in HIS scope; the death a day later.
+	if = {
+		limit = {
+			has_variable = spn_vade_book
+			exists = scope:old_owner
+			global_var:spn_vade_contract_running ?= scope:old_owner
+		}
+		scope:old_owner = { spn_vade_contract_end_effect = { RESULT = lost } }
+	}
+	# The Sleeper's Page leaves its holder's dreams.
+	if = {
+		limit = {
+			var:spn_vade_page ?= 2
+			exists = scope:old_owner
+		}
+		scope:old_owner = {
+			if = {
+				limit = { has_character_modifier = spn_vade_sleeper_modifier }
+				remove_character_modifier = spn_vade_sleeper_modifier
+			}
+		}
+	}
+	scope:owner ?= {
+		if = {
+			limit = { scope:spn_vo_item = { has_variable = spn_vade_book } }
+			set_global_variable = { name = spn_vade_book_holder value = this }
+		}
+		if = {
+			limit = { scope:spn_vo_item = { var:spn_vade_page ?= 2 } }
+			if = {
+				limit = { NOT = { has_character_modifier = spn_vade_sleeper_modifier } }
+				add_character_modifier = spn_vade_sleeper_modifier
+			}
+		}
+		spn_vade_check_four_effect = yes
+		# A champion who receives a page (§12.4): The Page Calls, once per 30 days.
+		if = {
+			limit = {
+				scope:spn_vo_item = { has_variable = spn_vade_page }
+				spn_is_champion_trigger = yes
+				NOT = { scope:spn_vo_item = { is_target_in_variable_list = { name = spn_page_heard_by target = prev } } }
+			}
+			scope:spn_vo_item = { add_to_variable_list = { name = spn_page_heard_by target = prev } }
+			if = {
+				limit = { NOT = { has_character_flag = spn_page_calls_cd } }
+				add_character_flag = { flag = spn_page_calls_cd days = 30 }
+				trigger_event = { id = spn_vade.0110 days = 1 }
+			}
+		}
+		# A player who now holds the whole book sees its panel.
+		if = {
+			limit = {
+				is_ai = no
+				scope:spn_vo_item = { has_variable = spn_vade_book }
+			}
+			spn_vade_book_story_sync_effect = yes
+		}
+	}
+	# The book's description names its newest soul.
+	if = {
+		limit = {
+			has_variable = spn_vade_book
+			exists = global_var:spn_vade_soul_last
+		}
+		set_artifact_description = spn_vade_book_desc_souls
+	}
+}
+
+# ==================================================================================================
+# DRAWING, TEARING, BURNING (§12.5, §12.10)
+# ==================================================================================================
+# A page drawn out of a hide. $HIDE_ART$: the hide; $TO$: who gets the page. Bank the page number and the hide first.
+spn_vade_draw_page_effect = {
+	$HIDE_ART$ = { save_scope_as = spn_dp_hide }
+	$TO$ = { save_scope_as = spn_dp_to }
+	if = {
+		limit = { scope:spn_dp_hide = { exists = var:spn_holds_vade_page } }
+		save_scope_value_as = { name = spn_dp_n value = scope:spn_dp_hide.var:spn_holds_vade_page }
+		scope:spn_dp_hide = { remove_variable = spn_holds_vade_page }
+		if = {
+			limit = { scope:spn_dp_n = 1 }
+			spn_vade_create_page_effect = { N = 1 OWNER = scope:spn_dp_to }
+		}
+		else_if = {
+			limit = { scope:spn_dp_n = 2 }
+			spn_vade_create_page_effect = { N = 2 OWNER = scope:spn_dp_to }
+		}
+		else_if = {
+			limit = { scope:spn_dp_n = 3 }
+			spn_vade_create_page_effect = { N = 3 OWNER = scope:spn_dp_to }
+		}
+		else = {
+			spn_vade_create_page_effect = { N = 4 OWNER = scope:spn_dp_to }
+		}
+		scope:spn_dp_to = {
+			spn_order_deed_effect = { PREROGATIVE = flag:recover AMOUNT = 15 TOAST = yes }
+			spn_order_deed_effect = { PREROGATIVE = flag:book AMOUNT = 15 TOAST = yes }
+		}
+	}
+}
+
+# Tear It Apart (§12.10). Root: the holder; scope:spn_tear_champion if one is to guard a page. Bank first.
+spn_vade_tear_effect = {
+	random_character_artifact = {
+		limit = { has_variable = spn_vade_book }
+		save_scope_as = spn_tr_book
+	}
+	if = {
+		limit = { exists = scope:spn_tr_book }
+		# The panel ends before the book is destroyed (§12.11).
+		random_owned_story = {
+			limit = { story_type = story_spn_vade_book }
+			end_story = yes
+		}
+		scope:spn_tr_book = { destroy_artifact = this }
+		remove_global_variable = spn_vade_book
+		remove_global_variable = spn_vade_book_exists
+		# The guarded page is never made as an artifact: the chosen hide holds page 4 (the lowest free in practice:
+		# 1-3 go to the treasuries).
+		if = {
+			limit = { exists = scope:spn_tear_champion }
+			scope:spn_tear_champion = {
+				random_character_artifact = {
+					limit = {
+						has_variable = spn_hide
+						is_equipped = yes
+						NOT = { has_variable = spn_holds_vade_page }
+					}
+					set_variable = { name = spn_holds_vade_page value = 4 }
+					set_global_variable = { name = spn_vade_page_4_hide value = var:spn_hide }
+				}
+			}
+			spn_vade_set_state_effect = { N = 4 STATE = in_hide }
+			spn_vade_place_page_effect = { N = 1 THEO = yes REPUB = no }
+			spn_vade_place_page_effect = { N = 2 THEO = no REPUB = no }
+			spn_vade_place_page_effect = { N = 3 THEO = no REPUB = yes }
+		}
+		else = {
+			spn_vade_scatter_effect = yes
+		}
+	}
+}
+# All four by the treasury rule (§12.10; The Book Falls Apart).
+spn_vade_scatter_effect = {
+	spn_vade_place_page_effect = { N = 1 THEO = yes REPUB = no }
+	spn_vade_place_page_effect = { N = 2 THEO = no REPUB = no }
+	spn_vade_place_page_effect = { N = 3 THEO = no REPUB = yes }
+	ordered_ruler = {
+		limit = {
+			spn_vade_page_holder_ok_trigger = yes
+			NOT = { any_character_artifact = { var:spn_vade_page ?= 2 } }
+		}
+		order_by = learning
+		save_scope_as = spn_sc4_holder
+	}
+	if = {
+		limit = { exists = scope:spn_sc4_holder }
+		spn_vade_create_page_effect = { N = 4 OWNER = scope:spn_sc4_holder }
+	}
+	else = {
+		spn_vade_page_lost_effect = { N = 4 }
+	}
+}
+# The aniconist (§12.10): the book is gone but recorded whole. No root.
+spn_vade_book_falls_apart_effect = {
+	remove_global_variable = spn_vade_book_exists
+	# The panel goes before anything else (an artifact slot on a destroyed item errors).
+	every_player = {
+		random_owned_story = {
+			limit = { story_type = story_spn_vade_book }
+			end_story = yes
+		}
+	}
+	global_var:spn_vade_book_holder ?= {
+		if = {
+			limit = { is_alive = yes }
+			trigger_event = spn_vade.0410
+		}
+	}
+	if = {
+		limit = { has_global_variable = spn_vade_book }
+		remove_global_variable = spn_vade_book
+	}
+	spn_vade_scatter_effect = yes
+}
+
+# Burn a Page (§12.10). Root: the holder; scope:spn_burn_page.
+spn_vade_burn_effect = {
+	scope:spn_burn_page = { spn_vade_page_destroyed_effect = { STATE = burned } }
+	if = {
+		limit = {
+			global_var:spn_vade_page_1_state ?= flag:burned
+			global_var:spn_vade_page_2_state ?= flag:burned
+			global_var:spn_vade_page_3_state ?= flag:burned
+			global_var:spn_vade_page_4_state ?= flag:burned
+		}
+		set_global_variable = spn_vade_destroyed
+		# The witnesses' bonds end with the book (§12.13).
+		every_in_global_list = {
+			variable = spn_vade_witnesses
+			limit = {
+				is_alive = yes
+				has_character_modifier = spn_vade_witness_bond_modifier
+			}
+			remove_character_modifier = spn_vade_witness_bond_modifier
+		}
+		trigger_event = spn_vade.0530
+		every_in_global_list = {
+			variable = spn_vade_promisers
+			limit = {
+				is_alive = yes
+				NOT = { this = root }
+			}
+			trigger_event = spn_vade.0530
+		}
+	}
+}
+
+# A Councilor Offers (§12.8). Story scope; scope:spn_ct_binder. The first seat holder who likes him (opinion >= 20).
+spn_vade_councilor_offer_effect = {
+	if = {
+		limit = {
+			global_var:current_loremaster_global ?= {
+				is_alive = yes
+				NOT = { this = scope:spn_ct_binder }
+				opinion = { target = scope:spn_ct_binder value >= 20 }
+			}
+		}
+		global_var:current_loremaster_global = { save_scope_as = spn_co_councilor }
+	}
+	else_if = {
+		limit = {
+			global_var:current_black_mage_global ?= {
+				is_alive = yes
+				NOT = { this = scope:spn_ct_binder }
+				opinion = { target = scope:spn_ct_binder value >= 20 }
+			}
+		}
+		global_var:current_black_mage_global = { save_scope_as = spn_co_councilor }
+	}
+	else_if = {
+		limit = {
+			global_var:current_admin_global ?= {
+				is_alive = yes
+				NOT = { this = scope:spn_ct_binder }
+				opinion = { target = scope:spn_ct_binder value >= 20 }
+			}
+		}
+		global_var:current_admin_global = { save_scope_as = spn_co_councilor }
+	}
+	if = {
+		limit = { exists = scope:spn_co_councilor }
+		scope:spn_ct_binder = { trigger_event = spn_vade.0330 }
+	}
+}
+
+# The witness is named (Name the Witness; A Councilor Offers). Binder scope; $WITNESS$. The witness is bound too (§12.13).
+spn_vade_set_witness_effect = {
+	$WITNESS$ = { save_scope_as = spn_sw_witness }
+	set_variable = { name = spn_vade_witness value = scope:spn_sw_witness }
+	random_owned_story = {
+		limit = { story_type = story_spn_vade_contract }
+		set_variable = { name = spn_vade_witness_shown value = scope:spn_sw_witness }
+		change_variable = { name = spn_vade_steps add = 1 }
+	}
+	scope:spn_sw_witness = {
+		if = {
+			limit = { NOT = { has_character_modifier = spn_vade_witness_bond_modifier } }
+			add_character_modifier = spn_vade_witness_bond_modifier
+		}
+		if = {
+			limit = { NOT = { is_target_in_global_variable_list = { name = spn_vade_witnesses target = this } } }
+			add_to_global_variable_list = { name = spn_vade_witnesses target = this }
+		}
+	}
+	spn_vade_step_felt_effect = yes
+}
+
+# A step of the Contract is felt (§12.6): nearby mages and champions sense it; the county remembers. Binder scope.
+spn_vade_step_felt_effect = {
+	save_scope_as = magic_user
+	send_message_4_magic_sense_effect = yes
+	if = {
+		limit = { exists = location.county }
+		save_scope_as = spn_sf_binder
+		location.county = { save_scope_as = spn_sf_county }
+		spn_mark_menace_effect = { COUNTY = scope:spn_sf_county CULPRIT = scope:spn_sf_binder KIND = witch SEVERITY = prowl }
+	}
+}
+
+# A random page's holder, named to whoever asks (The Pages Answer, What the Golem Found). Asker scope. The book's holder
+# first, then a held, unguarded page that is not his. Sets var:spn_knows_page_holder and saves scope:spn_named_holder.
+spn_vade_name_a_holder_effect = {
+	if = {
+		limit = {
+			global_var:spn_vade_book ?= {
+				artifact_owner ?= {
+					is_alive = yes
+					NOT = { this = root }
+				}
+			}
+		}
+		global_var:spn_vade_book.artifact_owner = { save_scope_as = spn_named_holder }
+	}
+	else_if = {
+		limit = { spn_relic_page_nameable_trigger = { N = 1 } }
+		global_var:spn_vade_page_1_art.artifact_owner = { save_scope_as = spn_named_holder }
+	}
+	else_if = {
+		limit = { spn_relic_page_nameable_trigger = { N = 2 } }
+		global_var:spn_vade_page_2_art.artifact_owner = { save_scope_as = spn_named_holder }
+	}
+	else_if = {
+		limit = { spn_relic_page_nameable_trigger = { N = 3 } }
+		global_var:spn_vade_page_3_art.artifact_owner = { save_scope_as = spn_named_holder }
+	}
+	else_if = {
+		limit = { spn_relic_page_nameable_trigger = { N = 4 } }
+		global_var:spn_vade_page_4_art.artifact_owner = { save_scope_as = spn_named_holder }
+	}
+	if = {
+		limit = { exists = scope:spn_named_holder }
+		set_variable = { name = spn_knows_page_holder value = scope:spn_named_holder years = 10 }
+		spn_order_deed_heard_effect = yes
+	}
+}
+
+# He listened to the book once more (§12.12). Holder scope.
+spn_vade_listened_effect = {
+	if = {
+		limit = { NOT = { has_variable = spn_vade_listened } }
+		set_variable = { name = spn_vade_listened value = 0 }
+	}
+	change_variable = { name = spn_vade_listened add = 1 }
+}
+
+# ==================================================================================================
+# DEBUG ONLY (spn_debug_events.0403, §23). Page $N$ to root: moved if it exists, else made. Never two of one page.
+# ==================================================================================================
+spn_debug_give_page_effect = {
+	if = {
+		limit = { global_var:spn_vade_page_$N$_art ?= { exists = artifact_owner } }
+		global_var:spn_vade_page_$N$_art = {
+			set_owner = {
+				target = root
+				history = {
+					type = given
+					recipient = root
+				}
+			}
+		}
+	}
+	else_if = {
+		limit = {
+			NOT = { global_var:spn_vade_page_$N$_state ?= flag:bound }
+			NOT = { global_var:spn_vade_page_$N$_state ?= flag:burned }
+			NOT = { global_var:spn_vade_page_$N$_state ?= flag:in_hide }
+		}
+		spn_vade_create_page_effect = { N = $N$ OWNER = root }
+	}
+}
+
+# One council seat holder claims the cruel bound master's book (§12.8). No root.
+spn_vade_council_claim_effect = {
+	if = {
+		limit = {
+			exists = $SEAT$
+			$SEAT$ = {
+				is_alive = yes
+				NOT = { this = scope:spn_cl_holder }
+				NOT = { var:spn_order_chapter ?= { story_owner = prev } }
+			}
+		}
+		$SEAT$ = {
+			add_personal_artifact_claim = scope:spn_cl_book
+			add_opinion = { target = scope:spn_cl_holder modifier = spn_betrayed_the_order_opinion }
+		}
+	}
+}

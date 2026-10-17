@@ -241,7 +241,8 @@ spn_has_lifetime_flags = {
 	OR = {
 		has_character_flag = has_refunded_perks
 		has_character_flag = declared_major_religious_war_flag
-		has_character_flag = has_created_a_faith
+		exists = var:has_created_a_faith # 2.39 (WORK-ORDER-2.39 B4): a variable in vanilla, not a flag
+		exists = var:has_edited_a_rite # 2.39 (WORK-ORDER-2.39 B4): 1.20's Modify Rite, once per lifetime
 		has_character_flag = converted_culture_this_lifetime
 		has_character_flag = used_lifetime_invasion
 		has_character_flag = used_lifetime_subjugation
@@ -664,4 +665,30 @@ spn_hunt_culprit_in_reach_trigger = {
 		}
 	}
 	trigger_else = { always = no }
+}
+
+# ============================================================================
+# 2.39 -- shared triggers (WORK-ORDER-2.39 F14). Any package may read these.
+# ============================================================================
+
+# 2.39 (F14 §1): the flavor gate. No mod flavor event for this character in the last 60 days. A flavor event's trigger
+# checks it and its immediate marks it (spn_flavor_mark_effect); follow-ups, reports and scheduled steps only mark it.
+spn_flavor_ready_trigger = {
+	NOT = { has_character_flag = spn_flavor_recent }
+}
+
+# 2.39 (F14 §2, B13): may this character and $CHARACTER$ become lovers in a 2.39 event? Both 18 or older and free,
+# vanilla's own lover test, mutual attraction, and not close or extended family. An AI partner who is married or has a
+# lover must ALSO pass vanilla might_cheat_on_every_partner_trigger at the call site.
+spn_romance_ok_trigger = {
+	age >= 18
+	is_imprisoned = no
+	$CHARACTER$ = {
+		age >= 18
+		is_imprisoned = no
+	}
+	can_set_relation_lover_trigger = { CHARACTER = $CHARACTER$ }
+	is_attracted_to_gender_of = $CHARACTER$
+	$CHARACTER$ = { is_attracted_to_gender_of = prev }
+	NOT = { is_close_or_extended_family_of = $CHARACTER$ }
 }

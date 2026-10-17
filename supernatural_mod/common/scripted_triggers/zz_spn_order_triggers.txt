@@ -1,0 +1,603 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": scripted triggers (WORK-ORDER-2.38 §4.11, §4.17).
+# Cross-scope variable reads are guarded with trigger_if (the Long Night's rule 4, followed by 2.37's pack triggers).
+
+# ==================================================================================================
+# RULES. has_game_rule takes the OPTION name. Read as "not Off" (2.37i): a save from before 2.38 has no setting stored,
+# and reads On.
+# ==================================================================================================
+# 2.38a: as a custom line. A bare NOT has_game_rule showed in a requirement list as "BUG: missing localization
+# NOT_has_game_rule_trigger" (Thomas's 9 Oct screenshot, Found the Order Anew).
+spn_order_on_trigger = {
+	custom_tooltip = {
+		text = spn_order_rule_on_tt
+		NOT = { has_game_rule = spn_order_off }
+	}
+}
+spn_vade_on_trigger = {
+	custom_tooltip = {
+		text = spn_vade_rule_on_tt
+		NOT = { has_game_rule = spn_vade_off }
+	}
+}
+# Covens are vanilla's and run whatever the rules (C14). One line so a later rule can gate them.
+spn_coven_on_trigger = {
+	always = yes
+}
+# Priority 3's reach (§5.15): charters, daughters, Found Anew, Bring the Coven. Ships `always = yes`.
+spn_order_reach_built_trigger = {
+	always = yes
+}
+
+# ==================================================================================================
+# MEMBERSHIP (C20: data, never a trait)
+# ==================================================================================================
+spn_is_order_member_trigger = {
+	has_variable = spn_order_member
+}
+# Of a chapter: a member, or a neophyte in his pledge.
+spn_order_in_chapter_trigger = {
+	exists = var:spn_order_chapter
+}
+spn_order_is_neophyte_trigger = {
+	var:spn_order_rank ?= flag:neophyte
+}
+spn_order_medicum_plus_trigger = {
+	spn_is_order_member_trigger = yes
+	OR = {
+		var:spn_order_rank ?= flag:medicum
+		var:spn_order_rank ?= flag:magistratus
+	}
+}
+spn_order_magistratus_plus_trigger = {
+	spn_is_order_member_trigger = yes
+	var:spn_order_rank ?= flag:magistratus
+}
+# The story's owner is the Temple Magus (the 2.37 alpha idiom).
+spn_is_temple_magus_trigger = {
+	trigger_if = {
+		limit = { exists = var:spn_order_chapter }
+		var:spn_order_chapter = { story_owner = prev }
+	}
+	trigger_else = { always = no }
+}
+# The master of the Order (§5.18): the member Grand Magus, else the oldest chapter's head.
+spn_order_is_master_trigger = {
+	global_var:spn_order_master ?= this
+}
+# Does this character know $WHO$ is of the Order? (T17: "members you know".) In his own scope.
+spn_order_knows_member_trigger = {
+	OR = {
+		this = $WHO$
+		trigger_if = {
+			limit = {
+				exists = var:spn_order_chapter
+				$WHO$ = { exists = var:spn_order_chapter }
+			}
+			var:spn_order_chapter = $WHO$.var:spn_order_chapter
+		}
+		trigger_else = { always = no }
+		any_known_secret = {
+			secret_type = spn_secret_blue_rose
+			secret_owner = $WHO$
+		}
+	}
+}
+
+# Who may ever join (§5.4, §5.17). The Old Law is the custom line: a stranger reading a refusal sees why.
+# 2.38a: every line reads in plain words (the flags showed as "You do not have the spn_order_defector flag").
+spn_order_can_join_trigger = {
+	spn_order_on_trigger = yes
+	custom_tooltip = {
+		text = spn_order_join_not_creature_tt
+		spn_has_hunter_trait = no
+		is_witch_hunter = no # 2.39 (WORK-ORDER-2.39 B7): Witchcraft's hunters too (magic_triggers.txt)
+		is_a_demon_trigger = no
+		NOT = { has_trait = golem }
+		NOT = { has_trait = spn_vade_bound }
+	}
+	custom_tooltip = {
+		text = spn_order_join_not_defector_tt
+		NOT = { has_character_flag = spn_order_defector }
+	}
+	custom_tooltip = {
+		text = spn_order_join_not_wiped_tt
+		NOT = { has_character_flag = spn_order_wiped }
+	}
+	custom_tooltip = {
+		text = spn_order_no_necromancers_tt
+		NOT = { has_trait = necromancer }
+	}
+}
+
+# 2.38b: who may sit on the Gnostic Council (DESIGN-2.38b §3). With the Order rule On, a member of the Order; Off,
+# anyone Witchcraft allows. Used by Witchcraft's three ways in (E26-E28).
+spn_order_council_member_ok_trigger = {
+	custom_tooltip = {
+		text = spn_order_council_members_only_tt
+		trigger_if = {
+			limit = { NOT = { has_game_rule = spn_order_off } }
+			spn_is_order_member_trigger = yes
+		}
+	}
+}
+
+# 2.38a: a Mage $WHO$ knows, who could join him (Found the Order Anew). The Mage trait is shown to everyone, so knowing a
+# Mage is dealing with him: $WHO$'s court and guests, his vassals, his liege, or any Mage whose witch secret he knows (2.38
+# counted the secret only, so Mages at his own court did not count; Thomas, 9 Oct). Candidate scope.
+spn_order_known_mage_trigger = {
+	is_alive = yes
+	NOT = { this = $WHO$ }
+	has_trait = archmage
+	in_diplomatic_range = $WHO$
+	spn_order_can_join_trigger = yes
+}
+# The same Mage, found through a known secret, who is not already counted as court, guest, vassal or liege of $WHO$.
+spn_order_known_mage_by_secret_trigger = {
+	spn_order_known_mage_trigger = { WHO = $WHO$ }
+	NOT = { is_courtier_of = $WHO$ }
+	NOT = { host ?= $WHO$ }
+	NOT = { is_vassal_of = $WHO$ }
+	NOT = { $WHO$.liege ?= this }
+}
+
+# A candidate for the Selection (§5.4). The cheap tests first: the walk's own limit is the same OR.
+spn_order_selection_reach_trigger = {
+	OR = {
+		has_trait = source
+		has_trait = source2
+		has_trait = archmage
+		AND = {
+			age >= 12
+			age <= 30
+			learning >= 8 # 2.38e: was 12 (Thomas, 9 Oct); the 73-year run found no member's child in reach
+			OR = {
+				has_character_flag = spn_order_legacy # 2.38c: the child of a member who has died
+				any_parent = { spn_is_order_member_trigger = yes }
+			}
+		}
+		# 2.38b: witches and scholars, very picky (DESIGN-2.38b §6). The cheap tests first in each.
+		AND = {
+			learning >= 12
+			is_adult = yes
+			OR = {
+				has_trait = witch
+				has_trait = true_witch
+				any_secret = { type = secret_witch }
+			}
+			NOT = { has_trait = callous }
+			NOT = { has_trait = deceitful }
+			spn_order_fit_value >= 10
+		}
+		AND = {
+			learning >= 16
+			age >= 16
+			age <= 40
+			OR = {
+				has_trait = education_learning_2
+				has_trait = education_learning_3
+				has_trait = education_learning_4
+				has_trait = education_learning_5
+			}
+			spn_order_fit_value >= 30
+		}
+		# 2.38e: the Order grows through courtiers and wanderers, not kings (Thomas, 9 Oct: "I would only want the order to be
+		# bigger if most of them were like courtiers and not like landed"). A learned scholar who holds no land is welcome on
+		# easier terms than a lord; the landed branch above stays as strict as it was.
+		AND = {
+			learning >= 12
+			is_landed = no
+			age >= 16
+			age <= 50
+			OR = {
+				has_trait = education_learning_3
+				has_trait = education_learning_4
+				has_trait = education_learning_5
+			}
+			spn_order_fit_value >= 20
+		}
+		# A player who heard the rumour and kept watch, or who was named by a member (DESIGN-2.38b §8).
+		has_character_flag = spn_order_eyes_open
+		has_character_flag = spn_order_sponsored
+	}
+}
+spn_order_candidate_trigger = {
+	spn_order_selection_reach_trigger = yes
+	spn_is_order_member_trigger = no
+	NOT = { exists = var:spn_order_chapter }
+	NOT = { has_character_flag = spn_order_refused }
+	NOT = { has_character_flag = spn_order_passed_over } # 2.38b: a player Temple Magus said not this one
+	age >= 12
+	is_imprisoned = no
+	spn_order_can_join_trigger = yes
+}
+
+# The prerogative (§5.18). $P$ is a flag literal.
+spn_order_prerogative_is_trigger = {
+	global_var:spn_order_prerogative ?= $P$
+}
+
+# Story scope: room for one more (§5.3).
+spn_order_has_room_trigger = {
+	trigger_if = {
+		limit = {
+			exists = var:spn_order_size
+			exists = var:spn_order_cap
+		}
+		custom_tooltip = {
+			text = spn_order_has_room_tt
+			var:spn_order_size < var:spn_order_cap
+		}
+	}
+	trigger_else = { always = no }
+}
+
+# ==================================================================================================
+# WORKINGS (§5.19, §5.20)
+# ==================================================================================================
+spn_order_deadly_disease_trigger = {
+	OR = {
+		has_trait = cancer
+		has_trait = consumption
+		has_trait = leper
+		has_trait = great_pox
+		has_trait = spn_blue_fever # 2.39 (WORK-ORDER-2.39 F4): the Homunculus Beetle's plague
+	}
+}
+# Casts without paying power saturation: the bound master or the Fors Factorum (C31). Read by Witchcraft's four power
+# chokepoints through apply_upstream_edits.py (E16-E20).
+spn_casts_without_price_trigger = {
+	OR = {
+		has_trait = spn_vade_bound
+		has_character_modifier = spn_fors_factorum_modifier
+	}
+}
+# Could this member call a Transference now? The interaction, the Bargain and the debug all ask this one question.
+spn_transference_caster_trigger = {
+	spn_order_magistratus_plus_trigger = yes
+	has_trait = archmage
+	can_spend_standard_ps_trigger = yes
+	NOT = { has_character_flag = spn_transference_cd }
+	NOT = { exists = var:spn_transference_patient }
+	# Six who could carry it, the caster among them, so five besides him. The patient may be one of the six; the gathering
+	# (.0821) counts again without either, and a Working short of five ends in Not Enough Blood with nothing spent.
+	var:spn_order_chapter = {
+		any_in_list = {
+			variable = spn_order_members
+			count >= 6
+			spn_transference_volunteer_ok_trigger = yes
+		}
+	}
+}
+# A member who may carry a fifth (§5.19). In the volunteer's scope.
+spn_transference_volunteer_ok_trigger = {
+	is_alive = yes
+	is_adult = yes
+	is_imprisoned = no
+	spn_is_order_member_trigger = yes
+	NOT = { exists = var:spn_transference_carrier_of }
+	NOT = { exists = var:spn_transference_disease }
+	NOT = { exists = var:spn_transference_patient }
+}
+
+# ==================================================================================================
+# ARTIFACT SCOPE (§4.11)
+# ==================================================================================================
+spn_is_relic_trigger = {
+	has_variable = spn_relic
+}
+spn_is_magic_item_trigger = {
+	OR = {
+		has_variable = magic1
+		has_variable = spn_relic
+		has_variable = spn_vade_page
+		has_variable = spn_vade_book
+	}
+}
+# Never a hide (2.37's own rules move them), and never the book while its Contract runs.
+spn_relic_can_move_trigger = {
+	NOT = { has_variable = spn_hide }
+	NOT = {
+		AND = {
+			has_variable = spn_vade_book
+			exists = global_var:spn_vade_contract_running
+		}
+	}
+}
+# The one definition of what may be pledged (§9.4, §9.7, §12.1).
+spn_pledgeable_trigger = {
+	spn_is_magic_item_trigger = yes
+	NOT = { has_variable = spn_hide }
+	NOT = { has_variable = spn_vade_page }
+	NOT = { has_variable = spn_vade_book }
+	NOT = { var:spn_relic ?= flag:seal }
+}
+# What Zecchia will take (§11.3): never a hide, the book mid-Contract, the Seal, or anything bound to a title.
+spn_zecchia_takeable_trigger = {
+	spn_relic_can_move_trigger = yes
+	NOT = { var:spn_relic ?= flag:seal }
+	NOR = {
+		has_variable = banner_dynasty
+		has_variable = banner_house
+		has_variable = artifact_succession_title
+	}
+}
+
+# ==================================================================================================
+# COVENS, THE BOOK, PACKS
+# ==================================================================================================
+spn_in_coven_trigger = {
+	exists = var:spn_coven
+}
+spn_is_vade_bound_trigger = {
+	has_trait = spn_vade_bound
+}
+# Wears the Seal of Solomon (§9.7).
+spn_wears_seal_trigger = {
+	any_equipped_character_artifact = { var:spn_relic ?= flag:seal }
+}
+# Wears the Enchanted Blade (§9.3, §12.9).
+spn_wears_blade_trigger = {
+	any_equipped_character_artifact = { var:spn_relic ?= flag:blade }
+}
+
+# §8.2 (T22): a wolf at root's court who could join root's pack. Root is the would-be founder.
+spn_wolf_at_my_court_trigger = {
+	trigger_if = {
+		limit = { exists = court_owner }
+		court_owner = {
+			OR = {
+				AND = {
+					NOT = { this = root }
+					spn_wolf_could_run_with_trigger = { HOST = root }
+				}
+				any_courtier = {
+					NOT = { this = root }
+					spn_wolf_could_run_with_trigger = { HOST = root }
+				}
+			}
+		}
+	}
+	trigger_else = { always = no }
+}
+spn_wolf_could_run_with_trigger = {
+	spn_is_wolf_trigger = yes
+	is_adult = yes
+	NOT = { exists = var:spn_pack }
+	spn_host_knows_wolf_trigger = { HOST = $HOST$ }
+}
+
+# ==================================================================================================
+# THE BOOK (§12.2)
+# ==================================================================================================
+# Who a page may be seeded or surfaced to: no creature, no hunter, a person, and no page or book already.
+spn_vade_page_holder_ok_trigger = {
+	is_adult = yes
+	spn_has_supernatural_trait = no
+	spn_has_hunter_trait = no
+	spn_is_valid_supernatural_target = yes
+	NOT = {
+		any_character_artifact = {
+			OR = {
+				has_variable = spn_vade_page
+				has_variable = spn_vade_book
+			}
+		}
+	}
+}
+# Zecchia's send rule (§11.3). In the target's scope.
+spn_zecchia_can_target_trigger = {
+	is_alive = yes
+	NOT = { this = $HIRER$ }
+	NOT = { spn_wears_seal_trigger = yes }
+	NOT = { is_target_in_variable_list = { name = spn_zecchia_privilege target = $HIRER$ } }
+	any_character_artifact = { spn_zecchia_takeable_trigger = yes }
+	in_diplomatic_range = $HIRER$
+}
+# The Council Calls You (§5.16): an Order candidate for an empty seat. In the candidate's scope.
+spn_order_seat_candidate_trigger = {
+	is_alive = yes
+	NOT = { this = $CHAIR$ }
+	spn_order_magistratus_plus_trigger = yes
+	has_trait = archmage
+	is_a_demon_trigger = no
+	is_imprisoned = no
+	NOT = { has_variable = mc_member_var }
+	NOT = { has_character_flag = spn_order_seat_declined }
+	in_diplomatic_range = $CHAIR$
+}
+# Respondeo paid by the chapter (§5.12). In the payer's scope.
+spn_order_respondeo_payer_trigger = {
+	is_alive = yes
+	NOT = { this = $CALLER$ }
+	spn_is_order_member_trigger = yes
+	can_spend_standard_ps_trigger = yes
+	OR = {
+		is_vassal_or_below_of = $CALLER$
+		is_courtier_of = $CALLER$
+	}
+	NOT = { var:spn_order_rank ?= flag:magistratus }
+}
+# At least two of them (the decision's second branch). Caster scope.
+spn_order_respondeo_chapter_can_pay_trigger = {
+	var:spn_order_chapter ?= {
+		any_in_list = {
+			variable = spn_order_members
+			count >= 2
+			spn_order_respondeo_payer_trigger = { CALLER = root }
+			# One who would pay: a player is asked; an AI pays if he does not dislike the caller (review, 9 Oct).
+			OR = {
+				is_ai = no
+				opinion = { target = root value >= 0 }
+			}
+		}
+	}
+}
+# The Necrophone can name page $N$'s holder: held (not in a hide, not lost), and not by the caller. Caller scope.
+spn_relic_page_nameable_trigger = {
+	global_var:spn_vade_page_$N$_state ?= flag:held
+	global_var:spn_vade_page_$N$_art ?= {
+		artifact_owner ?= {
+			is_alive = yes
+			NOT = { this = root }
+		}
+	}
+}
+# Tear It Apart may give a page to this hide's champion (§12.10): alive, in reach, his worn hide holds no page. Holder scope.
+spn_vade_tear_champion_ok_trigger = {
+	global_var:spn_hide_champion_$HIDE$ ?= {
+		is_alive = yes
+		NOT = { this = root }
+		in_diplomatic_range = root
+		any_equipped_character_artifact = {
+			has_variable = spn_hide
+			NOT = { has_variable = spn_holds_vade_page }
+		}
+	}
+}
+# A new seat is far enough from every chapter but his own (§5.2's spacing; A Daughter Chapter). Founder scope.
+spn_order_seat_spaced_trigger = {
+	NOT = {
+		any_in_global_list = {
+			variable = spn_order_chapters
+			is_alive = yes
+			NOT = { this = root }
+			NOT = { var:spn_order_chapter ?= root.var:spn_order_chapter }
+			location = {
+				squared_distance = {
+					target = root.location
+					value < spn_order_chapter_spacing_value
+				}
+			}
+		}
+	}
+}
+# One seat holder who may stand with the Grand Magus at the Unmaking (§12.7). In the seat holder's scope.
+spn_order_unmaking_seat_ok_trigger = {
+	is_alive = yes
+	NOT = { this = $MAGUS$ }
+	NOT = { has_trait = spn_vade_bound }
+	in_diplomatic_range = $MAGUS$
+}
+# Two of the three seat holders stand with $MAGUS$ (the Grand Magus).
+spn_order_unmaking_seats_trigger = {
+	OR = {
+		AND = {
+			global_var:current_loremaster_global ?= { spn_order_unmaking_seat_ok_trigger = { MAGUS = $MAGUS$ } }
+			global_var:current_black_mage_global ?= { spn_order_unmaking_seat_ok_trigger = { MAGUS = $MAGUS$ } }
+		}
+		AND = {
+			global_var:current_loremaster_global ?= { spn_order_unmaking_seat_ok_trigger = { MAGUS = $MAGUS$ } }
+			global_var:current_admin_global ?= { spn_order_unmaking_seat_ok_trigger = { MAGUS = $MAGUS$ } }
+		}
+		AND = {
+			global_var:current_black_mage_global ?= { spn_order_unmaking_seat_ok_trigger = { MAGUS = $MAGUS$ } }
+			global_var:current_admin_global ?= { spn_order_unmaking_seat_ok_trigger = { MAGUS = $MAGUS$ } }
+		}
+	}
+}
+
+# ==================================================================================================
+# 2.38b: THE CONCLAVE (DESIGN-2.38b §4)
+# ==================================================================================================
+# Proof for Make an Entrance: a golem or a demon destroyed since the last Conclave, or a great magical item not shown yet.
+spn_conclave_has_proof_trigger = {
+	OR = {
+		has_character_flag = spn_order_proof_kill
+		any_character_artifact = { spn_conclave_proof_artifact_trigger = yes }
+	}
+}
+# Artifact scope: a magical item of note (a relic of ours, a page, the book, or a famed or illustrious Witchcraft item).
+spn_conclave_proof_artifact_trigger = {
+	NOT = { has_variable = spn_shown_at_conclave }
+	OR = {
+		has_variable = spn_relic
+		has_variable = spn_vade_page
+		has_variable = spn_vade_book
+		AND = {
+			has_variable = magic1
+			OR = {
+				rarity = famed
+				rarity = illustrious
+			}
+		}
+	}
+}
+# Stands for the chair: a Temple Magus who came, free and not bound to the book.
+spn_conclave_candidate_trigger = {
+	is_alive = yes
+	is_imprisoned = no
+	spn_is_temple_magus_trigger = yes
+	NOT = { has_trait = spn_vade_bound }
+	NOT = { has_character_flag = spn_order_recalled } # 2.39 (WORK-ORDER-2.39 F1, D4): not in the election that replaces him
+}
+# Votes: Temple Magi and the holders of council seats who came.
+spn_conclave_voter_trigger = {
+	spn_is_order_member_trigger = yes
+	OR = {
+		spn_is_temple_magus_trigger = yes
+		has_variable = mc_member_var
+	}
+}
+# A seat on the council is empty (any scope).
+spn_conclave_seat_open_trigger = {
+	OR = {
+		NOT = { exists = global_var:current_loremaster_global }
+		NOT = { exists = global_var:current_black_mage_global }
+		NOT = { exists = global_var:current_admin_global }
+	}
+}
+# Artifact scope: a pledged item another temple's member can lend at the Conclave (the borrow interaction's own rules).
+spn_conclave_lendable_trigger = {
+	exists = var:spn_pledged_to
+	NOT = { has_variable = spn_borrowed_from }
+	NOT = { has_variable = spn_relic_borrow_cd }
+	NOT = { var:spn_relic ?= flag:powder }
+	NOT = { var:spn_relic ?= flag:beetle } # 2.39 (WORK-ORDER-2.39 F4): the beetle is never lent
+}
+
+# 2.38b: a hunter who could be the outsider of An Outsider Asks Questions (.0160). Root: the member he asks about.
+spn_order_outsider_hunter_trigger = {
+	OR = {
+		spn_real_hunter_candidate_trigger = yes
+		AND = {
+			has_trait = witch_hunter
+			is_adult = yes
+			is_imprisoned = no
+			NOT = { this = root }
+		}
+	}
+	is_landed = no
+	spn_is_order_member_trigger = no
+}
+
+# 2.38e: a nature that takes to necromancy (Thomas, 9 Oct: a Mage is neutral good, a necromancer evil, a Warlock chaotic).
+# Witchcraft's necromancy choices for the AI read this (apply_upstream_edits.py, entries 59-65): without it, x0.1.
+spn_dark_nature_trigger = {
+	OR = {
+		has_trait = sadistic
+		has_trait = callous
+		has_trait = vengeful
+		has_trait = lunatic
+		has_trait = possessed
+	}
+}
+
+# 2.38e: an Acolyte who has finished the Order's teaching: a Mage, or a Warlock or True Witch taught the craft (.0140).
+spn_order_taught_trigger = {
+	OR = {
+		has_trait = archmage
+		has_character_flag = spn_order_taught
+	}
+}
+
+# 2.38e: who may find one of Witchcraft's magical artifacts (spn_magic_art_pick_finder_effect): one of a dynasty that has
+# found none, as Witchcraft's own rule. A courtier must also be grown and free.
+spn_magic_art_finder_ok_trigger = {
+	exists = dynasty
+	dynasty = { NOT = { has_variable = ev1used } }
+}
+spn_magic_art_courtier_ok_trigger = {
+	is_adult = yes
+	is_imprisoned = no
+	spn_magic_art_finder_ok_trigger = yes
+}

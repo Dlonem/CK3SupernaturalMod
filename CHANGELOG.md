@@ -8,6 +8,24 @@ Newest first. Notes for 2.29 and earlier are on the Workshop's
 
 ---
 
+## 2.39 — The Hermetic Order of the Blue Rose, Part 2
+
+The temples of the Order of the Blue Rose can now vote out the Grand Magus with Invocare, the Gnostic Council can grant him Imperium, and its members can pledge to the council's first great work, the Great Respondeo. Outsiders who learn of the Order can break it, or be invited in. Also new: spells that go wrong for a Vade Maecum witness, the Homunculus Beetle, the Warded Chains, prison breaks for Champions and jailed vampires, the Draught of a Clear Mind, the Collegium, two Embrace decisions and an optional rule that keeps AI characters from becoming demons. Vampires can no longer compel werewolves, AI mages now need a reason to duel you or go after your magic items, and a Temple Magus can invite people into the Order himself. Fixes include pack invitations, a stuck council meeting and the Reset Lifetime Events rule. Russian translation by Adrian.
+
+Questions about the mod? Read the wiki: [dlonem.com/mods/supernatural/wiki](https://dlonem.com/mods/supernatural/wiki/)
+
+**Playing with AGOT?** AGOT hasn't been updated for 1.20 yet. Until it and the compatibility patch are, play on CK3 1.19 with Supernatural 2.35a from [GitHub](https://github.com/Dlonem/CK3SupernaturalMod/releases/tag/v2.35a) ([how to install it](https://dlonem.com/mods/supernatural/download/)).
+
+---
+
+## 2.38 — The Hermetic Order of the Blue Rose
+
+The Hermetic Order of the Blue Rose comes to Supernatural: six temples of Mages, a letter that invites you in, a test to pass, ranks to climb, relics to pledge, and a Gnostic Council whose chair passes by Conclave. The Vade Maecum Infernal, a demon thief called Zecchia, coven panels and a war for relics come with it. Magic is rebalanced: Mage, Warlock and True Witch are one path each, the AI chooses its path by its nature, the werewolf trait gives less Martial, hide Champions who practice magic grow stronger, and packs now recruit. Two new game rules turn the Order and the Vade Maecum on or off. Healing no longer takes the Horned God's Claws, and thousands of script errors are gone.
+
+Questions about the mod? Read the wiki: [dlonem.com/mods/supernatural/wiki](https://dlonem.com/mods/supernatural/wiki/)
+
+---
+
 ## 2.37 — The Six Hides
 
 Six ancient wolf hides are loose in the world: Silverback, Timber, Tundra, Graybeard, Midnight and Alpha. Each has a will of its own and chooses a werewolf or hybrid who fits it, and its Champion is stronger, lives longer, never grows frail and can hear magic. Most start as relics in shrines at holy sites. Take one by holding the county, by siege or on pilgrimage, or pay someone to bring it back with Send for a Hide. Wolves can now found and join packs, rise in Pack Standing, challenge the alpha for the pack, and meet at the new Werewolf Gathering. AI wolves challenge an alpha only for a reason: he is too weak to lead, cruel to his pack, or their enemy. A hide an AI leaves idle for ten years slips away to find a wolf. Two new game rules control the hides and the packs. The mod's death reasons now read as proper sentences, a few broken links and icons are fixed, and a demon can now have a child with a werewolf or hybrid (reported by Jean de Valois). It works on a running save: the hides turn up within the year.

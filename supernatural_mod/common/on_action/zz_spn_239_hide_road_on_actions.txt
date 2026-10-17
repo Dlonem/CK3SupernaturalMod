@@ -1,0 +1,58 @@
+﻿# Supernatural 2.39 -- hides you can come across (Boot 3, 16 Oct; tool/pkgs/PB/HANDOFF.md §9).
+#
+# Thomas: "I almost want it more likely for players to possibly come across them, but don't make it too obvious." Five of
+# the six hides sat in shrines at holy sites of faiths far from his own (Hindu, Hantu, West African, Finnic), so the holy
+# relics he browsed never showed them, and Word Travels (spn_hide.0310) only tells of a hide enshrined AFTER the seeding.
+# A player wolf who travels through a county that keeps a hide, or one beside it, may hear the tale at an inn (one in
+# five steps that qualify, then not again for three years): A Tale on the Road (spn_hide.0311), which teaches him where
+# it is kept exactly as Word Travels does (spn_hide_learn_where_effect, WANTS = yes), so Send for a Hide can offer it.
+# Cheap first: the county modifier, before any search of the artifacts.
+on_travel_plan_movement = {
+	on_actions = {
+		spn_hide_road_rumour
+	}
+}
+
+spn_hide_road_rumour = {
+	trigger = {
+		is_ai = no
+		spn_can_bear_hide_trigger = yes
+		NOT = { has_character_flag = spn_hide_road_heard }
+		spn_flavor_ready_trigger = yes # 2.39 (final pass, 17 Oct): flavor: the 60-day gate (F14)
+		location ?= {
+			county ?= {
+				OR = {
+					spn_county_keeps_a_hide_trigger = yes
+					any_neighboring_county = { spn_county_keeps_a_hide_trigger = yes }
+				}
+			}
+		}
+	}
+	effect = {
+		random = {
+			chance = 20
+			location.county = { save_scope_as = spn_road_here }
+			random_artifact = {
+				limit = {
+					has_variable = spn_hide
+					exists = var:spn_hide_shrine_county
+					OR = {
+						var:spn_hide_shrine_county = scope:spn_road_here
+						var:spn_hide_shrine_county = { any_neighboring_county = { this = scope:spn_road_here } }
+					}
+					spn_hide_fact_lacked_trigger = { WHO = root }
+				}
+				save_scope_as = spn_road_hide
+			}
+			if = {
+				limit = { exists = scope:spn_road_hide }
+				add_character_flag = { flag = spn_hide_road_heard years = 3 }
+				scope:spn_road_hide.var:spn_hide_shrine_county = { save_scope_as = spn_shrine_county }
+				trigger_event = spn_hide.0311
+			}
+			else = { # he knows every hide near here already: no second search of the world's artifacts for a while
+				add_character_flag = { flag = spn_hide_road_heard months = 6 }
+			}
+		}
+	}
+}

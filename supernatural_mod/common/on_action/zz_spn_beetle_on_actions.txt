@@ -1,0 +1,42 @@
+﻿# Supernatural 2.39 -- the Homunculus Beetle (WORK-ORDER-2.39 F4). Each vanilla on_action is APPENDED through
+# `on_actions = { }`, which merges across files (the 2.37 idiom zz_spn_order_on_actions.txt uses), so nothing is copied
+# or shadowed. Each starts with the cheapest test that is false almost everywhere.
+#
+# No scripted trigger may live in this folder (2.35d: the parser stops at it); the triggers are in
+# common/scripted_triggers/zz_spn_beetle_triggers.txt.
+
+# ==================================================================================================
+# DEATH. Root is about to die: the beetle's carrier. It crawls out of the body and comes back now. Never a death in here.
+# ==================================================================================================
+on_death = {
+	on_actions = {
+		spn_beetle_on_death
+	}
+}
+
+spn_beetle_on_death = {
+	trigger = {
+		global_var:spn_beetle_carrier ?= root
+		global_var:spn_beetle_state ?= flag:inside
+	}
+	effect = {
+		add_character_flag = { flag = spn_beetle_dying days = 1 }
+		save_scope_value_as = { name = spn_br_crawled value = yes }
+		spn_beetle_return_effect = yes
+	}
+}
+
+# ==================================================================================================
+# THE YEAR. The seed (once), the fallback return, and the backstop for the AI's containment. No root, no world walk.
+# ==================================================================================================
+yearly_global_pulse = {
+	on_actions = {
+		spn_beetle_yearly
+	}
+}
+
+spn_beetle_yearly = {
+	effect = {
+		spn_beetle_yearly_effect = yes
+	}
+}

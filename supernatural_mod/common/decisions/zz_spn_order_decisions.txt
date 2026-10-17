@@ -1,0 +1,743 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": the Order's decisions (WORK-ORDER-2.38 §5.10-5.20, §11.6).
+# Loc: localization/english/spn_order_l_english.yml. Every decision is in the Supernatural group.
+
+# Leave the Order (§5.10).
+spn_order_leave_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_order_leave_decision_desc
+	selection_tooltip = spn_order_leave_decision_tooltip
+	confirm_text = spn_order_leave_decision_confirm
+	ai_check_interval = 60
+	is_shown = {
+		spn_order_on_trigger = yes
+		exists = var:spn_order_chapter
+		NOT = { var:spn_order_rank ?= flag:neophyte }
+	}
+	effect = {
+		custom_tooltip = spn_order_leave_decision_effect_tt
+		trigger_event = spn_order.0191
+	}
+	ai_potential = {
+		exists = var:spn_order_chapter
+		spn_is_temple_magus_trigger = no
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 30
+			opinion = { target = var:spn_order_chapter.story_owner value <= -40 }
+		}
+		modifier = { add = 20 has_trait = zealous }
+	}
+}
+
+# Respondeo (§5.12): Magistratus and up; ten years between.
+spn_order_respondeo_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds" }
+	desc = spn_order_respondeo_decision_desc
+	selection_tooltip = spn_order_respondeo_decision_tooltip
+	confirm_text = spn_order_respondeo_decision_confirm
+	ai_check_interval = 24
+	cooldown = { years = 10 }
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_order_magistratus_plus_trigger = yes
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_order_respondeo_can_pay_tt
+			OR = {
+				can_spend_huge_ps_trigger = yes
+				spn_order_respondeo_chapter_can_pay_trigger = yes
+			}
+		}
+		exists = location.county
+	}
+	effect = {
+		custom_tooltip = spn_order_respondeo_decision_effect_tt
+		# 2.39 (WORK-ORDER-2.39 F15): no wound in the temple's own county.
+		if = {
+			limit = { var:spn_order_chapter ?= { spn_order_hall_stands_trigger = yes } }
+			custom_tooltip = spn_order_respondeo_hall_tt
+		}
+		trigger_event = spn_order.0180
+	}
+	ai_potential = {
+		spn_order_magistratus_plus_trigger = yes
+		location.county ?= { has_county_modifier = spn_menace_modifier }
+	}
+	ai_will_do = {
+		base = 50
+		modifier = { add = 20 has_trait = paranoid }
+	}
+}
+
+# Prepare the Powder (§5.13): Magistratus and up; five years between.
+spn_order_powder_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_physician.dds" }
+	desc = spn_order_powder_decision_desc
+	selection_tooltip = spn_order_powder_decision_tooltip
+	confirm_text = spn_order_powder_decision_confirm
+	ai_check_interval = 60
+	cooldown = { years = 5 }
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_order_magistratus_plus_trigger = yes
+	}
+	is_valid = {
+		can_spend_standard_ps_trigger = yes
+	}
+	effect = {
+		spend_standard_ps_effect = yes
+		spn_relic_make_powder_effect = { OWNER = root }
+	}
+	ai_potential = {
+		spn_order_magistratus_plus_trigger = yes
+	}
+	ai_will_do = {
+		base = 20
+		modifier = {
+			add = 20
+			var:spn_order_chapter ?= {
+				NOT = {
+					any_in_list = {
+						variable = spn_order_members
+						any_character_artifact = { var:spn_relic ?= flag:powder }
+					}
+				}
+			}
+		}
+	}
+}
+
+# Seek Out the Order (§5.17): players only, not a member, not spurned. A blue rose on the library steps.
+spn_order_seek_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_tale.dds" }
+	desc = spn_order_seek_decision_desc
+	selection_tooltip = spn_order_seek_decision_tooltip
+	confirm_text = spn_order_seek_decision_confirm
+	ai_check_interval = 0
+	cooldown = { years = 5 }
+	is_shown = {
+		is_ai = no
+		spn_order_on_trigger = yes
+		NOT = { exists = var:spn_order_chapter }
+		NOT = { has_character_flag = spn_order_spurned }
+		OR = {
+			has_trait = archmage
+			has_trait = source
+			has_trait = source2
+		}
+		# 2.38a: only while a temple stands somewhere. With none, a Mage sees Found the Order Anew instead.
+		any_in_global_list = { variable = spn_order_chapters always = yes }
+	}
+	effect = {
+		custom_tooltip = spn_order_seek_decision_effect_tt
+		trigger_event = spn_order.0104
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# Ask the Temple to Heal You (§5.19): a member with a deadly disease who is not the head; his Temple Magus decides.
+spn_order_transference_ask_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_physician.dds" }
+	desc = spn_order_transference_ask_decision_desc
+	selection_tooltip = spn_order_transference_ask_decision_tooltip
+	confirm_text = spn_order_transference_ask_decision_confirm
+	ai_check_interval = 12
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_is_order_member_trigger = yes
+		spn_is_temple_magus_trigger = no
+		spn_order_deadly_disease_trigger = yes
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_order_transference_not_pending_tt
+			NOT = { exists = var:spn_transference_pending }
+			NOT = { exists = var:spn_transference_disease }
+		}
+		custom_tooltip = {
+			text = spn_order_transference_ask_head_tt
+			var:spn_order_chapter ?= {
+				story_owner = {
+					is_alive = yes
+					is_imprisoned = no
+				}
+			}
+		}
+	}
+	effect = {
+		var:spn_order_chapter.story_owner = { save_scope_as = spn_ta_head }
+		save_scope_as = spn_tr_asker
+		custom_tooltip = spn_order_transference_ask_decision_effect_tt
+		scope:spn_ta_head = {
+			if = {
+				limit = { is_ai = no }
+				trigger_event = spn_order.0815
+			}
+			else_if = {
+				limit = {
+					spn_transference_caster_trigger = yes
+					opinion = { target = scope:spn_tr_asker value >= 0 }
+				}
+				spn_transference_begin_effect = { CASTER = scope:spn_ta_head PATIENT = scope:spn_tr_asker }
+			}
+			else = {
+				scope:spn_tr_asker = {
+					if = {
+						limit = { is_ai = no }
+						send_interface_toast = {
+							type = event_toast_effect_bad
+							title = spn_order_toast_heal_refused
+							left_icon = scope:spn_ta_head
+						}
+					}
+				}
+			}
+		}
+	}
+	ai_potential = {
+		spn_order_deadly_disease_trigger = yes
+	}
+	ai_will_do = {
+		base = 100
+		modifier = { # 2.39 (WORK-ORDER-2.39 F4): the Blue Fever alone passes by itself; the AI asks only as its carrier
+			factor = 0
+			has_trait = spn_blue_fever
+			NOR = {
+				has_trait = cancer
+				has_trait = consumption
+				has_trait = leper
+				has_trait = great_pox
+			}
+			NOT = { global_var:spn_beetle_carrier ?= this }
+		}
+	}
+}
+
+# Set the Order's Prerogative (§5.18): the master; ten years between.
+spn_order_set_prerogative_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_realm.dds" }
+	desc = spn_order_set_prerogative_decision_desc
+	selection_tooltip = spn_order_set_prerogative_decision_tooltip
+	confirm_text = spn_order_set_prerogative_decision_confirm
+	ai_check_interval = 0
+	cooldown = { years = 10 }
+	is_shown = {
+		is_ai = no
+		spn_order_on_trigger = yes
+		spn_order_is_master_trigger = yes
+	}
+	effect = {
+		custom_tooltip = spn_order_set_prerogative_choices_tt # 2.38c: the five choices, before you decide
+		hidden_effect = { trigger_event = spn_order.0940 }
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# Learn the Fors Factorum (§5.20): the Grand Magus, the master, a Temple Magus, or a Magistratus whose research found it
+# (2.39, Boot 3; it was a seat or the chair).
+spn_order_fors_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_destiny_goal.dds" }
+	desc = spn_order_fors_decision_desc
+	selection_tooltip = spn_order_fors_decision_tooltip
+	confirm_text = spn_order_fors_decision_confirm
+	ai_check_interval = 60
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_order_fors_eligible_trigger = yes # 2.39 (Boot 3, 16 Oct): the chair, a Temple Magus, or his own research (was any seat)
+		NOT = { has_character_modifier = spn_fors_factorum_modifier }
+	}
+	effect = {
+		trigger_event = spn_order.0840
+	}
+	ai_potential = {
+		age >= 30
+		NOR = {
+			has_trait = craven
+			has_trait = content
+		}
+	}
+	ai_will_do = {
+		base = 30
+		modifier = { add = 30 has_trait = ambitious }
+		modifier = { add = 20 has_trait = arrogant }
+	}
+}
+
+# Seek a Compact with the Order (§11.6): a demon, once a year at the master's door.
+spn_order_compact_seek_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_order_compact_seek_decision_desc
+	selection_tooltip = spn_order_compact_seek_decision_tooltip
+	confirm_text = spn_order_compact_seek_decision_confirm
+	ai_check_interval = 60
+	cooldown = { years = 10 }
+	is_shown = {
+		spn_order_on_trigger = yes
+		is_a_demon_trigger = yes
+		is_adult = yes
+		global_var:spn_order_master ?= { is_alive = yes }
+		spn_is_order_member_trigger = no
+		NOT = { global_var:spn_zecchia ?= this }
+		NOT = { any_relation = { type = mmaster } }
+		NOT = { exists = var:spn_order_compact }
+		NOT = { has_character_flag = spn_order_oathbreaker }
+		NOT = { has_character_flag = spn_order_turned_away }
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_order_compact_knock_tt
+			NOT = { exists = global_var:spn_order_knock_cd }
+		}
+		custom_tooltip = {
+			text = spn_order_compact_not_master_tt
+			NOT = { global_var:spn_order_master ?= this }
+		}
+	}
+	effect = {
+		set_global_variable = { name = spn_order_knock_cd value = yes years = 1 }
+		custom_tooltip = spn_order_compact_seek_decision_effect_tt
+		trigger_event = spn_order.0899
+	}
+	ai_potential = {
+		is_a_demon_trigger = yes
+	}
+	ai_will_do = {
+		base = 0
+		modifier = { add = 30 has_trait = ambitious }
+		modifier = { add = 20 has_trait = greedy }
+		modifier = {
+			add = 30
+			spn_order_prerogative_is_trigger = { P = flag:pit }
+		}
+	}
+}
+
+# ==================================================================================================
+# PRIORITY 3 -- THE ORDER'S REACH (§5.15). Each behind spn_order_reach_built_trigger.
+# ==================================================================================================
+# Petition the Gnostic Council for a Charter: a member at standing 75 (60 under More Hands); the chair answers (.0600).
+spn_order_charter_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_realm.dds" }
+	desc = spn_order_charter_decision_desc
+	selection_tooltip = spn_order_charter_decision_tooltip
+	confirm_text = spn_order_charter_decision_confirm
+	ai_check_interval = 60
+	cooldown = { years = 10 }
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_order_reach_built_trigger = yes
+		spn_is_order_member_trigger = yes
+		spn_is_temple_magus_trigger = no
+		is_landed = yes
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_order_charter_standing_tt
+			OR = {
+				var:spn_order_standing >= 75
+				AND = {
+					spn_order_prerogative_is_trigger = { P = flag:grow }
+					var:spn_order_standing >= 60
+				}
+			}
+		}
+		custom_tooltip = {
+			text = spn_order_charter_chair_tt
+			global_var:current_archmage_global ?= {
+				is_alive = yes
+				NOT = { this = root }
+			}
+		}
+		custom_tooltip = {
+			text = spn_order_charter_room_tt
+			NOT = {
+				any_in_global_list = {
+					variable = spn_order_chapters
+					count >= spn_order_max_chapters_value
+				}
+			}
+		}
+	}
+	effect = {
+		save_scope_as = spn_ch_petitioner
+		custom_tooltip = spn_order_charter_decision_effect_tt
+		global_var:current_archmage_global = { trigger_event = spn_order.0600 }
+	}
+	ai_potential = {
+		spn_is_order_member_trigger = yes
+		is_landed = yes
+	}
+	ai_will_do = {
+		base = 10
+		modifier = { add = 20 has_trait = ambitious }
+		modifier = {
+			add = 20
+			var:spn_order_chapter ?= { spn_order_has_room_trigger = no }
+		}
+	}
+}
+
+# A Daughter Chapter: a full chapter's Magistratus at standing 75 takes up to five who follow him to a new seat. Fifty years
+# between daughters of one chapter.
+spn_order_daughter_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_dynasty_house.dds" }
+	desc = spn_order_daughter_decision_desc
+	selection_tooltip = spn_order_daughter_decision_tooltip
+	confirm_text = spn_order_daughter_decision_confirm
+	ai_check_interval = 60
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_order_reach_built_trigger = yes
+		var:spn_order_rank ?= flag:magistratus
+		spn_is_temple_magus_trigger = no
+		is_landed = yes
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_order_daughter_standing_tt
+			exists = var:spn_order_standing
+			var:spn_order_standing >= 75
+		}
+		custom_tooltip = {
+			text = spn_order_daughter_full_tt
+			var:spn_order_chapter ?= { spn_order_has_room_trigger = no }
+		}
+		custom_tooltip = {
+			text = spn_order_daughter_cd_tt
+			var:spn_order_chapter ?= { NOT = { has_variable = spn_order_daughter_cd } }
+		}
+		custom_tooltip = {
+			text = spn_order_daughter_spaced_tt
+			spn_order_seat_spaced_trigger = yes
+		}
+		custom_tooltip = {
+			text = spn_order_charter_room_tt
+			NOT = {
+				any_in_global_list = {
+					variable = spn_order_chapters
+					count >= spn_order_max_chapters_value
+				}
+			}
+		}
+	}
+	effect = {
+		save_scope_as = spn_dc_founder
+		var:spn_order_chapter = {
+			save_scope_as = spn_dc_parent
+			set_variable = { name = spn_order_daughter_cd value = yes years = 50 }
+			# Up to five who follow him (AI members who like him; a player member is never moved without asking).
+			ordered_in_list = {
+				variable = spn_order_members
+				limit = {
+					is_ai = yes
+					is_alive = yes
+					NOT = { this = scope:spn_dc_founder }
+					NOT = { this = scope:spn_dc_parent.story_owner }
+					NOT = { var:spn_order_rank ?= flag:neophyte }
+					opinion = { target = scope:spn_dc_founder value >= 20 }
+				}
+				order_by = var:spn_order_standing
+				max = 5
+				check_range_bounds = no
+				add_to_temporary_list = spn_dc_followers
+			}
+		}
+		capital_county = { save_scope_as = spn_dc_seat }
+		spn_order_found_chapter_effect = { HEAD = scope:spn_dc_founder SEAT = scope:spn_dc_seat }
+		if = {
+			limit = { exists = scope:spn_new_chapter }
+			every_in_list = {
+				list = spn_dc_followers
+				# 2.39 (Boot 4, 16 Oct): his rank goes over as a flag literal, read before he leaves the old temple
+				if = {
+					limit = { var:spn_order_rank ?= flag:magistratus }
+					spn_order_remove_member_effect = { WHO = this REASON = flag:transfer }
+					spn_order_add_member_effect = { WHO = this CHAPTER = scope:spn_new_chapter RANK = flag:magistratus }
+				}
+				else_if = {
+					limit = { var:spn_order_rank ?= flag:medicum }
+					spn_order_remove_member_effect = { WHO = this REASON = flag:transfer }
+					spn_order_add_member_effect = { WHO = this CHAPTER = scope:spn_new_chapter RANK = flag:medicum }
+				}
+				else = {
+					spn_order_remove_member_effect = { WHO = this REASON = flag:transfer }
+					spn_order_add_member_effect = { WHO = this CHAPTER = scope:spn_new_chapter RANK = flag:acolyte }
+				}
+				spn_order_grant_membership_effect = yes
+			}
+		}
+	}
+	ai_potential = {
+		var:spn_order_rank ?= flag:magistratus
+		is_landed = yes
+	}
+	ai_will_do = {
+		base = 10
+		modifier = { add = 20 has_trait = ambitious }
+	}
+}
+
+# Found the Order Anew: no chapter is left; a Mage who knows two other Mages for what they are founds one with them.
+spn_order_refound_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_dynasty_house.dds" }
+	desc = spn_order_refound_decision_desc
+	selection_tooltip = spn_order_refound_decision_tooltip
+	confirm_text = spn_order_refound_decision_confirm
+	ai_check_interval = 60
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_order_reach_built_trigger = yes
+		has_trait = archmage
+		NOT = { any_in_global_list = { variable = spn_order_chapters always = yes } }
+		exists = global_var:spn_order_seeded
+	}
+	is_valid = {
+		is_landed = yes
+		spn_order_can_join_trigger = yes
+		# 2.38a: Mages at your court, your vassals, your liege, or any whose secret you know (spn_order_known_mage_trigger).
+		custom_tooltip = {
+			text = spn_order_refound_two_tt
+			spn_order_known_mages_value >= 2
+		}
+		# 2.39 (WORK-ORDER-2.39 F2): harder after a Break, never locked.
+		trigger_if = {
+			limit = { exists = global_var:spn_order_broken }
+			custom_tooltip = {
+				text = spn_order_refound_broken_tt
+				spn_order_known_mages_value >= 3
+			}
+		}
+	}
+	effect = {
+		save_scope_as = spn_oa_founder
+		capital_county = { save_scope_as = spn_oa_seat }
+		# 2.38a: say what happens (the Effects box was empty).
+		custom_tooltip = spn_order_refound_effect_temple_tt
+		custom_tooltip = spn_order_refound_effect_master_tt
+		custom_tooltip = spn_order_refound_effect_invite_tt
+		hidden_effect = {
+			spn_order_found_chapter_effect = { HEAD = root SEAT = scope:spn_oa_seat }
+			spn_order_refound_invite_effect = yes
+			spn_order_chair_fill_effect = yes # 2.38b: with no other temple, the founder holds the chair
+			spn_order_master_refresh_effect = yes
+			# 2.39 (WORK-ORDER-2.39 F2): The Rose Remembers, while the Order still counts as broken.
+			global_var:spn_order_broken ?= {
+				if = {
+					limit = {
+						is_alive = yes
+						NOT = { this = root }
+					}
+					save_scope_as = spn_or_breaker
+					root = { trigger_event = { id = spn_order.0983 days = { 30 90 } } }
+				}
+			}
+		}
+	}
+	ai_potential = {
+		has_trait = archmage
+		is_landed = yes
+		NOT = { exists = global_var:spn_order_broken } # 2.39 (WORK-ORDER-2.39 F2): the AI waits the twenty years out
+	}
+	ai_will_do = {
+		base = 20
+		modifier = { add = 20 has_trait = gregarious }
+	}
+}
+
+# 2.38b: Dissolve the Gnostic Council (DESIGN-2.38b §3). A player Grand Magus who is of the Order sends the seat holders
+# home; the next Conclave fills the seats again. The AI never does.
+spn_order_dissolve_council_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_realm.dds" }
+	desc = spn_order_dissolve_council_decision_desc
+	selection_tooltip = spn_order_dissolve_council_decision_tooltip
+	confirm_text = spn_order_dissolve_council_decision_confirm
+	ai_check_interval = 0
+	cooldown = { years = 10 }
+	is_shown = {
+		is_ai = no
+		spn_order_on_trigger = yes
+		spn_is_order_member_trigger = yes
+		global_var:current_archmage_global ?= root
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_order_dissolve_council_seats_tt
+			OR = {
+				exists = global_var:current_loremaster_global
+				exists = global_var:current_black_mage_global
+				exists = global_var:current_admin_global
+			}
+		}
+	}
+	effect = {
+		custom_tooltip = spn_order_dissolve_council_decision_effect_tt
+		trigger_event = spn_order.0975
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# 2.38b: a player Temple Magus who let the masks choose takes the choice back (DESIGN-2.38b §6).
+spn_order_choose_candidates_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_order_choose_candidates_decision_desc
+	selection_tooltip = spn_order_choose_candidates_decision_tooltip
+	confirm_text = spn_order_choose_candidates_decision_confirm
+	ai_check_interval = 0
+	is_shown = {
+		is_ai = no
+		spn_is_temple_magus_trigger = yes
+		has_character_flag = spn_order_auto_picks
+	}
+	effect = {
+		custom_tooltip = spn_order_choose_candidates_decision_effect_tt
+		remove_character_flag = spn_order_auto_picks
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# 2.38b: Call a Conclave (DESIGN-2.38b §4). A player Grand Magus of the Order, at will (the activity's own five-year
+# cooldown applies).
+spn_conclave_call_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_realm.dds" }
+	desc = spn_conclave_call_decision_desc
+	selection_tooltip = spn_conclave_call_decision_tooltip
+	confirm_text = spn_conclave_call_decision_confirm
+	ai_check_interval = 0
+	is_shown = {
+		is_ai = no
+		spn_order_on_trigger = yes
+		spn_is_order_member_trigger = yes
+		global_var:current_archmage_global ?= root
+	}
+	is_valid = {
+		is_landed = yes
+		custom_tooltip = {
+			text = spn_conclave_cooldown_tt
+			NOT = { is_activity_type_on_cooldown = spn_conclave }
+		}
+		custom_tooltip = {
+			text = spn_conclave_one_at_a_time_tt
+			NOT = { exists = global_var:spn_conclave_running }
+		}
+	}
+	effect = {
+		custom_tooltip = spn_conclave_call_decision_effect_tt
+		hidden_effect = { spn_conclave_call_effect = { REASON = flag:will } }
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# 2.38b: Ask the Temple for Help with Your Research (DESIGN-2.38b §7b). A member in the middle of Witchcraft's Magical
+# Research: a Magistratus of his temple comes, and the project needs one breakthrough fewer (E31).
+spn_order_research_help_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_order_research_help_decision_desc
+	selection_tooltip = spn_order_research_help_decision_tooltip
+	confirm_text = spn_order_research_help_decision_confirm
+	ai_check_interval = 24
+	cooldown = { years = 5 }
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_is_order_member_trigger = yes
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_order_research_help_in_research_tt
+			involved_activity ?= { has_activity_type = magical_research }
+		}
+		custom_tooltip = {
+			text = spn_order_research_help_standing_tt
+			exists = var:spn_order_standing
+			var:spn_order_standing >= 10
+		}
+		custom_tooltip = {
+			text = spn_order_research_help_magistratus_tt
+			var:spn_order_chapter ?= {
+				any_in_list = {
+					variable = spn_order_members
+					NOT = { this = root }
+					spn_order_magistratus_plus_trigger = yes
+				}
+			}
+		}
+	}
+	effect = {
+		spn_order_add_standing_effect = { VALUE = -10 }
+		custom_tooltip = spn_order_research_help_decision_effect_tt
+		trigger_event = spn_order.0330
+	}
+	ai_potential = { spn_is_order_member_trigger = yes }
+	ai_will_do = { base = 50 }
+}
+
+# 2.38b: The Clay Working (DESIGN-2.38b §7b). The Order's own golem: a Magistratus Mage of a temple of five or more, a
+# great deal of power, and one Working per temple every twenty years.
+spn_order_clay_working_decision = {
+	decision_group_type = supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds" }
+	desc = spn_order_clay_working_decision_desc
+	selection_tooltip = spn_order_clay_working_decision_tooltip
+	confirm_text = spn_order_clay_working_decision_confirm
+	ai_check_interval = 60
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_order_magistratus_plus_trigger = yes
+		has_trait = archmage
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_order_clay_power_tt
+			can_spend_huge_ps_trigger = yes
+		}
+		custom_tooltip = {
+			text = spn_order_clay_temple_size_tt
+			var:spn_order_chapter ?= {
+				exists = var:spn_order_size
+				var:spn_order_size >= 5
+			}
+		}
+		custom_tooltip = {
+			text = spn_order_clay_cd_tt
+			var:spn_order_chapter ?= { NOT = { has_variable = spn_order_clay_cd } }
+		}
+	}
+	effect = {
+		custom_tooltip = spn_order_clay_working_decision_effect_tt
+		hidden_effect = {
+			spend_huge_ps_effect = yes
+			var:spn_order_chapter = { set_variable = { name = spn_order_clay_cd value = yes years = 20 } }
+		}
+		trigger_event = spn_order.0860
+	}
+	ai_potential = {
+		spn_order_magistratus_plus_trigger = yes
+		has_trait = archmage
+	}
+	ai_will_do = {
+		base = 5
+		modifier = { add = 15 has_trait = ambitious }
+	}
+}

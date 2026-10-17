@@ -59,6 +59,19 @@ spn_hunters.0001 = { # Someone spotted a witch
 		spn_find_or_make_witch_effect = yes
 	}
 	
+	# 2.39 (WORK-ORDER-2.39 B10): a woman this chain keeps is never vanished by a later one (spn_invented_witch, 60 days).
+	after = {
+		scope:witch ?= {
+			if = {
+				limit = {
+					is_alive = yes
+					has_variable = spn_invented_witch
+				}
+				remove_variable = spn_invented_witch
+			}
+		}
+	}
+
 	option = { # Looks to be the beginning of a Witch hunt!
 		name = spn_hunters.0001.a
 		# debug_log = "WAM_Debug: a ruler hunted for a witch in spn_hunters.0001"
@@ -273,6 +286,28 @@ spn_hunters.0002 = { # Witch Spotted (Part 2)
 		character = scope:witch
 		animation = prayer
 	}
+
+	# 2.39 (WORK-ORDER-2.39 B10): this step had no trigger. In the 12-15 days she can be imprisoned by someone else, stripped
+	# of magic, turned, or dead (the 10% branch below would then credit a dead woman as the killer). If the chain stops, an
+	# invented witch simply stays in the world as a courtier.
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_has_supernatural_trait = no
+		scope:witch ?= {
+			is_alive = yes
+			OR = {
+				is_imprisoned = no
+				is_imprisoned_by = root
+			}
+			OR = {
+				has_trait = witch
+				any_secret = { secret_type = secret_witch }
+			}
+			NOT = { spn_hunt_is_creature_trigger = yes }
+			NOT = { has_trait = supernatural_hunter }
+		}
+	}
 	
 	option = { # Attempt to follow her tracks
 		name = spn_hunters.0002.a
@@ -471,17 +506,31 @@ spn_hunters.0003 = { # Decide on the fate of the witch
 		character = scope:witch
 		animation = fear
 	}
+
+	# 2.39 (WORK-ORDER-2.39 B10): no trigger until now, and option a burns her. The same re-check as Witch Spotted (Part 2).
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_has_supernatural_trait = no
+		scope:witch ?= {
+			is_alive = yes
+			OR = {
+				is_imprisoned = no
+				is_imprisoned_by = root
+			}
+			OR = {
+				has_trait = witch
+				any_secret = { secret_type = secret_witch }
+			}
+			NOT = { spn_hunt_is_creature_trigger = yes }
+			NOT = { has_trait = supernatural_hunter }
+		}
+	}
 	
 	option = { # Burn her
 		name = spn_hunters.0003.a
-		
-		scope:witch = {
-			death = { death_reason = death_burned }
-		}
-		
-		add_gold = {
-			value = { 10 25 }
-		}	
+		trigger = { scope:witch ?= { is_alive = yes } } # 2.39 (WORK-ORDER-2.39 B10): a player can leave the window open
+		# 2.39 (review L4): the 10-25 gold moved into the burn below, paid only when she is burned.
 
 		if = {
 			limit = {
@@ -517,6 +566,51 @@ spn_hunters.0003 = { # Decide on the fate of the witch
 			compassionate = medium_stress_impact_gain			
 			just = minor_stress_gain
 			supernatural_hunter = medium_stress_impact_loss
+		}
+
+		# 2.39 (WORK-ORDER-2.39 B10, decision D17 (b)): the burn, last in the option. A player's choice is unchanged. An AI
+		# burns only a witch in his power: his own prisoner, courtier or guest, as vanilla needs someone in your hands to
+		# execute them. Anyone else is exposed instead, or her county gets a trail, through the existing entry points
+		# (vanilla expose_secret; spn_mark_menace_effect). This ends player characters burned by a stranger with no warning.
+		if = {
+			limit = {
+				OR = {
+					is_ai = no
+					scope:witch = {
+						OR = {
+							is_imprisoned_by = root
+							is_courtier_of = root
+							is_foreign_court_or_pool_guest_of = root
+						}
+					}
+				}
+			}
+			add_gold = { # 2.39 (review L4): moved here from the top of the option; the reward is for the burning
+				value = { 10 25 }
+			}
+			scope:witch = {
+				death = { death_reason = death_burned }
+			}
+		}
+		else_if = {
+			limit = { scope:witch = { any_secret = { secret_type = secret_witch } } }
+			scope:witch = {
+				random_secret = {
+					limit = { secret_type = secret_witch }
+					expose_secret = root
+				}
+			}
+		}
+		else = {
+			scope:witch = {
+				location ?= {
+					county ?= { save_scope_as = spn_wf_county }
+				}
+			}
+			if = {
+				limit = { exists = scope:spn_wf_county }
+				spn_mark_menace_effect = { COUNTY = scope:spn_wf_county CULPRIT = scope:witch KIND = witch SEVERITY = prowl }
+			}
 		}
 		
 		ai_chance = {

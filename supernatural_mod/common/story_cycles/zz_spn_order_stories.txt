@@ -1,0 +1,313 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": the visible story cycles (WORK-ORDER-2.38 §4.4). The shape of 2.37's
+# zz_spn_pack_story.txt. No GUI file: vanilla draws a story with `visible = yes` in the Situations window.
+#
+# C2: the Situations window shows a player only the stories he owns. So each real story is owned by its head, and every
+# PLAYER member who is not the head owns a mirror story whose variables are copies (spn_order_sync_mirrors_effect,
+# spn_coven_sync_mirrors_effect). A non-member owns nothing and sees nothing (T17).
+# Every visualised variable is either always set or a list: an empty list draws nothing (the 2.37 rule).
+# No basic_counter anywhere: the panel draws one only when Story.MakeScope.HasFlag(<variable>) holds
+# (window_situation_list.gui:707); counts are in the strings instead.
+
+# ==================================================================================================
+# THE CHAPTER (§5.3). Owner: the Temple Magus.
+# ==================================================================================================
+story_spn_order_chapter = {
+	visible = yes
+
+	icon = {
+		reference = "gfx/interface/icons/story_cycles/spn_order_chapter.dds"
+	}
+	background = {
+		reference = "gfx/interface/illustrations/event_scenes/study.dds"
+	}
+
+	visualization = {
+		custom_string_key = spn_order_chapter_string
+		character = {
+			variable_name = spn_order_head
+			label = SPN_ORDER_HEAD
+		}
+		character_list = {
+			variable_name = spn_order_magistrati
+			label = SPN_ORDER_MAGISTRATI
+		}
+		character_list = {
+			variable_name = spn_order_medici
+			label = SPN_ORDER_MEDICI
+		}
+		character_list = {
+			variable_name = spn_order_acolytes
+			label = SPN_ORDER_ACOLYTES
+		}
+		character_list = {
+			variable_name = spn_order_neophytes
+			label = SPN_ORDER_NEOPHYTES
+		}
+		artifact_list = {
+			variable_name = spn_order_reliquary
+			label = SPN_ORDER_RELIQUARY
+		}
+		modifiers = { spn_reliquary_modifier }
+		decisions = { spn_order_leave_decision spn_order_respondeo_decision spn_order_powder_decision spn_order_set_prerogative_decision }
+	}
+
+	on_setup = {
+	}
+
+	on_end = {
+	}
+
+	# Only the story is in scope here (_story_cycles.info). A head who leaves alive runs the succession himself (§5.1),
+	# so this is the one road for a dead head, and the two never both run.
+	on_owner_death = {
+		spn_order_succession_effect = yes
+	}
+
+	effect_group = {
+		years = 1
+		triggered_effect = {
+			trigger = { always = yes }
+			effect = { spn_order_chapter_year_effect = yes }
+		}
+	}
+}
+
+# A player member's copy of his chapter (§5.7). Owned by him; ends when he is no longer of the chapter it mirrors.
+story_spn_order_mirror = {
+	visible = yes
+
+	icon = {
+		reference = "gfx/interface/icons/story_cycles/spn_order_chapter.dds"
+	}
+	background = {
+		reference = "gfx/interface/illustrations/event_scenes/study.dds"
+	}
+
+	visualization = {
+		custom_string_key = spn_order_chapter_string
+		character = {
+			variable_name = spn_order_head
+			label = SPN_ORDER_HEAD
+		}
+		character_list = {
+			variable_name = spn_order_magistrati
+			label = SPN_ORDER_MAGISTRATI
+		}
+		character_list = {
+			variable_name = spn_order_medici
+			label = SPN_ORDER_MEDICI
+		}
+		character_list = {
+			variable_name = spn_order_acolytes
+			label = SPN_ORDER_ACOLYTES
+		}
+		character_list = {
+			variable_name = spn_order_neophytes
+			label = SPN_ORDER_NEOPHYTES
+		}
+		artifact_list = {
+			variable_name = spn_order_reliquary
+			label = SPN_ORDER_RELIQUARY
+		}
+		modifiers = { spn_reliquary_modifier }
+		decisions = { spn_order_leave_decision spn_order_respondeo_decision spn_order_powder_decision spn_order_transference_ask_decision }
+	}
+
+	on_owner_death = {
+		end_story = yes
+	}
+
+	effect_group = {
+		years = 1
+		triggered_effect = {
+			trigger = {
+				OR = {
+					story_owner = { NOT = { exists = var:spn_order_chapter } }
+					NOT = { exists = var:spn_mirror_of }
+					story_owner = {
+						NOT = { var:spn_order_chapter = scope:story.var:spn_mirror_of }
+					}
+				}
+			}
+			effect = { end_story = yes }
+		}
+	}
+}
+
+# ==================================================================================================
+# THE COVEN (§7.2). Owner: the coven's Grand Master in the house, else the house head.
+# ==================================================================================================
+story_spn_coven = {
+	visible = yes
+
+	icon = {
+		reference = "gfx/interface/icons/story_cycles/spn_coven.dds"
+	}
+	background = {
+		reference = "gfx/interface/illustrations/event_scenes/corridor.dds"
+	}
+
+	visualization = {
+		custom_string_key = spn_coven_string
+		character = {
+			variable_name = spn_coven_head
+			label = SPN_COVEN_HEAD
+		}
+		character_list = {
+			variable_name = spn_coven_members
+			label = SPN_COVEN_MEMBERS
+		}
+		artifact_list = {
+			variable_name = spn_coven_reliquary
+			label = SPN_COVEN_RELIQUARY
+		}
+		modifiers = { spn_coven_reliquary_modifier }
+		decisions = { spn_coven_leave_decision spn_coven_disband_decision }
+	}
+
+	on_owner_death = {
+		spn_coven_succession_effect = yes
+	}
+
+	effect_group = {
+		years = 1
+		triggered_effect = {
+			trigger = { always = yes }
+			effect = { spn_coven_year_effect = yes }
+		}
+	}
+}
+
+story_spn_coven_mirror = {
+	visible = yes
+
+	icon = {
+		reference = "gfx/interface/icons/story_cycles/spn_coven.dds"
+	}
+	background = {
+		reference = "gfx/interface/illustrations/event_scenes/corridor.dds"
+	}
+
+	visualization = {
+		custom_string_key = spn_coven_string
+		character = {
+			variable_name = spn_coven_head
+			label = SPN_COVEN_HEAD
+		}
+		character_list = {
+			variable_name = spn_coven_members
+			label = SPN_COVEN_MEMBERS
+		}
+		artifact_list = {
+			variable_name = spn_coven_reliquary
+			label = SPN_COVEN_RELIQUARY
+		}
+		modifiers = { spn_coven_reliquary_modifier }
+		decisions = { spn_coven_leave_decision }
+	}
+
+	on_owner_death = {
+		end_story = yes
+	}
+
+	effect_group = {
+		years = 1
+		triggered_effect = {
+			trigger = {
+				OR = {
+					story_owner = { NOT = { exists = var:spn_coven } }
+					NOT = { exists = var:spn_mirror_of }
+					story_owner = {
+						NOT = { var:spn_coven = scope:story.var:spn_mirror_of }
+					}
+				}
+			}
+			effect = { end_story = yes }
+		}
+	}
+}
+
+# ==================================================================================================
+# THE CONTRACT (§12.6). Owner: the binder. Visible only to him (C2), so it is a secret by construction.
+# Both character slots are set the moment the Contract starts (to the binder himself until a witness is named and the
+# book names a son), so neither draws an empty frame; the string says "none yet".
+# ==================================================================================================
+story_spn_vade_contract = {
+	visible = yes
+
+	icon = {
+		reference = "gfx/interface/icons/story_cycles/spn_vade_contract.dds"
+	}
+	background = {
+		reference = "gfx/interface/illustrations/event_scenes/dungeon.dds"
+	}
+
+	visualization = {
+		custom_string_key = spn_vade_contract_string
+		character = {
+			variable_name = spn_vade_witness_shown
+			label = SPN_VADE_WITNESS
+		}
+		character = {
+			variable_name = spn_vade_son_shown
+			label = SPN_VADE_SON
+		}
+		artifact = {
+			variable_name = spn_vade_book_shown
+			label = SPN_VADE_BOOK
+		}
+		decisions = { spn_vade_finger_decision spn_vade_price_decision }
+	}
+
+	# The binder died. on_death has already run the Contract's end (§12.6, RESULT = flag:died); this is the backstop.
+	on_owner_death = {
+		end_story = yes
+	}
+
+	effect_group = {
+		days = 30
+		triggered_effect = {
+			trigger = { always = yes }
+			effect = { spn_vade_contract_tick_effect = yes }
+		}
+	}
+}
+
+# ==================================================================================================
+# THE BOOK (§12.11). Owner: a PLAYER who holds the whole book. The souls it took, and the book itself.
+# ==================================================================================================
+story_spn_vade_book = {
+	visible = yes
+
+	icon = {
+		reference = "gfx/interface/icons/story_cycles/spn_vade_book.dds"
+	}
+	background = {
+		reference = "gfx/interface/illustrations/event_scenes/dungeon.dds"
+	}
+
+	visualization = {
+		custom_string_key = spn_vade_book_string
+		artifact = {
+			variable_name = spn_vade_book_shown
+			label = SPN_VADE_BOOK
+		}
+		character_list = {
+			variable_name = spn_vade_souls_shown
+			label = SPN_VADE_SOULS
+		}
+		decisions = { spn_vade_bind_decision spn_vade_tear_decision spn_vade_names_decision }
+	}
+
+	on_owner_death = {
+		end_story = yes
+	}
+
+	effect_group = {
+		years = 1
+		triggered_effect = {
+			trigger = { always = yes }
+			effect = { spn_vade_book_story_year_effect = yes }
+		}
+	}
+}

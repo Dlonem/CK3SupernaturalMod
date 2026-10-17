@@ -1,0 +1,966 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": the lesser relics, the reliquaries, the loans and the Seal of Solomon
+# (WORK-ORDER-2.38 §9, §10).
+#
+# A relic carries var:spn_relic = flag:<key> (glove necrophone blade pendant powder mirror bell seal chains beetle);
+# never magic1 (T4). 2.39 added chains (zz_spn_chains_effects.txt) and beetle (zz_spn_beetle_effects.txt).
+# A pledged item carries var:spn_pledged_to (the chapter or coven story) and vanilla's artifact_prevent_transfer (C4).
+# A lent item carries var:spn_borrowed_from (the lender), spn_borrow_timer (3 years), and sits on the global list
+# spn_relic_loans while it is out (review D, B1: the one clock every loan runs on, whoever holds it).
+
+# ==================================================================================================
+# CREATION (§9.2). The 2.37 hide shape, with its guard: a tooltip walks a create without creating.
+# ==================================================================================================
+spn_relic_create_base_effect = {
+	$OWNER$ = {
+		create_artifact = {
+			name = spn_relic_$KEY$_name
+			description = spn_relic_$KEY$_desc
+			template = spn_relic_template
+			type = spn_relic
+			visuals = $VISUAL$
+			modifier = $MODIFIER$
+			rarity = $RARITY$
+			decaying = no
+			history = { type = created_before_history }
+			save_scope_as = spn_new_relic
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_new_relic }
+		scope:spn_new_relic = {
+			set_variable = { name = spn_relic value = flag:$KEY$ }
+		}
+	}
+}
+# One maker per relic: the key picks its name, visual, modifier and rarity (§9.2). The Seal is never made here (§9.7).
+spn_relic_make_glove_effect = {
+	spn_relic_create_base_effect = { KEY = glove OWNER = $OWNER$ VISUAL = pocket_fancy_case MODIFIER = spn_relic_glove_modifier RARITY = famed }
+}
+spn_relic_make_necrophone_effect = {
+	spn_relic_create_base_effect = { KEY = necrophone OWNER = $OWNER$ VISUAL = small_box MODIFIER = spn_relic_necrophone_modifier RARITY = famed }
+}
+spn_relic_make_blade_effect = {
+	spn_relic_create_base_effect = { KEY = blade OWNER = $OWNER$ VISUAL = dagger MODIFIER = spn_relic_blade_modifier RARITY = masterwork }
+}
+# The Echo Pendant carries Witchcraft's curse immunity, read by name on an equipped artifact (magic_triggers.txt:1110).
+spn_relic_make_pendant_effect = {
+	spn_relic_create_base_effect = { KEY = pendant OWNER = $OWNER$ VISUAL = necklace MODIFIER = immunity_curse_terrain_cancel_negative_supply RARITY = masterwork }
+}
+spn_relic_make_powder_effect = {
+	spn_relic_create_base_effect = { KEY = powder OWNER = $OWNER$ VISUAL = pocket_pouch MODIFIER = spn_relic_powder_modifier RARITY = common }
+}
+spn_relic_make_mirror_effect = {
+	spn_relic_create_base_effect = { KEY = mirror OWNER = $OWNER$ VISUAL = diamond MODIFIER = spn_relic_mirror_modifier RARITY = famed }
+}
+spn_relic_make_bell_effect = {
+	spn_relic_create_base_effect = { KEY = bell OWNER = $OWNER$ VISUAL = pocket_goblet MODIFIER = spn_relic_bell_modifier RARITY = masterwork }
+}
+# A relic other than the Powder and the Seal, at random (seeding, the search, §9.6).
+spn_relic_make_random_effect = {
+	random_list = {
+		10 = { spn_relic_make_glove_effect = { OWNER = $OWNER$ } }
+		10 = { spn_relic_make_necrophone_effect = { OWNER = $OWNER$ } }
+		10 = { spn_relic_make_blade_effect = { OWNER = $OWNER$ } }
+		10 = { spn_relic_make_pendant_effect = { OWNER = $OWNER$ } }
+		10 = { spn_relic_make_mirror_effect = { OWNER = $OWNER$ } }
+		10 = { spn_relic_make_bell_effect = { OWNER = $OWNER$ } }
+		10 = { spn_relic_make_chains_effect = { OWNER = $OWNER$ } }    # 2.39 (WORK-ORDER-2.39 F6): the Warded Chains, relic ten
+	}
+}
+
+# ==================================================================================================
+# SEEDING (§9.6). After the Order's; guarded by spn_relics_seeded. The Order rule Off: only the four court relics.
+# ==================================================================================================
+spn_relic_seed_effect = {
+	if = {
+		limit = { NOT = { exists = global_var:spn_relics_seeded } }
+		set_global_variable = spn_relics_seeded
+		every_in_global_list = {
+			variable = spn_order_chapters
+			limit = { exists = var:spn_order_chapter }
+			save_scope_as = spn_rs_head
+			# One for the head, pledged.
+			spn_relic_make_random_effect = { OWNER = scope:spn_rs_head }
+			if = {
+				limit = { exists = scope:spn_new_relic }
+				spn_relic_pledge_effect = { ART = scope:spn_new_relic TO = scope:spn_rs_head.var:spn_order_chapter }
+				clear_saved_scope = spn_new_relic
+			}
+			# One to three more, spread over the members, pledged.
+			var:spn_order_chapter = {
+				random_list = {
+					40 = { set_variable = { name = spn_rs_more value = 1 } }
+					40 = { set_variable = { name = spn_rs_more value = 2 } }
+					20 = { set_variable = { name = spn_rs_more value = 3 } }
+				}
+			}
+			spn_relic_seed_member_effect = yes
+			if = {
+				limit = { var:spn_order_chapter.var:spn_rs_more >= 2 }
+				spn_relic_seed_member_effect = yes
+			}
+			if = {
+				limit = { var:spn_order_chapter.var:spn_rs_more >= 3 }
+				spn_relic_seed_member_effect = yes
+			}
+			var:spn_order_chapter = { remove_variable = spn_rs_more }
+		}
+		# Four more to people of learning (one world walk, once). 2.38e (Thomas, 9 Oct: "making sure it can be given to
+		# courtiers as well. And landless adventurers, not just rulers"): two to AI rulers, a landless adventurer among
+		# them (every_ruler holds his camp's title), and two to learned courtiers at their courts.
+		every_ruler = {
+			if = {
+				limit = {
+					is_ai = yes
+					learning >= 12
+					spn_has_hunter_trait = no
+				}
+				add_to_temporary_list = spn_rs_learned
+			}
+			every_courtier = {
+				limit = {
+					is_ai = yes
+					is_adult = yes
+					learning >= 14
+					spn_has_hunter_trait = no
+				}
+				add_to_temporary_list = spn_rs_learned_court
+			}
+		}
+		spn_relic_seed_court_effect = { LIST = spn_rs_learned }
+		spn_relic_seed_court_effect = { LIST = spn_rs_learned }
+		spn_relic_seed_court_effect = { LIST = spn_rs_learned_court }
+		spn_relic_seed_court_effect = { LIST = spn_rs_learned_court }
+	}
+}
+# Head scope (scope:spn_rs_head): a relic to a member of his chapter at random, pledged.
+spn_relic_seed_member_effect = {
+	var:spn_order_chapter = {
+		random_in_list = {
+			variable = spn_order_members
+			limit = {
+				is_alive = yes
+				spn_is_order_member_trigger = yes
+			}
+			save_scope_as = spn_rs_member
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_rs_member }
+		spn_relic_make_random_effect = { OWNER = scope:spn_rs_member }
+		if = {
+			limit = { exists = scope:spn_new_relic }
+			spn_relic_pledge_effect = { ART = scope:spn_new_relic TO = scope:spn_rs_member.var:spn_order_chapter }
+			clear_saved_scope = spn_new_relic
+		}
+		clear_saved_scope = spn_rs_member
+	}
+}
+spn_relic_seed_court_effect = {
+	random_in_list = {
+		list = $LIST$
+		limit = { NOT = { has_character_flag = spn_rs_given } }
+		save_scope_as = spn_rs_court
+	}
+	if = {
+		limit = { exists = scope:spn_rs_court }
+		scope:spn_rs_court = { add_character_flag = { flag = spn_rs_given days = 1 } }
+		spn_relic_make_random_effect = { OWNER = scope:spn_rs_court }
+		clear_saved_scope = spn_rs_court
+		clear_saved_scope = spn_new_relic
+	}
+}
+
+# ==================================================================================================
+# PLEDGING (§9.4)
+# ==================================================================================================
+# $ART$ pledged to $TO$ (a chapter or coven story).
+spn_relic_pledge_effect = {
+	$ART$ = { save_scope_as = spn_pg_art }
+	$TO$ = { save_scope_as = spn_pg_to }
+	scope:spn_pg_art = {
+		set_variable = { name = spn_pledged_to value = scope:spn_pg_to }
+		set_variable = artifact_prevent_transfer
+		# A pledge pays a deed only the first time an item is ever pledged (review D, S7: no farming).
+		if = {
+			limit = { NOT = { has_variable = spn_ever_pledged } }
+			set_variable = spn_ever_pledged
+			artifact_owner ?= {
+				spn_order_deed_effect = { PREROGATIVE = flag:recover AMOUNT = 10 TOAST = yes }
+			}
+		}
+	}
+	scope:spn_pg_to = { spn_reliquary_rebuild_effect = yes }
+	scope:spn_pg_art.artifact_owner ?= { spn_reliquary_apply_any_effect = yes }
+}
+# $ART$ unpledged. The story it was pledged to is rebuilt.
+spn_relic_unpledge_effect = {
+	$ART$ = {
+		save_scope_as = spn_up_art
+		if = {
+			limit = { exists = var:spn_pledged_to }
+			var:spn_pledged_to = { save_scope_as = spn_up_story }
+			remove_variable = spn_pledged_to
+			# A loan in flight keeps the flag until it comes home (it is still pledged then); a plain unpledge frees it.
+			if = {
+				limit = { NOT = { has_variable = spn_borrowed_from } }
+				remove_variable = artifact_prevent_transfer
+			}
+		}
+		# 2.39 (Boot 4, 16 Oct): the temple it was pledged to is gone: nothing to rebuild, but the pledge and its lock go
+		else_if = {
+			limit = { has_variable = spn_pledged_to }
+			remove_variable = spn_pledged_to
+			if = {
+				limit = {
+					NOT = { has_variable = spn_borrowed_from }
+					has_variable = artifact_prevent_transfer
+				}
+				remove_variable = artifact_prevent_transfer
+			}
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_up_story }
+		scope:spn_up_story = { spn_reliquary_rebuild_effect = yes }
+		clear_saved_scope = spn_up_story
+	}
+}
+
+# ==================================================================================================
+# THE RELIQUARIES (§9.5). The 2.37 scale shape.
+# ==================================================================================================
+# Story scope: a chapter or a coven. Walks the members' items and the live loans (an item lent out stays listed).
+spn_reliquary_rebuild_effect = {
+	save_scope_as = spn_rb_story
+	if = {
+		limit = { NOT = { has_variable = spn_coven_house } }
+		clear_variable_list = spn_order_reliquary
+		set_variable = { name = spn_order_reliquary_count value = 0 }
+		set_variable = { name = spn_order_reliquary_magic value = 0 }
+		every_in_list = {
+			variable = spn_order_members
+			limit = { is_alive = yes }
+			every_character_artifact = {
+				limit = { var:spn_pledged_to ?= scope:spn_rb_story }
+				add_to_temporary_list = spn_rb_items
+			}
+		}
+	}
+	else = {
+		clear_variable_list = spn_coven_reliquary
+		set_variable = { name = spn_order_reliquary_count value = 0 }
+		set_variable = { name = spn_order_reliquary_magic value = 0 }
+		every_in_list = {
+			variable = spn_coven_members
+			limit = { is_alive = yes }
+			every_character_artifact = {
+				limit = { var:spn_pledged_to ?= scope:spn_rb_story }
+				add_to_temporary_list = spn_rb_items
+			}
+		}
+	}
+	every_in_global_list = {
+		variable = spn_relic_loans
+		limit = { var:spn_pledged_to ?= scope:spn_rb_story }
+		add_to_temporary_list = spn_rb_items
+	}
+	every_in_list = {
+		list = spn_rb_items
+		scope:spn_rb_story = {
+			if = {
+				limit = { NOT = { has_variable = spn_coven_house } }
+				add_to_variable_list = { name = spn_order_reliquary target = prev }
+			}
+			else = {
+				add_to_variable_list = { name = spn_coven_reliquary target = prev }
+			}
+			if = {
+				limit = { prev = { has_variable = magic1 } }
+				change_variable = { name = spn_order_reliquary_magic add = 1 }
+			}
+			else = {
+				change_variable = { name = spn_order_reliquary_count add = 1 }
+			}
+		}
+	}
+	if = {
+		limit = { NOT = { has_variable = spn_coven_house } }
+		spn_order_sync_mirrors_effect = yes
+	}
+	else = {
+		spn_coven_sync_mirrors_effect = yes
+	}
+}
+
+# Member scope: the chapter's reliquary modifier, from the cached value (§9.5). With nothing pledged, none.
+spn_reliquary_apply_effect = {
+	set_variable = { name = spn_reliquary_cached value = spn_reliquary_compute_value }
+	if = {
+		limit = { has_character_modifier = spn_reliquary_modifier }
+		remove_character_modifier = spn_reliquary_modifier
+	}
+	if = {
+		limit = {
+			spn_is_order_member_trigger = yes
+			var:spn_reliquary_cached > 0
+		}
+		add_character_modifier = { modifier = spn_reliquary_modifier years = 2 }
+	}
+}
+spn_coven_reliquary_apply_effect = {
+	set_variable = { name = spn_coven_reliquary_cached value = spn_coven_reliquary_compute_value }
+	if = {
+		limit = { has_character_modifier = spn_coven_reliquary_modifier }
+		remove_character_modifier = spn_coven_reliquary_modifier
+	}
+	if = {
+		limit = {
+			exists = var:spn_coven
+			var:spn_coven_reliquary_cached > 0
+		}
+		add_character_modifier = { modifier = spn_coven_reliquary_modifier years = 2 }
+	}
+}
+# Both, for whoever just pledged or took back.
+spn_reliquary_apply_any_effect = {
+	if = {
+		limit = { spn_is_order_member_trigger = yes }
+		var:spn_order_chapter = {
+			every_in_list = {
+				variable = spn_order_members
+				limit = {
+					is_alive = yes
+					spn_is_order_member_trigger = yes
+				}
+				spn_reliquary_apply_effect = yes
+			}
+		}
+	}
+	if = {
+		limit = { exists = var:spn_coven }
+		var:spn_coven = {
+			every_in_list = {
+				variable = spn_coven_members
+				limit = { is_alive = yes }
+				spn_coven_reliquary_apply_effect = yes
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# LOANS (§9.5, §11.6, §5.22)
+# ==================================================================================================
+# $ART$ lent by $LENDER$ to $BORROWER$ for three years.
+spn_relic_lend_effect = {
+	$ART$ = { save_scope_as = spn_ln_art }
+	$LENDER$ = { save_scope_as = spn_ln_lender }
+	$BORROWER$ = { save_scope_as = spn_ln_borrower }
+	scope:spn_ln_art = {
+		set_variable = { name = spn_relic_lending value = yes days = 1 }
+		set_variable = { name = spn_borrowed_from value = scope:spn_ln_lender }
+		set_variable = { name = spn_borrow_timer value = yes years = 3 }
+		set_variable = { name = spn_relic_borrow_cd value = yes years = 3 }
+		remove_variable = artifact_prevent_transfer
+		set_owner = {
+			target = scope:spn_ln_borrower
+			history = {
+				type = given
+				actor = scope:spn_ln_lender
+				recipient = scope:spn_ln_borrower
+			}
+		}
+		set_variable = artifact_prevent_transfer
+		if = {
+			limit = { NOT = { is_target_in_global_variable_list = { name = spn_relic_loans target = this } } }
+			add_to_global_variable_list = { name = spn_relic_loans target = this }
+		}
+	}
+	scope:spn_ln_lender = {
+		add_personal_artifact_claim = scope:spn_ln_art
+		if = {
+			limit = { is_ai = no }
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = spn_relic_toast_lent
+				left_icon = scope:spn_ln_borrower
+				right_icon = scope:spn_ln_art
+			}
+		}
+	}
+	scope:spn_ln_borrower = {
+		if = {
+			limit = { is_ai = no }
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = spn_relic_toast_borrowed
+				left_icon = scope:spn_ln_lender
+				right_icon = scope:spn_ln_art
+			}
+		}
+	}
+}
+
+# $ART$ goes home. Lender dead -> to his primary heir, unpledged.
+spn_relic_return_effect = {
+	$ART$ = {
+		save_scope_as = spn_rt_art
+		if = {
+			limit = { exists = var:spn_borrowed_from }
+			var:spn_borrowed_from = { save_scope_as = spn_rt_lender }
+			if = {
+				limit = { scope:spn_rt_lender = { is_alive = yes } }
+				save_scope_as = spn_rt_art2
+				set_variable = { name = spn_relic_returning value = yes days = 1 }
+				if = {
+					limit = { NOT = { artifact_owner ?= scope:spn_rt_lender } }
+					artifact_owner ?= { save_scope_as = spn_rt_from }
+					set_owner = {
+						target = scope:spn_rt_lender
+						history = {
+							type = given
+							actor = scope:spn_rt_lender
+							recipient = scope:spn_rt_lender
+						}
+					}
+				}
+				scope:spn_rt_lender = {
+					remove_personal_artifact_claim = scope:spn_rt_art
+					if = {
+						limit = { is_ai = no }
+						send_interface_toast = {
+							type = event_toast_effect_neutral
+							title = spn_relic_toast_returned
+							left_icon = this
+							right_icon = scope:spn_rt_art
+						}
+					}
+				}
+			}
+			else = {
+				scope:spn_rt_lender.primary_heir ?= { save_scope_as = spn_rt_heir }
+				spn_relic_unpledge_effect = { ART = scope:spn_rt_art }
+				# The unpledge kept the prevent flag for the loan in flight; this loan is over (review, 9 Oct).
+				scope:spn_rt_art = {
+					if = {
+						limit = { has_variable = artifact_prevent_transfer }
+						remove_variable = artifact_prevent_transfer
+					}
+				}
+				if = {
+					limit = { exists = scope:spn_rt_heir }
+					set_owner = {
+						target = scope:spn_rt_heir
+						history = {
+							type = inherited
+							actor = scope:spn_rt_lender
+							recipient = scope:spn_rt_heir
+						}
+					}
+				}
+			}
+			remove_variable = spn_borrowed_from
+			remove_variable = spn_borrow_timer
+		}
+		# 2.39 (Boot 4, 16 Oct): the lender is gone from the world: the loan ends where it stands, unpledged and free
+		else_if = {
+			limit = { has_variable = spn_borrowed_from }
+			remove_variable = spn_borrowed_from
+			if = {
+				limit = { has_variable = spn_borrow_timer }
+				remove_variable = spn_borrow_timer
+			}
+			spn_relic_unpledge_effect = { ART = scope:spn_rt_art }
+			if = {
+				limit = { has_variable = artifact_prevent_transfer }
+				remove_variable = artifact_prevent_transfer
+			}
+		}
+		if = {
+			limit = { is_target_in_global_variable_list = { name = spn_relic_loans target = this } }
+			remove_list_global_variable = { name = spn_relic_loans target = this }
+		}
+	}
+}
+
+# Every item $WHO$ holds on loan comes home (his death, expulsion, leaving, a broken Compact). Collected first.
+spn_relic_return_loans_of_effect = {
+	$WHO$ = {
+		every_character_artifact = {
+			limit = { has_variable = spn_borrowed_from }
+			add_to_temporary_list = spn_rl_items
+		}
+	}
+	every_in_list = {
+		list = spn_rl_items
+		spn_relic_return_effect = { ART = this }
+	}
+}
+
+# The one clock every loan runs on (review D, B1). Yearly pulse.
+spn_relic_loans_yearly_effect = {
+	every_in_global_list = {
+		variable = spn_relic_loans
+		limit = {
+			OR = {
+				NOT = { has_variable = spn_borrow_timer }
+				NOT = { exists = artifact_owner }
+			}
+		}
+		add_to_temporary_list = spn_ly_items
+	}
+	every_in_list = {
+		list = spn_ly_items
+		spn_relic_return_effect = { ART = this }
+	}
+}
+
+# ==================================================================================================
+# THE OWNER HOOK (§9.4). Root: the artifact; scope:owner, scope:old_owner, scope:old_holy_site (inventory_on_actions).
+# One hook for relics, pledges, loans, the Seal, the pages and the book.
+# ==================================================================================================
+spn_relic_owner_changed_effect = {
+	save_scope_as = spn_oc_art
+	# Loans.
+	if = {
+		limit = { has_variable = spn_borrowed_from }
+		if = {
+			limit = { has_variable = spn_relic_lending }
+			remove_variable = spn_relic_lending
+		}
+		else_if = {
+			limit = { has_variable = spn_relic_returning }
+			remove_variable = spn_relic_returning
+			remove_variable = spn_borrowed_from
+			remove_variable = spn_borrow_timer
+			if = {
+				limit = { is_target_in_global_variable_list = { name = spn_relic_loans target = this } }
+				remove_list_global_variable = { name = spn_relic_loans target = this }
+			}
+		}
+		else = {
+			# Taken by war, theft or Zecchia while out on loan: the loan ends and the pledge with it.
+			remove_variable = spn_borrowed_from
+			remove_variable = spn_borrow_timer
+			if = {
+				limit = { is_target_in_global_variable_list = { name = spn_relic_loans target = this } }
+				remove_list_global_variable = { name = spn_relic_loans target = this }
+			}
+			spn_relic_unpledge_effect = { ART = scope:spn_oc_art }
+		}
+	}
+	else_if = {
+		limit = {
+			has_variable = spn_pledged_to
+			NOT = { has_variable = spn_relic_returning }
+		}
+		scope:old_owner ?= {
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_bad
+					title = spn_relic_toast_unpledged
+					left_icon = this
+					right_icon = scope:spn_oc_art
+				}
+			}
+		}
+		spn_relic_unpledge_effect = { ART = scope:spn_oc_art }
+	}
+	else_if = {
+		limit = { has_variable = spn_relic_returning }
+		remove_variable = spn_relic_returning
+	}
+	# The Seal (§9.7).
+	if = {
+		limit = { var:spn_relic ?= flag:seal }
+		spn_seal_owner_changed_effect = yes
+	}
+	# The pages and the book (§12).
+	if = {
+		limit = {
+			OR = {
+				has_variable = spn_vade_page
+				has_variable = spn_vade_book
+			}
+		}
+		spn_vade_owner_changed_effect = yes
+	}
+}
+
+# ==================================================================================================
+# THE RELIC WAR (§10). Collect first, then move: never change an owner while walking his inventory.
+# ==================================================================================================
+spn_relic_take_all_effect = {
+	$FROM$ = { save_scope_as = spn_ta_from }
+	$TO$ = { save_scope_as = spn_ta_to }
+	scope:spn_ta_from = {
+		every_character_artifact = {
+			limit = {
+				spn_is_magic_item_trigger = yes
+				spn_relic_can_move_trigger = yes
+			}
+			add_to_temporary_list = spn_ta_items
+		}
+	}
+	every_in_list = {
+		list = spn_ta_items
+		save_scope_as = spn_ta_art
+		if = {
+			limit = { has_variable = spn_borrowed_from }
+			remove_variable = spn_borrowed_from
+			remove_variable = spn_borrow_timer
+			if = {
+				limit = { is_target_in_global_variable_list = { name = spn_relic_loans target = this } }
+				remove_list_global_variable = { name = spn_relic_loans target = this }
+			}
+		}
+		spn_relic_unpledge_taken_effect = { ART = scope:spn_ta_art }
+		set_owner = {
+			target = scope:spn_ta_to
+			history = {
+				type = conquest
+				actor = scope:spn_ta_from
+				recipient = scope:spn_ta_to
+			}
+		}
+		scope:spn_ta_from = { add_personal_artifact_claim = scope:spn_ta_art }
+	}
+	scope:spn_ta_to = {
+		spn_order_deed_effect = { PREROGATIVE = flag:recover AMOUNT = 20 TOAST = yes }
+	}
+}
+
+# ==================================================================================================
+# THE SEAL OF SOLOMON (§9.7)
+# ==================================================================================================
+# Placed once (any rules): Jerusalem if it has a free slot and an Abrahamic holder; else a random Abrahamic holy site
+# with a free slot (2.37's walk); else the highest-tier Abrahamic ruler's treasury; else lost. Vanilla's own method:
+# made in the holder's inventory, then set_holy_site_owner (02_starting_holy_site_relics_effects.txt:1592-1599).
+spn_seal_seed_effect = {
+	if = {
+		limit = {
+			NOT = { exists = global_var:spn_seal }
+			NOT = { exists = global_var:spn_seal_destroyed }
+		}
+		set_global_variable = { name = spn_seal_seeding value = yes days = 1 }
+		if = {
+			limit = {
+				holy_site:jerusalem ?= {
+					holy_site_artifact_count < 3
+					holy_site_county ?= {
+						exists = holder
+						holder.faith.religion = { is_in_family = rf_abrahamic }
+					}
+				}
+			}
+			holy_site:jerusalem = { save_scope_as = spn_ss_site }
+		}
+		else = {
+			every_religion_global = {
+				limit = { is_in_family = rf_abrahamic }
+				every_faith = {
+					every_holy_site = {
+						limit = {
+							holy_site_artifact_count < 3
+							holy_site_county ?= {
+								exists = holder
+								holder.faith.religion = { is_in_family = rf_abrahamic }
+							}
+						}
+						add_to_temporary_list = spn_ss_sites
+					}
+				}
+			}
+			random_in_list = {
+				list = spn_ss_sites
+				save_scope_as = spn_ss_site
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_ss_site }
+			scope:spn_ss_site.holy_site_county = { save_scope_as = spn_ss_county }
+			scope:spn_ss_county.holder = { save_scope_as = spn_ss_holder }
+			spn_seal_create_effect = { OWNER = scope:spn_ss_holder }
+			if = {
+				limit = { exists = scope:spn_new_seal }
+				scope:spn_new_seal = {
+					set_holy_site_owner = {
+						target = scope:spn_ss_site
+						generate_history = no
+					}
+					equip_artifact_to_owner = yes
+					spn_seal_mark_county_effect = { COUNTY = scope:spn_ss_county }
+				}
+			}
+		}
+		else = {
+			ordered_ruler = {
+				limit = {
+					is_ai = yes
+					faith.religion = { is_in_family = rf_abrahamic }
+				}
+				order_by = highest_held_title_tier
+				save_scope_as = spn_ss_holder
+			}
+			if = {
+				limit = { exists = scope:spn_ss_holder }
+				spn_seal_create_effect = { OWNER = scope:spn_ss_holder }
+			}
+			else = {
+				random_list = {
+					1 = { set_global_variable = { name = spn_seal_lost_until value = spn_years_on_10_value } }
+					1 = { set_global_variable = { name = spn_seal_lost_until value = spn_years_on_20_value } }
+					1 = { set_global_variable = { name = spn_seal_lost_until value = spn_years_on_30_value } }
+				}
+			}
+		}
+		set_global_variable = spn_seal_seeded
+	}
+}
+
+spn_seal_create_effect = {
+	$OWNER$ = {
+		create_artifact = {
+			name = spn_relic_seal_name
+			description = spn_relic_seal_desc
+			template = spn_seal_template
+			type = spn_relic
+			visuals = ring
+			modifier = immunity_domination_terrain_cancel_negative_supply
+			rarity = illustrious
+			decaying = no
+			history = { type = created_before_history }
+			save_scope_as = spn_new_seal
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_new_seal }
+		scope:spn_new_seal = {
+			set_variable = { name = spn_relic value = flag:seal }
+			add_artifact_modifier = spn_relic_seal_modifier
+		}
+		set_global_variable = { name = spn_seal value = scope:spn_new_seal }
+		if = {
+			limit = { has_global_variable = spn_seal_lost_until }
+			remove_global_variable = spn_seal_lost_until
+		}
+	}
+}
+
+# The map marker (2.37's shrine marker). Artifact scope: the Seal.
+spn_seal_mark_county_effect = {
+	$COUNTY$ = { save_scope_as = spn_sm_county }
+	if = {
+		limit = {
+			exists = var:spn_seal_shrine_county
+			NOT = { var:spn_seal_shrine_county = scope:spn_sm_county }
+		}
+		spn_seal_unmark_effect = yes
+	}
+	set_variable = { name = spn_seal_shrine_county value = scope:spn_sm_county }
+	set_global_variable = { name = spn_seal_county value = scope:spn_sm_county }
+	scope:spn_sm_county = {
+		if = {
+			limit = { NOT = { has_county_modifier = spn_seal_kept_modifier } }
+			add_county_modifier = spn_seal_kept_modifier
+		}
+	}
+}
+spn_seal_unmark_effect = {
+	if = {
+		limit = { exists = var:spn_seal_shrine_county }
+		var:spn_seal_shrine_county = {
+			if = {
+				limit = { has_county_modifier = spn_seal_kept_modifier }
+				remove_county_modifier = spn_seal_kept_modifier
+			}
+		}
+		remove_variable = spn_seal_shrine_county
+	}
+	if = {
+		limit = { has_global_variable = spn_seal_county }
+		remove_global_variable = spn_seal_county
+	}
+}
+
+# The holy-site hook (§9.7). Root: the Seal; scope:holy_site, scope:old_holy_site. "Out" before "into".
+spn_seal_holy_site_changed_effect = {
+	if = {
+		limit = { exists = scope:old_holy_site }
+		spn_seal_unmark_effect = yes
+	}
+	if = {
+		limit = {
+			exists = scope:holy_site
+			exists = global_var:spn_seal_seeded
+			NOT = { exists = global_var:spn_seal_seeding }
+		}
+		scope:holy_site.holy_site_county = { save_scope_as = spn_sh_county }
+		spn_seal_mark_county_effect = { COUNTY = scope:spn_sh_county }
+		spn_seal_word_effect = yes
+	}
+}
+
+# The owner hook's Seal step. The 2.37 backstop: an owner change out of a shrine clears the marker.
+spn_seal_owner_changed_effect = {
+	if = {
+		limit = { exists = scope:old_holy_site }
+		spn_seal_unmark_effect = yes
+	}
+	set_global_variable = { name = spn_seal value = this }
+	if = {
+		limit = {
+			exists = global_var:spn_seal_seeded
+			NOT = { exists = global_var:spn_seal_seeding }
+		}
+		spn_seal_word_effect = yes
+		# A new living owner remembers holding it (§4.13).
+		scope:owner ?= {
+			# Once per man: the memory, and the deed with it (no farming by gifts, review 9 Oct).
+			if = {
+				limit = {
+					is_alive = yes
+					NOT = { any_memory = { memory_type = spn_seal_found_memory } }
+				}
+				create_character_memory = { type = spn_seal_found_memory }
+				spn_order_deed_effect = { PREROGATIVE = flag:recover AMOUNT = 30 TOAST = yes }
+			}
+		}
+	}
+}
+
+# Word of the Ring: every player who knows where it was hears that it moved. Root: the Seal.
+spn_seal_word_effect = {
+	save_scope_as = spn_sw_seal
+	every_player = {
+		limit = { exists = var:spn_knows_seal }
+		send_interface_toast = {
+			type = event_toast_effect_neutral
+			title = spn_seal_toast_moved
+			left_icon = this
+			right_icon = scope:spn_sw_seal
+		}
+		if = {
+			limit = { exists = global_var:spn_seal_county }
+			set_variable = { name = spn_knows_seal value = global_var:spn_seal_county years = 10 }
+		}
+		else = {
+			remove_variable = spn_knows_seal
+		}
+	}
+}
+
+# Yearly: a lost Seal surfaces again; a marker whose ring is gone is cleared.
+spn_seal_yearly_effect = {
+	# The marker outlives its ring (destroyed in its shrine, or gone without an owner change): cleared (§9.7).
+	if = {
+		limit = {
+			exists = global_var:spn_seal_county
+			NOT = {
+				global_var:spn_seal ?= { var:spn_seal_shrine_county ?= global_var:spn_seal_county }
+			}
+		}
+		global_var:spn_seal_county = {
+			if = {
+				limit = { has_county_modifier = spn_seal_kept_modifier }
+				remove_county_modifier = spn_seal_kept_modifier
+			}
+		}
+		remove_global_variable = spn_seal_county
+	}
+	if = {
+		limit = {
+			exists = global_var:spn_seal_lost_until
+			global_var:spn_seal_lost_until <= current_year
+			NOT = { exists = global_var:spn_seal }
+		}
+		remove_global_variable = spn_seal_seeded
+		spn_seal_seed_effect = yes
+	}
+	if = {
+		limit = {
+			exists = global_var:spn_seal_seeded
+			NOT = { exists = global_var:spn_seal }
+			NOT = { exists = global_var:spn_seal_lost_until }
+		}
+		set_global_variable = spn_seal_destroyed
+	}
+}
+
+# Where it is, for whoever learns it (the Necrophone, the voices, Zecchia, §9.7). Character scope. Sets var:spn_knows_seal
+# to the shrine's county, or (held) to the county of its holder's capital.
+spn_seal_learn_effect = {
+	if = {
+		limit = { exists = global_var:spn_seal_county }
+		set_variable = { name = spn_knows_seal value = global_var:spn_seal_county years = 10 }
+	}
+	else_if = {
+		limit = { global_var:spn_seal ?= { exists = artifact_owner } }
+		global_var:spn_seal.artifact_owner = { save_scope_as = spn_sl_holder }
+		set_variable = { name = spn_knows_seal_holder value = scope:spn_sl_holder years = 10 }
+	}
+}
+
+# The Necrophone answers once more: a counter on the artifact, not durability. At three, it cracks (§9.3). Caller scope;
+# scope:spn_nc_phone.
+spn_relic_necrophone_used_effect = {
+	add_character_flag = { flag = spn_necrophone_cd years = 1 }
+	scope:spn_nc_phone ?= {
+		if = {
+			limit = { NOT = { has_variable = spn_necrophone_calls } }
+			set_variable = { name = spn_necrophone_calls value = 0 }
+		}
+		change_variable = { name = spn_necrophone_calls add = 1 }
+		if = {
+			limit = { var:spn_necrophone_calls >= 3 }
+			custom_tooltip = spn_relic_necrophone_cracks_tt
+			destroy_artifact = this
+		}
+	}
+}
+
+# An item taken from its owner by war or theft: if it was pledged, a player owner hears his pledge is broken (§16.2).
+spn_relic_unpledge_taken_effect = {
+	$ART$ = {
+		if = {
+			limit = {
+				exists = var:spn_pledged_to
+				artifact_owner ?= { is_ai = no }
+			}
+			save_scope_as = spn_ut_art
+			artifact_owner = {
+				send_interface_toast = {
+					type = event_toast_effect_bad
+					title = spn_relic_toast_unpledged
+					left_icon = this
+					right_icon = scope:spn_ut_art
+				}
+			}
+		}
+	}
+	spn_relic_unpledge_effect = { ART = $ART$ }
+}
+
+# ==================================================================================================
+# 2.38e: WITCHCRAFT'S MAGICAL ARTIFACTS (magic_ev.99) reach courtiers and landless adventurers, not only landed rulers
+# (Thomas, 9 Oct). apply_upstream_edits.py entries 66-67 call this from the ruler random_ruler picked (a landless adventurer
+# among them): the finder is the ruler himself (3 in 4) or an adult free courtier of a dynasty that has found none (1 in 4).
+# Sets scope:spn_magic_art_finder; magic_ev.99 runs its list in that scope. The triggers are in zz_spn_order_triggers.txt.
+# ==================================================================================================
+spn_magic_art_pick_finder_effect = {
+	random_list = {
+		3 = {
+			trigger = { spn_magic_art_finder_ok_trigger = yes }
+			save_scope_as = spn_magic_art_finder
+		}
+		1 = {
+			trigger = { any_courtier = { spn_magic_art_courtier_ok_trigger = yes } }
+			random_courtier = {
+				limit = { spn_magic_art_courtier_ok_trigger = yes }
+				save_scope_as = spn_magic_art_finder
+			}
+		}
+	}
+}

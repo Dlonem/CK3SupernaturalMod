@@ -1,0 +1,266 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": the Order's intents (WORK-ORDER-2.38 §5.15, §5.21). Witchcraft's activities list them
+# through apply_upstream_edits.py (E9, E10: the Mage Summit; E11, E12: the Grand Rite). Their effects run in those
+# activities' on_complete (spn_order_summit_complete_effect, spn_coven_rite_complete_effect), which read the intent, or for
+# AI members the Order membership (Witchcraft gives its AI guests flags, not intents: ms_load_intents_for_ai_effect).
+# The names a player sees name no society (review D should-fix 2): "Seek Kindred Minds", "Speak for My Circle".
+# Loc: localization/english/spn_order_l_english.yml.
+
+# Meet in the Masks ("Seek Kindred Minds"): members you know to be members are glad of you.
+spn_meet_in_the_masks_intent = {
+	icon = intent_mystic
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_is_order_member_trigger = yes
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_rational
+	}
+	ai_will_do = {
+		value = 40
+		if = {
+			limit = { has_trait = gregarious }
+			add = 20
+		}
+	}
+}
+
+# Speak for the Order ("Speak for My Circle"): Medicum and up. Standing, and more if the chair goes to one of ours.
+spn_speak_for_the_order_intent = {
+	icon = intent_influence
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_order_medicum_plus_trigger = yes
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_bold
+	}
+	ai_will_do = {
+		value = 50
+		if = {
+			limit = { has_trait = ambitious }
+			add = 20
+		}
+	}
+}
+
+# Bring the Coven to the Order (the Grand Rite's host): every Mage of your coven who is not a member is offered the rose.
+spn_bring_coven_to_order_intent = {
+	icon = intent_knowledge
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_order_reach_built_trigger = yes
+		spn_order_magistratus_plus_trigger = yes
+		exists = var:spn_coven
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_rational
+	}
+	ai_will_do = {
+		value = 0
+		if = {
+			limit = {
+				has_trait = grandmaster_coven
+				var:spn_order_rank ?= flag:magistratus
+			}
+			add = 30
+		}
+	}
+}
+
+# ==================================================================================================
+# 2.38b: THE CONCLAVE'S INTENTS (DESIGN-2.38b §4). What each one pays is in spn_conclave_complete_effect (and, for Seek the
+# Chair and Seek a Seat, in the Vote). Loc: spn_conclave_l_english.yml.
+# ==================================================================================================
+spn_conclave_preside_intent = {
+	# The default intent: no triggers (the engine ignores them and logs an error; 2.38b boot).
+	icon = intent_influence
+	auto_complete = yes
+	scripted_animation = {
+		animation = personality_bold
+	}
+	ai_will_do = {
+		value = 10
+	}
+}
+
+spn_conclave_attend_intent = {
+	# The default intent: no triggers (the engine ignores them and logs an error; 2.38b boot).
+	icon = intent_mystic
+	auto_complete = yes
+	scripted_animation = {
+		animation = personality_rational
+	}
+	ai_will_do = {
+		value = 10
+	}
+}
+
+spn_seek_the_chair_intent = {
+	icon = intent_influence
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_is_temple_magus_trigger = yes
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_conclave_chair_empty_tt
+			OR = {
+				NOT = { exists = global_var:current_archmage_global }
+				# After the vote, the intent has done its work (the winner, and those who lost fairly).
+				involved_activity ?= { has_variable = spn_cv_vote_closed }
+			}
+		}
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_bold
+	}
+	ai_will_do = {
+		value = 30
+		if = { limit = { has_trait = ambitious } add = 60 }
+		if = { limit = { has_character_flag = spn_order_aspires_chair } add = 60 }
+		if = { limit = { has_trait = content } add = -40 }
+	}
+}
+
+spn_seek_a_seat_intent = {
+	icon = intent_influence
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_order_magistratus_plus_trigger = yes
+		NOT = { has_variable = mc_member_var }
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_bold
+	}
+	ai_will_do = {
+		value = 20
+		if = { limit = { has_trait = ambitious } add = 40 }
+	}
+}
+
+spn_speak_for_my_temple_intent = {
+	icon = intent_influence
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_order_medicum_plus_trigger = yes
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_rational
+	}
+	ai_will_do = {
+		value = 25
+		if = { limit = { spn_order_fit_value >= 20 } add = 20 }
+	}
+}
+
+spn_find_a_teacher_intent = {
+	icon = intent_knowledge
+	is_shown = {
+		spn_order_on_trigger = yes
+		var:spn_order_rank ?= flag:acolyte
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_conclave_no_tutor_tt
+			NOT = { exists = var:spn_order_tutor }
+		}
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_rational
+	}
+	ai_will_do = {
+		value = 0
+		if = { limit = { NOT = { exists = var:spn_order_tutor } } add = 80 }
+	}
+}
+
+spn_borrow_from_another_temple_intent = {
+	icon = intent_curiosity
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_order_magistratus_plus_trigger = yes
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_relic_borrow_cd_tt
+			NOT = { has_character_flag = spn_order_borrow_cd }
+		}
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_rational
+	}
+	ai_will_do = {
+		value = 10
+		if = { limit = { has_trait = greedy } add = 20 }
+	}
+}
+
+spn_ask_for_the_working_intent = {
+	icon = intent_mystic
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_is_order_member_trigger = yes
+		spn_order_deadly_disease_trigger = yes
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_order_transference_not_pending_tt
+			NOT = { exists = var:spn_transference_pending }
+			NOT = { exists = var:spn_transference_disease }
+		}
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_rational
+	}
+	ai_will_do = {
+		value = 200
+		if = { # 2.39 (WORK-ORDER-2.39 F4): the Blue Fever alone passes by itself; the AI asks only as its carrier
+			limit = {
+				has_trait = spn_blue_fever
+				NOR = {
+					has_trait = cancer
+					has_trait = consumption
+					has_trait = leper
+					has_trait = great_pox
+				}
+				NOT = { global_var:spn_beetle_carrier ?= this }
+			}
+			multiply = 0
+		}
+	}
+}
+
+spn_make_an_entrance_intent = {
+	icon = intent_spread_legend
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_is_order_member_trigger = yes
+		spn_conclave_has_proof_trigger = yes
+	}
+	auto_complete = yes
+	on_invalidated = { trigger_event = activity_system.0090 }
+	scripted_animation = {
+		animation = personality_bold
+	}
+	ai_will_do = {
+		value = 300
+	}
+}

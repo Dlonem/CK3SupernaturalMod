@@ -40,6 +40,25 @@ spn_pack_found_effect = {
 			}
 			add_to_global_variable_list = { name = spn_packs target = scope:spn_founder }
 			spn_pack_add_member_effect = { WHO = scope:spn_founder PACK = scope:spn_new_pack }
+			# 2.38 (§8.2): an AI founder asks the wolves at his court at once (An Invitation), at most three.
+			if = {
+				limit = { scope:spn_founder = { is_ai = yes } }
+				scope:spn_founder = { save_scope_as = spn_inv_alpha }
+				scope:spn_new_pack = { save_scope_as = spn_inv_pack }
+				save_scope_value_as = { name = spn_inv_recruit value = yes } # 2.38e: .0011's text for a wolf he did not make
+				scope:spn_founder.court_owner ?= {
+					ordered_courtier = {
+						limit = {
+							NOT = { this = scope:spn_founder }
+							spn_wolf_could_run_with_trigger = { HOST = scope:spn_founder }
+						}
+						order_by = age
+						max = 3
+						check_range_bounds = no
+						trigger_event = { id = spn_pack.0011 days = 3 }
+					}
+				}
+			}
 		}
 		spn_pack_born_standing_effect = yes
 		if = {
@@ -140,7 +159,7 @@ spn_pack_remove_member_effect = {
 		scope:spn_rem_who = {
 			remove_variable = spn_pack
 			if = {
-				limit = { exists = var:spn_pack_size_cached }
+				limit = { has_variable = spn_pack_size_cached }
 				remove_variable = spn_pack_size_cached
 			}
 			spn_pack_clear_modifiers_effect = yes
@@ -388,7 +407,7 @@ spn_pack_update_second_effect = {
 		set_variable = { name = spn_pack_second value = scope:spn_us_second }
 	}
 	else_if = {
-		limit = { exists = var:spn_pack_second }
+		limit = { has_variable = spn_pack_second }
 		remove_variable = spn_pack_second
 	}
 	# The story draws lists, never an unset variable: the Second as a one-entry list.
@@ -405,16 +424,44 @@ spn_pack_sync_mirrors_effect = {
 	save_scope_as = spn_mirror_pack
 	every_in_list = {
 		variable = spn_pack_members
-		limit = { NOT = { this = scope:spn_mirror_pack.story_owner } }
+		# 2.38 (§8.1, C2): mirrors for players only.
+		limit = {
+			is_ai = no
+			NOT = { this = scope:spn_mirror_pack.story_owner }
+		}
 		if = {
 			limit = { NOT = { any_owned_story = { story_type = story_spn_pack_membership } } }
 			create_story = story_spn_pack_membership
 		}
 		random_owned_story = {
 			limit = { story_type = story_spn_pack_membership }
+			save_scope_as = spn_mirror_story
 			set_variable = { name = spn_pack_alpha value = scope:spn_mirror_pack.story_owner }
 			set_variable = { name = spn_pack_size value = scope:spn_mirror_pack.var:spn_pack_size }
 			set_variable = { name = spn_mirror_of value = scope:spn_mirror_pack }
+			# 2.38 (§8.1): the lists the alpha's panel shows.
+			clear_variable_list = spn_pack_second_list
+			clear_variable_list = spn_pack_co_alpha_list
+			clear_variable_list = spn_pack_champions
+			clear_variable_list = spn_pack_members
+			scope:spn_mirror_pack = {
+				every_in_list = {
+					variable = spn_pack_second_list
+					scope:spn_mirror_story = { add_to_variable_list = { name = spn_pack_second_list target = prev } }
+				}
+				every_in_list = {
+					variable = spn_pack_co_alpha_list
+					scope:spn_mirror_story = { add_to_variable_list = { name = spn_pack_co_alpha_list target = prev } }
+				}
+				every_in_list = {
+					variable = spn_pack_champions
+					scope:spn_mirror_story = { add_to_variable_list = { name = spn_pack_champions target = prev } }
+				}
+				every_in_list = {
+					variable = spn_pack_members
+					scope:spn_mirror_story = { add_to_variable_list = { name = spn_pack_members target = prev } }
+				}
+			}
 		}
 	}
 }
@@ -451,6 +498,13 @@ spn_pack_set_alpha_effect = {
 	}
 	make_story_owner = scope:spn_sa_new
 	set_variable = { name = spn_pack_alpha value = scope:spn_sa_new }
+	# 2.38 (§8.1): the new alpha sees the real story; a mirror he owned ends.
+	scope:spn_sa_new = {
+		random_owned_story = {
+			limit = { story_type = story_spn_pack_membership }
+			end_story = yes
+		}
+	}
 	# 2.37e: a co-alpha who becomes the alpha is no longer listed as both.
 	if = {
 		limit = { var:spn_pack_co_alpha ?= scope:spn_sa_new }
@@ -459,7 +513,7 @@ spn_pack_set_alpha_effect = {
 	# 2.37i: the Second's two-year opening was against the old alpha; a new alpha starts closed. And a co-alpha stands
 	# only beside the spouse the Unification joined him to: under anyone else he is a member like the rest.
 	if = {
-		limit = { exists = var:spn_second_lost_to_alpha }
+		limit = { has_variable = spn_second_lost_to_alpha }
 		remove_variable = spn_second_lost_to_alpha
 	}
 	if = {
@@ -556,7 +610,7 @@ spn_pack_succession_effect = {
 		}
 	}
 	if = {
-		limit = { exists = var:spn_pack_killer }
+		limit = { has_variable = spn_pack_killer }
 		remove_variable = spn_pack_killer
 	}
 	if = {
@@ -909,7 +963,19 @@ spn_true_alpha_found_own_effect = {
 spn_pack_moment_effect = {
 	save_scope_as = spn_mo_pack
 	story_owner = { save_scope_as = spn_mo_alpha }
+	# 2.39 (WORK-ORDER-2.39 F14 §4, D19): a player wolf of this pack is due The Pack Comes Home: the night home is this
+	# year's moment. Never two years running (spn_pack_home_seen, 18 months, set when it arrives), so a neighbour's moment
+	# comes in the year after. Before the fix the night was one weighted branch among the neighbour's, about one year in 5-6.
 	if = {
+		limit = {
+			any_in_list = {
+				variable = spn_pack_members
+				spn_pack_home_due_trigger = yes
+			}
+		}
+		spn_pack_moment_home_effect = yes
+	}
+	else_if = {
 		limit = {
 			any_in_global_list = {
 				variable = spn_packs
@@ -935,6 +1001,23 @@ spn_pack_moment_effect = {
 						}
 					}
 				}
+				# 2.39 (WORK-ORDER-2.39 F14): not while the player who would be asked is inside the flavor gate.
+				modifier = {
+					factor = 0
+					OR = {
+						scope:spn_mo_alpha = {
+							is_ai = no
+							spn_flavor_ready_trigger = no
+						}
+						AND = {
+							scope:spn_mo_alpha = { is_ai = yes }
+							scope:spn_mo_other = {
+								is_ai = no
+								spn_flavor_ready_trigger = no
+							}
+						}
+					}
+				}
 				spn_pack_moment_scent_effect = yes
 			}
 			# A Wolf Asks to Run With You
@@ -955,6 +1038,14 @@ spn_pack_moment_effect = {
 							has_trait = arbitrary
 							has_trait = wrathful
 						}
+					}
+				}
+				# 2.39 (WORK-ORDER-2.39 F14): not while a player alpha is inside the flavor gate.
+				modifier = {
+					factor = 0
+					scope:spn_mo_alpha = {
+						is_ai = no
+						spn_flavor_ready_trigger = no
 					}
 				}
 				spn_pack_moment_asks_effect = yes
@@ -997,7 +1088,27 @@ spn_pack_moment_effect = {
 				}
 				spn_pack_moment_hide_seen_effect = yes
 			}
+			# 2.39 (WORK-ORDER-2.39 F14 §4): The Pack Comes Home, the pack's own night at its own fire, for its AI wolves
+			# (no player of the pack is due it here: that case is the first branch above).
+			20 = {
+				trigger = { # 2.39 (Boot 1, 16 Oct): a pack, not a lone wolf
+					scope:spn_mo_pack = {
+						any_in_list = {
+							variable = spn_pack_members
+							is_alive = yes
+							count >= 2
+						}
+					}
+				}
+				spn_pack_moment_home_effect = yes
+			}
 		}
+	}
+	# 2.39 (WORK-ORDER-2.39 F14 §4): with no neighbouring pack in range, the night home is the one moment there can be.
+	# Before 2.39 such a pack had no moment at all. (The same as one list in which the five neighbour branches need a
+	# neighbour: only the home branch would be left.)
+	else = {
+		spn_pack_moment_home_effect = yes
 	}
 }
 
@@ -1223,7 +1334,28 @@ spn_pack_moment_kindred_effect = {
 				limit = {
 					is_married = no # 2.37 boot: "spouse" is not a link in 1.20 (error.log, 3 Oct)
 					scope:spn_mo_kin_b = { is_married = no }
-					can_set_relation_lover_trigger = { CHARACTER = scope:spn_mo_kin_b }
+					spn_romance_ok_trigger = { CHARACTER = scope:spn_mo_kin_b } # 2.39 (WORK-ORDER-2.39 B13): was vanilla's test alone (16+)
+					# 2.39 (B13, review L-3): a wolf who already has a lover must be one who would take another.
+					trigger_if = {
+						limit = {
+							OR = {
+								is_married = yes
+								any_relation = { type = lover }
+							}
+						}
+						might_cheat_on_every_partner_trigger = yes
+					}
+					scope:spn_mo_kin_b = {
+						trigger_if = {
+							limit = {
+								OR = {
+									is_married = yes
+									any_relation = { type = lover }
+								}
+							}
+							might_cheat_on_every_partner_trigger = yes
+						}
+					}
 					# 2.37i: a lover only between two AI wolves; a player is never handed one unasked. He may still be
 					# made a friend, and is told.
 					is_ai = yes
@@ -1507,5 +1639,95 @@ spn_pack_blood_pact_effect = {
 		B = scope:spn_bp_b
 		VALUE = house_relation_improve_major_value
 		REASON = spn_blood_pact
+	}
+}
+
+# 2.38e: packs recruit (Thomas, 9 Oct: they should, "though not just any werewolf"). Character scope: a wolf with no pack,
+# from spn_wolf_year. An AI alpha with room may ask him if each can stand the other, the alpha knows what he is, and he
+# is kin, of the alpha's bite, or within reach and shares his faith or culture or has his good opinion. Kin and a Champion's
+# pack weigh more. The alphas are a short global list,
+# one a pack. Two years before the same alpha asks again (the same record the Invite interaction keeps).
+spn_pack_lone_wolf_year_effect = {
+	save_scope_as = spn_lw
+	every_in_global_list = {
+		variable = spn_packs
+		limit = {
+			is_alive = yes
+			is_ai = yes
+			is_adult = yes
+			is_imprisoned = no
+			NOT = { this = scope:spn_lw }
+			exists = var:spn_pack
+			var:spn_pack = { spn_pack_has_room_trigger = yes }
+			NOT = { has_relation_rival = scope:spn_lw }
+			opinion = {
+				target = scope:spn_lw
+				value >= 0
+			}
+		}
+		save_temporary_scope_as = spn_lw_alpha
+		if = {
+			limit = {
+				scope:spn_lw = {
+					NOT = { is_target_in_variable_list = { name = spn_pack_invited_by target = scope:spn_lw_alpha } }
+					opinion = {
+						target = scope:spn_lw_alpha
+						value >= -10
+					}
+					spn_wolf_could_run_with_trigger = { HOST = scope:spn_lw_alpha }
+					OR = {
+						is_close_family_of = scope:spn_lw_alpha
+						has_relation_ww_clawed = scope:spn_lw_alpha
+						has_relation_ww_clawed_by = scope:spn_lw_alpha
+						# A stranger within reach only if they have something in common or the alpha thinks well of him.
+						AND = {
+							location = {
+								squared_distance = {
+									target = scope:spn_lw_alpha.location
+									value < spn_pack_reach_value
+								}
+							}
+							OR = {
+								faith = scope:spn_lw_alpha.faith
+								culture = scope:spn_lw_alpha.culture
+								scope:spn_lw_alpha = {
+									opinion = {
+										target = scope:spn_lw
+										value >= 15
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			add_to_temporary_list = spn_lw_alphas
+		}
+	}
+	random_in_list = {
+		list = spn_lw_alphas
+		weight = {
+			base = 10
+			modifier = {
+				add = 30
+				OR = {
+					is_close_family_of = scope:spn_lw
+					has_relation_ww_clawed = scope:spn_lw
+					has_relation_ww_clawed_by = scope:spn_lw
+				}
+			}
+			modifier = {
+				add = 15
+				spn_is_champion_trigger = yes
+			}
+		}
+		save_scope_as = spn_inv_alpha
+	}
+	if = {
+		limit = { exists = scope:spn_inv_alpha }
+		scope:spn_inv_alpha.var:spn_pack = { save_scope_as = spn_inv_pack }
+		save_scope_value_as = { name = spn_inv_recruit value = yes }
+		add_to_variable_list = { name = spn_pack_invited_by target = scope:spn_inv_alpha years = 2 }
+		trigger_event = { id = spn_pack.0011 days = { 7 60 } }
 	}
 }

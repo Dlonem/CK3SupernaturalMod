@@ -1,0 +1,55 @@
+﻿# Supernatural 2.39 -- how rare the Collegium is (Thomas's call, 16 Oct; zz_spn_239_collegium_rarity_triggers.txt).
+#
+# THE WORLD LIST global spn_collegia: every province with a Collegium, standing or being raised.
+#   Writers: spn_collegium_register_effect (callers: the building's on_start and on_complete, the seed after each
+#            add_building, and the one-time count below).
+#   Removers: the building's on_cancelled, and the yearly sweep below (a province with no Collegium and nothing being
+#            built). No script removes a Collegium itself.
+# THE TIMER global spn_collegium_ai_recent (2 years): set when an AI begins an ordinary Collegium.
+# THE MARK province spn_collegium_for_hall (4 years, the hall's own timer): a Collegium begun for a temple, so it is not
+#   counted as ordinary while it is built and until step 2c adopts it. Set in on_start only; it expires.
+
+# PROVINCE scope. Put this province on the world list, once.
+spn_collegium_register_effect = {
+	if = {
+		limit = {
+			NOT = { is_target_in_global_variable_list = { name = spn_collegia target = this } }
+		}
+		add_to_global_variable_list = { name = spn_collegia target = this }
+	}
+}
+
+# PROVINCE scope. Take this province off the world list.
+spn_collegium_unregister_effect = {
+	if = {
+		limit = {
+			is_target_in_global_variable_list = { name = spn_collegia target = this }
+		}
+		remove_list_global_variable = { name = spn_collegia target = this }
+	}
+}
+
+# Global (spn_order_yearly). Once per game, count the Collegia already on the map: a save made before this rule, which
+# has Collegia but no list. Then, every year, drop any province whose Collegium is gone.
+spn_collegia_yearly_effect = {
+	if = {
+		limit = { NOT = { exists = global_var:spn_collegia_counted } }
+		set_global_variable = spn_collegia_counted
+		every_province = {
+			limit = { has_building = spn_order_collegium_01 }
+			spn_collegium_register_effect = yes
+		}
+	}
+	every_in_global_list = {
+		variable = spn_collegia
+		limit = {
+			NOT = { has_building = spn_order_collegium_01 }
+			NOT = { has_ongoing_construction = yes }
+		}
+		add_to_temporary_list = spn_cl_gone
+	}
+	every_in_list = {
+		list = spn_cl_gone
+		spn_collegium_unregister_effect = yes
+	}
+}

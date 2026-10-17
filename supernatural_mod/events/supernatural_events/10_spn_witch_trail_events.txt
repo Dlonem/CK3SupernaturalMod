@@ -194,6 +194,44 @@ spn_hunt.0171 = {
 			modifier = { add = -25 has_trait = content }
 		}
 	}
+	# 2.38 (§13 step 2): the culprit is of the Order; the hunter goes through her chapter instead of her house.
+	option = {
+		name = spn_hunt.0171.temple
+		trigger = {
+			scope:spn_culprit = { spn_is_order_member_trigger = yes }
+			custom_tooltip = {
+				text = spn_hunt_coven_needs_tt
+				OR = {
+					has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 60 }
+					spn_hunter_reputation_value >= 2
+				}
+			}
+		}
+		custom_tooltip = spn_hunt.0171.temple.tt
+		scope:spn_hunt_activity = {
+			set_variable = spn_hunt_chapter_sweep
+			# 2.39 (WORK-ORDER-2.39 F15): the temple, banked while the culprit is alive (her death removes
+			# var:spn_order_chapter). Read by the sweep's doors and The Corridor. Lives as long as the hunt.
+			if = {
+				limit = { scope:spn_culprit ?= { exists = var:spn_order_chapter } }
+				set_variable = { name = spn_hunt_sweep_ch value = scope:spn_culprit.var:spn_order_chapter }
+			}
+		}
+		# §13 step 4: a year on, The Adeptus Major Moves (a player hunter).
+		if = {
+			limit = { is_ai = no }
+			add_character_flag = { flag = spn_order_swept_chapter years = 2 }
+			trigger_event = { id = spn_order.0710 days = { 365 400 } }
+		}
+		spn_hunt_coven_begin_effect = yes
+		ai_chance = {
+			base = 25
+			modifier = { add = 35 has_trait = zealous }
+			modifier = { add = 25 has_trait = vengeful }
+			modifier = { add = 25 has_trait = brave }
+			modifier = { add = -45 has_trait = craven }
+		}
+	}
 	# Walk away. §8.5's off-ramp, on this branch too.
 	option = {
 		name = spn_hunt.0171.d
@@ -275,6 +313,8 @@ spn_hunt.0172 = {
 			TARGET = scope:spn_defender
 			IMPRISONER = root
 		}
+		# 2.38 (§13 step 2): a Temple Magus taken alive gives up every member of his chapter.
+		scope:spn_defender = { spn_order_temple_magus_captured_effect = { HUNTER = root } }
 		add_trait_xp = { trait = supernatural_hunter track = witch_hunting value = { 4 9 } }
 		spn_hunt_coven_next_effect = yes
 		ai_chance = {

@@ -1732,6 +1732,40 @@ spn_hunt.0200 = {
 					}
 				}
 			}
+			# 2.39 (WORK-ORDER-2.39 F17): a guarded mind (the Draught of a Clear Mind, the Seal, Master Defence) cannot be
+			# compelled. The one reason key used everywhere a guarded mind is checked.
+			scope:spn_hunter = {
+				custom_description = {
+					text = spn_mind_guarded_custom
+					has_immunity_for_magic_domination = no
+				}
+			}
+		}
+		# 2.39 (F17): shown greyed out, with the reason, when the guarded mind is all that stands in the way (the mod's idiom,
+		# zz_spn_order_events.txt). The Draught is a visible modifier, so this reveals nothing secret (B6).
+		show_as_unavailable = {
+			OR = {
+				has_trait = supernatural_vampire
+				has_trait = supernatural_hybrid
+			}
+			scope:spn_hunt_activity = {
+				NOT = { has_activity_option = { category = spn_hunt_preparations option = spn_hunt_prep_stakes } }
+			}
+			OR = {
+				scope:spn_hunt_activity = {
+					has_activity_option = { category = spn_hunt_preparations option = spn_hunt_prep_silver }
+				}
+				AND = {
+					OR = {
+						has_trait_xp = { trait = supernatural_vampire track = vampirism value >= 100 }
+						has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 100 }
+					}
+					scope:spn_hunter = {
+						NOT = { has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 40 } }
+					}
+				}
+			}
+			scope:spn_hunter = { has_immunity_for_magic_domination = yes }
 		}
 		if = {
 			limit = { has_trait = supernatural_vampire }
@@ -1768,6 +1802,7 @@ spn_hunt.0200 = {
 	option = {
 		name = spn_hunt.0200.f
 		trigger = {
+			spn_held_in_chains_trigger = no    # 2.39 (WORK-ORDER-2.39 F6): the Warded Chains hold the wolf's form
 			OR = {
 				has_trait = supernatural_werewolf
 				has_trait = supernatural_hybrid

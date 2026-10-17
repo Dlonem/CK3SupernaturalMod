@@ -3580,11 +3580,8 @@ magic_ev10.5 = {
 					value = 3
 				}
 			}
-			else = {
-				scope:temp_spell_host = {
-					change_first_name = var:my_custom_spell_name
-				}
-			}
+			# 2.38 (Supernatural): an unreachable else that passed var:my_custom_spell_name to change_first_name as a loc key
+			# is removed. The typed name reaches the spell through copy_localized_text in the first branch.
 			set_variable = {
 				name = my_custom_spell
 				value = scope:temp_spell_host
@@ -5331,7 +5328,7 @@ magic_ev10.18 = {
 						}
 						if = {
 							limit = {
-								exists = scope:hagent
+								scope:hagent ?= { is_alive = yes } # 2.38h (Supernatural): he may be dead
 							}
 							imprison = {
 								target = scope:hagent
@@ -5404,7 +5401,7 @@ magic_ev10.18 = {
 								}
 								if = {
 									limit = {
-										exists = scope:hagent
+										scope:hagent ?= { is_alive = yes } # 2.38h (Supernatural): he may be dead
 									}
 									imprison = {
 										target = scope:hagent
@@ -5496,7 +5493,7 @@ magic_ev10.18 = {
 				}
 				if = {
 					limit = {
-						exists = scope:hagent
+						scope:hagent ?= { is_alive = yes } # 2.38h (Supernatural): he may be dead
 					}
 					imprison = {
 						target = scope:hagent
@@ -12664,7 +12661,9 @@ magic_ev10.65 = {
 	trigger = {
 		is_alive = yes
 		is_imprisoned = no
+		spn_order_council_member_ok_trigger = yes # 2.38b (Supernatural): the council is the Order's (DESIGN-2.38b §3)
 		exists = global_var:current_archmage_global
+		NOT = { has_variable = mc_member_var } # 2.39 (Supernatural): not one who already sits (WORK-ORDER-2.39 B3 B)
 		OR = {
 			NOT = { exists = global_var:current_loremaster_global }
 			NOT = { exists = global_var:current_black_mage_global }
@@ -13534,6 +13533,7 @@ magic_ev10.70 = {
 		if = {
 			limit = {
 				exists = global_var:current_archmage_global
+				NOT = { global_var:current_archmage_global = root } # 2.38h (Supernatural): not a secret about himself
 			}
 			give_or_update_embezzler_secret_effect = {
 				TARGET = global_var:current_archmage_global
@@ -13543,6 +13543,7 @@ magic_ev10.70 = {
 		else_if = {
 			limit = {
 				exists = global_var:current_black_mage_global
+				NOT = { global_var:current_black_mage_global = root } # 2.38h (Supernatural)
 			}
 			give_or_update_embezzler_secret_effect = {
 				TARGET = global_var:current_black_mage_global
@@ -14262,6 +14263,16 @@ magic_ev10.78 = {
 	
 	option = {
 		name = ev10.78.a
+		ai_chance = { # 2.39 (Supernatural): by his nature (Thomas, 16 Oct)
+			base = 40
+			modifier = {
+				add = 30
+				OR = {
+					has_trait = vengeful
+					has_trait = arrogant
+				}
+			}
+		}
 		trigger = {
 			NOT = {
 				has_character_modifier = excluded_from_magic_community
@@ -14277,6 +14288,20 @@ magic_ev10.78 = {
 	}
 	option = {
 		name = ev10.78.b
+		ai_chance = { # 2.39 (Supernatural): by his nature (Thomas, 16 Oct)
+			base = 40
+			modifier = {
+				add = 60
+				OR = {
+					has_trait = forgiving
+					has_trait = compassionate
+				}
+			}
+			modifier = {
+				add = -30
+				has_trait = vengeful
+			}
+		}
 		stress_and_fulfillment_impact = {
 			forgiving = major_stress_loss
 			vengeful = major_stress_gain
@@ -14294,6 +14319,24 @@ magic_ev10.78 = {
 			}
 		}
 		name = ev10.78.c
+		ai_chance = { # 2.39 (Supernatural): by his nature; the arrest can end in a duel to the death (Thomas, 16 Oct)
+			base = 5
+			modifier = {
+				add = 45
+				OR = {
+					has_trait = vengeful
+					has_trait = wrathful
+					has_trait = sadistic
+				}
+			}
+			modifier = {
+				factor = 0
+				OR = {
+					has_trait = forgiving
+					has_trait = compassionate
+				}
+			}
+		}
 		custom_tooltip = ev10.78.c_ct
 		custom_tooltip = ev10.78.c_ct2
 		hidden_effect = {
@@ -14496,6 +14539,7 @@ magic_ev10.80 = {
 #secret meeting! - intro
 magic_ev10.81 = {
 	title = ev10.81.title
+	trigger = { spn_council_meeting_roles_distinct_trigger = yes } # 2.39 (Supernatural): four people, or the meeting ends (WORK-ORDER-2.39 B3 C)
 	desc = {
 		first_valid = {
 			triggered_desc = {
@@ -15448,6 +15492,7 @@ magic_ev10.84 = {
 		custom_tooltip = ev10.84.a_ct
 		custom_tooltip = witch_hunters_vacations_ct
 		add_character_flag = amage_rep1_bmage_rep1_flag
+		hidden_effect = { spn_order_council_hunters_effect = yes } # 2.39 (Supernatural): the Adeptus Major, to the hunters the Order watches (WORK-ORDER-2.39 F11)
 		ai_chance = {
 			base = 2
 			modifier = {
@@ -15531,6 +15576,7 @@ magic_ev10.84 = {
 		custom_tooltip = witch_hunters_vacations_ct
 		hidden_effect = {
 			witch_hunter_vacations_effect = { Y = 3 }
+			spn_order_council_hunters_effect = yes # 2.39 (Supernatural): the Adeptus Major, to the hunters the Order watches (WORK-ORDER-2.39 F11)
 			every_living_character = {
 				limit = {
 					is_witch_hunter = yes
@@ -15930,6 +15976,20 @@ magic_ev10.85 = {
 		trigger_event = magic_ev10.94
 		ai_chance = {
 			base = 0
+		}
+	}
+	option = { # 2.39 (Supernatural): a motion before the council -- Imperium, or a council work (WORK-ORDER-2.39 F12, F13)
+		name = spn_ev10_85_motion
+		trigger = { spn_council_motion_available_trigger = yes }
+		hidden_effect = { set_variable = { name = spn_imp_in_meeting value = yes days = 60 } }
+		trigger_event = spn_order.1000
+		ai_chance = {
+			base = 0
+			modifier = { add = 1 has_trait = ambitious }
+			modifier = { add = 1 has_trait = arrogant }
+			modifier = { add = 1 has_character_flag = mc_crisises_flag }
+			modifier = { add = 2 spn_council_work_due_trigger = yes can_spend_huge_ps_trigger = yes } # when a work is due and he can cast it
+			modifier = { factor = 0 OR = { has_trait = content has_trait = humble } }
 		}
 	}
 }

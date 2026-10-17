@@ -1,0 +1,118 @@
+﻿namespace = spn_coven
+
+# Supernatural 2.38 -- "The Blue Rose": the coven's panel (WORK-ORDER-2.38 §7, §16.1).
+# Loc: localization/english/event_localization/spn_coven_l_english.yml.
+
+# .0001 -- Your Coven. Each player member when his house becomes a coven (spn_coven_started_effect).
+spn_coven.0001 = {
+	type = character_event
+	title = spn_coven.0001.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { var:spn_coven ?= { story_owner = root } }
+				desc = spn_coven.0001.desc_owner
+			}
+			desc = spn_coven.0001.desc
+		}
+	}
+	theme = witchcraft
+	override_background = { reference = wam_coven_court }
+	left_portrait = { character = root animation = interested }
+	right_portrait = {
+		character = var:spn_coven.story_owner
+		trigger = { var:spn_coven ?= { NOT = { story_owner = root } } }
+		animation = personality_rational
+	}
+	trigger = {
+		is_alive = yes
+		exists = var:spn_coven
+	}
+	option = {
+		name = spn_coven.0001.a
+	}
+}
+
+# .0002 -- (hidden, no root) the covens that already exist at game start.
+spn_coven.0002 = {
+	scope = none
+	hidden = yes
+	trigger = {
+		spn_coven_on_trigger = yes
+		NOT = { exists = global_var:spn_coven_swept }
+	}
+	immediate = {
+		spn_coven_sweep_existing_effect = yes
+	}
+}
+
+# .0010 -- The Sisters Ask What You Are. A player in both a coven and a chapter (§16.1). The coven's owner has noticed.
+spn_coven.0010 = {
+	type = character_event
+	title = spn_coven.0010.t
+	desc = spn_coven.0010.desc
+	theme = witchcraft
+	override_background = { reference = wam_coven_court }
+	left_portrait = { character = root animation = worry }
+	right_portrait = { character = scope:spn_sa_owner animation = paranoia }
+	trigger = {
+		is_alive = yes
+		spn_is_order_member_trigger = yes
+		var:spn_coven ?= {
+			story_owner = {
+				is_alive = yes
+				NOT = { this = root }
+			}
+		}
+	}
+	immediate = {
+		var:spn_coven.story_owner = { save_scope_as = spn_sa_owner }
+	}
+	option = {
+		name = spn_coven.0010.a
+		random_secret = {
+			limit = {
+				secret_type = spn_secret_blue_rose
+				NOT = { is_known_by = scope:spn_sa_owner }
+			}
+			reveal_to = scope:spn_sa_owner
+		}
+		scope:spn_sa_owner = {
+			add_opinion = { target = root modifier = spn_coven_trusted_opinion }
+		}
+		spn_order_add_standing_effect = { VALUE = -10 }
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = honest }
+			modifier = { add = 20 has_trait = trusting }
+		}
+	}
+	option = {
+		name = spn_coven.0010.b
+		custom_tooltip = spn_coven_lie_tt
+		hidden_effect = {
+			random = {
+				chance = spn_order_coin_chance_intrigue_value
+				save_scope_value_as = { name = spn_sa_pass value = yes }
+			}
+			if = {
+				limit = { NOT = { exists = scope:spn_sa_pass } }
+				scope:spn_sa_owner = {
+					add_opinion = { target = root modifier = spn_coven_lied_to_opinion }
+				}
+				random_secret = {
+					limit = {
+						secret_type = spn_secret_blue_rose
+						NOT = { is_known_by = scope:spn_sa_owner }
+					}
+					reveal_to = scope:spn_sa_owner
+				}
+			}
+		}
+		ai_chance = {
+			base = 60
+			modifier = { add = 30 has_trait = deceitful }
+			modifier = { add = 20 has_trait = paranoid }
+		}
+	}
+}

@@ -71,7 +71,11 @@ gain_huge_ps_effect = {
 }
 
 spend_standard_ps_effect = {
-	if = {
+	if = { # 2.38 (Supernatural): WORK-ORDER-2.38 §5.20, §12.7
+		limit = { spn_casts_without_price_trigger = yes }
+		custom_tooltip = spn_vade_free_tt
+	}
+	else_if = {
 		limit = {
 			OR = {
 				has_character_modifier = power_saturated1
@@ -100,7 +104,11 @@ spend_standard_ps_effect = {
 	}
 }
 spend_huge_ps_effect = {
-	if = {
+	if = { # 2.38 (Supernatural): WORK-ORDER-2.38 §5.20, §12.7
+		limit = { spn_casts_without_price_trigger = yes }
+		custom_tooltip = spn_vade_free_tt
+	}
+	else_if = {
 		limit = {
 			has_trait = archmage
 		}
@@ -116,7 +124,11 @@ spend_huge_ps_effect = {
 }
 
 spend_minor_ps_effect = {
-	if = {
+	if = { # 2.38 (Supernatural): WORK-ORDER-2.38 §5.20, §12.7
+		limit = { spn_casts_without_price_trigger = yes }
+		custom_tooltip = spn_vade_free_tt
+	}
+	else_if = {
 		limit = {
 			OR = {
 				has_character_modifier = power_saturated1
@@ -1342,6 +1354,7 @@ create_yaga_family_effect = {
 			create_magic_broom_artifact_effect = yes
 			house = {
 				add_house_modifier = witch_coven
+				spn_coven_started_effect = yes # 2.38 (Supernatural): the coven's panel
 			}
 			add_character_flag = special_magic_character
 			add_character_flag = teleportation_spell_flag
@@ -1581,6 +1594,7 @@ create_yaga_family_effect2 = {
 			add_character_flag = teleportation_spell_flag
 			house = {
 				add_house_modifier = witch_coven
+				spn_coven_started_effect = yes # 2.38 (Supernatural): the coven's panel
 			}
 		}
 		scope:unlucky_guy = {
@@ -1756,6 +1770,7 @@ create_yaga_family_effectAR = {
 			create_magic_broom_artifact_effect = yes
 			house = {
 				add_house_modifier = witch_coven
+				spn_coven_started_effect = yes # 2.38 (Supernatural): the coven's panel
 			}
 			add_character_flag = special_magic_character
 			add_character_flag = teleportation_spell_flag
@@ -1990,6 +2005,7 @@ create_yaga_family_effect2AR = {
 			add_character_flag = teleportation_spell_flag
 			house = {
 				add_house_modifier = witch_coven
+				spn_coven_started_effect = yes # 2.38 (Supernatural): the coven's panel
 			}
 		}
 		scope:unlucky_guy = {
@@ -2158,6 +2174,7 @@ create_extra_coven = {
 			is_landed_or_landless_administrative = yes
 			is_ai = yes
 			is_adult = yes
+			NOR = { is_true_mage = yes has_trait = warlock } # 2.38e (Supernatural): one capstone; this head is made a True Witch
 			exists = house
 			house = {
 				house_head = PREV
@@ -2189,6 +2206,7 @@ create_extra_coven = {
 			add_house_modifier = {
 				modifier = witch_coven
 			}
+			spn_coven_started_effect = yes # 2.38 (Supernatural): the coven's panel
 			every_house_member = {
 				limit = {
 					is_adult = yes
@@ -2260,6 +2278,8 @@ create_true_witch_effect = {
 						#has_trait = source4
 						has_trait = honest
 						has_trait = true_witch
+						is_true_mage = yes # 2.38e (Supernatural): one capstone
+						has_trait = warlock
 					}
 					is_male = no
 					is_landed_or_landless_administrative = yes
@@ -2321,6 +2341,19 @@ create_some_mage_effect = {
 				}
 				1 = {
 
+				}
+			}
+		}
+		# 2.38f (Supernatural): True Witches on their own count (the Order's Mages no longer shut this off).
+		if = {
+			limit = {
+				NOT = {
+					has_game_rule = min_num_of_mages
+				}
+				any_living_character = {
+					has_trait = true_witch
+					is_ai = yes
+					count < num_of_mages_limit_value
 				}
 			}
 			random_list = {
@@ -2977,6 +3010,7 @@ create_mage_effect = {
 				is_ai = yes
 				NOT = { has_trait = zealous }
 				NOT = { has_trait = source }
+				NOR = { has_trait = warlock has_trait = true_witch } # 2.38e (Supernatural): one capstone
 				#NOT = { has_trait = source2 }
 				#NOT = { has_trait = source3 }
 				#NOT = { has_trait = source4 }
@@ -3289,7 +3323,10 @@ create_mage_effect = {
 					}
 					random = {
 						chance = 10
-						add_trait = demon1
+						if = {
+							limit = { spn_may_become_demon_trigger = yes } # 2.39 (Supernatural): F9, Mortals Becoming Demons
+							add_trait = demon1
+						}
 					}
 					random_list = {
 						1 = {
@@ -4444,9 +4481,8 @@ spawn_witch_hunter_full_chance_effect = {
 				template = witch_hunter_character
 				save_scope_as = whunter
 				after_creation = {
-					add_secret = {
-						type = secret_witch_hunter
-					}
+					# 2.38 (Supernatural): no secret_witch_hunter here. The template gives supernatural_hunter, which the secret's
+					# is_valid forbids, so the secret was invalid the moment it was made.
 					add_gold = 100
 					#add_trait_xp = {
 					#	trait = witch_hunter
@@ -4473,9 +4509,7 @@ spawn_witch_hunter_full_chance_effect = {
 				template = witch_hunter_character
 				save_scope_as = whunter
 				after_creation = {
-					add_secret = {
-						type = secret_witch_hunter
-					}
+					# 2.38 (Supernatural): no secret_witch_hunter here (see the landed branch above).
 					add_gold = 50
 					random_living_character = {
 						limit = {
@@ -5651,6 +5685,7 @@ ms_resolve_voting_effects = {
 							scope:speaker0 = {
 								has_character_flag = ms_want_be_archmage_flag
 							}
+							spn_order_on_trigger = no # 2.38b (Supernatural): the Order elects the Grand Magus (DESIGN-2.38b §3)
 						}
 						scope:speaker0 = {
 							#give_nickname = archmage_nickname
@@ -7413,6 +7448,7 @@ set_spell_id = {
 			name = spell_id
 			value = $ID$
 		}
+		spn_vade_misfire_roll_effect = yes # 2.39 (Supernatural): a witness's spell may go wrong while any part of the Vade Maecum survives
 		if = {
 			limit = {
 				has_character_modifier = nyarlathotep_curse_modifier
@@ -9647,7 +9683,17 @@ vistited_place_of_power_effect = {
 		}
 	}
 }
+# 2.39 (Supernatural): WORK-ORDER-2.39 F9, the rule "Supernatural: Mortals Becoming Demons". Under Players Only an AI
+# character is never made a demon here, and a demon-blooded one keeps demon0. Default is exactly 2.38.
 make_demon_effect = {
+	if = {
+		limit = { spn_may_become_demon_trigger = yes } # 2.39 (Supernatural): zz_spn_mortal_demons_triggers.txt
+		spn_make_demon_body_effect = yes
+	}
+}
+# 2.39 (Supernatural): Witchcraft's make_demon_effect body, unchanged line for line, under its own name. Callers use
+# make_demon_effect, never this.
+spn_make_demon_body_effect = {
 	if = {
 		limit = {
 			has_trait = golem
@@ -12503,43 +12549,20 @@ ai_striving_for_magic_power_effect = {
 		}
 		clear_saved_scope = target
 	}
-	if = {
+	# 2.39 (Supernatural): in range only (no longer anywhere in the world), and only from someone it has a reason to rob
+	# (Thomas, 16 Oct).
+	random_artifact = {
 		limit = {
-			any_artifact = {
-				has_variable = magic1
-				NOT = { artifact_owner = ROOT }
-				NOT = { any_artifact_claimant = { THIS = ROOT } }
-				artifact_owner = { in_diplomatic_range = ROOT NOT = { has_strong_hook = ROOT } }
+			has_variable = magic1
+			NOT = { artifact_owner = ROOT }
+			NOT = { any_artifact_claimant = { THIS = ROOT } }
+			artifact_owner = {
+				in_diplomatic_range = ROOT
+				NOT = { has_strong_hook = ROOT }
+				spn_ai_artifact_motive_trigger = { ACTOR = ROOT }
 			}
 		}
-		random_artifact = {
-			limit = {
-				has_variable = magic1
-				NOT = { artifact_owner = ROOT }
-				NOT = { any_artifact_claimant = { THIS = ROOT } }
-				artifact_owner = { in_diplomatic_range = ROOT NOT = { has_strong_hook = ROOT } }
-			}
-			save_scope_as = art1
-		}
-	}
-	else_if = {
-		limit = {
-			any_artifact = {
-				has_variable = magic1
-				NOT = { artifact_owner = ROOT }
-				NOT = { any_artifact_claimant = { THIS = ROOT } }
-				artifact_owner = { NOT = { has_strong_hook = ROOT } }
-			}
-		}
-		random_artifact = {
-			limit = {
-				has_variable = magic1
-				NOT = { artifact_owner = ROOT }
-				NOT = { any_artifact_claimant = { THIS = ROOT } }
-				artifact_owner = { NOT = { has_strong_hook = ROOT } }
-			}
-			save_scope_as = art1
-		}
+		save_scope_as = art1
 	}
 	if = {
 		limit = {
@@ -12631,10 +12654,10 @@ ai_striving_for_magic_power_effect = {
 	}
 	if = {
 		limit = {
-			any_claimed_artifact = { has_variable = magic1 artifact_owner = { in_diplomatic_range = ROOT } }
+			any_claimed_artifact = { has_variable = magic1 artifact_owner = { in_diplomatic_range = ROOT NOT = { spn_ai_spares_trigger = { ACTOR = ROOT } } } } # 2.39 (Supernatural)
 		}
 		random_claimed_artifact = {
-			limit = { has_variable = magic1 artifact_owner = { in_diplomatic_range = ROOT } }
+			limit = { has_variable = magic1 artifact_owner = { in_diplomatic_range = ROOT NOT = { spn_ai_spares_trigger = { ACTOR = ROOT } } } } # 2.39 (Supernatural)
 			save_scope_as = art2
 			artifact_owner = { save_scope_as = oart2 }
 		}
@@ -12825,6 +12848,12 @@ ai_striving_for_magic_power_effect = {
 		else_if = {	#domination
 			limit = {
 				scope:oart2 = {
+					OR = { # 2.39 (Supernatural): a player only with a real grudge; run_interaction skips magic_domination's own -200 (Thomas, 16 Oct)
+						is_ai = yes
+						has_relation_rival = ROOT
+						has_relation_nemesis = ROOT
+						is_at_war_with = ROOT
+					}
 					is_powerful_being = no
 					has_immunity_for_magic_domination = no
 					is_magic_protected = no
@@ -13078,6 +13107,7 @@ magical_research_for_ai_effect = {
 					1 = {
 						trigger = {
 							is_or_will_be_a_demon_trigger = no
+							spn_may_become_demon_trigger = yes # 2.39 (Supernatural): F9, Mortals Becoming Demons
 							has_trait_xp = {
 								trait = archmage
 								track = secret_knowledge
@@ -15402,6 +15432,8 @@ ai_artifact_seeker_effect = {
 				NOT = { artifact_owner = ROOT }
 				artifact_owner = {
 					is_ai = yes
+					in_diplomatic_range = ROOT # 2.39 (Supernatural): in range, and a reason to rob him (Thomas, 16 Oct)
+					spn_ai_artifact_motive_trigger = { ACTOR = ROOT }
 					is_imprisoned = no
 					is_powerful_being = no
 					NOR = {
@@ -15460,12 +15492,18 @@ ai_artifact_seeker_effect = {
 		}
 		clear_saved_scope = target
 	}
+	# 2.39 (Supernatural): in range only (no longer anywhere in the world): someone it has a reason to rob, else an item
+	# it already claims from someone it does not spare (Thomas, 16 Oct).
 	random_artifact = {
 		limit = {
 			has_variable = magic1
 			NOT = { artifact_owner = ROOT }
 			NOT = { any_artifact_claimant = { THIS = ROOT } }
-			artifact_owner = { in_diplomatic_range = ROOT NOT = { has_strong_hook = ROOT } }
+			artifact_owner = {
+				in_diplomatic_range = ROOT
+				NOT = { has_strong_hook = ROOT }
+				spn_ai_artifact_motive_trigger = { ACTOR = ROOT }
+			}
 		}
 		save_scope_as = art1
 	}
@@ -15479,23 +15517,12 @@ ai_artifact_seeker_effect = {
 			limit = {
 				has_variable = magic1
 				NOT = { artifact_owner = ROOT }
-				NOT = { any_artifact_claimant = { THIS = ROOT } }
-				artifact_owner = { NOT = { has_strong_hook = ROOT } }
-			}
-			save_scope_as = art1
-		}
-	}
-	if = {
-		limit = {
-			NOT = {
-				exists = scope:art1
-			}
-		}
-		random_artifact = {
-			limit = {
-				has_variable = magic1
-				NOT = { artifact_owner = ROOT }
-				artifact_owner = { NOT = { has_strong_hook = ROOT } }
+				any_artifact_claimant = { THIS = ROOT }
+				artifact_owner = {
+					in_diplomatic_range = ROOT
+					NOT = { has_strong_hook = ROOT }
+					NOT = { spn_ai_spares_trigger = { ACTOR = ROOT } }
+				}
 			}
 			save_scope_as = art1
 		}
@@ -15623,6 +15650,12 @@ ai_artifact_seeker_effect = {
 		else_if = {	#domination
 			limit = {
 				scope:oart1 = {
+					OR = { # 2.39 (Supernatural): a player only with a real grudge; run_interaction skips magic_domination's own -200 (Thomas, 16 Oct)
+						is_ai = yes
+						has_relation_rival = ROOT
+						has_relation_nemesis = ROOT
+						is_at_war_with = ROOT
+					}
 					is_powerful_being = no
 					has_immunity_for_magic_domination = no
 					is_magic_protected = no
@@ -15650,6 +15683,8 @@ ai_artifact_seeker_effect = {
 				recipient = scope:oart1
 				execute_threshold = accept
 			}
+			scope:art1 = { save_scope_as = art2 } # 2.39 (Supernatural): magic_ev10.157 reads art2/oart2 (Thomas, 16 Oct)
+			scope:oart1 = { save_scope_as = oart2 }
 			trigger_event = {
 				id = magic_ev10.157
 				days = 14

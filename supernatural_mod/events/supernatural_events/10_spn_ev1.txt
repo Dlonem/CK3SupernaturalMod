@@ -6,24 +6,55 @@ supernatural_ev1.01 = {
 	# 2.32 -- the letter now says something different depending on who sent it, because a letter
 	# from the vampire who MADE you does not read like a letter from an acquaintance.
 	desc = {
-		triggered_desc = {
-			trigger = { has_relation_mmaker = scope:host }
-			desc = supernatural_ev1.01.desc_sire
-		}
-		triggered_desc = {
-			trigger = { has_relation_pprogeny = scope:host }
-			desc = supernatural_ev1.01.desc_progeny
-		}
-		triggered_desc = {
-			trigger = {
-				OR = {
-					has_trait = spn_known_vampire
-					has_trait = spn_known_hybrid
-				}
+		first_valid = { # 2.38c: one of these, not all of them
+			triggered_desc = {
+				trigger = { has_relation_mmaker = scope:host }
+				desc = supernatural_ev1.01.desc_sire
 			}
-			desc = supernatural_ev1.01.desc_known
+			triggered_desc = {
+				trigger = { has_relation_pprogeny = scope:host }
+				desc = supernatural_ev1.01.desc_progeny
+			}
+			triggered_desc = {
+				trigger = {
+					OR = {
+						has_trait = spn_known_vampire
+						has_trait = spn_known_hybrid
+					}
+				}
+				desc = supernatural_ev1.01.desc_known
+			}
+			desc = supernatural_ev1.01.desc
 		}
-		desc = supernatural_ev1.01.desc
+		# 2.38c: how far it is (vanilla's map distances, 00_distance_values.txt).
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					scope:activity ?= {
+						activity_location = {
+							squared_distance = {
+								target = root.location
+								value > squared_distance_huge
+							}
+						}
+					}
+				}
+				desc = supernatural_ev1.01.desc_far
+			}
+			triggered_desc = {
+				trigger = {
+					scope:activity ?= {
+						activity_location = {
+							squared_distance = {
+								target = root.location
+								value > squared_distance_large
+							}
+						}
+					}
+				}
+				desc = supernatural_ev1.01.desc_long
+			}
+		}
 	}
 	theme = secret
 	override_background = { reference = study }
@@ -1056,6 +1087,7 @@ supernatural_ev1.11 = { #The Catacombs Below: Part 2
 
 	option = {
 		name = supernatural_ev1.11.b
+		trigger = { is_ruler = yes } # 2.38f: only a ruler has a dungeon to put him in
 		custom_tooltip = supernatural_ev1.11.b_tt
 
 		random_list = {
@@ -2269,7 +2301,8 @@ supernatural_ev1.23 = { # The Crimson Decision
 		root = {
 			add_stress = minor_stress_impact_gain
 			random = {
-				chance = { value = 45 if = { limit = { has_perk = compulsion_perk } add = 35 } if = { limit = { OR = { has_trait_xp = { trait = supernatural_vampire track = vampirism value > 40 } has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 40 } } } add = 15 } if = { limit = { OR = { has_trait_xp = { trait = supernatural_vampire track = vampirism value > 70 } has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 70 } } } add = 10 } min = 5 max = 95 }
+				chance = { value = 45 if = { limit = { has_perk = compulsion_perk } add = 35 } if = { limit = { OR = { has_trait_xp = { trait = supernatural_vampire track = vampirism value > 40 } has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 40 } } } add = 15 } if = { limit = { OR = { has_trait_xp = { trait = supernatural_vampire track = vampirism value > 70 } has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value > 70 } } } add = 10 } min = 5 max = 95 if = { limit = { scope:vf_human ?= { has_immunity_for_magic_domination = yes } } multiply = 0 } }
+				# 2.39 (WORK-ORDER-2.39 F17): a guarded mind (the Draught, the Seal) does not take it; the line above sets it to 0.
 				add_character_flag = { flag = vf_compelled_clean days = 2 }
 			}
 			if = {

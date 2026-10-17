@@ -1,0 +1,196 @@
+﻿# Supernatural 2.39 -- "The Hermetic Order of the Blue Rose, Part 2": the Homunculus Beetle's plague (WORK-ORDER-2.39 F4).
+#
+# A plague type of its own (format: vanilla common/epidemics/_epidemics.info; shaped on vanilla typhus). It NEVER starts on
+# its own: every outbreak_chance is 0. Only "The Beetle Wakes" (spn_relic.0700) starts it, with create_epidemic_outbreak,
+# and only when vanilla's epidemic_frequency_disabled rule is not set. One at a time: the beetle cannot be used while one
+# runs. A major outbreak covers 30-45 provinces for 8-14 months: rough, not apocalyptic.
+# Its icon is gfx/interface/icons/epidemics/spn_blue_beetle.dds (a copy of vanilla typhus.dds); its name is
+# epidemic_spn_blue_beetle; its disease is the trait spn_blue_fever (zz_spn_order_traits.txt), and its death reason
+# spn_death_blue_fever (10_spn_deaths.txt). Works without Legends of the Dead, as Witchcraft's Plague spell does.
+spn_blue_beetle = {
+	trait = spn_blue_fever
+	color = { 40 80 170 }
+	priority = 4
+
+	shader_data = {
+		strength = 0.6
+		edge_fade = 0.25
+		tile_multiplier = 0.01
+		texture_index = 1
+		channel = red
+	}
+
+	name = {
+		desc = epidemic_spn_blue_beetle
+	}
+
+	# Root: the epidemic. Vanilla's legitimacy line, then the carrier is its first victim (safer than finding the outbreak
+	# in the effect that made it).
+	on_start = {
+		epidemic_outbreak_legitimacy_effect = { PROVINCE = root.outbreak_province }
+		global_var:spn_beetle_carrier ?= {
+			if = {
+				limit = {
+					is_alive = yes
+					global_var:spn_beetle_state ?= flag:inside
+					can_contract_disease_trigger = { DISEASE = spn_blue_fever }
+				}
+				infect_with_epidemic = root
+			}
+		}
+	}
+
+	on_monthly = {
+		trigger_event = {
+			on_action = epidemic_ongoing_events
+		}
+	}
+
+	character_infection_chance = {
+		value = character_infection_chance_default_value
+	}
+
+	can_infect_character = {
+		can_contract_disease_trigger = { DISEASE = spn_blue_fever }
+		immune_to_epidemic = { EPIDEMIC = scope:epidemic }
+	}
+
+	on_character_infected = {
+		spn_blue_fever_infected_effect = yes
+	}
+
+	# Typhus's levels at about two-thirds strength.
+	infection_levels = {
+		10 = {
+			province_modifier = {
+				monthly_county_control_decline_add = -0.2
+				development_decline = -1
+				levy_reinforcement_rate = -0.15
+				county_opinion_add = -1
+				epidemic_travel_danger = 15
+			}
+		}
+		50 = {
+			province_modifier = {
+				monthly_county_control_decline_add = -0.3
+				development_decline = -1
+				levy_reinforcement_rate = -0.15
+				garrison_size = -0.05
+				county_opinion_add = -2
+				epidemic_travel_danger = 20
+			}
+		}
+		80 = {
+			province_modifier = {
+				monthly_county_control_decline_add = -0.35
+				development_decline = -2
+				levy_reinforcement_rate = -0.15
+				garrison_size = -0.15
+				county_opinion_add = -3
+				epidemic_travel_danger = 25
+			}
+		}
+	}
+
+	outbreak_intensities = {
+		minor = {
+			outbreak_chance = {
+				value = 0 # never on its own
+			}
+			spread_chance = {
+				value = spread_chance_epidemics_default_value
+				multiply = spread_chance_epidemics_mult_value
+				# The Order contained it: its spread is cut inside its own formula.
+				if = {
+					limit = { exists = global_var:spn_beetle_contained }
+					multiply = 0.25
+				}
+			}
+			max_provinces = { 10 20 }
+			infection_duration = {
+				months = { 6 10 }
+			}
+			infection_progress_duration = {
+				days = 100
+			}
+			infection_recovery_duration = {
+				days = 30
+			}
+		}
+
+		major = {
+			outbreak_chance = {
+				value = 0 # never on its own
+			}
+			spread_chance = {
+				value = spread_chance_epidemics_default_value
+				multiply = spread_chance_epidemics_mult_value
+				if = {
+					limit = { exists = global_var:spn_beetle_contained }
+					multiply = 0.25
+				}
+			}
+			max_provinces = { 30 45 }
+			infection_duration = {
+				months = { 8 14 }
+			}
+			infection_progress_duration = {
+				days = { 45 55 }
+			}
+			infection_recovery_duration = {
+				days = { 28 32 }
+			}
+		}
+
+		apocalyptic = {
+			outbreak_chance = {
+				value = 0 # never on its own, and never started at this intensity
+			}
+			spread_chance = {
+				value = spread_chance_epidemics_default_value
+				multiply = spread_chance_epidemics_mult_value
+				if = {
+					limit = { exists = global_var:spn_beetle_contained }
+					multiply = 0.25
+				}
+			}
+			max_provinces = { 30 45 }
+			infection_duration = {
+				months = { 8 14 }
+			}
+			infection_progress_duration = {
+				days = { 45 55 }
+			}
+			infection_recovery_duration = {
+				days = { 28 32 }
+			}
+		}
+	}
+
+	on_province_infected = {
+		county = {
+			apply_infection_development_loss = { BASE = 3 }
+		}
+	}
+
+	on_province_recovered = {
+		county = {
+			remove_isolated_capital_modifiers_effect = yes
+		}
+		add_to_variable_list = {
+			name = epidemic_cooldown
+			target = scope:epidemic.epidemic_type
+			years = 50
+		}
+		set_variable = {
+			name = epidemic_cooldown_general
+			years = 15
+		}
+		plague_recovery_event_effect = yes
+	}
+
+	# Root: the epidemic. The moment the beetle comes back (spn_beetle_return_effect does nothing if it already has).
+	on_end = {
+		spn_beetle_plague_ended_effect = yes
+	}
+}

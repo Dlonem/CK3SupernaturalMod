@@ -1,0 +1,226 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": the Vade Maecum Infernal (WORK-ORDER-2.38 §12.4-12.6).
+# Loc: localization/english/spn_vade_l_english.yml.
+
+# Name the Witness (§12.6 step 1). The binder asks a courtier, spouse or vassal. The witness is bound too (§12.13).
+spn_vade_witness_interaction = {
+	category = interaction_category_favorites
+	icon = icon_magic
+	desc = spn_vade_witness_interaction_desc
+	ai_targets = {
+		ai_recipients = courtiers
+		ai_recipients = spouses
+		ai_recipients = vassals
+		max = 15
+	}
+	ai_frequency = 12
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			global_var:spn_vade_contract_running ?= this
+			NOT = { var:spn_vade_witness ?= { is_alive = yes } }
+		}
+		scope:recipient = {
+			OR = {
+				is_courtier_of = scope:actor
+				is_spouse_of = scope:actor
+				is_vassal_of = scope:actor
+			}
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:recipient = {
+			is_adult = yes
+			is_imprisoned = no
+			NOT = { scope:actor.var:spn_vade_firstborn ?= this }
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_vade_witness_interaction_tt
+		scope:actor = { spn_vade_set_witness_effect = { WITNESS = scope:recipient } }
+	}
+	ai_accept = {
+		base = 0
+		opinion_modifier = {
+			who = scope:recipient
+			opinion_target = scope:actor
+			multiplier = 1
+		}
+		modifier = {
+			add = -20
+			desc = spn_ai_accept_low_opinion
+			scope:recipient = { opinion = { target = scope:actor value < 20 } }
+		}
+		modifier = {
+			add = 20
+			desc = spn_ai_accept_ambitious
+			scope:recipient = { has_trait = ambitious }
+		}
+		modifier = {
+			add = -40
+			desc = spn_ai_accept_honest
+			scope:recipient = { has_trait = honest }
+		}
+		modifier = {
+			add = -30
+			desc = spn_ai_accept_zealous
+			scope:recipient = { has_trait = zealous }
+		}
+		modifier = {
+			add = -20
+			desc = spn_ai_accept_mage_witness
+			scope:recipient = { has_trait = archmage }
+		}
+	}
+	ai_will_do = {
+		base = 100
+	}
+}
+
+# Ask for the Page (§12.5). A Mage asks a champion for the page his worn hide holds. The hides hate the book.
+spn_vade_ask_page_interaction = {
+	category = interaction_category_favorites
+	icon = icon_magic
+	desc = spn_vade_ask_page_interaction_desc
+	use_diplomatic_range = yes
+	ai_targets = {
+		ai_recipients = neighboring_rulers
+		ai_recipients = scripted_relations
+		ai_recipients = courtiers
+		max = 10
+	}
+	ai_frequency = 36
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		spn_vade_on_trigger = yes
+		scope:actor = { has_trait = archmage }
+		scope:recipient = {
+			any_equipped_character_artifact = {
+				has_variable = spn_hide
+				has_variable = spn_holds_vade_page
+			}
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_vade_ask_page_interaction_tt
+		scope:recipient = {
+			random_equipped_character_artifact = {
+				limit = {
+					has_variable = spn_hide
+					has_variable = spn_holds_vade_page
+				}
+				save_scope_as = spn_ap_hide
+			}
+		}
+		spn_vade_draw_page_effect = { HIDE_ART = scope:spn_ap_hide TO = scope:actor }
+	}
+	ai_accept = {
+		base = -100
+		opinion_modifier = {
+			who = scope:recipient
+			opinion_target = scope:actor
+			multiplier = 1
+		}
+	}
+	ai_will_do = {
+		base = 10
+	}
+}
+
+# Tear the Hide Away (§12.5). A Mage pulls the page out of a champion's worn hide, by force.
+spn_vade_tear_hide_interaction = {
+	category = interaction_category_hostile
+	icon = icon_magic
+	desc = spn_vade_tear_hide_interaction_desc
+	auto_accept = yes
+	use_diplomatic_range = yes
+	ai_targets = {
+		ai_recipients = neighboring_rulers
+		ai_recipients = scripted_relations
+		max = 10
+	}
+	ai_frequency = 36
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		spn_vade_on_trigger = yes
+		scope:actor = { has_trait = archmage }
+		scope:recipient = {
+			any_equipped_character_artifact = {
+				has_variable = spn_hide
+				has_variable = spn_holds_vade_page
+			}
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = { can_spend_huge_ps_trigger = yes }
+	}
+	on_accept = {
+		custom_tooltip = spn_vade_tear_hide_interaction_tt
+		scope:actor = {
+			spend_huge_ps_effect = yes
+			save_scope_as = spn_th_caster
+		}
+		scope:recipient = {
+			random_equipped_character_artifact = {
+				limit = {
+					has_variable = spn_hide
+					has_variable = spn_holds_vade_page
+				}
+				save_scope_as = spn_th_hide
+			}
+			trigger_event = spn_vade.0130
+		}
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 40
+			scope:actor = {
+				has_trait = ambitious
+				has_trait = callous
+			}
+		}
+	}
+}
+
+# Send the Golem to Search (§12.4). Your own golem goes looking for the pages; two to five years.
+spn_vade_golem_interaction = {
+	category = interaction_category_favorites
+	icon = icon_magic
+	desc = spn_vade_golem_interaction_desc
+	auto_accept = yes
+	ai_targets = { ai_recipients = courtiers }
+	ai_frequency = 36
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		spn_vade_on_trigger = yes
+		scope:recipient = {
+			has_trait = golem
+			is_courtier_of = scope:actor
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_vade_golem_away_tt
+				NOT = { has_character_flag = spn_golem_searching }
+			}
+			is_imprisoned = no
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_vade_golem_interaction_tt
+		scope:recipient = {
+			add_character_flag = spn_golem_searching
+			add_character_modifier = spn_golem_away_modifier
+			save_scope_as = spn_golem
+		}
+		scope:actor = { trigger_event = { id = spn_vade.0210 days = { 730 1825 } } }
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 40
+			scope:actor = { any_character_artifact = { has_variable = spn_vade_page } }
+		}
+	}
+}

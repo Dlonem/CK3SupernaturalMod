@@ -1,0 +1,544 @@
+﻿# Supernatural 2.39 -- "The Hermetic Order of the Blue Rose, Part 2": the Homunculus Beetle and its plague
+# (WORK-ORDER-2.39 F4; season 2, episodes 7-8: the parasite that came out of Professor Cameron Foley).
+#
+# Extends the 2.38 relic system (relic #9: var:spn_relic = flag:beetle, so pledging, the Reliquary, claims, Zecchia and
+# the relic war all handle it), vanilla's epidemics (its own plague type, common/epidemics/zz_spn_beetle_epidemic.txt,
+# which never starts on its own), the Elemental Transference and the Order's rules.
+#
+# The state (relic state, like a hide's or a page's: no expiry, each with its one writer here):
+#   global_var:spn_beetle_seeded    once, ever (spn_beetle_seed_effect)
+#   global_var:spn_beetle_state     flag:jar (an artifact holds it) / flag:inside (a carrier holds it; no artifact exists)
+#   global_var:spn_beetle_art       the artifact while it exists
+#   global_var:spn_beetle_carrier, spn_beetle_user, spn_beetle_how   while it is inside (cleared by the return)
+# Timed: spn_beetle_waking (15 days: it has not woken yet), spn_beetle_province (3 years: where the plague broke out),
+# spn_beetle_contained (5 years: who contained it, read by the plague's spread and by the return), spn_beetle_contain_wait
+# (90 days: the players' window before an AI Temple Magus contains it).
+#
+# Order of things (Thomas's rule): when it is used, everything is recorded before the jar is destroyed; when it comes
+# back, its state is set to returned BEFORE the artifact is made, so the plague's end, the carrier's death and the yearly
+# fallback, landing on one day, can make only one beetle.
+
+# ==================================================================================================
+# MAKING (relic #9)
+# ==================================================================================================
+spn_relic_make_beetle_effect = {
+	if = {
+		limit = { exists = scope:spn_new_relic }
+		clear_saved_scope = spn_new_relic
+	}
+	spn_relic_create_base_effect = { KEY = beetle OWNER = $OWNER$ VISUAL = pocket_basic_case MODIFIER = spn_relic_beetle_modifier RARITY = famed }
+	if = {
+		limit = { exists = scope:spn_new_relic }
+		set_global_variable = { name = spn_beetle_art value = scope:spn_new_relic }
+	}
+}
+
+# Who keeps it when no one else should: the Keeper of the Reliquary if he is a member with a temple, else the most learned
+# Temple Magus (Order On); with the Order Off or no temple standing, the most learned AI ruler, as the pages go. Saves
+# scope:spn_bt_keeper and, when he keeps it for the Order, scope:spn_bt_pledge.
+spn_beetle_pick_keeper_effect = {
+	if = {
+		limit = {
+			spn_order_on_trigger = yes
+			global_var:current_loremaster_global ?= {
+				is_alive = yes
+				spn_is_order_member_trigger = yes
+				exists = var:spn_order_chapter
+			}
+		}
+		global_var:current_loremaster_global = { save_scope_as = spn_bt_keeper }
+	}
+	else_if = {
+		limit = {
+			spn_order_on_trigger = yes
+			any_in_global_list = {
+				variable = spn_order_chapters
+				is_alive = yes
+				exists = var:spn_order_chapter
+			}
+		}
+		ordered_in_global_list = {
+			variable = spn_order_chapters
+			limit = {
+				is_alive = yes
+				exists = var:spn_order_chapter
+			}
+			order_by = learning
+			save_scope_as = spn_bt_keeper
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_bt_keeper }
+		save_scope_value_as = { name = spn_bt_pledge value = yes }
+	}
+	else = {
+		ordered_ruler = {
+			limit = {
+				is_ai = yes
+				spn_vade_page_holder_ok_trigger = yes
+			}
+			order_by = learning
+			save_scope_as = spn_bt_keeper
+		}
+	}
+}
+
+# ==================================================================================================
+# SEEDING. Once, from the yearly pulse (zz_spn_beetle_on_actions.txt): an older save the first year it runs 2.39. With the
+# Order On a new game waits until a temple stands (or ten years have passed with none). No root.
+# ==================================================================================================
+spn_beetle_seed_effect = {
+	if = {
+		limit = {
+			NOT = { exists = global_var:spn_beetle_seeded }
+			OR = {
+				NOT = { spn_order_on_trigger = yes }
+				# 2.39 review M1: a new game's Order seeding (days 12-32) founds no temple; temples come at most one a year.
+				# Wait for one, so the beetle starts in a Reliquary (as the Collegium's seed waits, zz_spn_order_on_actions.txt).
+				AND = {
+					exists = global_var:spn_order_seeded
+					OR = {
+						any_in_global_list = {
+							variable = spn_order_chapters
+							is_alive = yes
+							exists = var:spn_order_chapter
+						}
+						years_from_game_start >= 10 # no temple ever stood: a learned ruler keeps it, as with the Order Off
+					}
+				}
+			}
+		}
+		set_global_variable = spn_beetle_seeded
+		spn_beetle_pick_keeper_effect = yes
+		if = {
+			limit = { exists = scope:spn_bt_keeper }
+			set_global_variable = { name = spn_beetle_state value = flag:jar }
+			spn_relic_make_beetle_effect = { OWNER = scope:spn_bt_keeper }
+			if = {
+				limit = {
+					exists = scope:spn_bt_pledge
+					exists = scope:spn_new_relic
+				}
+				spn_relic_pledge_effect = { ART = scope:spn_new_relic TO = scope:spn_bt_keeper.var:spn_order_chapter }
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# USING IT. All three uses (Swallow, Slip, Feed It to the Prisoner) end here. Banked first; then the Order's answer to
+# whoever loosed it; then the jar is destroyed (made again when the beetle comes back); then it wakes 3-10 days later,
+# wherever the carrier stands then. $HOW$ is flag:swallowed, flag:slipped or flag:forced (the carrier's text).
+# ==================================================================================================
+spn_beetle_swallowed_effect = {
+	$CARRIER$ = { save_scope_as = spn_bs_carrier }
+	$USER$ = { save_scope_as = spn_bs_user }
+	# 1. The record every later step reads.
+	set_global_variable = { name = spn_beetle_state value = flag:inside }
+	set_global_variable = { name = spn_beetle_carrier value = scope:spn_bs_carrier }
+	set_global_variable = { name = spn_beetle_user value = scope:spn_bs_user }
+	set_global_variable = { name = spn_beetle_how value = $HOW$ }
+	set_global_variable = { name = spn_beetle_waking value = yes days = 15 }
+	# A plague's leftovers from an earlier time (the plague's end clears them; their expiry is the backstop).
+	if = {
+		limit = { has_global_variable = spn_beetle_contained }
+		remove_global_variable = spn_beetle_contained
+	}
+	if = {
+		limit = { has_global_variable = spn_beetle_province }
+		remove_global_variable = spn_beetle_province
+	}
+	# 2. The Order's answer. A member breaks its rules. A non-member is marked by the Grand Magus and by the Temple Magi,
+	# but only by one he already knows to be of the Order (never by the others: that would show him who they are, T17).
+	scope:spn_bs_user = {
+		if = {
+			limit = { spn_is_order_member_trigger = yes }
+			spn_order_broke_rules_effect = yes
+			spn_order_add_standing_effect = { VALUE = -20 }
+		}
+		else_if = {
+			limit = { spn_order_on_trigger = yes }
+			global_var:current_archmage_global ?= {
+				save_scope_as = spn_bs_gm
+				if = {
+					limit = {
+						is_alive = yes
+						spn_is_order_member_trigger = yes
+						NOT = { this = scope:spn_bs_user }
+						# 2.39 review M2: the chair is not always of the Order; it marks only a user who knows it is (T17)
+						scope:spn_bs_user = { spn_order_knows_member_trigger = { WHO = scope:spn_bs_gm } }
+					}
+					add_to_temporary_list = spn_bs_markers
+				}
+			}
+			every_in_global_list = {
+				variable = spn_order_chapters
+				limit = {
+					is_alive = yes
+					exists = var:spn_order_chapter
+					NOT = { this = scope:spn_bs_user }
+				}
+				save_scope_as = spn_bs_head
+				if = {
+					limit = {
+						scope:spn_bs_user = { spn_order_knows_member_trigger = { WHO = scope:spn_bs_head } }
+						NOT = { is_in_list = spn_bs_markers }
+					}
+					add_to_temporary_list = spn_bs_markers
+				}
+			}
+			every_in_list = {
+				list = spn_bs_markers
+				add_opinion = {
+					target = scope:spn_bs_user
+					modifier = spn_loosed_the_beetle_opinion
+				}
+			}
+		}
+	}
+	# 3. The jar is empty. Collected first, then destroyed (never change an inventory while walking it).
+	scope:spn_bs_user = {
+		every_character_artifact = {
+			limit = { var:spn_relic ?= flag:beetle }
+			add_to_temporary_list = spn_bs_jars
+		}
+	}
+	every_in_list = {
+		list = spn_bs_jars
+		destroy_artifact = this
+	}
+	if = {
+		limit = { has_global_variable = spn_beetle_art }
+		remove_global_variable = spn_beetle_art
+	}
+	# 4. It wakes.
+	scope:spn_bs_carrier = {
+		trigger_event = { id = spn_relic.0700 days = { 3 10 } }
+	}
+}
+
+# ==================================================================================================
+# THE FEVER
+# ==================================================================================================
+# Character scope: the fever itself, and its own cure 45-120 days later ("The Blue Fever Passes"; vanilla's
+# contract_disease_effect dispatches on hard-coded diseases, so a mod disease brings its own cure). A player is told.
+spn_blue_fever_add_effect = {
+	if = {
+		limit = { is_ai = no }
+		send_interface_toast = {
+			type = event_toast_effect_bad
+			title = spn_beetle_toast_fever
+			left_icon = this
+			add_trait = spn_blue_fever
+		}
+	}
+	else = {
+		add_trait = spn_blue_fever
+	}
+	trigger_event = { id = spn_relic.0720 days = { 45 120 } }
+}
+
+# Character scope: the fever outside the plague's own infection (the carrier when the plague could not infect him, the
+# few who fall sick when epidemics are disabled).
+spn_blue_fever_give_effect = {
+	if = {
+		limit = { can_contract_disease_trigger = { DISEASE = spn_blue_fever } }
+		spn_blue_fever_add_effect = yes
+	}
+}
+
+# The plague's on_character_infected. Root: the character; scope:epidemic. The fever, and immunity to this outbreak once
+# he is over it (vanilla's own give_epidemic_immunity, as contract_disease_effect gives it).
+spn_blue_fever_infected_effect = {
+	if = {
+		limit = { NOT = { has_trait = spn_blue_fever } }
+		spn_blue_fever_add_effect = yes
+	}
+	else = {
+		# The engine gave the trait with the infection (not verified either way, WORK-ORDER-2.39 §8.0): its cure still comes.
+		trigger_event = { id = spn_relic.0720 days = { 45 120 } }
+	}
+	if = {
+		limit = { exists = scope:epidemic }
+		give_epidemic_immunity = { EPIDEMIC = scope:epidemic }
+	}
+}
+
+# ==================================================================================================
+# THE ORDER'S ANSWER
+# ==================================================================================================
+# Contain it. A Temple Magus (or the master) scope. Power spent; the record that cuts the plague's spread inside its own
+# formula and sends the beetle home to him; a year of vanilla's major quarantine on the county where it broke out; a deed.
+spn_beetle_contain_effect = {
+	spend_standard_ps_effect = yes
+	set_global_variable = { name = spn_beetle_contained value = this years = 5 }
+	global_var:spn_beetle_province ?= {
+		county = {
+			add_county_modifier = {
+				modifier = ce1_major_quarantine_county
+				years = 1
+			}
+		}
+	}
+	spn_order_deed_effect = { PREROGATIVE = flag:silence AMOUNT = 10 TOAST = yes }
+	spn_order_toast_members_effect = { TITLE = spn_beetle_toast_contained }
+}
+
+# No player contained it in 90 days: the first AI Temple Magus who can pay does (most learned first). No root.
+spn_beetle_ai_contain_effect = {
+	if = {
+		limit = {
+			spn_order_on_trigger = yes
+			spn_beetle_plague_running_trigger = yes
+			NOT = { exists = global_var:spn_beetle_contained }
+		}
+		ordered_in_global_list = {
+			variable = spn_order_chapters
+			limit = {
+				is_alive = yes
+				is_ai = yes
+				is_imprisoned = no
+				exists = var:spn_order_chapter
+				can_spend_standard_ps_trigger = yes
+			}
+			order_by = learning
+			save_scope_as = spn_bc_head
+		}
+		scope:spn_bc_head ?= { spn_beetle_contain_effect = yes }
+	}
+}
+
+# The Elemental Transference drew the fever out of the carrier, and the beetle with it, into the caster's hands. Patient
+# scope (spn_transference_succeed_effect); $CASTER$ is the Mage who worked it.
+spn_beetle_drawn_out_effect = {
+	if = {
+		limit = {
+			global_var:spn_beetle_carrier ?= this
+			global_var:spn_beetle_state ?= flag:inside
+		}
+		$CASTER$ = { save_scope_as = spn_bd_caster }
+		set_global_variable = { name = spn_beetle_contained value = scope:spn_bd_caster years = 5 }
+		save_scope_value_as = { name = spn_br_drawn value = yes }
+		spn_beetle_return_effect = yes
+	}
+}
+
+# ==================================================================================================
+# IT COMES BACK. Exactly once: the state is set to returned (flag:jar) before anything else, and the effect does nothing
+# unless the beetle is inside someone. To the Temple Magus who contained it (pledged, in his Reliquary); otherwise to the
+# carrier if he lives, his court's owner, or his heir; otherwise to whoever would keep it at seeding. Outside a
+# Reliquary, every Temple Magus gains a claim on it. No root (the plague's on_end, the carrier's on_death, the yearly
+# fallback, the Transference); scope:spn_br_crawled / spn_br_drawn pick the owner's toast.
+# ==================================================================================================
+spn_beetle_return_effect = {
+	if = {
+		limit = { global_var:spn_beetle_state ?= flag:inside }
+		# 1. Bank first.
+		set_global_variable = { name = spn_beetle_state value = flag:jar }
+		global_var:spn_beetle_carrier ?= { save_scope_as = spn_br_carrier }
+		# 2. Where it goes.
+		if = {
+			limit = {
+				spn_order_on_trigger = yes
+				global_var:spn_beetle_contained ?= {
+					is_alive = yes
+					spn_is_order_member_trigger = yes
+					exists = var:spn_order_chapter
+				}
+			}
+			global_var:spn_beetle_contained = { save_scope_as = spn_br_to }
+			save_scope_value_as = { name = spn_br_pledge value = yes }
+		}
+		else_if = {
+			limit = { exists = scope:spn_br_carrier }
+			scope:spn_br_carrier = {
+				# The carrier, unless he is the one dying ("it crawls out of the body").
+				if = {
+					limit = {
+						is_alive = yes
+						NOT = { has_character_flag = spn_beetle_dying }
+					}
+					save_scope_as = spn_br_to
+				}
+				else_if = {
+					limit = {
+						court_owner ?= {
+							is_alive = yes
+							NOT = { this = scope:spn_br_carrier }
+						}
+					}
+					court_owner = { save_scope_as = spn_br_to }
+				}
+				else_if = {
+					limit = {
+						primary_heir ?= {
+							is_alive = yes
+							NOT = { this = scope:spn_br_carrier }
+						}
+					}
+					primary_heir = { save_scope_as = spn_br_to }
+				}
+			}
+		}
+		if = {
+			limit = { NOT = { exists = scope:spn_br_to } }
+			spn_beetle_pick_keeper_effect = yes
+			scope:spn_bt_keeper ?= { save_scope_as = spn_br_to }
+			if = {
+				limit = { exists = scope:spn_bt_pledge }
+				save_scope_value_as = { name = spn_br_pledge value = yes }
+			}
+		}
+		# 3. Made, and pledged or claimed.
+		if = {
+			limit = { exists = scope:spn_br_to }
+			spn_relic_make_beetle_effect = { OWNER = scope:spn_br_to }
+		}
+		if = {
+			limit = {
+				exists = scope:spn_br_to
+				exists = scope:spn_new_relic
+			}
+			scope:spn_new_relic = { save_scope_as = spn_br_art }
+			if = {
+				limit = { exists = scope:spn_br_pledge }
+				spn_relic_pledge_effect = { ART = scope:spn_br_art TO = scope:spn_br_to.var:spn_order_chapter }
+			}
+			else_if = {
+				limit = { spn_order_on_trigger = yes }
+				every_in_global_list = {
+					variable = spn_order_chapters
+					limit = {
+						is_alive = yes
+						exists = var:spn_order_chapter
+						NOT = { this = scope:spn_br_to }
+					}
+					add_personal_artifact_claim = scope:spn_br_art
+					if = {
+						limit = { is_ai = no }
+						send_interface_toast = {
+							type = event_toast_effect_neutral
+							title = spn_beetle_toast_claim
+							left_icon = scope:spn_br_to
+							right_icon = scope:spn_br_art
+						}
+					}
+				}
+			}
+			scope:spn_br_to = {
+				if = {
+					limit = { is_ai = no }
+					if = {
+						limit = { exists = scope:spn_br_crawled }
+						send_interface_toast = {
+							type = event_toast_effect_neutral
+							title = spn_beetle_toast_crawled
+							left_icon = scope:spn_br_carrier
+							right_icon = scope:spn_br_art
+						}
+					}
+					else_if = {
+						limit = { exists = scope:spn_br_drawn }
+						send_interface_toast = {
+							type = event_toast_effect_good
+							title = spn_beetle_toast_drawn
+							left_icon = scope:spn_br_carrier
+							right_icon = scope:spn_br_art
+						}
+					}
+					else = {
+						send_interface_toast = {
+							type = event_toast_effect_neutral
+							title = spn_beetle_toast_returned
+							left_icon = this
+							right_icon = scope:spn_br_art
+						}
+					}
+				}
+			}
+		}
+		# 4. The carrier's record ends with it.
+		if = {
+			limit = { has_global_variable = spn_beetle_carrier }
+			remove_global_variable = spn_beetle_carrier
+		}
+		if = {
+			limit = { has_global_variable = spn_beetle_user }
+			remove_global_variable = spn_beetle_user
+		}
+		if = {
+			limit = { has_global_variable = spn_beetle_how }
+			remove_global_variable = spn_beetle_how
+		}
+		if = {
+			limit = { has_global_variable = spn_beetle_waking }
+			remove_global_variable = spn_beetle_waking
+		}
+	}
+}
+
+# The plague is over (its on_end; the yearly fallback when it never started or its end was missed). The beetle comes back,
+# then the plague's own records go.
+spn_beetle_plague_ended_effect = {
+	spn_beetle_return_effect = yes
+	if = {
+		limit = { has_global_variable = spn_beetle_contained }
+		remove_global_variable = spn_beetle_contained
+	}
+	if = {
+		limit = { has_global_variable = spn_beetle_province }
+		remove_global_variable = spn_beetle_province
+	}
+	if = {
+		limit = { has_global_variable = spn_beetle_contain_wait }
+		remove_global_variable = spn_beetle_contain_wait
+	}
+}
+
+# ==================================================================================================
+# THE YEAR (zz_spn_beetle_on_actions.txt). No root. No world walk: the seed's ordered_ruler runs once, ever.
+# ==================================================================================================
+spn_beetle_yearly_effect = {
+	# The seed, once (it waits while a new game's own seeding is on its way).
+	if = {
+		limit = {
+			NOT = { exists = global_var:spn_beetle_seeded }
+			NOT = { exists = global_var:spn_seed_pending }
+		}
+		spn_beetle_seed_effect = yes
+	}
+	# The fallback: it is inside someone, it has had its days to wake, and no plague of it is running (epidemics
+	# disabled, a plague that never started, or an end the game did not report).
+	if = {
+		limit = {
+			global_var:spn_beetle_state ?= flag:inside
+			NOT = { exists = global_var:spn_beetle_waking }
+			spn_beetle_plague_running_trigger = no
+		}
+		spn_beetle_plague_ended_effect = yes
+	}
+	# The backstop for the 90-day AI containment, if its event was lost with a dead carrier.
+	if = {
+		limit = {
+			spn_order_on_trigger = yes
+			spn_beetle_plague_running_trigger = yes
+			NOT = { exists = global_var:spn_beetle_contained }
+			NOT = { exists = global_var:spn_beetle_contain_wait }
+		}
+		spn_beetle_ai_contain_effect = yes
+	}
+	# 2.39 review L2: the jar is gone some other way (no script destroys it; an engine-side loss is the risk). It surfaces
+	# again, once, through the ordinary return: no carrier is recorded, so it goes to whoever would keep it at seeding,
+	# pledged when the Order can hold it. Cheap: the second line fails while the jar has an owner; the world's artifacts
+	# are only walked when it has none.
+	if = {
+		limit = {
+			global_var:spn_beetle_state ?= flag:jar
+			NOT = { global_var:spn_beetle_art ?= { exists = artifact_owner } }
+			exists = global_var:spn_beetle_seeded
+			NOT = { any_artifact = { var:spn_relic ?= flag:beetle } }
+		}
+		set_global_variable = { name = spn_beetle_state value = flag:inside }
+		spn_beetle_return_effect = yes
+	}
+}

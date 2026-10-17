@@ -1,0 +1,3892 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": the Hermetic Order of the Blue Rose (WORK-ORDER-2.38 §5).
+#
+# THE DATA MODEL (C20: membership is data, never a trait).
+#   On a member:  var:spn_order_member (set at initiation and seeding), var:spn_order_chapter (the chapter story; a neophyte
+#                 has it too), var:spn_order_rank (flag:neophyte|acolyte|medicum|magistratus), var:spn_order_standing
+#                 (0-100), var:spn_order_tutor, list spn_order_tutees, var:spn_order_pledge_step, var:spn_order_pledge_since.
+#   On the story: spn_order_head, spn_order_seat (the seat county), spn_order_founded, spn_order_cap, spn_order_size,
+#                 spn_order_way, the lists spn_order_members (everyone, the head and the neophytes too),
+#                 spn_order_magistrati / _medici / _acolytes / _neophytes (the panel's rank lists, without the head),
+#                 spn_order_reliquary, spn_order_reliquary_count, spn_order_reliquary_magic.
+#   Global:       spn_order_chapters (every chapter's HEAD, kept by spn_order_set_head_effect), spn_order_master.
+#
+# REASON for leaving (§5.1): flag:death | flag:forget (Pulveris Memoria; strips a member's magic, T30) | flag:defect
+# (keeps memory and magic; marked a defector) | flag:quiet (no cost).
+#
+# House rules: bank before anything irreversible; every create_story / create_artifact is followed by an exists guard
+# before its saved scope is read (the 2.37 tooltip lesson); lists are copied to a temporary list before anyone is removed
+# from them; a set or removal of a hidden scripted relation is inside hidden_effect (2.37e).
+
+# ==================================================================================================
+# MEMBERSHIP
+# ==================================================================================================
+
+# The ONE place membership and the secret are given (§5.5). Initiation and seeding call it; so do the chair's masks.
+spn_order_grant_membership_effect = {
+	set_variable = spn_order_member
+	if = {
+		limit = { NOT = { exists = var:spn_order_standing } }
+		set_variable = { name = spn_order_standing value = 5 }
+	}
+	if = {
+		limit = { NOT = { any_secret = { secret_type = spn_secret_blue_rose } } }
+		add_secret = { type = spn_secret_blue_rose }
+	}
+	save_scope_as = spn_grant_who
+	if = {
+		limit = { var:spn_order_chapter ?= { NOT = { story_owner = scope:spn_grant_who } } }
+		var:spn_order_chapter.story_owner = { save_scope_as = spn_grant_head }
+		random_secret = {
+			limit = {
+				secret_type = spn_secret_blue_rose
+				NOT = { is_known_by = scope:spn_grant_head }
+			}
+			reveal_to = scope:spn_grant_head
+		}
+	}
+	spn_order_studies_apply_effect = yes
+}
+
+# Add $WHO$ to $CHAPTER$ (a story) at $RANK$ (a flag literal). A neophyte is a candidate: no membership, no secret.
+spn_order_add_member_effect = {
+	$WHO$ = { save_scope_as = spn_add_who }
+	$CHAPTER$ = { save_scope_as = spn_add_ch }
+	scope:spn_add_who = {
+		set_variable = { name = spn_order_chapter value = scope:spn_add_ch }
+		set_variable = { name = spn_order_rank value = $RANK$ }
+		if = {
+			# 2.38a2: ?= (a tooltip builds this without the variable set: 7,275 errors while A Note and a Blue Rose was open)
+			limit = { var:spn_order_rank ?= flag:neophyte }
+			set_variable = { name = spn_order_pledge_since value = current_year }
+		}
+	}
+	scope:spn_add_ch = {
+		if = {
+			limit = { NOT = { is_target_in_variable_list = { name = spn_order_members target = scope:spn_add_who } } }
+			add_to_variable_list = { name = spn_order_members target = scope:spn_add_who }
+		}
+		spn_order_refresh_effect = yes
+	}
+}
+
+# Set $WHO$'s rank ($RANK$, a flag literal) and refresh his chapter.
+spn_order_set_rank_effect = {
+	$WHO$ = {
+		set_variable = { name = spn_order_rank value = $RANK$ }
+		var:spn_order_chapter ?= { spn_order_refresh_effect = yes }
+	}
+}
+
+# Remove $WHO$ for $REASON$ (flag:death | flag:forget | flag:defect | flag:quiet). §5.1's order: bank first.
+spn_order_remove_member_effect = {
+	$WHO$ = { save_scope_as = spn_rem_who }
+	save_scope_value_as = { name = spn_rem_reason value = $REASON$ }
+	scope:spn_rem_who = {
+		if = {
+			limit = { exists = var:spn_order_chapter }
+			var:spn_order_chapter = { save_scope_as = spn_rem_ch }
+			if = {
+				limit = { spn_is_order_member_trigger = yes }
+				save_scope_value_as = { name = spn_rem_was_member value = yes }
+			}
+			# A head who leaves alive passes the temple on (the 2.37 alpha lesson): banked here, run LAST, after he is off
+			# the list and his data is gone, so a succession that dissolves the chapter can never reach him again (review,
+			# 9 Oct: it recursed). A dead head is left to the story's own on_owner_death. Never while the chapter is
+			# already dissolving.
+			if = {
+				limit = {
+					scope:spn_rem_ch = {
+						story_owner = scope:spn_rem_who
+						NOT = { has_variable = spn_order_dissolving }
+					}
+					NOT = { scope:spn_rem_reason = flag:death }
+				}
+				scope:spn_rem_ch = { save_scope_as = spn_rem_succ_ch }
+			}
+		}
+		# Off the chapter's list.
+		if = {
+			limit = { exists = scope:spn_rem_ch }
+			scope:spn_rem_ch = {
+				if = {
+					limit = { is_target_in_variable_list = { name = spn_order_members target = scope:spn_rem_who } }
+					remove_list_variable = { name = spn_order_members target = scope:spn_rem_who }
+				}
+				if = {
+					limit = { var:spn_order_heir ?= scope:spn_rem_who }
+					remove_variable = spn_order_heir
+				}
+			}
+		}
+		# His tutor's list, and his own tutees (re-assigned at the chapter's next year).
+		if = {
+			limit = { exists = var:spn_order_tutor }
+			var:spn_order_tutor = {
+				if = {
+					limit = { is_target_in_variable_list = { name = spn_order_tutees target = scope:spn_rem_who } }
+					remove_list_variable = { name = spn_order_tutees target = scope:spn_rem_who }
+				}
+				hidden_effect = {
+					if = {
+						limit = { has_relation_spn_order_tutor_of = scope:spn_rem_who }
+						remove_relation_spn_order_tutor_of = scope:spn_rem_who
+					}
+				}
+			}
+			remove_variable = spn_order_tutor
+		}
+		if = {
+			limit = { has_variable_list = spn_order_tutees }
+			every_in_list = {
+				variable = spn_order_tutees
+				add_to_temporary_list = spn_rem_tutees
+			}
+			every_in_list = {
+				list = spn_rem_tutees
+				if = {
+					limit = { var:spn_order_tutor ?= scope:spn_rem_who }
+					remove_variable = spn_order_tutor
+				}
+				hidden_effect = {
+					if = {
+						limit = { scope:spn_rem_who = { has_relation_spn_order_tutor_of = prev } }
+						scope:spn_rem_who = { remove_relation_spn_order_tutor_of = prev }
+					}
+				}
+			}
+			clear_variable_list = spn_order_tutees
+		}
+		# The data (C20) and its one visible trace.
+		remove_variable = spn_order_chapter
+		remove_variable = spn_order_rank
+		remove_variable = spn_order_member
+		remove_variable = spn_order_pledge_step
+		remove_variable = spn_order_pledge_since
+		remove_variable = spn_order_taught_years
+		# A transfer to a new chapter (a charter, a daughter, a founding) keeps who he is in the Order (review, 9 Oct).
+		if = {
+			limit = { NOT = { scope:spn_rem_reason = flag:transfer } }
+			remove_variable = spn_order_standing
+			remove_variable = spn_order_adeptus
+			if = {
+				limit = { has_character_flag = spn_order_aspires_chair }
+				remove_character_flag = spn_order_aspires_chair
+			}
+			if = {
+				limit = { has_character_flag = spn_order_tutor_strict }
+				remove_character_flag = spn_order_tutor_strict
+			}
+			if = {
+				limit = { has_character_flag = spn_order_tutor_patient }
+				remove_character_flag = spn_order_tutor_patient
+			}
+		}
+		if = {
+			limit = { has_character_flag = spn_order_summit_errand }
+			remove_character_flag = spn_order_summit_errand
+		}
+		if = {
+			limit = { has_character_flag = spn_order_seat_declined }
+			remove_character_flag = spn_order_seat_declined
+		}
+		spn_order_studies_remove_effect = yes
+		if = {
+			limit = { has_character_modifier = spn_order_tutor_modifier }
+			remove_character_modifier = spn_order_tutor_modifier
+		}
+		if = {
+			limit = { has_character_modifier = spn_reliquary_modifier }
+			remove_character_modifier = spn_reliquary_modifier
+		}
+		remove_variable = spn_reliquary_cached
+		if = {
+			limit = { NOT = { scope:spn_rem_reason = flag:transfer } }
+			every_secret = {
+				limit = { secret_type = spn_secret_blue_rose }
+				remove_secret = yes
+			}
+		}
+		# His pledges to that chapter, and any loan he holds.
+		if = {
+			limit = { exists = scope:spn_rem_ch }
+			every_character_artifact = {
+				limit = { var:spn_pledged_to ?= scope:spn_rem_ch }
+				add_to_temporary_list = spn_rem_pledges
+			}
+			every_in_list = {
+				list = spn_rem_pledges
+				spn_relic_unpledge_effect = { ART = this }
+			}
+		}
+		spn_relic_return_loans_of_effect = { WHO = scope:spn_rem_who }
+		# His mirror.
+		random_owned_story = {
+			limit = { story_type = story_spn_order_mirror }
+			end_story = yes
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_rem_ch }
+		scope:spn_rem_ch = { spn_order_refresh_effect = yes }
+	}
+	# 2.38b: the council is the Order's (DESIGN-2.38b §3). Leaving the Order leaves the council: not for a transfer, and
+	# not for a death (Witchcraft clears a dead man's seat itself, on_action_mc_remover).
+	if = {
+		limit = {
+			NOR = {
+				scope:spn_rem_reason = flag:transfer
+				scope:spn_rem_reason = flag:death
+			}
+			scope:spn_rem_who = { has_variable = mc_member_var }
+		}
+		scope:spn_rem_who = { remove_from_mc_effect = yes }
+	}
+	# What the reason costs (§5.10). Last: the bank is done.
+	if = {
+		limit = { scope:spn_rem_reason = flag:forget }
+		scope:spn_rem_who = { spn_order_pulveris_effect = yes }
+	}
+	else_if = {
+		limit = { scope:spn_rem_reason = flag:defect }
+		scope:spn_rem_who = {
+			add_character_flag = spn_order_defector
+			if = {
+				limit = { exists = scope:spn_rem_ch }
+				set_variable = { name = spn_order_defected_from value = scope:spn_rem_ch.story_owner years = 20 }
+			}
+			if = {
+				limit = { NOT = { has_character_flag = spn_order_left_alone } }
+				random = {
+					chance = 40
+					trigger_event = {
+						id = spn_order.0193
+						days = { 730 1825 }
+					}
+				}
+			}
+		}
+	}
+	# The succession, last (see above). The banked chapter is moved to a second name first, so a member removed by a
+	# dissolve inside it never sees it.
+	if = {
+		limit = { exists = scope:spn_rem_succ_ch }
+		scope:spn_rem_succ_ch = { save_scope_as = spn_rem_succ_now }
+		clear_saved_scope = spn_rem_succ_ch
+		scope:spn_rem_succ_now = {
+			if = {
+				limit = { NOT = { has_variable = spn_order_dissolving } }
+				spn_order_succession_effect = yes
+			}
+		}
+	}
+}
+
+# The chapter's studies modifier, chosen by its way (§5.22). Member scope. years = 2, re-applied every chapter year.
+spn_order_studies_remove_effect = {
+	if = {
+		limit = { has_character_modifier = spn_order_studies_modifier }
+		remove_character_modifier = spn_order_studies_modifier
+	}
+	if = {
+		limit = { has_character_modifier = spn_order_studies_silence_modifier }
+		remove_character_modifier = spn_order_studies_silence_modifier
+	}
+	if = {
+		limit = { has_character_modifier = spn_order_studies_subservience_modifier }
+		remove_character_modifier = spn_order_studies_subservience_modifier
+	}
+	if = {
+		limit = { has_character_modifier = spn_order_studies_observance_modifier }
+		remove_character_modifier = spn_order_studies_observance_modifier
+	}
+	if = {
+		limit = { has_character_modifier = spn_order_way_silence_modifier }
+		remove_character_modifier = spn_order_way_silence_modifier
+	}
+	if = {
+		limit = { has_character_modifier = spn_order_way_observance_modifier }
+		remove_character_modifier = spn_order_way_observance_modifier
+	}
+}
+spn_order_studies_apply_effect = {
+	spn_order_studies_remove_effect = yes
+	if = {
+		limit = { spn_is_order_member_trigger = yes }
+		if = {
+			limit = { var:spn_order_chapter ?= { var:spn_order_way ?= flag:silence } }
+			add_character_modifier = { modifier = spn_order_studies_silence_modifier years = 2 }
+			add_character_modifier = { modifier = spn_order_way_silence_modifier years = 2 }
+		}
+		else_if = {
+			limit = { var:spn_order_chapter ?= { var:spn_order_way ?= flag:subservience } }
+			add_character_modifier = { modifier = spn_order_studies_subservience_modifier years = 2 }
+		}
+		else_if = {
+			limit = { var:spn_order_chapter ?= { var:spn_order_way ?= flag:observance } }
+			add_character_modifier = { modifier = spn_order_studies_observance_modifier years = 2 }
+			add_character_modifier = { modifier = spn_order_way_observance_modifier years = 2 }
+		}
+		else = {
+			add_character_modifier = { modifier = spn_order_studies_modifier years = 2 }
+		}
+	}
+}
+
+# Story scope. Rebuild the panel's rank lists and the size from spn_order_members, then the mirrors.
+spn_order_refresh_effect = {
+	save_scope_as = spn_ref_ch
+	set_variable = { name = spn_order_head value = story_owner }
+	clear_variable_list = spn_order_magistrati
+	clear_variable_list = spn_order_medici
+	clear_variable_list = spn_order_acolytes
+	clear_variable_list = spn_order_neophytes
+	set_variable = { name = spn_order_size value = 0 }
+	every_in_list = {
+		variable = spn_order_members
+		limit = { is_alive = yes }
+		scope:spn_ref_ch = { change_variable = { name = spn_order_size add = 1 } }
+		if = {
+			limit = { NOT = { this = scope:spn_ref_ch.story_owner } }
+			if = {
+				limit = { var:spn_order_rank ?= flag:magistratus }
+				scope:spn_ref_ch = { add_to_variable_list = { name = spn_order_magistrati target = prev } }
+			}
+			else_if = {
+				limit = { var:spn_order_rank ?= flag:medicum }
+				scope:spn_ref_ch = { add_to_variable_list = { name = spn_order_medici target = prev } }
+			}
+			else_if = {
+				limit = { var:spn_order_rank ?= flag:acolyte }
+				scope:spn_ref_ch = { add_to_variable_list = { name = spn_order_acolytes target = prev } }
+			}
+			else = {
+				scope:spn_ref_ch = { add_to_variable_list = { name = spn_order_neophytes target = prev } }
+			}
+		}
+	}
+	spn_order_sync_mirrors_effect = yes
+}
+
+# Story scope (§5.7). Every PLAYER member who is not the head owns a mirror whose variables are copies (C2).
+spn_order_sync_mirrors_effect = {
+	save_scope_as = spn_mir_ch
+	every_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_ai = no
+			is_alive = yes
+			spn_is_order_member_trigger = yes
+			NOT = { this = scope:spn_mir_ch.story_owner }
+		}
+		if = {
+			limit = { NOT = { any_owned_story = { story_type = story_spn_order_mirror } } }
+			create_story = story_spn_order_mirror
+		}
+		random_owned_story = {
+			limit = { story_type = story_spn_order_mirror }
+			set_variable = { name = spn_mirror_of value = scope:spn_mir_ch }
+			set_variable = { name = spn_order_head value = scope:spn_mir_ch.story_owner }
+			set_variable = { name = spn_order_seat value = scope:spn_mir_ch.var:spn_order_seat }
+			# 2.39 (WORK-ORDER-2.39 F15): the hall, for the member's panel line.
+			if = {
+				limit = { scope:spn_mir_ch = { exists = var:spn_order_hall } }
+				set_variable = { name = spn_order_hall value = scope:spn_mir_ch.var:spn_order_hall }
+			}
+			else_if = {
+				limit = { has_variable = spn_order_hall }
+				remove_variable = spn_order_hall
+			}
+			set_variable = { name = spn_order_founded value = scope:spn_mir_ch.var:spn_order_founded }
+			set_variable = { name = spn_order_cap value = scope:spn_mir_ch.var:spn_order_cap }
+			set_variable = { name = spn_order_size value = scope:spn_mir_ch.var:spn_order_size }
+			if = {
+				limit = { scope:spn_mir_ch = { exists = var:spn_order_way } }
+				set_variable = { name = spn_order_way value = scope:spn_mir_ch.var:spn_order_way }
+			}
+			else = {
+				remove_variable = spn_order_way
+			}
+			if = {
+				limit = { scope:spn_mir_ch = { exists = var:spn_order_reliquary_count } }
+				set_variable = { name = spn_order_reliquary_count value = scope:spn_mir_ch.var:spn_order_reliquary_count }
+			}
+			clear_variable_list = spn_order_magistrati
+			clear_variable_list = spn_order_medici
+			clear_variable_list = spn_order_acolytes
+			clear_variable_list = spn_order_neophytes
+			clear_variable_list = spn_order_reliquary
+			save_scope_as = spn_mir_story
+			scope:spn_mir_ch = {
+				every_in_list = {
+					variable = spn_order_magistrati
+					scope:spn_mir_story = { add_to_variable_list = { name = spn_order_magistrati target = prev } }
+				}
+				every_in_list = {
+					variable = spn_order_medici
+					scope:spn_mir_story = { add_to_variable_list = { name = spn_order_medici target = prev } }
+				}
+				every_in_list = {
+					variable = spn_order_acolytes
+					scope:spn_mir_story = { add_to_variable_list = { name = spn_order_acolytes target = prev } }
+				}
+				every_in_list = {
+					variable = spn_order_neophytes
+					scope:spn_mir_story = { add_to_variable_list = { name = spn_order_neophytes target = prev } }
+				}
+				every_in_list = {
+					variable = spn_order_reliquary
+					scope:spn_mir_story = { add_to_variable_list = { name = spn_order_reliquary target = prev } }
+				}
+			}
+		}
+	}
+}
+
+# Initiation (Will You Heed the Call?, §5.5). Root: the neophyte.
+spn_order_initiate_effect = {
+	spn_order_grant_membership_effect = yes
+	# 2.39 (WORK-ORDER-2.39 F14 §2): a favour earned as a neophyte is kept; otherwise he starts at 5, as before.
+	if = {
+		limit = {
+			OR = {
+				NOT = { exists = var:spn_order_standing }
+				var:spn_order_standing < 5
+			}
+		}
+		set_variable = { name = spn_order_standing value = 5 }
+	}
+	remove_variable = spn_order_pledge_step
+	remove_variable = spn_order_pledge_since
+	spn_order_set_rank_effect = { WHO = this RANK = flag:acolyte }
+	spn_order_assign_tutor_effect = { WHO = this }
+	if = {
+		limit = { NOT = { any_memory = { memory_type = spn_order_initiated_memory } } }
+		create_character_memory = { type = spn_order_initiated_memory }
+	}
+}
+
+# A tutor for $WHO$ (an acolyte): the Medicum or higher of his chapter with the fewest tutees (§5.6 step 4).
+spn_order_assign_tutor_effect = {
+	$WHO$ = { save_scope_as = spn_tut_who }
+	scope:spn_tut_who.var:spn_order_chapter ?= {
+		ordered_in_list = {
+			variable = spn_order_members
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_tut_who }
+				spn_order_medicum_plus_trigger = yes
+				is_imprisoned = no
+			}
+			order_by = spn_order_tutor_pick_value
+			save_scope_as = spn_tut_tutor
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_tut_tutor }
+		scope:spn_tut_who = { set_variable = { name = spn_order_tutor value = scope:spn_tut_tutor } }
+		scope:spn_tut_tutor = {
+			add_to_variable_list = { name = spn_order_tutees target = scope:spn_tut_who }
+			hidden_effect = {
+				if = {
+					limit = { NOT = { has_relation_spn_order_tutor_of = scope:spn_tut_who } }
+					set_relation_spn_order_tutor_of = scope:spn_tut_who
+				}
+			}
+		}
+		scope:spn_tut_who = {
+			if = {
+				limit = { NOT = { any_memory = { memory_type = spn_order_tutor_memory } } }
+				create_character_memory = {
+					type = spn_order_tutor_memory
+					participants = { tutor = scope:spn_tut_tutor }
+				}
+			}
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_order_toast_tutor_got
+					left_icon = this
+					right_icon = scope:spn_tut_tutor
+				}
+			}
+		}
+		scope:spn_tut_tutor = {
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_order_toast_tutee_got
+					left_icon = this
+					right_icon = scope:spn_tut_who
+				}
+			}
+		}
+		# 2.38b: The First Lesson (DESIGN-2.38b §7), for whichever of the two is a player.
+		scope:spn_tut_tutor = { save_scope_as = spn_tp_tutor }
+		scope:spn_tut_who = { save_scope_as = spn_tp_tutee }
+		if = {
+			limit = { scope:spn_tut_who = { is_ai = no } }
+			scope:spn_tut_who = { trigger_event = { id = spn_order.0320 days = { 7 30 } } }
+		}
+		else_if = {
+			limit = { scope:spn_tut_tutor = { is_ai = no } }
+			scope:spn_tut_tutor = { trigger_event = { id = spn_order.0320 days = { 7 30 } } }
+		}
+	}
+}
+
+# ==================================================================================================
+# CHAPTERS (§5.3, §5.8)
+# ==================================================================================================
+
+# Found a chapter. $HEAD$ becomes its Temple Magus (a Magistratus, with membership and the secret); $SEAT$ is a county.
+spn_order_found_chapter_effect = {
+	$HEAD$ = { save_scope_as = spn_fc_head }
+	$SEAT$ = { save_scope_as = spn_fc_seat }
+	scope:spn_fc_head = {
+		create_story = {
+			type = story_spn_order_chapter
+			save_scope_as = spn_new_chapter
+		}
+	}
+	# GUARDED (2.37): a tooltip walks this without creating the story.
+	if = {
+		limit = { exists = scope:spn_new_chapter }
+		scope:spn_new_chapter = {
+			set_variable = { name = spn_order_head value = scope:spn_fc_head }
+			set_variable = { name = spn_order_seat value = scope:spn_fc_seat }
+			set_variable = { name = spn_order_founded value = current_year }
+			set_variable = { name = spn_order_cap value = spn_order_cap_base_value }
+			set_variable = { name = spn_order_size value = 0 }
+			set_variable = { name = spn_order_reliquary_count value = 0 }
+			set_variable = { name = spn_order_reliquary_magic value = 0 }
+		}
+		add_to_global_variable_list = { name = spn_order_chapters target = scope:spn_fc_head }
+		# A head who was a member elsewhere leaves that chapter quietly first.
+		scope:spn_fc_head = {
+			if = {
+				limit = {
+					exists = var:spn_order_chapter
+					NOT = { var:spn_order_chapter = scope:spn_new_chapter }
+				}
+				spn_order_remove_member_effect = { WHO = this REASON = flag:transfer }
+			}
+		}
+		spn_order_add_member_effect = { WHO = scope:spn_fc_head CHAPTER = scope:spn_new_chapter RANK = flag:magistratus }
+		scope:spn_fc_head = {
+			spn_order_grant_membership_effect = yes
+			if = {
+				limit = { is_ai = yes }
+				spn_order_ai_pick_way_effect = yes
+			}
+			# A player founder chooses his temple's way too, by any road (review, 9 Oct).
+			else = {
+				trigger_event = { id = spn_order.0143 days = 1 }
+			}
+		}
+		# 2.39 (WORK-ORDER-2.39 F15): a temple founded where a Collegium stands empty meets beneath it again.
+		scope:spn_fc_seat = {
+			random_county_province = {
+				limit = { spn_order_hall_free_trigger = yes } # 2.39 (final pass, 17 Oct): also not a hall let go
+				save_scope_as = spn_fc_hall
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_fc_hall }
+			scope:spn_new_chapter = { spn_order_hall_adopt_effect = { PROV = scope:spn_fc_hall } }
+			clear_saved_scope = spn_fc_hall
+		}
+	}
+}
+
+# An AI head's temple takes a word of the motto by his nature (§5.16). Head scope.
+# 2.38f: weighted by the Order's fit groups (spn_order_fit_silence_value and its two siblings), so a head leans to the
+# way that suits him but the world gets all three. Before, a head who was not paranoid, deceitful, zealous or diligent
+# always took Observance (Thomas's 233-year run: all six temples).
+spn_order_ai_pick_way_effect = {
+	if = {
+		limit = { exists = var:spn_order_chapter }
+		var:spn_order_chapter = { save_scope_as = spn_way_ch }
+		random_list = {
+			10 = {
+				modifier = {
+					add = {
+						value = spn_order_fit_silence_value
+						multiply = 2
+						min = 0
+					}
+				}
+				scope:spn_way_ch = { set_variable = { name = spn_order_way value = flag:silence } }
+			}
+			10 = {
+				modifier = {
+					add = {
+						value = spn_order_fit_subservience_value
+						multiply = 2
+						min = 0
+					}
+				}
+				scope:spn_way_ch = { set_variable = { name = spn_order_way value = flag:subservience } }
+			}
+			10 = {
+				modifier = {
+					add = {
+						value = spn_order_fit_observance_value
+						multiply = 2
+						min = 0
+					}
+				}
+				scope:spn_way_ch = { set_variable = { name = spn_order_way value = flag:observance } }
+			}
+		}
+	}
+}
+
+# Story scope. The one place a chapter's head changes (§5.8; the 2.37 set-alpha shape).
+spn_order_set_head_effect = {
+	save_scope_as = spn_sh_ch
+	$NEW$ = { save_scope_as = spn_sh_new }
+	story_owner = { save_scope_as = spn_sh_old }
+	if = {
+		limit = { NOT = { scope:spn_sh_old = scope:spn_sh_new } }
+		make_story_owner = scope:spn_sh_new
+		set_variable = { name = spn_order_head value = scope:spn_sh_new }
+		if = {
+			limit = { is_target_in_global_variable_list = { name = spn_order_chapters target = scope:spn_sh_old } }
+			remove_list_global_variable = { name = spn_order_chapters target = scope:spn_sh_old }
+		}
+		if = {
+			limit = { NOT = { is_target_in_global_variable_list = { name = spn_order_chapters target = scope:spn_sh_new } } }
+			add_to_global_variable_list = { name = spn_order_chapters target = scope:spn_sh_new }
+		}
+		if = {
+			limit = { var:spn_order_heir ?= scope:spn_sh_new }
+			remove_variable = spn_order_heir
+		}
+		scope:spn_sh_new = {
+			# A head sees the real story; he must not also hold a mirror.
+			random_owned_story = {
+				limit = { story_type = story_spn_order_mirror }
+				end_story = yes
+			}
+			# The new head is a Magistratus at least.
+			if = {
+				limit = { NOT = { var:spn_order_rank ?= flag:magistratus } }
+				set_variable = { name = spn_order_rank value = flag:magistratus }
+			}
+			if = {
+				limit = { is_ai = no }
+				trigger_event = { id = spn_order.0143 days = 1 }
+			}
+			else = {
+				if = {
+					limit = { NOT = { scope:spn_sh_ch = { exists = var:spn_order_way } } }
+					spn_order_ai_pick_way_effect = yes
+				}
+			}
+		}
+		spn_order_refresh_effect = yes
+		spn_order_master_refresh_effect = yes
+	}
+}
+
+# on_owner_death, or a head who leaves alive (§5.8). Story scope. The named heir first, then the best Magistratus, then
+# Medicum, then acolyte (members only); nobody -> the chapter dissolves.
+spn_order_succession_effect = {
+	save_scope_as = spn_su_ch
+	story_owner = { save_scope_as = spn_su_old }
+	if = {
+		limit = {
+			var:spn_order_heir ?= {
+				is_alive = yes
+				NOT = { this = scope:spn_su_old }
+				var:spn_order_chapter ?= scope:spn_su_ch
+				var:spn_order_rank ?= flag:magistratus
+			}
+		}
+		var:spn_order_heir = { save_scope_as = spn_su_new }
+	}
+	else = {
+		ordered_in_list = {
+			variable = spn_order_members
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_su_old }
+				spn_is_order_member_trigger = yes
+			}
+			order_by = spn_order_succession_score_value
+			save_scope_as = spn_su_new
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_su_new }
+		spn_order_set_head_effect = { NEW = scope:spn_su_new }
+	}
+	else = {
+		spn_order_dissolve_effect = yes
+	}
+}
+
+# Story scope. No member left (§5.6 step 11): neophytes released, the story ended. Pledged items stay with their owners.
+spn_order_dissolve_effect = {
+	# 2.39 (WORK-ORDER-2.39 F15): the Collegium is released first; its building stands on for its lord.
+	spn_order_hall_release_effect = yes
+	save_scope_as = spn_dis_ch
+	# No removal inside a dissolve may start another succession (review, 9 Oct).
+	set_variable = spn_order_dissolving
+	every_in_list = {
+		variable = spn_order_members
+		add_to_temporary_list = spn_dis_left
+	}
+	every_in_list = {
+		list = spn_dis_left
+		if = {
+			limit = { var:spn_order_chapter ?= scope:spn_dis_ch }
+			spn_order_remove_member_effect = { WHO = this REASON = flag:quiet }
+		}
+	}
+	story_owner = { save_scope_as = spn_dis_owner }
+	if = {
+		limit = { is_target_in_global_variable_list = { name = spn_order_chapters target = scope:spn_dis_owner } }
+		remove_list_global_variable = { name = spn_order_chapters target = scope:spn_dis_owner }
+	}
+	# The master first: after end_story this scope is gone (2.38b boot, two errors on a head's death).
+	spn_order_master_refresh_effect = yes
+	end_story = yes
+}
+
+# ==================================================================================================
+# THE CHAPTER'S YEAR (§5.6). Story scope. Bank first: counts and lists are read before anyone is promoted or removed.
+# ==================================================================================================
+spn_order_chapter_year_effect = {
+	save_scope_as = spn_yr_ch
+	story_owner = { save_scope_as = spn_yr_head }
+	# 1. Prune, from a copy: the dead, the strays, and neophytes two years into a pledge.
+	every_in_list = {
+		variable = spn_order_members
+		add_to_temporary_list = spn_yr_all
+	}
+	every_in_list = {
+		list = spn_yr_all
+		if = {
+			limit = {
+				OR = {
+					is_alive = no
+					NOT = { var:spn_order_chapter ?= scope:spn_yr_ch }
+					AND = {
+						var:spn_order_rank ?= flag:neophyte
+						exists = var:spn_order_pledge_since
+						var:spn_order_pledge_since <= spn_order_two_years_ago_value
+					}
+				}
+			}
+			if = {
+				limit = { var:spn_order_chapter ?= scope:spn_yr_ch }
+				spn_order_remove_member_effect = { WHO = this REASON = flag:quiet }
+			}
+			else = {
+				scope:spn_yr_ch = { remove_list_variable = { name = spn_order_members target = prev } }
+			}
+		}
+	}
+	# 1b. The Old Law and what cannot stay (§5.17): a demon or a golem leaves quietly; a necromancer is judged.
+	every_in_list = {
+		variable = spn_order_members
+		add_to_temporary_list = spn_yr_live
+	}
+	every_in_list = {
+		list = spn_yr_live
+		limit = { spn_is_order_member_trigger = yes }
+		if = {
+			limit = {
+				OR = {
+					is_a_demon_trigger = yes
+					has_trait = golem
+				}
+			}
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_bad
+					title = spn_order_toast_mask_gone
+					left_icon = this
+				}
+			}
+			spn_order_remove_member_effect = { WHO = this REASON = flag:quiet }
+		}
+		else_if = {
+			limit = {
+				has_trait = necromancer
+				NOT = { has_character_flag = spn_order_necro_tolerated }
+				NOT = { has_character_flag = spn_order_necro_asked }
+			}
+			add_character_flag = { flag = spn_order_necro_asked years = 1 }
+			trigger_event = { id = spn_order.0106 days = { 1 30 } }
+		}
+	}
+	# 2. The cap (T24): 30 + 5 per 25 years, max 60.
+	set_variable = { name = spn_order_cap value = spn_order_cap_value }
+	# 2b-2d. 2.39 (WORK-ORDER-2.39 F15), the Collegium: a lost hall released, an empty one in the head's capital
+	# adopted, a new lord above the hall answered (spn_order_hall_year_effect, zz_spn_collegium_effects.txt).
+	spn_order_hall_year_effect = yes
+	# 3. Standing: +5 to every member; the tutors' reports; the chapter's way.
+	every_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_alive = yes
+			spn_is_order_member_trigger = yes
+		}
+		spn_order_add_standing_effect = { VALUE = spn_order_standing_yearly_value }
+		if = {
+			limit = { scope:spn_yr_ch = { var:spn_order_way ?= flag:subservience } }
+			spn_order_add_standing_effect = { VALUE = 2 }
+		}
+		if = {
+			limit = { has_variable_list = spn_order_tutees }
+			save_scope_value_as = { name = spn_yr_tutor_pay value = spn_order_tutor_report_value }
+			spn_order_add_standing_effect = { VALUE = scope:spn_yr_tutor_pay }
+		}
+		# The Medicum's choice (Raised to Medicum, §5.16): the hard or the patient tutor.
+		if = {
+			limit = { has_variable_list = spn_order_tutees }
+			save_scope_as = spn_yr_tutor
+			every_in_list = {
+				variable = spn_order_tutees
+				limit = { is_alive = yes }
+				if = {
+					limit = { scope:spn_yr_tutor = { has_character_flag = spn_order_tutor_strict } }
+					spn_order_add_standing_effect = { VALUE = 2 }
+					add_opinion = { target = scope:spn_yr_tutor modifier = spn_order_hard_tutor_opinion }
+				}
+				else_if = {
+					limit = { scope:spn_yr_tutor = { has_character_flag = spn_order_tutor_patient } }
+					add_opinion = { target = scope:spn_yr_tutor modifier = spn_order_patient_tutor_opinion }
+				}
+			}
+		}
+		# The prerogative Silence pays a quiet year (§5.18): no toast, it is every year.
+		if = {
+			limit = { NOT = { scope:spn_yr_ch = { has_variable = spn_order_exposed_this_year } } }
+			spn_order_deed_effect = { PREROGATIVE = flag:silence AMOUNT = 3 TOAST = no }
+		}
+		spn_order_studies_apply_effect = yes
+		spn_order_mage_growth_effect = yes # 2.38c
+	}
+	scope:spn_yr_ch = { remove_variable = spn_order_exposed_this_year }
+	# 4. Tutors.
+	every_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_alive = yes
+			var:spn_order_rank ?= flag:acolyte
+		}
+		if = {
+			limit = {
+				NOT = { var:spn_order_tutor ?= { is_alive = yes } }
+			}
+			remove_variable = spn_order_tutor
+			spn_order_assign_tutor_effect = { WHO = this }
+		}
+		if = {
+			limit = { exists = var:spn_order_tutor }
+			add_character_modifier = { modifier = spn_order_tutor_modifier years = 1 }
+			save_scope_as = spn_yr_tutee
+			var:spn_order_tutor = { save_scope_as = spn_yr_tutor2 }
+			random = {
+				chance = 10
+				random_list = { # 2.39 (Boot 3, 16 Oct): the student answers, by his nature and by how he was taught
+					35 = {	# grateful: a friend
+						trigger = { can_set_relation_friend_trigger = { CHARACTER = scope:spn_yr_tutor2 } }
+						modifier = { add = 25 has_trait = humble }
+						modifier = { add = 20 has_trait = compassionate }
+						modifier = { add = 15 has_trait = trusting }
+						modifier = { add = 15 has_trait = diligent }
+						modifier = { add = 25 scope:spn_yr_tutor2 = { has_character_flag = spn_order_tutor_patient } }
+						modifier = { add = 20 opinion = { target = scope:spn_yr_tutor2 value >= 40 } }
+						modifier = { add = 15 scope:spn_yr_tutor2 = { opinion = { target = scope:spn_yr_tutee value >= 40 } } }
+						modifier = { factor = 0 opinion = { target = scope:spn_yr_tutor2 value <= -40 } }
+						scope:spn_yr_tutor2 = { set_relation_friend = { reason = spn_rel_order_tutor target = scope:spn_yr_tutee } }
+					}
+					45 = {	# thankful: better for it, no bond
+						add_opinion = { target = scope:spn_yr_tutor2 modifier = grateful_opinion opinion = 15 }
+					}
+					20 = {	# resentful: a rival
+						trigger = { can_set_relation_rival_trigger = { CHARACTER = scope:spn_yr_tutor2 } }
+						modifier = { add = 20 has_trait = ambitious }
+						modifier = { add = 20 has_trait = arrogant }
+						modifier = { add = 15 has_trait = vengeful }
+						modifier = { add = 25 scope:spn_yr_tutor2 = { has_character_flag = spn_order_tutor_strict } }
+						modifier = { add = 25 opinion = { target = scope:spn_yr_tutor2 value <= -20 } }
+						modifier = { add = 15 scope:spn_yr_tutor2 = { opinion = { target = scope:spn_yr_tutee value <= -20 } } }
+						modifier = { factor = 0.25 has_trait = humble }
+						modifier = { factor = 0 opinion = { target = scope:spn_yr_tutor2 value >= 40 } }
+						scope:spn_yr_tutor2 = { set_relation_rival = { reason = spn_rel_order_tutor target = scope:spn_yr_tutee } }
+					}
+				}
+			}
+		}
+	}
+	# 5. Teaching (T10): an acolyte who is not a Mage counts the years; at the value, The First True Working.
+	every_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_alive = yes
+			var:spn_order_rank ?= flag:acolyte
+			spn_order_taught_trigger = no # 2.38e: was NOT archmage; a Warlock or a True Witch who finished (.0140) is taught too
+			NOT = { has_character_flag = spn_order_wiped }
+		}
+		if = {
+			limit = { NOT = { exists = var:spn_order_taught_years } }
+			set_variable = { name = spn_order_taught_years value = 0 }
+		}
+		change_variable = { name = spn_order_taught_years add = 1 }
+		if = {
+			limit = { var:spn_order_taught_years >= spn_order_teach_years_value }
+			trigger_event = { id = spn_order.0140 days = { 1 60 } }
+		}
+		# 2.38b: the study cycle (DESIGN-2.38b §6): two lessons on the way, for a player.
+		else_if = {
+			limit = {
+				is_ai = no
+				var:spn_order_taught_years = 1
+			}
+			trigger_event = { id = spn_order.0310 days = { 30 200 } }
+		}
+		else_if = {
+			limit = {
+				is_ai = no
+				var:spn_order_taught_years = 3
+			}
+			trigger_event = { id = spn_order.0311 days = { 30 200 } }
+		}
+	}
+	# 2.38b: the tutor and the acolyte (DESIGN-2.38b §7). One moment a year at most, for a pair with a player in it.
+	every_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_alive = yes
+			exists = var:spn_order_tutor
+			OR = {
+				is_ai = no
+				var:spn_order_tutor ?= { is_ai = no }
+			}
+		}
+		spn_order_tutor_year_effect = yes
+	}
+	# 6. Promotions: one candidate per rank per year for a player head, who is asked; an AI head raises up to two (2.38h).
+	# 2.38f: an AI head passes over the ones he dislikes and takes the next (reverse_opinion: the head's opinion of the
+	# member). Before, the one with the most standing was the only one asked, so a head who disliked him promoted nobody,
+	# ever (Thomas's 233-year run: 0 Medici, 27 Acolytes waiting).
+	ordered_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_alive = yes
+			var:spn_order_rank ?= flag:acolyte
+			spn_order_taught_trigger = yes # 2.38e: a Warlock or a True Witch who finished (.0140) too
+			var:spn_order_standing >= spn_order_promote_medicum_value
+			OR = { # 2.38f
+				scope:spn_yr_head = { is_ai = no }
+				reverse_opinion = {
+					target = scope:spn_yr_head
+					value >= 0
+				}
+			}
+		}
+		order_by = var:spn_order_standing
+		save_scope_as = spn_yr_to_medicum
+	}
+	ordered_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_alive = yes
+			var:spn_order_rank ?= flag:medicum
+			var:spn_order_standing >= spn_order_promote_magistratus_value
+			NOT = { this = scope:spn_yr_head }
+			OR = { # 2.38f
+				scope:spn_yr_head = { is_ai = no }
+				reverse_opinion = {
+					target = scope:spn_yr_head
+					value >= 0
+				}
+			}
+		}
+		order_by = var:spn_order_standing
+		save_scope_as = spn_yr_to_magistratus
+	}
+	if = {
+		limit = {
+			scope:spn_yr_head = { is_ai = no }
+			OR = {
+				exists = scope:spn_yr_to_medicum
+				exists = scope:spn_yr_to_magistratus
+			}
+		}
+		scope:spn_yr_head = { trigger_event = { id = spn_order.0150 days = { 20 60 } } } # 2.38c: not on the same day as the rest
+	}
+	else = {
+		if = {
+			limit = {
+				exists = scope:spn_yr_to_medicum
+				scope:spn_yr_head = { opinion = { target = scope:spn_yr_to_medicum value >= 0 } }
+			}
+			spn_order_promote_effect = { WHO = scope:spn_yr_to_medicum }
+		}
+		if = {
+			limit = {
+				exists = scope:spn_yr_to_magistratus
+				scope:spn_yr_head = { opinion = { target = scope:spn_yr_to_magistratus value >= 0 } }
+			}
+			spn_order_promote_effect = { WHO = scope:spn_yr_to_magistratus }
+		}
+		# 2.38h: an AI head raises a second of each rank, the same way (Thomas, 9 Oct: two a year; the Order recruits faster
+		# than one a year clears; his 1178 run had 28 Mage Acolytes waiting). The first are already raised, so these lists
+		# take the next; a member just made a Medicum is not raised again in the same year.
+		ordered_in_list = {
+			variable = spn_order_members
+			limit = {
+				is_alive = yes
+				var:spn_order_rank ?= flag:acolyte
+				spn_order_taught_trigger = yes
+				var:spn_order_standing >= spn_order_promote_medicum_value
+				reverse_opinion = {
+					target = scope:spn_yr_head
+					value >= 0
+				}
+			}
+			order_by = var:spn_order_standing
+			save_temporary_scope_as = spn_yr_to_medicum2
+			spn_order_promote_effect = { WHO = scope:spn_yr_to_medicum2 }
+		}
+		ordered_in_list = {
+			variable = spn_order_members
+			limit = {
+				is_alive = yes
+				var:spn_order_rank ?= flag:medicum
+				var:spn_order_standing >= spn_order_promote_magistratus_value
+				NOT = { this = scope:spn_yr_head }
+				NOT = { scope:spn_yr_to_medicum ?= this }
+				NOT = { scope:spn_yr_to_medicum2 ?= this }
+				reverse_opinion = {
+					target = scope:spn_yr_head
+					value >= 0
+				}
+			}
+			order_by = var:spn_order_standing
+			save_temporary_scope_as = spn_yr_to_magistratus2
+			spn_order_promote_effect = { WHO = scope:spn_yr_to_magistratus2 }
+		}
+	}
+	# 7. Dues: into the council's funds once it is formed, else to the head.
+	every_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_alive = yes
+			spn_is_order_member_trigger = yes
+			NOT = { this = scope:spn_yr_head }
+		}
+		save_scope_value_as = { name = spn_yr_dues value = spn_order_dues_value }
+		if = {
+			limit = { short_term_gold >= scope:spn_yr_dues }
+			if = {
+				limit = { exists = global_var:mc_has_been_formed }
+				save_scope_as = spn_yr_payer
+				transfer_to_mc_funds_effect = { PAYER = scope:spn_yr_payer VALUE = scope:spn_yr_dues }
+			}
+			else = {
+				pay_short_term_gold = { target = scope:spn_yr_head gold = scope:spn_yr_dues }
+			}
+		}
+		else = {
+			spn_order_add_standing_effect = { VALUE = -5 }
+		}
+	}
+	# 8. The reliquary.
+	spn_reliquary_rebuild_effect = yes
+	every_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_alive = yes
+			spn_is_order_member_trigger = yes
+		}
+		spn_reliquary_apply_effect = yes
+	}
+	# 9. Brotherhood: the head and each member (never all pairs: the 2.37 rule).
+	every_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_alive = yes
+			spn_is_order_member_trigger = yes
+			NOT = { this = scope:spn_yr_head }
+		}
+		add_opinion = { target = scope:spn_yr_head modifier = spn_brother_of_the_order_opinion }
+		scope:spn_yr_head = { add_opinion = { target = prev modifier = spn_brother_of_the_order_opinion } }
+	}
+	# 9b. A seat on the council, once (A Seat Among the Masks, §5.16).
+	every_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_alive = yes
+			is_ai = no
+			spn_is_order_member_trigger = yes
+			has_variable = mc_member_var
+			NOT = { has_character_flag = spn_order_seat_moment }
+			NOT = { global_var:current_archmage_global ?= this }
+		}
+		add_character_flag = spn_order_seat_moment
+		trigger_event = { id = spn_order.0144 days = { 1 30 } }
+	}
+	every_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_alive = yes
+			is_ai = yes
+			spn_is_order_member_trigger = yes
+			has_variable = mc_member_var
+			NOT = { has_character_flag = spn_order_seat_moment }
+		}
+		add_character_flag = spn_order_seat_moment
+		if = {
+			limit = {
+				OR = {
+					has_trait = ambitious
+					has_trait = arrogant
+				}
+			}
+			add_character_flag = spn_order_aspires_chair
+		}
+		else = {
+			spn_order_add_standing_effect = { VALUE = 10 }
+		}
+	}
+	# 10. A chapter moment. 2.39 (WORK-ORDER-2.39 F14 V1): each PLAYER of the chapter rolls on his own, so two friends in
+	# one temple each get their share, and neophytes are in the pool; spn_order_moment_chance_value (40) each. Each
+	# branch's spn_order_cm_*_ok_trigger is that event's own subject test and its ten-year "seen" flag (zz_spn_flavor_
+	# triggers.txt); the event repeats it when it arrives and sets the flag then, so a moment the 60-day flavor gate turns
+	# away is not used up. Before 2.39: one roll a chapter (20%), for one random player member, with no repeat guard.
+	every_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_alive = yes
+			is_ai = no
+			exists = var:spn_order_chapter
+			is_imprisoned = no
+			spn_flavor_ready_trigger = yes
+		}
+		random = {
+			chance = spn_order_moment_chance_value
+			random_list = {
+				# An Outsider Asks Questions
+				10 = {
+					trigger = { spn_order_cm_outsider_ok_trigger = yes }
+					trigger_event = { id = spn_order.0160 days = { 1 200 } }
+				}
+				# The Relic That Would Not Sleep
+				10 = {
+					trigger = { spn_order_cm_relic_ok_trigger = yes }
+					trigger_event = { id = spn_order.0161 days = { 1 200 } }
+				}
+				# A Neophyte's Test Gone Wrong
+				10 = {
+					trigger = { spn_order_cm_neophyte_ok_trigger = yes }
+					trigger_event = { id = spn_order.0162 days = { 1 200 } }
+				}
+				# The Tutor's Quarrel
+				10 = {
+					trigger = { spn_order_cm_quarrel_ok_trigger = yes }
+					trigger_event = { id = spn_order.0163 days = { 1 200 } }
+				}
+				# The Masks Are Watching
+				10 = {
+					trigger = { spn_order_cm_watching_ok_trigger = yes }
+					trigger_event = { id = spn_order.0360 days = { 1 200 } }
+				}
+				# Beneath Your Station
+				10 = {
+					trigger = { spn_order_cm_station_ok_trigger = yes }
+					trigger_event = { id = spn_order.0361 days = { 1 200 } }
+				}
+				# The Same Night
+				10 = {
+					trigger = { spn_order_cm_night_ok_trigger = yes }
+					trigger_event = { id = spn_order.0362 days = { 1 200 } }
+				}
+				# One of the Seniors
+				10 = {
+					trigger = { spn_order_cm_senior_ok_trigger = yes }
+					trigger_event = { id = spn_order.0363 days = { 1 200 } }
+				}
+				# A Brother Asks for Help
+				10 = {
+					trigger = { spn_order_cm_brother_ok_trigger = yes }
+					trigger_event = { id = spn_order.0370 days = { 1 200 } }
+				}
+				# A Feud in the Chapter / on the Council
+				10 = {
+					trigger = { spn_order_cm_feud_ok_trigger = yes }
+					trigger_event = { id = spn_order.0371 days = { 1 200 } }
+				}
+				# Where Do You Go at Night? A Temple Magus or a seat holder is away more.
+				6 = {
+					trigger = { spn_order_cm_where_ok_trigger = yes }
+					modifier = {
+						add = 6
+						OR = {
+							spn_is_temple_magus_trigger = yes
+							has_variable = mc_member_var
+						}
+					}
+					trigger_event = { id = spn_order.0372 days = { 1 200 } }
+				}
+				# After the Others Have Gone
+				6 = {
+					trigger = { spn_order_cm_advance_senior_ok_trigger = yes }
+					trigger_event = { id = spn_order.0350 days = { 1 200 } }
+				}
+				# A Door Left Open
+				6 = {
+					trigger = { spn_order_cm_advance_junior_ok_trigger = yes }
+					trigger_event = { id = spn_order.0351 days = { 1 200 } }
+				}
+				# Beneath the Collegium (WORK-ORDER-2.39 F15)
+				10 = {
+					trigger = { spn_order_cm_hall_ok_trigger = yes }
+					trigger_event = { id = spn_order.0164 days = { 1 200 } }
+				}
+				# Nothing, so the list is never left without a valid entry when no branch has a subject for him.
+				1 = { }
+			}
+		}
+	}
+	# 10b (§5.10, §5.14). An AI head casts out a member who broke the Order's rules, or one he cannot abide (opinion <= -60).
+	# The member answers in Cast Out (.0192). Collected first, then sent.
+	if = {
+		limit = { scope:spn_yr_head = { is_ai = yes } }
+		every_in_list = {
+			variable = spn_order_members
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_yr_head }
+				spn_is_order_member_trigger = yes
+				OR = {
+					has_character_flag = spn_order_broke_rules
+					scope:spn_yr_head = { opinion = { target = prev value <= -60 } }
+				}
+			}
+			add_to_temporary_list = spn_yr_expel
+		}
+		every_in_list = {
+			list = spn_yr_expel
+			trigger_event = spn_order.0192
+		}
+	}
+	# 11. The mirrors; and no member left -> the chapter dissolves (neophytes do not count).
+	if = {
+		limit = {
+			NOT = {
+				any_in_list = {
+					variable = spn_order_members
+					is_alive = yes
+					spn_is_order_member_trigger = yes
+				}
+			}
+		}
+		spn_order_dissolve_effect = yes
+	}
+	else = {
+		spn_order_refresh_effect = yes
+	}
+}
+
+# $WHO$ moves up one rank (§5.6 step 6). Standing is never reduced by a promotion.
+spn_order_promote_effect = {
+	$WHO$ = {
+		save_scope_as = spn_pr_who
+		if = {
+			limit = { var:spn_order_rank ?= flag:acolyte }
+			spn_order_set_rank_effect = { WHO = this RANK = flag:medicum }
+			# A Medicum has no tutor of his own any more.
+			if = {
+				limit = { exists = var:spn_order_tutor }
+				var:spn_order_tutor = {
+					if = {
+						limit = { is_target_in_variable_list = { name = spn_order_tutees target = scope:spn_pr_who } }
+						remove_list_variable = { name = spn_order_tutees target = scope:spn_pr_who }
+					}
+					hidden_effect = {
+						if = {
+							limit = { has_relation_spn_order_tutor_of = scope:spn_pr_who }
+							remove_relation_spn_order_tutor_of = scope:spn_pr_who
+						}
+					}
+				}
+				remove_variable = spn_order_tutor
+			}
+			if = {
+				limit = { is_ai = no }
+				trigger_event = { id = spn_order.0141 days = 1 }
+			}
+			else = {
+				random_list = {
+					40 = {
+						modifier = { add = 30 has_trait = wrathful }
+						modifier = { add = 20 has_trait = arrogant }
+						add_character_flag = spn_order_tutor_strict
+					}
+					60 = {
+						modifier = { add = 30 has_trait = compassionate }
+						modifier = { add = 20 has_trait = patient }
+						add_character_flag = spn_order_tutor_patient
+					}
+				}
+			}
+		}
+		else_if = {
+			limit = { var:spn_order_rank ?= flag:medicum }
+			spn_order_set_rank_effect = { WHO = this RANK = flag:magistratus }
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_good
+					title = spn_order_toast_rank_magistratus
+					left_icon = this
+					custom_tooltip = spn_order_toast_rank_magistratus_tt
+				}
+			}
+		}
+	}
+}
+
+# Standing is 0-100 (§4.2). $VALUE$ may be a number or a saved scope value.
+spn_order_add_standing_effect = {
+	if = {
+		limit = { NOT = { exists = var:spn_order_standing } }
+		set_variable = { name = spn_order_standing value = 0 }
+	}
+	change_variable = { name = spn_order_standing add = $VALUE$ }
+	if = {
+		limit = { var:spn_order_standing > 100 }
+		set_variable = { name = spn_order_standing value = 100 }
+	}
+	else_if = {
+		limit = { var:spn_order_standing < 0 }
+		set_variable = { name = spn_order_standing value = 0 }
+	}
+}
+
+# ==================================================================================================
+# SEEDING (§5.2). on_game_start_after_lobby, days = 2 (after the hides' day-1 seeding); guarded by spn_order_seeded.
+# ==================================================================================================
+# The counties are counted once (the map does not change), so no decision or AI check ever walks them (§5.3).
+spn_order_count_counties_effect = {
+	if = {
+		limit = { NOT = { exists = global_var:spn_county_count } }
+		set_global_variable = { name = spn_county_count value = 0 }
+		every_county = {
+			change_global_variable = { name = spn_county_count add = 1 }
+		}
+	}
+}
+
+# Step 1: the players (T27). Root: anyone (the on_action has none). The AI seats follow in .0002.
+spn_order_seed_players_effect = {
+	spn_order_count_counties_effect = yes
+	every_player = {
+		limit = {
+			has_trait = archmage
+			is_adult = yes
+			spn_has_hunter_trait = no
+			is_a_demon_trigger = no
+		}
+		if = {
+			limit = { has_trait = necromancer }
+			trigger_event = spn_order.0003
+		}
+		else = {
+			add_character_flag = { flag = spn_order_offer_pending days = 30 }
+			trigger_event = spn_order.0001
+		}
+	}
+	# The AI seats are the hidden spn_order.0002, scheduled by the on_action at days 12, 22 and 32 (§5.2: it waits for the
+	# players at most twice).
+}
+
+# Steps 2-5 (§5.2): the AI seats, the members, then the relics. One world walk, at game start.
+spn_order_seed_ai_effect = {
+	every_living_character = {
+		limit = {
+			is_ai = yes
+			has_trait = archmage
+			is_adult = yes
+			spn_order_can_join_trigger = yes
+			NOT = { exists = var:spn_order_chapter }
+		}
+		add_to_temporary_list = spn_seed_mages
+	}
+	spn_order_seed_one_effect = yes
+	spn_order_seed_one_effect = yes
+	spn_order_seed_one_effect = yes
+	spn_order_seed_one_effect = yes
+	spn_order_seed_one_effect = yes
+	spn_order_seed_one_effect = yes
+	# Step 3: every Mage still in the list joins a chapter whose head is in his diplomatic range and that has room.
+	every_in_list = {
+		list = spn_seed_mages
+		limit = { NOT = { exists = var:spn_order_chapter } }
+		save_temporary_scope_as = spn_sd_mage
+		random_in_global_list = {
+			variable = spn_order_chapters
+			limit = {
+				in_diplomatic_range = scope:spn_sd_mage
+				var:spn_order_chapter ?= { spn_order_has_room_trigger = yes }
+			}
+			var:spn_order_chapter = { save_scope_as = spn_sd_ch }
+		}
+		if = {
+			limit = { exists = scope:spn_sd_ch }
+			random_list = {
+				1 = { set_variable = { name = spn_order_standing value = 25 } }
+				1 = { set_variable = { name = spn_order_standing value = 35 } }
+				1 = { set_variable = { name = spn_order_standing value = 45 } }
+				1 = { set_variable = { name = spn_order_standing value = 50 } }
+			}
+			if = {
+				limit = { var:spn_order_standing >= 50 }
+				spn_order_add_member_effect = { WHO = scope:spn_sd_mage CHAPTER = scope:spn_sd_ch RANK = flag:magistratus }
+			}
+			else = {
+				spn_order_add_member_effect = { WHO = scope:spn_sd_mage CHAPTER = scope:spn_sd_ch RANK = flag:medicum }
+			}
+			spn_order_grant_membership_effect = yes
+		}
+		clear_saved_scope = spn_sd_ch
+	}
+	# Step 4: the relics, so the reliquaries are not empty (§9.6).
+	spn_relic_seed_effect = yes
+	every_in_global_list = {
+		variable = spn_order_chapters
+		var:spn_order_chapter ?= {
+			spn_reliquary_rebuild_effect = yes
+			every_in_list = {
+				variable = spn_order_members
+				limit = { spn_is_order_member_trigger = yes }
+				spn_reliquary_apply_effect = yes
+			}
+		}
+	}
+	set_global_variable = spn_order_seeded
+	spn_order_master_refresh_effect = yes
+}
+
+# 2.38a (Thomas's 9 Oct run): THE ORDER GATHERS. Witchcraft makes no Mage at game start (magic_ev4.50 gives Source and
+# witches only), so the start seeding found nobody, set spn_order_seeded and never tried again: no temple ever stood. Now,
+# each year while fewer than spn_order_chapters_start_value temples stand, the best-placed AI Mage outside the Order who is
+# far enough from every seat founds one: at most one a year, by the start seeding's own rule (spn_order_seed_one_effect).
+# The candidates are listed by the Selection's walk, which runs just before this in the same pulse; the Selection fills
+# the new temple from the next year. A player Mage founds his own with Found the Order Anew (no temple anywhere) or a
+# charter.
+spn_order_gather_effect = {
+	if = {
+		limit = {
+			exists = scope:spn_gather_found
+			NOT = { exists = global_var:spn_order_broken } # 2.39 (WORK-ORDER-2.39 F2): broken, the Order does not regather
+			NOT = {
+				any_in_global_list = {
+					variable = spn_order_chapters
+					count >= spn_order_chapters_start_value
+				}
+			}
+		}
+		spn_order_seed_one_effect = yes
+	}
+}
+
+# One AI seat: the best-placed Mage (learning + 5 x his highest tier) who is far enough from every existing head.
+# Six unrolled calls, never a `while`. Stops at spn_order_chapters_start_value, the players' chapters counted.
+spn_order_seed_one_effect = {
+	if = {
+		limit = {
+			NOT = {
+				any_in_global_list = {
+					variable = spn_order_chapters
+					count >= spn_order_chapters_start_value
+				}
+			}
+		}
+		every_in_list = {
+			list = spn_seed_mages
+			limit = {
+				NOT = { exists = var:spn_order_chapter }
+				NOT = { has_character_flag = spn_seed_too_close }
+			}
+			save_temporary_scope_as = spn_sd_cand
+			if = {
+				limit = {
+					any_in_global_list = {
+						variable = spn_order_chapters
+						location = {
+							squared_distance = {
+								target = scope:spn_sd_cand.location
+								value < spn_order_chapter_spacing_value
+							}
+						}
+					}
+				}
+				add_character_flag = { flag = spn_seed_too_close days = 1 }
+			}
+		}
+		ordered_in_list = {
+			list = spn_seed_mages
+			limit = {
+				NOT = { exists = var:spn_order_chapter }
+				NOT = { has_character_flag = spn_seed_too_close }
+				NOT = { has_character_flag = spn_order_picked } # 2.38a: a Mage the Selection is already calling
+			}
+			order_by = spn_order_seat_score_value
+			save_scope_as = spn_sd_head
+		}
+		if = {
+			limit = { exists = scope:spn_sd_head }
+			scope:spn_sd_head = {
+				if = {
+					limit = { exists = capital_county }
+					capital_county = { save_scope_as = spn_sd_seat }
+				}
+				else = {
+					location.county = { save_scope_as = spn_sd_seat }
+				}
+			}
+			spn_order_found_chapter_effect = { HEAD = scope:spn_sd_head SEAT = scope:spn_sd_seat }
+			clear_saved_scope = spn_sd_head
+			clear_saved_scope = spn_sd_seat
+		}
+		# The day-long flag is recomputed for the next seat (a new head moves the circle).
+		every_in_list = {
+			list = spn_seed_mages
+			limit = { has_character_flag = spn_seed_too_close }
+			remove_character_flag = spn_seed_too_close
+		}
+	}
+}
+
+# ==================================================================================================
+# THE SELECTION (§5.4; C16: one world walk a year). yearly_global_pulse, Order rule On.
+# ==================================================================================================
+spn_order_selection_effect = {
+	every_living_character = {
+		limit = { spn_order_selection_reach_trigger = yes }
+		if = {
+			limit = { spn_order_candidate_trigger = yes }
+			add_to_temporary_list = spn_order_selection_list
+		}
+		# The Necromancer's Bargain (§5.19): the first who qualifies this year.
+		else_if = {
+			limit = {
+				NOT = { exists = scope:spn_bargain_necro }
+				is_ai = yes
+				has_trait = necromancer
+				is_adult = yes
+				spn_is_order_member_trigger = no
+				NOT = { has_character_flag = spn_order_bargain_cd }
+				spn_order_deadly_disease_trigger = yes
+				any_character_artifact = {
+					spn_is_magic_item_trigger = yes
+					spn_pledgeable_trigger = yes
+				}
+			}
+			save_scope_as = spn_bargain_necro
+		}
+		# 2.38a: an AI Mage outside the Order, for the gathering (spn_order_gather_effect). The same walk, no second one.
+		if = {
+			limit = {
+				is_ai = yes
+				has_trait = archmage
+				is_adult = yes
+				is_imprisoned = no
+				NOT = { exists = var:spn_order_chapter }
+				NOT = { has_character_flag = spn_order_refused } # turned down a note in the last 10 years (review, 9 Oct)
+				spn_order_can_join_trigger = yes
+			}
+			add_to_temporary_list = spn_seed_mages
+			save_scope_as = spn_gather_found
+		}
+	}
+	every_in_global_list = {
+		variable = spn_order_chapters
+		limit = { exists = var:spn_order_chapter }
+		save_scope_as = spn_sel_head
+		var:spn_order_chapter = {
+			save_scope_as = spn_sel_ch
+			set_variable = { name = spn_order_picks value = 0 }
+			spn_order_pick_one_effect = yes
+			spn_order_pick_one_effect = yes
+			spn_order_pick_one_effect = yes
+			if = {
+				limit = { spn_order_prerogative_is_trigger = { P = flag:grow } }
+				spn_order_pick_one_effect = yes
+			}
+			remove_variable = spn_order_picks
+		}
+		clear_saved_scope = spn_sel_ch
+	}
+	if = {
+		limit = { exists = scope:spn_bargain_necro }
+		scope:spn_bargain_necro = {
+			add_character_flag = { flag = spn_order_bargain_cd years = 10 }
+			trigger_event = { id = spn_order.0830 days = { 30 200 } }
+		}
+	}
+}
+
+# One pick for scope:spn_sel_ch (story scope), guarded by size + picks < cap (§5.4 step 2).
+spn_order_pick_one_effect = {
+	if = {
+		limit = { spn_order_room_left_value > 0 }
+		ordered_in_list = {
+			list = spn_order_selection_list
+			limit = {
+				NOT = { has_character_flag = spn_order_picked }
+				in_diplomatic_range = scope:spn_sel_head
+				# 2.38b: the AI fills a temple to 80% of its cap; the rest is for players (DESIGN-2.38b §6).
+				trigger_if = {
+					limit = { is_ai = yes }
+					scope:spn_sel_ch = { spn_order_ai_room_left_value > 0 }
+				}
+			}
+			order_by = spn_order_candidate_score_value
+			save_scope_as = spn_sel_pick
+		}
+		if = {
+			limit = { exists = scope:spn_sel_pick }
+			change_variable = { name = spn_order_picks add = 1 }
+			scope:spn_sel_pick = {
+				add_character_flag = { flag = spn_order_picked years = 1 }
+				set_variable = { name = spn_order_picker value = scope:spn_sel_ch years = 1 }
+			}
+			# 2.38b: a player Temple Magus chooses who his temple calls (DESIGN-2.38b §6), unless he has left it to the masks.
+			if = {
+				limit = {
+					scope:spn_sel_head = {
+						is_ai = no
+						NOT = { has_character_flag = spn_order_auto_picks }
+					}
+				}
+				# 2.39 (WORK-ORDER-2.39 F14 V3): staggered by the pick counter (counted just above), so the three or four Names
+				# for the Rose come about 70 days apart instead of all inside 60 days. The pick's own flag and variable last a
+				# year (above), so the fourth is still valid. 2.38c: still spaced from the Rite and the Conclave.
+				if = {
+					limit = { var:spn_order_picks <= 1 }
+					scope:spn_sel_head = { trigger_event = { id = spn_order.0108 days = { 90 120 } } }
+				}
+				else_if = {
+					limit = { var:spn_order_picks = 2 }
+					scope:spn_sel_head = { trigger_event = { id = spn_order.0108 days = { 160 190 } } }
+				}
+				else_if = {
+					limit = { var:spn_order_picks = 3 }
+					scope:spn_sel_head = { trigger_event = { id = spn_order.0108 days = { 230 260 } } }
+				}
+				else = {
+					scope:spn_sel_head = { trigger_event = { id = spn_order.0108 days = { 300 330 } } }
+				}
+			}
+			# 2.38b: a player who has not heard of the Order hears the rumour first (DESIGN-2.38b §8), once.
+			else_if = {
+				limit = {
+					scope:spn_sel_pick = {
+						is_ai = no
+						NOT = { has_character_flag = spn_order_whispered }
+					}
+				}
+				scope:spn_sel_pick = { spn_order_whisper_effect = yes }
+			}
+			else = {
+				scope:spn_sel_pick = { spn_order_send_note_effect = yes }
+			}
+			clear_saved_scope = spn_sel_pick
+		}
+	}
+}
+
+# ==================================================================================================
+# THE PLEDGE (§5.5). The events are spn_order.0101-.0190; these are their shared steps.
+# ==================================================================================================
+# "I will come." Root: the candidate. Onto the picking story, as a neophyte.
+spn_order_accept_note_effect = {
+	var:spn_order_picker = { save_scope_as = spn_pl_ch }
+	remove_variable = spn_order_picker
+	spn_order_add_member_effect = { WHO = root CHAPTER = scope:spn_pl_ch RANK = flag:neophyte }
+	set_variable = { name = spn_order_pledge_step value = 1 }
+	# 2.38b: the first meeting comes before the tests (DESIGN-2.38b §9).
+	trigger_event = { id = spn_order.0102 days = { 20 40 } }
+}
+
+# A failed step: Pulveris Memoria (§5.10). Root: the neophyte. He is removed with flag:forget, which wipes him.
+spn_order_fail_pledge_effect = {
+	add_character_flag = { flag = spn_order_refused years = 10 }
+	save_scope_value_as = { name = spn_pm_pledge_failed value = yes } # 2.39 (final pass, 17 Oct): no wronged kin for a failed pledge
+	spn_order_remove_member_effect = { WHO = root REASON = flag:forget }
+	clear_saved_scope = spn_pm_pledge_failed
+}
+
+# 2.38a: Found the Order Anew asks every Mage the founder knows (spn_order_known_mages_value's four groups, in the same
+# order, so they never overlap). Root: the founder, saved as scope:spn_oa_founder; his chapter already exists.
+spn_order_refound_invite_effect = {
+	every_courtier_or_guest = {
+		limit = { spn_order_known_mage_trigger = { WHO = root } }
+		trigger_event = spn_order.0610
+	}
+	every_vassal = {
+		limit = { spn_order_known_mage_trigger = { WHO = root } }
+		trigger_event = spn_order.0610
+	}
+	liege ?= {
+		if = {
+			limit = {
+				NOT = { this = root }
+				spn_order_known_mage_trigger = { WHO = root }
+			}
+			trigger_event = spn_order.0610
+		}
+	}
+	every_known_secret = {
+		limit = {
+			secret_type = secret_witch
+			secret_owner = { spn_order_known_mage_by_secret_trigger = { WHO = root } }
+		}
+		secret_owner = { trigger_event = spn_order.0610 }
+	}
+}
+
+# Pulveris Memoria (§5.10). Root: the one forgetting. The memory; his knowledge of every Blue Rose secret is re-issued
+# without him (C9); a member's magic is stripped (T30); then spn_order_wiped keeps the Selection and the teaching away.
+spn_order_pulveris_effect = {
+	# 2.39 (WORK-ORDER-2.39 F2): a non-member wiped by the Order leaves wronged kin (50 years). Not a guarded mind (F17).
+	if = {
+		limit = {
+			NOT = { exists = scope:spn_rem_was_member }
+			NOT = { exists = scope:spn_pm_pledge_failed } # 2.39 (final pass, 17 Oct): a neophyte who failed his pledge
+			has_immunity_for_magic_domination = no
+		}
+		spn_order_wronged_kin_effect = { WHO = this }
+	}
+	save_scope_as = spn_pm_who
+	# 2.39 (WORK-ORDER-2.39 F17): READ FIRST. A guarded mind does not take the powder (the Draught of a Clear Mind, and
+	# Witchcraft's own guards: the Seal, Master Defence, Dragon Scales, Natural Immunity, an antimagic seal). Nothing is
+	# forgotten and spn_order_wiped is not set; the Order believes it worked, and a leaving member still loses his magic
+	# below (expert call, wolves Q10). Cleared first, so a second Pulveris in the same run never reads the first's answer.
+	if = {
+		limit = { exists = scope:spn_pm_resisted }
+		clear_saved_scope = spn_pm_resisted
+	}
+	if = {
+		limit = { has_immunity_for_magic_domination = yes }
+		save_scope_value_as = { name = spn_pm_resisted value = yes }
+	}
+	if = {
+		limit = {
+			NOT = { exists = scope:spn_pm_resisted }
+			NOT = { any_memory = { memory_type = spn_order_forgotten_memory } }
+		}
+		create_character_memory = { type = spn_order_forgotten_memory }
+	}
+	every_known_secret = {
+		limit = { secret_type = spn_secret_blue_rose }
+		secret_owner = { add_to_temporary_list = spn_pm_owners }
+	}
+	if = {
+		limit = { NOT = { exists = scope:spn_pm_resisted } }
+		# 2.39 (WORK-ORDER-2.39 F17): a wolf's names are BANKED before they are taken (the ordering rule). Only wolves
+		# recover, so only wolves are banked (red team L22). Each owner is checked against what this man knows NOW, before
+		# anything is forgotten, so a list carried from an earlier Pulveris in the same run banks nothing it should not.
+		if = {
+			limit = { spn_is_wolf_trigger = yes }
+			every_in_list = {
+				list = spn_pm_owners
+				limit = {
+					any_secret = {
+						secret_type = spn_secret_blue_rose
+						is_known_by = scope:spn_pm_who
+					}
+				}
+				save_temporary_scope_as = spn_pm_o
+				scope:spn_pm_who = {
+					if = {
+						limit = { NOT = { is_target_in_variable_list = { name = spn_pm_forgotten target = scope:spn_pm_o } } }
+						add_to_variable_list = { name = spn_pm_forgotten target = scope:spn_pm_o }
+					}
+				}
+			}
+			# Only with something banked (2.39 review L1): a wolf who knew no Blue Rose name has nothing to get back, so he
+			# gets no ring count, no chain and no flag (L22: no bank outlives its use).
+			if = {
+				limit = { has_variable_list = spn_pm_forgotten }
+				set_variable = { name = spn_pm_rings value = 0 }
+				# The slow pull (expert call, wolves Q7 (B)): one chain at a time. A second wipe refreshes the flag rather
+				# than starting a second chain (red team L23); the flag lasts as long as the wipe.
+				if = {
+					limit = { NOT = { has_character_flag = spn_pm_pull_active } }
+					trigger_event = { id = spn_order.0196 years = { 3 6 } }
+				}
+				else = {
+					remove_character_flag = spn_pm_pull_active
+				}
+				add_character_flag = { flag = spn_pm_pull_active years = 30 }
+			}
+		}
+		every_in_list = {
+			list = spn_pm_owners
+			limit = {
+				any_secret = {
+					secret_type = spn_secret_blue_rose
+					is_known_by = scope:spn_pm_who
+				}
+			}
+			spn_order_forget_secret_effect = { WHO = this }
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_rem_was_member }
+		spn_order_strip_magic_effect = yes
+	}
+	if = {
+		limit = { NOT = { exists = scope:spn_pm_resisted } }
+		add_character_flag = { flag = spn_order_wiped years = 30 }
+	}
+	trigger_event = spn_order.0190    # 2.39 (F17): "There was a night you cannot remember" has a guarded text (red team M2)
+}
+
+# C9: no effect makes one person forget a secret. So $WHO$'s Blue Rose secret is removed and re-added, then revealed again
+# only to his chapter's members (and the forgetting man is not among them by then).
+spn_order_forget_secret_effect = {
+	$WHO$ = {
+		save_scope_as = spn_fs_who
+		if = {
+			limit = { spn_is_order_member_trigger = yes }
+			# 2.39 (WORK-ORDER-2.39 F17, red team M1): what a guarded mind knows stays known. BEFORE the secret is re-issued,
+			# bank everyone who knows it and whose mind is guarded (vanilla every_secret_knower, 00_secret_effects.txt); they
+			# are told again below. A variable list on the owner, cleared below: a temporary list would carry one owner's
+			# knowers into the next owner's call in the same run.
+			every_secret = {
+				limit = { secret_type = spn_secret_blue_rose }
+				every_secret_knower = {
+					limit = { has_immunity_for_magic_domination = yes }
+					save_temporary_scope_as = spn_fs_g
+					scope:spn_fs_who = { add_to_variable_list = { name = spn_fs_guarded target = scope:spn_fs_g } }
+				}
+			}
+			every_secret = {
+				limit = { secret_type = spn_secret_blue_rose }
+				remove_secret = yes
+			}
+			add_secret = { type = spn_secret_blue_rose }
+			var:spn_order_chapter ?= {
+				every_in_list = {
+					variable = spn_order_members
+					limit = {
+						is_alive = yes
+						spn_is_order_member_trigger = yes
+						NOT = { this = scope:spn_fs_who }
+					}
+					save_temporary_scope_as = spn_fs_knower
+					scope:spn_fs_who = {
+						random_secret = {
+							limit = {
+								secret_type = spn_secret_blue_rose
+								NOT = { is_known_by = scope:spn_fs_knower }
+							}
+							reveal_to = scope:spn_fs_knower
+						}
+					}
+				}
+			}
+			# 2.39 (M1): ...and the guarded are told again.
+			if = {
+				limit = { has_variable_list = spn_fs_guarded }
+				every_in_list = {
+					variable = spn_fs_guarded
+					limit = { is_alive = yes }
+					save_temporary_scope_as = spn_fs_g
+					scope:spn_fs_who = {
+						random_secret = {
+							limit = {
+								secret_type = spn_secret_blue_rose
+								NOT = { is_known_by = scope:spn_fs_g }
+							}
+							reveal_to = scope:spn_fs_g
+						}
+					}
+				}
+				clear_variable_list = spn_fs_guarded
+			}
+		}
+	}
+}
+
+# T30: leaving the Order "takes your magic too". Every writer of a Mage's state was enumerated (§5.10); only Witchcraft's
+# own removal lines are used. Order: bank the seat, then the seat, the perks, the spell flags, power saturation, the trait.
+spn_order_strip_magic_effect = {
+	if = {
+		limit = { has_variable = mc_member_var }
+		remove_from_mc_effect = yes
+	}
+	spn_order_strip_perks_effect = yes
+	clear_valid_magic_flags_effect = yes
+	if = {
+		limit = { has_character_modifier = power_saturated1 }
+		remove_character_modifier = power_saturated1
+	}
+	if = {
+		limit = { has_character_modifier = power_saturated2 }
+		remove_character_modifier = power_saturated2
+	}
+	if = {
+		limit = { has_character_modifier = spn_fors_factorum_modifier }
+		remove_character_modifier = spn_fors_factorum_modifier
+	}
+	if = {
+		limit = { has_trait = true_witch }
+		remove_trait = true_witch
+	}
+	if = {
+		limit = { has_trait = archmage }
+		remove_trait = archmage
+	}
+}
+
+# The secret's on_expose (§5.11). Root: the exposed member.
+spn_order_exposed_effect = {
+	save_scope_as = spn_ex_who
+	set_global_variable = { name = spn_order_last_exposed_year value = current_year }
+	if = {
+		limit = {
+			exists = location.county
+			NOT = { exists = global_var:spn_order_breaking } # 2.39 (WORK-ORDER-2.39 F2): no trail while the Order is broken
+		}
+		location.county = { save_scope_as = spn_ex_county }
+		spn_mark_menace_effect = { COUNTY = scope:spn_ex_county CULPRIT = scope:spn_ex_who KIND = witch SEVERITY = prowl }
+	}
+	var:spn_order_chapter ?= {
+		set_variable = { name = spn_order_exposed_this_year value = yes years = 1 }
+	}
+	# Under Silence, the one who was exposed loses ten more (§5.18).
+	if = {
+		limit = { spn_order_prerogative_is_trigger = { P = flag:silence } }
+		spn_order_add_standing_effect = { VALUE = -10 }
+	}
+	# A brother who exposes a brother breaks the Order's rules (§5.14).
+	if = {
+		limit = {
+			exists = scope:secret_exposer
+			scope:secret_exposer = {
+				spn_is_order_member_trigger = yes
+				NOT = { this = scope:spn_ex_who }
+			}
+		}
+		scope:secret_exposer = { spn_order_broke_rules_effect = yes }
+	}
+	var:spn_order_chapter ?= {
+		story_owner = {
+			if = {
+				limit = {
+					is_ai = no
+					NOT = { this = scope:spn_ex_who }
+					NOT = { exists = global_var:spn_order_breaking } # 2.39 (WORK-ORDER-2.39 F2): the Break tells its own
+				}
+				trigger_event = spn_order.0170
+			}
+		}
+	}
+}
+
+# An Order crime (§5.14): the flag, and the Temple Magus's opinion. The AI head expels at the flag (§5.10).
+spn_order_broke_rules_effect = {
+	add_character_flag = { flag = spn_order_broke_rules years = 10 }
+	save_scope_as = spn_br_who
+	var:spn_order_chapter ?= {
+		story_owner = {
+			if = {
+				limit = { NOT = { this = scope:spn_br_who } }
+				add_opinion = { target = scope:spn_br_who modifier = spn_betrayed_the_order_opinion }
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# RESPONDEO AND THE POWDER (§5.12, §5.13)
+# ==================================================================================================
+# Respondeo's working (the decision's event). Root: the caster. Paid already by the event's option.
+spn_order_respondeo_effect = {
+	save_scope_as = spn_rs_actor
+	if = {
+		limit = { exists = location.county }
+		location.county = { save_scope_as = spn_body_county }
+		scope:spn_body_county = { spn_menace_clear_county_effect = yes }
+		# The members whose bodies are in that county: their witch secret is re-told only to their chapter (C9).
+		var:spn_order_chapter ?= {
+			every_in_list = {
+				variable = spn_order_members
+				limit = {
+					is_alive = yes
+					spn_is_order_member_trigger = yes
+					location.county ?= scope:spn_body_county
+				}
+				spn_order_forget_witch_secret_effect = yes
+			}
+		}
+	}
+	# 2.39 (WORK-ORDER-2.39 F15): cast in the county of his temple's own Collegium, Respondeo costs no wound.
+	if = {
+		limit = {
+			exists = scope:spn_body_county
+			var:spn_order_chapter ?= {
+				spn_order_hall_stands_trigger = yes
+				var:spn_order_hall.county ?= scope:spn_body_county
+			}
+		}
+		custom_tooltip = spn_order_respondeo_no_wound_tt
+	}
+	else = {
+		increase_wounds_no_death_effect = { REASON = fight }
+	}
+	add_stress = major_stress_impact_gain
+	add_character_modifier = { modifier = spn_order_respondeo_modifier years = 1 }
+	# 2.39 (WORK-ORDER-2.39 B9): the spn_order_respondeo_cd flag is gone. It was set here and read nowhere.
+	spn_order_deed_effect = { PREROGATIVE = flag:silence AMOUNT = 15 TOAST = yes }
+}
+
+# C9 for a member's WITCH secret: bank who knows it, remove it, add it again, and reveal it only to his chapter, his
+# spouse and close family. Member scope.
+spn_order_forget_witch_secret_effect = {
+	save_scope_as = spn_fw_who
+	if = {
+		limit = { any_secret = { secret_type = secret_witch } }
+		# 2.39 (WORK-ORDER-2.39 F17, red team M1): bank the guarded knowers BEFORE the secret is re-issued; told again below.
+		every_secret = {
+			limit = { secret_type = secret_witch }
+			every_secret_knower = {
+				limit = { has_immunity_for_magic_domination = yes }
+				save_temporary_scope_as = spn_fw_g
+				scope:spn_fw_who = { add_to_variable_list = { name = spn_fw_guarded target = scope:spn_fw_g } }
+			}
+		}
+		every_secret = {
+			limit = { secret_type = secret_witch }
+			remove_secret = yes
+		}
+		add_secret = { type = secret_witch }
+		var:spn_order_chapter ?= {
+			every_in_list = {
+				variable = spn_order_members
+				limit = {
+					is_alive = yes
+					NOT = { this = scope:spn_fw_who }
+				}
+				save_temporary_scope_as = spn_fw_t    # 2.39: a list on the member, not a temporary list (see above)
+				scope:spn_fw_who = { add_to_variable_list = { name = spn_fw_tell target = scope:spn_fw_t } }
+			}
+		}
+		every_close_family_member = {
+			save_temporary_scope_as = spn_fw_t
+			scope:spn_fw_who = { add_to_variable_list = { name = spn_fw_tell target = scope:spn_fw_t } }
+		}
+		every_spouse = {
+			save_temporary_scope_as = spn_fw_t
+			scope:spn_fw_who = { add_to_variable_list = { name = spn_fw_tell target = scope:spn_fw_t } }
+		}
+		every_in_list = {
+			variable = spn_fw_tell
+			save_temporary_scope_as = spn_fw_knower
+			scope:spn_fw_who = {
+				random_secret = {
+					limit = {
+						secret_type = secret_witch
+						NOT = { is_known_by = scope:spn_fw_knower }
+					}
+					reveal_to = scope:spn_fw_knower
+				}
+			}
+		}
+		if = {
+			limit = { has_variable_list = spn_fw_tell }
+			clear_variable_list = spn_fw_tell
+		}
+		# 2.39 (M1): ...and the guarded are told again.
+		if = {
+			limit = { has_variable_list = spn_fw_guarded }
+			every_in_list = {
+				variable = spn_fw_guarded
+				limit = { is_alive = yes }
+				save_temporary_scope_as = spn_fw_g
+				scope:spn_fw_who = {
+					random_secret = {
+						limit = {
+							secret_type = secret_witch
+							NOT = { is_known_by = scope:spn_fw_g }
+						}
+						reveal_to = scope:spn_fw_g
+					}
+				}
+			}
+			clear_variable_list = spn_fw_guarded
+		}
+	}
+}
+
+# ==================================================================================================
+# v4 -- THE MASTER AND THE PREROGATIVE (§5.18)
+# ==================================================================================================
+# The Grand Magus if he is a member; else the head of the oldest chapter. Yearly, on a change of head, and on the
+# master's death. Every reader also tests is_alive.
+spn_order_master_refresh_effect = {
+	if = {
+		limit = {
+			global_var:current_archmage_global ?= {
+				is_alive = yes
+				spn_is_order_member_trigger = yes
+			}
+		}
+		set_global_variable = { name = spn_order_master value = global_var:current_archmage_global }
+	}
+	else_if = {
+		limit = {
+			any_in_global_list = {
+				variable = spn_order_chapters
+				is_alive = yes
+				exists = var:spn_order_chapter
+			}
+		}
+		ordered_in_global_list = {
+			variable = spn_order_chapters
+			limit = {
+				is_alive = yes
+				exists = var:spn_order_chapter
+			}
+			order_by = spn_order_chapter_age_value
+			save_scope_as = spn_mr_master
+		}
+		set_global_variable = { name = spn_order_master value = scope:spn_mr_master }
+	}
+	else = {
+		remove_global_variable = spn_order_master
+	}
+}
+
+# Set the prerogative to $P$ (a flag literal) and tell every player member.
+spn_order_set_prerogative_effect = {
+	set_global_variable = { name = spn_order_prerogative value = $P$ }
+	set_global_variable = { name = spn_order_prerogative_year value = current_year }
+	# One title per prerogative: a toast title is plain text with no scope to read a custom loc from (review, 9 Oct).
+	if = {
+		limit = { global_var:spn_order_prerogative ?= flag:recover }
+		spn_order_toast_members_effect = { TITLE = spn_order_toast_prerogative_recover }
+	}
+	else_if = {
+		limit = { global_var:spn_order_prerogative ?= flag:silence }
+		spn_order_toast_members_effect = { TITLE = spn_order_toast_prerogative_silence }
+	}
+	else_if = {
+		limit = { global_var:spn_order_prerogative ?= flag:book }
+		spn_order_toast_members_effect = { TITLE = spn_order_toast_prerogative_book }
+	}
+	else_if = {
+		limit = { global_var:spn_order_prerogative ?= flag:grow }
+		spn_order_toast_members_effect = { TITLE = spn_order_toast_prerogative_grow }
+	}
+	else = {
+		spn_order_toast_members_effect = { TITLE = spn_order_toast_prerogative_pit }
+	}
+}
+
+# A deed (§5.18): pays $AMOUNT$ standing only when the prerogative is $PREROGATIVE$; $TOAST$ yes/no. Member scope.
+spn_order_deed_effect = {
+	if = {
+		limit = {
+			spn_is_order_member_trigger = yes
+			spn_order_prerogative_is_trigger = { P = $PREROGATIVE$ }
+		}
+		spn_order_add_standing_effect = { VALUE = $AMOUNT$ }
+		if = {
+			limit = { exists = var:spn_order_adeptus }
+			spn_order_add_standing_effect = { VALUE = 5 }
+		}
+		if = {
+			limit = {
+				is_ai = no
+				always = $TOAST$
+			}
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_order_toast_deed
+				left_icon = this
+				custom_tooltip = spn_order_toast_deed_tt
+			}
+		}
+	}
+}
+
+# One toast to every player member. $TITLE$ is a loc key.
+spn_order_toast_members_effect = {
+	every_player = {
+		limit = { spn_is_order_member_trigger = yes }
+		send_interface_toast = {
+			type = event_toast_effect_neutral
+			title = $TITLE$
+			left_icon = this
+		}
+	}
+}
+
+# The AI master sets or renews the prerogative (§5.18). Yearly; once in ten years.
+spn_order_ai_prerogative_effect = {
+	if = {
+		limit = {
+			global_var:spn_order_master ?= {
+				is_alive = yes
+				is_ai = yes
+			}
+			OR = {
+				NOT = { exists = global_var:spn_order_prerogative }
+				global_var:spn_order_prerogative_year <= spn_order_ten_years_ago_value
+			}
+		}
+		global_var:spn_order_master = {
+			random_list = {
+				30 = {
+					modifier = { add = 30 has_trait = greedy }
+					modifier = {
+						add = 20
+						var:spn_order_chapter ?= { var:spn_order_reliquary_count < 3 }
+					}
+					spn_order_set_prerogative_effect = { P = flag:recover }
+				}
+				30 = {
+					modifier = {
+						add = 40
+						exists = global_var:spn_order_last_exposed_year
+						global_var:spn_order_last_exposed_year >= spn_order_five_years_ago_value
+					}
+					modifier = { add = 20 has_trait = paranoid }
+					spn_order_set_prerogative_effect = { P = flag:silence }
+				}
+				20 = {
+					modifier = {
+						add = 40
+						spn_vade_on_trigger = yes
+						NOT = { exists = global_var:spn_vade_destroyed }
+					}
+					modifier = { add = 20 has_trait = ambitious }
+					spn_order_set_prerogative_effect = { P = flag:book }
+				}
+				30 = {
+					modifier = {
+						add = 30
+						NOT = {
+							any_in_global_list = {
+								variable = spn_order_chapters
+								count >= spn_order_max_chapters_value
+							}
+						}
+					}
+					spn_order_set_prerogative_effect = { P = flag:grow }
+				}
+				0 = {
+					modifier = { add = 30 has_trait = arbitrary }
+					modifier = { add = 20 has_trait = ambitious }
+					modifier = {
+						add = 40
+						any_in_global_list = {
+							variable = spn_order_compacts
+							is_alive = yes
+						}
+					}
+					modifier = {
+						factor = 0
+						has_trait = zealous
+					}
+					spn_order_set_prerogative_effect = { P = flag:pit }
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# v4 -- THE CHAIR AND THE SEATS (§5.16). Yearly. Reads a handful of globals; walks no world.
+# ==================================================================================================
+spn_order_chair_yearly_effect = {
+	# The Chair Is Empty: once, the year the formed council has no chair.
+	if = {
+		limit = {
+			exists = global_var:mc_has_been_formed
+			NOT = { exists = global_var:current_archmage_global }
+			NOT = { exists = global_var:spn_order_chair_empty_told }
+		}
+		set_global_variable = spn_order_chair_empty_told
+		spn_order_toast_members_effect = { TITLE = spn_order_toast_chair_empty }
+	}
+	if = {
+		limit = { exists = global_var:current_archmage_global }
+		remove_global_variable = spn_order_chair_empty_told
+	}
+	# A new chair: the masks are offered once to a Mage who is not a member; one who cannot join leaves the Order with
+	# no chair of its own.
+	if = {
+		limit = {
+			global_var:current_archmage_global ?= {
+				is_alive = yes
+				spn_is_order_member_trigger = no
+			}
+			NOT = { global_var:spn_order_chair_seen ?= global_var:current_archmage_global }
+			any_in_global_list = {
+				variable = spn_order_chapters
+				is_alive = yes
+			}
+		}
+		set_global_variable = { name = spn_order_chair_seen value = global_var:current_archmage_global }
+		global_var:current_archmage_global = {
+			if = {
+				limit = { spn_order_can_join_trigger = yes }
+				if = {
+					limit = { is_ai = yes }
+					spn_order_masks_bow_effect = yes
+				}
+				else = {
+					trigger_event = spn_order.0960
+				}
+			}
+			# 2.38b: the chair is the Order's. One who cannot join leaves it empty for the temples to fill.
+			else = {
+				remove_from_mc_effect = yes
+				spn_order_toast_members_effect = { TITLE = spn_order_toast_chair_vacated }
+			}
+		}
+	}
+	# 2.39 (WORK-ORDER-2.39 F1): a new face in the chair is dated (Invocare's three years). Identity state, no expiry.
+	# Review L-2: the first face this pulse ever sees in an older save (three years or more after its start) has sat there
+	# longer than anyone can tell, so he counts as settled. Every later face, and the first one of a new game, is dated to
+	# this year. spn_order_chair_looked (identity state, no expiry) marks that the pulse has looked at the chair once.
+	if = {
+		limit = {
+			exists = global_var:current_archmage_global
+			NOT = { global_var:spn_order_chair_dated ?= global_var:current_archmage_global }
+		}
+		if = {
+			limit = {
+				NOT = { exists = global_var:spn_order_chair_looked }
+				years_from_game_start >= 3
+			}
+			set_global_variable = { name = spn_order_chair_year value = spn_order_three_years_ago_value }
+		}
+		else = {
+			set_global_variable = { name = spn_order_chair_year value = current_year }
+		}
+		set_global_variable = { name = spn_order_chair_dated value = global_var:current_archmage_global }
+	}
+	if = {
+		limit = { NOT = { exists = global_var:spn_order_chair_looked } }
+		set_global_variable = { name = spn_order_chair_looked value = yes }
+	}
+	# A member in the chair, once per man: The Chair of the Grand Magus.
+	if = {
+		limit = {
+			global_var:current_archmage_global ?= {
+				is_alive = yes
+				spn_is_order_member_trigger = yes
+				NOT = { has_character_flag = spn_order_chair_moment }
+			}
+		}
+		global_var:current_archmage_global = {
+			add_character_flag = spn_order_chair_moment
+			if = {
+				limit = { is_ai = no }
+				trigger_event = spn_order.0963
+			}
+		}
+	}
+	# The Council Calls You: an AI member chair, an empty seat, the Order's best candidate.
+	if = {
+		limit = {
+			global_var:current_archmage_global ?= {
+				is_alive = yes
+				is_ai = yes
+				spn_is_order_member_trigger = yes
+				is_imprisoned = no
+			}
+			OR = {
+				NOT = { exists = global_var:current_loremaster_global }
+				NOT = { exists = global_var:current_black_mage_global }
+				NOT = { exists = global_var:current_admin_global }
+			}
+		}
+		global_var:current_archmage_global = { save_scope_as = spn_cc_chair }
+		ordered_in_global_list = {
+			variable = spn_order_chapters
+			limit = { spn_order_seat_candidate_trigger = { CHAIR = scope:spn_cc_chair } }
+			order_by = var:spn_order_standing
+			save_scope_as = spn_cc_pick
+		}
+		if = {
+			limit = { NOT = { exists = scope:spn_cc_pick } }
+			scope:spn_cc_chair.var:spn_order_chapter ?= {
+				ordered_in_list = {
+					variable = spn_order_members
+					limit = {
+						var:spn_order_rank ?= flag:magistratus
+						spn_order_seat_candidate_trigger = { CHAIR = scope:spn_cc_chair }
+					}
+					order_by = var:spn_order_standing
+					save_scope_as = spn_cc_pick
+				}
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_cc_pick }
+			scope:spn_cc_pick = { trigger_event = spn_order.0970 }
+		}
+	}
+}
+
+# A Mage who is not a member, given the chair, puts on the mask (§5.16). His scope.
+spn_order_masks_bow_effect = {
+	save_scope_as = spn_mb_chair
+	random_in_global_list = {
+		variable = spn_order_chapters
+		limit = {
+			is_alive = yes
+			in_diplomatic_range = scope:spn_mb_chair
+			var:spn_order_chapter ?= { spn_order_has_room_trigger = yes }
+		}
+		var:spn_order_chapter = { save_scope_as = spn_mb_ch }
+	}
+	if = {
+		limit = { NOT = { exists = scope:spn_mb_ch } }
+		ordered_in_global_list = {
+			variable = spn_order_chapters
+			limit = {
+				is_alive = yes
+				exists = var:spn_order_chapter
+			}
+			order_by = spn_order_chapter_age_value
+			var:spn_order_chapter = { save_scope_as = spn_mb_ch }
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_mb_ch }
+		spn_order_add_member_effect = { WHO = scope:spn_mb_chair CHAPTER = scope:spn_mb_ch RANK = flag:magistratus }
+		# Standing first: grant gives 5 to anyone without it (review, 9 Oct).
+		if = {
+			limit = { NOT = { exists = var:spn_order_standing } }
+			set_variable = { name = spn_order_standing value = 50 }
+		}
+		spn_order_grant_membership_effect = yes
+		spn_order_master_refresh_effect = yes
+	}
+}
+
+# The Adepti (§5.22): one call a year, to the best Magistratus at 75 who is not a head and has not declined.
+spn_order_adepti_yearly_effect = {
+	if = {
+		limit = { exists = global_var:spn_order_master }
+		if = {
+			limit = {
+				global_var:current_black_mage_global ?= {
+					is_alive = yes
+					spn_is_order_member_trigger = yes
+				}
+			}
+			global_var:current_black_mage_global = { save_scope_as = spn_ad_caller }
+		}
+		else = {
+			global_var:spn_order_master = { save_scope_as = spn_ad_caller }
+		}
+		every_in_global_list = {
+			variable = spn_order_chapters
+			limit = { exists = var:spn_order_chapter }
+			var:spn_order_chapter = {
+				every_in_list = {
+					variable = spn_order_members
+					limit = {
+						is_alive = yes
+						var:spn_order_rank ?= flag:magistratus
+						var:spn_order_standing >= 75
+						spn_is_temple_magus_trigger = no
+						NOT = { exists = var:spn_order_adeptus }
+						NOT = { has_character_flag = spn_order_adepti_declined }
+						NOT = { this = scope:spn_ad_caller }
+					}
+					add_to_temporary_list = spn_ad_pool
+				}
+			}
+		}
+		ordered_in_list = {
+			list = spn_ad_pool
+			order_by = var:spn_order_standing
+			save_scope_as = spn_ad_pick
+		}
+		if = {
+			limit = { exists = scope:spn_ad_pick }
+			scope:spn_ad_pick = {
+				if = {
+					limit = { is_ai = no }
+					trigger_event = spn_order.0850
+				}
+				else = {
+					random_list = {
+						60 = {
+							modifier = { add = 20 has_trait = ambitious }
+							modifier = { add = 20 has_trait = brave }
+							set_variable = spn_order_adeptus
+						}
+						40 = {
+							modifier = { add = 30 has_trait = content }
+							add_character_flag = { flag = spn_order_adepti_declined years = 10 }
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# v4 -- THE MAGE SUMMIT (§5.21). Two hooks Witchcraft calls through apply_upstream_edits.py.
+# ==================================================================================================
+# E21, in mages_summit's on_start. Root: the activity; scope:host. The chair at the start is banked on the activity, and
+# every player member of rank who is not the host is sent by his temple.
+spn_order_summit_started_effect = {
+	if = {
+		limit = { exists = global_var:current_archmage_global }
+		set_variable = { name = spn_chair_at_start value = global_var:current_archmage_global }
+	}
+	if = {
+		limit = { spn_order_on_trigger = yes }
+		every_player = {
+			limit = {
+				spn_order_medicum_plus_trigger = yes
+				is_adult = yes
+				is_imprisoned = no
+				NOT = { this = scope:host }
+			}
+			trigger_event = { id = spn_order.0800 days = 3 }
+		}
+	}
+}
+
+# E3, the first line of mages_summit's on_complete. Root: each attendee; scope:activity, scope:host.
+spn_order_summit_complete_effect = {
+	if = {
+		limit = { spn_is_order_member_trigger = yes }
+		save_scope_as = spn_sc_who
+		# Meet in the Masks (§5.15): every member here whom he knows to be one; the AI always meets in the masks.
+		if = {
+			limit = {
+				OR = {
+					has_activity_intent = spn_meet_in_the_masks_intent
+					is_ai = yes
+				}
+			}
+			scope:activity = {
+				every_attending_character = {
+					limit = {
+						NOT = { this = scope:spn_sc_who }
+						spn_is_order_member_trigger = yes
+						scope:spn_sc_who = { spn_order_knows_member_trigger = { WHO = prev } }
+					}
+					add_to_temporary_list = spn_sc_brothers
+				}
+			}
+			if = {
+				limit = { any_in_list = { list = spn_sc_brothers count > 0 } }
+				spn_order_add_standing_effect = { VALUE = 10 }
+				every_in_list = {
+					list = spn_sc_brothers
+					add_opinion = { target = scope:spn_sc_who modifier = spn_brother_of_the_order_opinion }
+				}
+			}
+		}
+		# Speak for the Order (§5.21).
+		if = {
+			limit = {
+				spn_order_medicum_plus_trigger = yes
+				OR = {
+					has_activity_intent = spn_speak_for_the_order_intent
+					is_ai = yes
+				}
+			}
+			spn_order_add_standing_effect = { VALUE = 10 }
+			if = {
+				limit = {
+					global_var:current_archmage_global ?= {
+						is_alive = yes
+						spn_is_order_member_trigger = yes
+					}
+					OR = {
+						NOT = { scope:activity = { exists = var:spn_chair_at_start } }
+						NOT = { global_var:current_archmage_global = scope:activity.var:spn_chair_at_start }
+					}
+				}
+				spn_order_add_standing_effect = { VALUE = 15 }
+				if = {
+					limit = { NOT = { global_var:current_archmage_global = scope:spn_sc_who } }
+					global_var:current_archmage_global = { add_opinion = { target = scope:spn_sc_who modifier = spn_order_carried_me_opinion } }
+				}
+			}
+		}
+		# The temple's errand.
+		if = {
+			limit = { has_character_flag = spn_order_summit_errand }
+			remove_character_flag = spn_order_summit_errand
+			spn_order_add_standing_effect = { VALUE = 10 }
+		}
+	}
+}
+
+# E12, the first line of witch_ritual's on_complete. Root: each attendee. Bring the Coven to the Order (§5.15): at the
+# rite's end, the host's coven's Mages who are not members are handed to the host's chapter as Selection picks.
+spn_coven_rite_complete_effect = {
+	if = {
+		limit = {
+			this = scope:host
+			spn_order_reach_built_trigger = yes
+			has_activity_intent = spn_bring_coven_to_order_intent
+			spn_is_order_member_trigger = yes
+			exists = var:spn_coven
+		}
+		var:spn_order_chapter = { save_scope_as = spn_cr_ch }
+		var:spn_coven = {
+			every_in_list = {
+				variable = spn_coven_members
+				limit = {
+					is_alive = yes
+					has_trait = archmage
+					spn_order_candidate_trigger = yes
+					NOT = { has_character_flag = spn_order_picked }
+				}
+				add_character_flag = { flag = spn_order_picked years = 1 }
+				set_variable = { name = spn_order_picker value = scope:spn_cr_ch years = 1 }
+				trigger_event = { id = spn_order.0101 days = { 10 60 } }
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# v4 -- WORKINGS: THE ELEMENTAL TRANSFERENCE (§5.19)
+# ==================================================================================================
+# Begin. $CASTER$ and $PATIENT$ are characters. The cooldown and the patient's pending mark are set NOW, so no one is in
+# two Workings at once. The power is spent at the Working itself (.0823).
+spn_transference_begin_effect = {
+	$CASTER$ = { save_scope_as = spn_tb_caster }
+	$PATIENT$ = { save_scope_as = spn_tb_patient }
+	scope:spn_tb_caster = {
+		set_variable = { name = spn_transference_patient value = scope:spn_tb_patient days = 60 }
+		add_character_flag = { flag = spn_transference_cd years = 5 }
+		clear_variable_list = spn_transference_volunteers
+	}
+	scope:spn_tb_patient = {
+		set_variable = { name = spn_transference_pending value = yes days = 60 }
+	}
+	scope:spn_tb_caster.var:spn_order_chapter ?= {
+		every_in_list = {
+			variable = spn_order_members
+			limit = {
+				is_ai = no
+				spn_transference_volunteer_ok_trigger = yes
+				NOT = { this = scope:spn_tb_caster }
+				NOT = { this = scope:spn_tb_patient }
+			}
+			trigger_event = { id = spn_order.0820 days = 1 }
+		}
+	}
+	scope:spn_tb_caster = { trigger_event = { id = spn_order.0821 days = 15 } }
+}
+
+# One AI volunteer onto the caster's list, while it holds fewer than five. Root: the caster.
+spn_transference_pick_one_effect = {
+	if = {
+		limit = {
+			OR = { # 2.38e: the list does not exist before the first volunteer
+				NOT = { has_variable_list = spn_transference_volunteers }
+				variable_list_size = { name = spn_transference_volunteers value < 5 }
+			}
+		}
+		var:spn_order_chapter ?= {
+			ordered_in_list = {
+				variable = spn_order_members
+				limit = {
+					is_ai = yes
+					spn_transference_volunteer_ok_trigger = yes
+					NOT = { this = root }
+					NOT = { this = root.var:spn_transference_patient }
+					NOT = { root = { is_target_in_variable_list = { name = spn_transference_volunteers target = prev } } }
+					spn_transference_volunteer_value >= 20
+				}
+				order_by = spn_transference_volunteer_value
+				save_scope_as = spn_tp_one
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_tp_one }
+			add_to_variable_list = { name = spn_transference_volunteers target = scope:spn_tp_one }
+			clear_saved_scope = spn_tp_one
+		}
+	}
+}
+
+# Success (.0823). Root: the caster; scope:spn_tw_patient. The patient keeps the Working's record (review D, B2).
+spn_transference_succeed_effect = {
+	scope:spn_tw_patient = {
+		if = {
+			limit = { has_trait = cancer }
+			set_variable = { name = spn_transference_disease value = flag:cancer years = 5 }
+			remove_trait = cancer
+		}
+		else_if = {
+			limit = { has_trait = consumption }
+			set_variable = { name = spn_transference_disease value = flag:consumption years = 5 }
+			remove_trait = consumption
+		}
+		else_if = {
+			limit = { has_trait = leper }
+			set_variable = { name = spn_transference_disease value = flag:leper years = 5 }
+			remove_trait = leper
+		}
+		else_if = {
+			limit = { has_trait = great_pox }
+			set_variable = { name = spn_transference_disease value = flag:great_pox years = 5 }
+			remove_trait = great_pox
+		}
+		# 2.39 (WORK-ORDER-2.39 F4): the Blue Fever. Drawn out of the beetle's carrier, it brings the beetle with it.
+		else_if = {
+			limit = { has_trait = spn_blue_fever }
+			set_variable = { name = spn_transference_disease value = flag:spn_blue_fever years = 5 }
+			remove_trait = spn_blue_fever
+			spn_beetle_drawn_out_effect = { CASTER = root }
+		}
+		set_variable = { name = spn_transference_cast_by value = root years = 5 }
+		clear_variable_list = spn_transference_carriers
+	}
+	every_in_list = {
+		variable = spn_transference_volunteers
+		limit = { is_alive = yes }
+		scope:spn_tw_patient = { add_to_variable_list = { name = spn_transference_carriers target = prev } }
+		set_variable = { name = spn_transference_carrier_of value = scope:spn_tw_patient years = 5 }
+		add_character_modifier = { modifier = spn_transference_carrier_modifier years = 5 }
+		spn_order_add_standing_effect = { VALUE = 15 }
+		if = {
+			limit = { scope:spn_tw_patient = { spn_is_order_member_trigger = yes } }
+			scope:spn_tw_patient = { add_opinion = { target = prev modifier = spn_gave_blood_opinion } }
+		}
+		if = {
+			limit = { is_ai = no }
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_order_toast_transference
+				left_icon = this
+				right_icon = scope:spn_tw_patient
+			}
+		}
+	}
+}
+
+# The Working is over (reversed, or the patient died): every carrier on the patient's list is freed. Patient scope.
+spn_transference_free_carriers_effect = {
+	every_in_list = {
+		variable = spn_transference_carriers
+		limit = { is_alive = yes }
+		remove_variable = spn_transference_carrier_of
+		if = {
+			limit = { has_character_modifier = spn_transference_carrier_modifier }
+			remove_character_modifier = spn_transference_carrier_modifier
+		}
+	}
+	clear_variable_list = spn_transference_carriers
+}
+
+# The disease comes back (.0827). Patient scope; scope:spn_rv_killer may be set.
+spn_transference_revert_effect = {
+	if = {
+		limit = { var:spn_transference_disease ?= flag:cancer }
+		add_trait = cancer
+	}
+	else_if = {
+		limit = { var:spn_transference_disease ?= flag:consumption }
+		add_trait = consumption
+	}
+	else_if = {
+		limit = { var:spn_transference_disease ?= flag:leper }
+		add_trait = leper
+	}
+	else_if = {
+		limit = { var:spn_transference_disease ?= flag:great_pox }
+		add_trait = great_pox
+	}
+	# 2.39 (WORK-ORDER-2.39 F4): the Blue Fever comes back with its own cure, as when it was first caught.
+	else_if = {
+		limit = { var:spn_transference_disease ?= flag:spn_blue_fever }
+		add_trait = spn_blue_fever
+		trigger_event = { id = spn_relic.0720 days = { 45 120 } }
+	}
+	remove_variable = spn_transference_disease
+	spn_transference_free_carriers_effect = yes
+}
+
+# ==================================================================================================
+# v4 -- DEMONS: THE COMPACT AND THE FAVOR (§11.6)
+# ==================================================================================================
+# The Compact. Root: the master; $DEMON$.
+spn_order_compact_effect = {
+	$DEMON$ = { save_scope_as = spn_cp_demon }
+	save_scope_as = spn_cp_master
+	scope:spn_cp_demon = {
+		set_variable = { name = spn_order_compact value = scope:spn_cp_master years = 20 }
+		if = {
+			limit = { NOT = { is_target_in_global_variable_list = { name = spn_order_compacts target = this } } }
+			add_to_global_variable_list = { name = spn_order_compacts target = this }
+		}
+		add_opinion = { target = scope:spn_cp_master modifier = spn_order_compact_opinion }
+	}
+	scope:spn_cp_master = {
+		add_opinion = { target = scope:spn_cp_demon modifier = spn_order_compact_opinion }
+		random_secret = {
+			limit = {
+				secret_type = spn_secret_blue_rose
+				NOT = { is_known_by = scope:spn_cp_demon }
+			}
+			reveal_to = scope:spn_cp_demon
+		}
+		# Rule One: with demons, don't. Lifted under Treat with the Pit.
+		if = {
+			limit = { NOT = { spn_order_prerogative_is_trigger = { P = flag:pit } } }
+			spn_order_add_standing_effect = { VALUE = -10 }
+		}
+	}
+	scope:spn_cp_demon = {
+		if = {
+			limit = { is_ai = no }
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = spn_order_toast_compact
+				left_icon = this
+				right_icon = scope:spn_cp_master
+			}
+		}
+	}
+}
+
+# "It is done." (.0910). Root: the demon; scope:spn_fv_lender. The task is the one owed (the demon's own variable).
+spn_order_favor_done_effect = {
+	if = {
+		limit = { var:spn_order_favor_owed ?= flag:recover }
+		scope:spn_fv_lender = {
+			random_relation = {
+				type = rival
+				limit = {
+					is_alive = yes
+					any_character_artifact = { spn_zecchia_takeable_trigger = yes }
+				}
+				save_scope_as = spn_fv_rival
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_fv_rival }
+			spn_zecchia_rob_effect = { VICTIM = scope:spn_fv_rival THIEF = scope:spn_fv_lender COUNT = 1 }
+		}
+		else = {
+			pay_short_term_gold = { target = scope:spn_fv_lender gold = 150 }
+		}
+	}
+	else_if = {
+		limit = { var:spn_order_favor_owed ?= flag:silence }
+		scope:spn_fv_lender = {
+			if = {
+				limit = { exists = location.county }
+				location.county = { spn_menace_clear_county_effect = yes }
+			}
+		}
+	}
+	else_if = {
+		limit = { var:spn_order_favor_owed ?= flag:book }
+		# Through the page globals, never a world walk (review, 9 Oct).
+		scope:spn_fv_lender = { spn_vade_name_a_holder_effect = yes }
+		if = {
+			limit = { exists = scope:spn_named_holder }
+			scope:spn_fv_lender = { save_scope_as = spn_fv_page_holder }
+		}
+		else = {
+			pay_short_term_gold = { target = scope:spn_fv_lender gold = 150 }
+		}
+	}
+	else_if = {
+		limit = { var:spn_order_favor_owed ?= flag:grow }
+		if = {
+			limit = { is_ruler = yes }
+			random_courtier = {
+				limit = {
+					OR = {
+						has_trait = source
+						has_trait = source2
+					}
+					age >= 12
+					spn_order_candidate_trigger = yes
+					NOT = { has_character_flag = spn_order_picked }
+				}
+				save_scope_as = spn_fv_child
+			}
+		}
+		if = {
+			limit = {
+				exists = scope:spn_fv_child
+				scope:spn_fv_lender = { exists = var:spn_order_chapter }
+			}
+			scope:spn_fv_child = {
+				add_character_flag = { flag = spn_order_picked years = 1 }
+				set_variable = { name = spn_order_picker value = scope:spn_fv_lender.var:spn_order_chapter years = 1 }
+				trigger_event = { id = spn_order.0101 days = { 10 60 } }
+			}
+		}
+		else = {
+			pay_short_term_gold = { target = scope:spn_fv_lender gold = 150 }
+		}
+	}
+	else_if = {
+		limit = { var:spn_order_favor_owed ?= flag:pit }
+		scope:spn_fv_lender = {
+			add_magic_lifestyle_xp = medium_lifestyle_xp
+			spn_order_add_standing_effect = { VALUE = 15 }
+		}
+	}
+	remove_variable = spn_order_favor_owed
+	remove_variable = spn_order_favor_to
+	if = {
+		limit = { exists = var:spn_order_compact }
+		set_variable = { name = spn_order_compact value = var:spn_order_compact years = 20 }
+	}
+	scope:spn_fv_lender = {
+		if = {
+			limit = { is_ai = no }
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_order_toast_favor
+				left_icon = this
+				right_icon = root
+			}
+		}
+	}
+}
+
+# "I owe the Order nothing." Root: the demon; scope:spn_fv_lender.
+spn_order_favor_broken_effect = {
+	add_character_flag = { flag = spn_order_oathbreaker years = 50 }
+	remove_variable = spn_order_compact
+	remove_variable = spn_order_favor_owed
+	remove_variable = spn_order_favor_to
+	if = {
+		limit = { is_target_in_global_variable_list = { name = spn_order_compacts target = this } }
+		remove_list_global_variable = { name = spn_order_compacts target = this }
+	}
+	spn_relic_return_loans_of_effect = { WHO = root }
+	scope:spn_fv_lender = { add_opinion = { target = root modifier = spn_order_oathbreaker_opinion } }
+	if = {
+		limit = {
+			global_var:spn_order_master ?= {
+				is_alive = yes
+				NOT = { this = scope:spn_fv_lender }
+			}
+		}
+		global_var:spn_order_master = { add_opinion = { target = root modifier = spn_order_oathbreaker_opinion } }
+	}
+	scope:spn_fv_lender = {
+		if = {
+			limit = { is_ai = no }
+			send_interface_toast = {
+				type = event_toast_effect_bad
+				title = spn_order_toast_compact_broken
+				left_icon = this
+				right_icon = root
+			}
+		}
+	}
+}
+
+# The yearly pass over the Compacts: the dead and the lapsed come off the list.
+spn_order_compacts_yearly_effect = {
+	every_in_global_list = {
+		variable = spn_order_compacts
+		limit = {
+			OR = {
+				is_alive = no
+				NOT = { exists = var:spn_order_compact }
+			}
+		}
+		add_to_temporary_list = spn_cpy_gone
+	}
+	every_in_list = {
+		list = spn_cpy_gone
+		remove_list_global_variable = { name = spn_order_compacts target = this }
+	}
+}
+
+# The Coin's outcome (§5.5). Root: the neophyte; scope:spn_coin_pass when the roll passed.
+spn_order_coin_result_effect = {
+	if = {
+		limit = { exists = scope:spn_coin_pass }
+		set_variable = { name = spn_order_pledge_step value = 2 }
+		trigger_event = { id = spn_order.0120 days = { 30 90 } }
+	}
+	else = {
+		spn_order_fail_pledge_effect = yes
+	}
+}
+
+# The Old Law's judgment (§5.17). Root: the member who became a necromancer. The judge is his Temple Magus; if he IS the
+# head, the master; if he is also the master, the oldest other head (review D, S20).
+spn_order_judge_necro_effect = {
+	save_scope_as = spn_nj_member
+	if = {
+		limit = { spn_is_temple_magus_trigger = no }
+		var:spn_order_chapter.story_owner = { save_scope_as = spn_nj_judge }
+	}
+	else_if = {
+		limit = {
+			global_var:spn_order_master ?= {
+				is_alive = yes
+				NOT = { this = scope:spn_nj_member }
+			}
+		}
+		global_var:spn_order_master = { save_scope_as = spn_nj_judge }
+	}
+	else = {
+		ordered_in_global_list = {
+			variable = spn_order_chapters
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_nj_member }
+				exists = var:spn_order_chapter
+			}
+			order_by = spn_order_chapter_age_value
+			save_scope_as = spn_nj_judge
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_nj_judge }
+		scope:spn_nj_judge = {
+			if = {
+				limit = { is_ai = no }
+				trigger_event = spn_order.0107
+			}
+			else_if = {
+				limit = { opinion = { target = scope:spn_nj_member value >= 60 } }
+				scope:spn_nj_member = { add_character_flag = spn_order_necro_tolerated }
+			}
+			else = {
+				scope:spn_nj_member = { trigger_event = spn_order.0192 }
+			}
+		}
+	}
+	else = {
+		add_character_flag = spn_order_necro_tolerated
+	}
+}
+
+# The way chosen (The Mask of the Temple): every member's studies modifier follows it now. Head scope.
+spn_order_way_refresh_effect = {
+	var:spn_order_chapter ?= {
+		every_in_list = {
+			variable = spn_order_members
+			limit = {
+				is_alive = yes
+				spn_is_order_member_trigger = yes
+			}
+			spn_order_studies_apply_effect = yes
+		}
+		spn_order_sync_mirrors_effect = yes
+	}
+}
+
+# Respondeo paid by the chapter (§5.12, your design §2.6): the many pay, nobody is drained. Root: the caster. Each
+# lower-ranked member of his chapter in his realm who can spend and likes him (AI) pays; a player member is asked.
+spn_order_respondeo_chapter_pays_effect = {
+	save_scope_as = spn_rs_caller
+	var:spn_order_chapter = {
+		every_in_list = {
+			variable = spn_order_members
+			limit = { spn_order_respondeo_payer_trigger = { CALLER = scope:spn_rs_caller } }
+			if = {
+				limit = { is_ai = no }
+				trigger_event = spn_order.0181
+			}
+			else_if = {
+				limit = { opinion = { target = scope:spn_rs_caller value >= 0 } }
+				spend_standard_ps_effect = yes
+			}
+		}
+	}
+}
+
+# The Adeptus Major's agent for The Adeptus Major Moves (§13 step 4, §5.22): an Adeptus if one exists, else the Adeptus Major
+# himself if a member, else the master. Saves scope:spn_am_agent.
+spn_order_adeptus_agent_effect = {
+	every_in_global_list = {
+		variable = spn_order_chapters
+		limit = { exists = var:spn_order_chapter }
+		var:spn_order_chapter = {
+			every_in_list = {
+				variable = spn_order_members
+				limit = {
+					is_alive = yes
+					exists = var:spn_order_adeptus
+				}
+				add_to_temporary_list = spn_am_adepti
+			}
+		}
+	}
+	random_in_list = {
+		list = spn_am_adepti
+		save_scope_as = spn_am_agent
+	}
+	if = {
+		limit = { NOT = { exists = scope:spn_am_agent } }
+		if = {
+			limit = {
+				global_var:current_black_mage_global ?= {
+					is_alive = yes
+					spn_is_order_member_trigger = yes
+				}
+			}
+			global_var:current_black_mage_global = { save_scope_as = spn_am_agent }
+		}
+		else = {
+			global_var:spn_order_master ?= {
+				if = {
+					limit = { is_alive = yes }
+					save_scope_as = spn_am_agent
+				}
+			}
+		}
+	}
+}
+
+# 2.38b: An Outsider Asks Questions (.0160). Root: the member; scope:spn_os_won if he got the better of the outsider.
+# Losing tells a hunter where the temple is (that sets The Adeptus Major Moves in motion for a player hunter, .0710).
+spn_order_outsider_result_effect = {
+	if = {
+		limit = { exists = scope:spn_os_won }
+		spn_order_add_standing_effect = { VALUE = 5 }
+	}
+	else_if = {
+		limit = {
+			exists = scope:spn_os_hunter
+			exists = var:spn_order_chapter
+		}
+		scope:spn_os_hunter = {
+			set_variable = { name = spn_hunter_knows_chapter value = root.var:spn_order_chapter years = 10 }
+			if = {
+				limit = { is_ai = no }
+				trigger_event = { id = spn_order.0710 days = { 365 400 } }
+			}
+		}
+		random_secret = {
+			limit = {
+				secret_type = spn_secret_blue_rose
+				NOT = { is_known_by = scope:spn_os_hunter }
+			}
+			reveal_to = scope:spn_os_hunter
+		}
+		spn_order_watch_add_effect = { WHO = scope:spn_os_hunter } # 2.39 (WORK-ORDER-2.39 F2): the Order watches him now
+		send_interface_toast = {
+			type = event_toast_text_neutral
+			title = spn_order_toast_outsider_lost
+			desc = spn_order_toast_outsider_lost.desc
+		}
+	}
+	else = {
+		send_interface_toast = {
+			type = event_toast_text_neutral
+			title = spn_order_toast_outsider_lost
+			desc = spn_order_toast_outsider_gone.desc
+		}
+	}
+}
+
+# Tell Me About the Rose (§13 step 1). Root: the defending member who lost to a hunter, before his death block.
+spn_order_hunter_learns_effect = {
+	save_scope_as = spn_rose_member
+	if = {
+		limit = {
+			spn_is_order_member_trigger = yes
+			exists = scope:spn_hunter
+			NOT = { scope:spn_hunt_activity ?= { has_variable = spn_order_rose_told } }
+		}
+		scope:spn_hunt_activity ?= { set_variable = { name = spn_order_rose_told value = yes } }
+		scope:spn_hunter = {
+			set_variable = { name = spn_hunter_knows_chapter value = scope:spn_rose_member.var:spn_order_chapter years = 10 }
+		}
+		random_secret = {
+			limit = {
+				secret_type = spn_secret_blue_rose
+				NOT = { is_known_by = scope:spn_hunter }
+			}
+			reveal_to = scope:spn_hunter
+		}
+		spn_order_watch_add_effect = { WHO = scope:spn_hunter } # 2.39 (WORK-ORDER-2.39 F2): the Order watches him now
+		# One pledged relic as evidence: the Knights' locker.
+		random_character_artifact = {
+			limit = { exists = var:spn_pledged_to }
+			save_scope_as = spn_rose_relic
+		}
+		if = {
+			limit = { exists = scope:spn_rose_relic }
+			spn_relic_unpledge_effect = { ART = scope:spn_rose_relic }
+			scope:spn_rose_relic = {
+				set_owner = {
+					target = scope:spn_hunter
+					history = {
+						type = conquest
+						actor = scope:spn_rose_member
+						recipient = scope:spn_hunter
+					}
+				}
+			}
+		}
+		scope:spn_hunter = {
+			if = {
+				limit = { is_ai = no }
+				trigger_event = spn_order.0700
+			}
+		}
+	}
+}
+
+# The Working ends, for good or ill: the caster's books are closed. Root: the caster. (The list is read before this runs.)
+spn_transference_clear_caster_effect = {
+	var:spn_transference_patient ?= {
+		if = {
+			limit = { has_variable = spn_transference_pending }
+			remove_variable = spn_transference_pending
+		}
+	}
+	if = {
+		limit = { has_variable = spn_transference_patient }
+		remove_variable = spn_transference_patient
+	}
+	clear_variable_list = spn_transference_volunteers
+}
+
+# The Old Law was broken (the Bargain taken, §5.19). Root: the breaker. A judge is found as for the Forbidden Art; a player
+# judge decides (.0832); an AI judge expels or brings it to the council.
+spn_order_old_law_judge_effect = {
+	save_scope_as = spn_ol_breaker
+	if = {
+		limit = {
+			global_var:spn_order_master ?= {
+				is_alive = yes
+				NOT = { this = scope:spn_ol_breaker }
+			}
+		}
+		global_var:spn_order_master = { save_scope_as = spn_ol_judge }
+	}
+	else = {
+		ordered_in_global_list = {
+			variable = spn_order_chapters
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_ol_breaker }
+				exists = var:spn_order_chapter
+			}
+			order_by = spn_order_chapter_age_value
+			save_scope_as = spn_ol_judge
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_ol_judge }
+		scope:spn_ol_judge = {
+			if = {
+				limit = { is_ai = no }
+				trigger_event = spn_order.0832
+			}
+			else = {
+				random_list = {
+					40 = {
+						modifier = { add = 30 has_trait = just }
+						modifier = { add = 20 has_trait = zealous }
+						scope:spn_ol_breaker = { trigger_event = spn_order.0192 }
+					}
+					60 = {
+						add_opinion = { target = scope:spn_ol_breaker modifier = spn_betrayed_the_order_opinion }
+					}
+				}
+			}
+		}
+	}
+}
+
+# Take an empty seat on the council (The Council Calls You, §5.16). Witchcraft's own appoint effects, in the appointee's scope;
+# the first empty seat in their order (Loremaster, Black Mage, Administrator).
+# 2.39 (WORK-ORDER-2.39 B3 A): never a second seat, and nothing at all when no seat is empty (no standing, no toast).
+# Checked at click time, so it covers The Council Calls You, the AI path of .0970, the Conclave's AI seats and Fill the Seats.
+spn_order_take_seat_effect = {
+	if = {
+		limit = {
+			NOT = { has_variable = mc_member_var } # Witchcraft's seat marker; the Grand Magus carries it too
+			spn_conclave_seat_open_trigger = yes
+		}
+		if = {
+			limit = { NOT = { exists = global_var:current_loremaster_global } }
+			appoint_to_mc1_effect = yes
+		}
+		else_if = {
+			limit = { NOT = { exists = global_var:current_black_mage_global } }
+			appoint_to_mc2_effect = yes
+		}
+		else_if = {
+			limit = { NOT = { exists = global_var:current_admin_global } }
+			appoint_to_mc3_effect = yes
+		}
+		spn_order_add_standing_effect = { VALUE = 10 }
+		spn_order_toast_members_effect = { TITLE = spn_order_toast_seat_taken }
+	}
+}
+
+# DEBUG ONLY (spn_debug_events.0413, §23): one AI member of root's chapter at root's court, kind and fond of root.
+spn_debug_volunteer_effect = {
+	create_character = {
+		# 2.38a: no location; the engine refuses both with an employer (9 Oct log), and the employer's court places him.
+		age = { 25 40 }
+		gender_female_chance = 50
+		employer = root
+		trait = compassionate
+		learning = 12
+		save_scope_as = spn_dbg_vol
+	}
+	if = {
+		limit = { exists = scope:spn_dbg_vol }
+		spn_order_add_member_effect = { WHO = scope:spn_dbg_vol CHAPTER = root.var:spn_order_chapter RANK = flag:medicum }
+		scope:spn_dbg_vol = {
+			spn_order_grant_membership_effect = yes
+			add_opinion = { target = root modifier = spn_gave_blood_opinion }
+		}
+		clear_saved_scope = spn_dbg_vol
+	}
+}
+
+# A Temple Magus is taken in a chapter sweep (§13 step 2): every member's secret in his chapter is revealed to the hunter.
+# Character scope: the captured; $HUNTER$.
+spn_order_temple_magus_captured_effect = {
+	if = {
+		limit = { spn_is_temple_magus_trigger = yes }
+		var:spn_order_chapter = {
+			every_in_list = {
+				variable = spn_order_members
+				limit = { is_alive = yes }
+				every_secret = {
+					limit = {
+						secret_type = spn_secret_blue_rose
+						NOT = { is_known_by = $HUNTER$ }
+					}
+					reveal_to = $HUNTER$
+				}
+			}
+		}
+		spn_order_watch_add_effect = { WHO = $HUNTER$ } # 2.39 (WORK-ORDER-2.39 F2): the Order watches him now
+	}
+}
+
+# A page heard of or named (§5.18, The Book Must Be Found, +5): at most once in five years. Member scope.
+spn_order_deed_heard_effect = {
+	if = {
+		limit = {
+			spn_is_order_member_trigger = yes
+			spn_order_prerogative_is_trigger = { P = flag:book }
+			NOT = { has_character_flag = spn_order_deed_heard_cd }
+		}
+		add_character_flag = { flag = spn_order_deed_heard_cd years = 5 }
+		spn_order_deed_effect = { PREROGATIVE = flag:book AMOUNT = 5 TOAST = yes }
+	}
+}
+
+# ==================================================================================================
+# 2.38b: THE CHAIR IS THE ORDER'S (DESIGN-2.38b §3). With fewer than three temples the senior Temple Magus (of the
+# oldest temple) holds it; with three or more the temples choose at a Conclave of the Chair (zz_spn_conclave_*). If a
+# called Conclave has not sat in three years, the senior takes it. Yearly (Order rule On), and at each founding.
+# ==================================================================================================
+spn_order_chair_fill_effect = {
+	if = {
+		limit = { NOT = { exists = global_var:spn_order_council_ours } }
+		set_global_variable = spn_order_council_ours
+	}
+	if = {
+		limit = { exists = global_var:current_archmage_global }
+		if = {
+			limit = { has_global_variable = spn_conclave_chair_called }
+			remove_global_variable = spn_conclave_chair_called
+		}
+	}
+	else_if = {
+		limit = {
+			any_in_global_list = {
+				variable = spn_order_chapters
+				is_alive = yes
+				exists = var:spn_order_chapter
+			}
+		}
+		ordered_in_global_list = {
+			variable = spn_order_chapters
+			limit = {
+				is_alive = yes
+				is_imprisoned = no
+				exists = var:spn_order_chapter
+			}
+			order_by = spn_order_chapter_age_value
+			save_scope_as = spn_cf_senior
+		}
+		if = {
+			limit = {
+				exists = scope:spn_cf_senior
+				OR = {
+					NOT = {
+						any_in_global_list = {
+							variable = spn_order_chapters
+							count >= spn_order_conclave_threshold_value
+						}
+					}
+					AND = {
+						exists = global_var:spn_conclave_chair_called
+						global_var:spn_conclave_chair_called <= spn_conclave_chair_deadline_value
+					}
+				}
+			}
+			scope:spn_cf_senior = { spn_order_take_chair_effect = yes }
+		}
+		else_if = {
+			limit = {
+				exists = scope:spn_cf_senior
+				NOT = { exists = global_var:spn_conclave_chair_called }
+			}
+			set_global_variable = { name = spn_conclave_chair_called value = current_year }
+			scope:spn_cf_senior = { spn_conclave_call_effect = { REASON = flag:chair } }
+		}
+	}
+}
+
+# Root takes the chair (a Temple Magus; the senior, or the Conclave's choice). Witchcraft's own effect forms the council
+# if it was never formed. Then the master moves to him and the members are told.
+spn_order_take_chair_effect = {
+	save_scope_as = spn_tc_new
+	appoint_as_archmage_effect = yes
+	if = {
+		limit = { has_global_variable = spn_conclave_chair_called }
+		remove_global_variable = spn_conclave_chair_called
+	}
+	spn_order_master_refresh_effect = yes
+	every_player = {
+		limit = {
+			spn_is_order_member_trigger = yes
+			NOT = { this = scope:spn_tc_new }
+		}
+		send_interface_toast = {
+			type = event_toast_text_neutral
+			title = spn_order_toast_new_grand_magus
+			desc = spn_order_toast_new_grand_magus_desc
+			left_icon = scope:spn_tc_new
+		}
+	}
+}
+
+# Dissolve the Gnostic Council (DESIGN-2.38b §3): the Grand Magus sends every seat holder home. The council, not the
+# councillors. Root: the Grand Magus. Seats are filled again at the next Conclave, or by his invitation.
+spn_order_dissolve_council_effect = {
+	save_scope_as = spn_dc_magus
+	global_var:current_loremaster_global ?= {
+		remove_from_mc_effect = yes
+		add_opinion = { target = scope:spn_dc_magus modifier = spn_order_council_dissolved_opinion }
+	}
+	global_var:current_black_mage_global ?= {
+		remove_from_mc_effect = yes
+		add_opinion = { target = scope:spn_dc_magus modifier = spn_order_council_dissolved_opinion }
+	}
+	global_var:current_admin_global ?= {
+		remove_from_mc_effect = yes
+		add_opinion = { target = scope:spn_dc_magus modifier = spn_order_council_dissolved_opinion }
+	}
+}
+
+# 2.38b: the note goes out (the Selection's own road, and A Name for the Rose). A player who has never heard of the Order
+# hears the rumour first (DESIGN-2.38b §8). Root: the pick, who carries var:spn_order_picker.
+spn_order_send_note_effect = {
+	if = {
+		limit = {
+			is_ai = no
+			NOT = { has_character_flag = spn_order_whispered }
+		}
+		spn_order_whisper_effect = yes
+	}
+	else = {
+		trigger_event = { id = spn_order.0101 days = { 30 300 } }
+	}
+}
+
+# 2.38b: THE RUMOUR (DESIGN-2.38b §8). A player hears of a learned society before any note comes. Root: the player.
+spn_order_whisper_effect = {
+	add_character_flag = spn_order_whispered
+	if = {
+		limit = { has_variable = spn_order_picker }
+		remove_variable = spn_order_picker
+	}
+	trigger_event = { id = spn_order.0090 days = { 7 60 } }
+}
+
+# Yearly: a player who could be taught, who has heard nothing, near a temple: one chance in five. This is the door for
+# a player with no magic at all (DESIGN-2.38b §8). every_player only; no world walk.
+spn_order_rumour_yearly_effect = {
+	every_player = {
+		limit = {
+			is_adult = yes
+			learning >= 12
+			NOT = { exists = var:spn_order_chapter }
+			NOT = { has_character_flag = spn_order_whispered }
+			NOT = { has_character_flag = spn_order_spurned }
+			spn_order_can_join_trigger = yes
+		}
+		save_temporary_scope_as = spn_rm_p
+		if = {
+			limit = {
+				any_in_global_list = {
+					variable = spn_order_chapters
+					is_alive = yes
+					in_diplomatic_range = scope:spn_rm_p
+				}
+			}
+			random = {
+				chance = spn_order_rumour_chance_value # 2.39 (WORK-ORDER-2.39 F15): was 20; 40 over a Collegium
+				spn_order_whisper_effect = yes
+			}
+		}
+	}
+}
+
+# 2.38b: ASK ABOUT THE BLUE ROSE (DESIGN-2.38b §8). A prisoner whose secret root knows names at most two others of his
+# temple (every temple keeps its own; no member knows them all). Root: the asker; scope:recipient the prisoner.
+spn_order_rose_talks_effect = {
+	scope:recipient = {
+		add_character_flag = { flag = spn_order_rose_asked years = 10 }
+		save_scope_as = spn_rt_prisoner
+		var:spn_order_chapter ?= {
+			save_scope_as = spn_rt_ch
+			random_in_list = {
+				variable = spn_order_members
+				limit = {
+					is_alive = yes
+					NOT = { this = scope:spn_rt_prisoner }
+				}
+				save_scope_as = spn_rt_named1
+			}
+			random_in_list = {
+				variable = spn_order_members
+				limit = {
+					is_alive = yes
+					NOT = { this = scope:spn_rt_prisoner }
+					NOT = { this = scope:spn_rt_named1 }
+				}
+				save_scope_as = spn_rt_named2
+			}
+		}
+		# He broke Silence.
+		spn_order_broke_rules_effect = yes
+	}
+	if = {
+		limit = { exists = scope:spn_rt_named1 }
+		spn_order_reveal_membership_effect = { WHO = scope:spn_rt_named1 TO = root }
+	}
+	if = {
+		limit = { exists = scope:spn_rt_named2 }
+		spn_order_reveal_membership_effect = { WHO = scope:spn_rt_named2 TO = root }
+	}
+	spn_order_watch_add_effect = { WHO = root } # 2.39 (WORK-ORDER-2.39 F2): the Order watches the one who asked
+}
+
+# $WHO$'s membership becomes known to $TO$ (the Blue Rose secret, revealed).
+spn_order_reveal_membership_effect = {
+	$WHO$ = {
+		every_secret = {
+			limit = {
+				secret_type = spn_secret_blue_rose
+				NOT = { is_known_by = $TO$ }
+			}
+			reveal_to = $TO$
+		}
+	}
+}
+
+# ==================================================================================================
+# 2.38b: THE TUTOR AND THE ACOLYTE (DESIGN-2.38b §7). Root: the tutee; var:spn_order_tutor the tutor. The event goes to
+# the player of the two (to the tutee if both are players).
+# ==================================================================================================
+spn_order_tutor_year_effect = {
+	save_scope_as = spn_tp_tutee
+	var:spn_order_tutor = { save_scope_as = spn_tp_tutor }
+	if = {
+		limit = { scope:spn_tp_tutee = { is_ai = no } }
+		scope:spn_tp_tutee = { save_scope_as = spn_tp_player }
+	}
+	else = {
+		scope:spn_tp_tutor = { save_scope_as = spn_tp_player }
+	}
+	# 2.39 (WORK-ORDER-2.39 F14 V2): one tutor moment a year for a PLAYER, not one per pair (a tutor with three acolytes
+	# rolled three times), and none while the flavor gate is closed. The branch that sends sets spn_tp_moment_year.
+	random = {
+		chance = {
+			value = 50
+			if = {
+				limit = {
+					scope:spn_tp_player = {
+						OR = {
+							has_character_flag = spn_tp_moment_year
+							spn_flavor_ready_trigger = no
+						}
+					}
+				}
+				value = 0
+			}
+		}
+		random_list = {
+			# The Errand: the acolyte is sent somewhere he should not go.
+			10 = {
+				trigger = {
+					scope:spn_tp_tutee = { is_ai = no }
+					NOT = { scope:spn_tp_tutee = { has_character_flag = spn_tp_seen_errand } }
+				}
+				scope:spn_tp_tutee = { trigger_event = { id = spn_order.0321 days = { 10 120 } } } # 2.39: seen on arrival (.0321)
+				scope:spn_tp_player = { add_character_flag = { flag = spn_tp_moment_year months = 11 } }
+			}
+			# The Research: one of them is in the middle of Magical Research.
+			10 = {
+				trigger = {
+					OR = {
+						scope:spn_tp_tutee = { involved_activity ?= { has_activity_type = magical_research } }
+						scope:spn_tp_tutor = { involved_activity ?= { has_activity_type = magical_research } }
+					}
+					# 2.39 (WORK-ORDER-2.39 F14): once in ten years for him, like every chapter and tutor moment (seen on arrival)
+					NOT = { scope:spn_tp_player = { has_character_flag = spn_tp_seen_research } }
+				}
+				scope:spn_tp_player = {
+					trigger_event = { id = spn_order.0322 days = { 3 20 } }
+					add_character_flag = { flag = spn_tp_moment_year months = 11 }
+				}
+			}
+			# The Lesson Returned: late in the pairing, the student shows the teacher something new.
+			10 = {
+				trigger = {
+					scope:spn_tp_tutee = {
+						exists = var:spn_order_taught_years
+						var:spn_order_taught_years >= 3
+					}
+					NOT = { scope:spn_tp_tutee = { has_character_flag = spn_tp_seen_returned } }
+				}
+				scope:spn_tp_player = { # 2.39: seen on arrival (.0323)
+					trigger_event = { id = spn_order.0323 days = { 10 120 } }
+					add_character_flag = { flag = spn_tp_moment_year months = 11 }
+				}
+			}
+			# Something more: grown adults only (18 or older, both), not family, once for a pair.
+			5 = {
+				trigger = {
+					scope:spn_tp_tutee = {
+						age >= 18
+						NOT = { has_character_flag = spn_tp_seen_close }
+						spn_romance_ok_trigger = { CHARACTER = scope:spn_tp_tutor } # 2.39 (WORK-ORDER-2.39 F14, review L-2): 18+, attraction both ways, not family
+						trigger_if = {
+							limit = {
+								OR = {
+									is_married = yes
+									any_relation = { type = lover }
+								}
+							}
+							might_cheat_on_every_partner_trigger = yes
+						}
+						scope:spn_tp_tutor = {
+							trigger_if = {
+								limit = {
+									OR = {
+										is_married = yes
+										any_relation = { type = lover }
+									}
+								}
+								might_cheat_on_every_partner_trigger = yes
+							}
+						}
+						opinion = { target = scope:spn_tp_tutor value >= 30 }
+					}
+					scope:spn_tp_tutor = {
+						age >= 18
+						opinion = { target = scope:spn_tp_tutee value >= 30 }
+					}
+				}
+				scope:spn_tp_player = { # 2.39: seen on arrival (.0324)
+					trigger_event = { id = spn_order.0324 days = { 10 120 } }
+					add_character_flag = { flag = spn_tp_moment_year months = 11 }
+				}
+			}
+			60 = { }
+		}
+	}
+}
+
+# ==================================================================================================
+# 2.38b: GOLEMS AND THE ORDER (DESIGN-2.38b §7b)
+# ==================================================================================================
+# The Clay Working: a temple makes a golem. Root: the Magistratus who leads it. Witchcraft's own creation (magic_ev7.119):
+# the template golem_character, the same names, his minion and his hook.
+spn_order_make_golem_effect = {
+	if = {
+		limit = { is_male = yes }
+		create_character = {
+			name = golem_name
+			employer = root
+			culture = root.culture
+			faith = root.faith
+			rite = root.rite
+			dynasty_house = root.house
+			gender = male
+			template = golem_character
+			save_scope_as = spn_cw_golem
+			after_creation = {
+				remove_mortal_soul_effect = yes
+				copy_inheritable_appearance_from = root
+				set_sexuality = heterosexual
+			}
+		}
+	}
+	else = {
+		create_character = {
+			name = golem_name2
+			employer = root
+			culture = root.culture
+			faith = root.faith
+			rite = root.rite
+			dynasty_house = root.house
+			gender = female
+			template = golem_character
+			save_scope_as = spn_cw_golem
+			after_creation = {
+				remove_mortal_soul_effect = yes
+				copy_inheritable_appearance_from = root
+				set_sexuality = heterosexual
+			}
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_cw_golem }
+		set_relation_mminion = scope:spn_cw_golem
+		add_hook = {
+			type = magic_domination_hook
+			target = scope:spn_cw_golem
+		}
+	}
+}
+
+# 2.38c: the Order teaches its Mages (Thomas, 9 Oct: "are there any opportunities as a mage to grow within the order?").
+# 2.38e: one point a year, no more, on a path drawn at random (Thomas's 73-year run: ten members at Secret Knowledge 75-100,
+# no outsider there; "I'd have it randomize one XP from the different mage trait tracks"). The temple's way doubles the
+# chance of its own path: Observance Secret Knowledge, Silence Alchemy, Subservience Combat Magic; Treat with the Pit
+# doubles Demonology. A finished path (100) is never drawn. Character scope, from the chapter's year.
+spn_order_mage_growth_effect = {
+	if = {
+		limit = {
+			has_trait = archmage
+			spn_is_order_member_trigger = yes
+			OR = {
+				has_trait_xp = { trait = archmage track = secret_knowledge value < 100 }
+				has_trait_xp = { trait = archmage track = combat_magic value < 100 }
+				has_trait_xp = { trait = archmage track = demonology value < 100 }
+				has_trait_xp = { trait = archmage track = alchemy value < 100 }
+			}
+		}
+		random_list = {
+			10 = {
+				trigger = { has_trait_xp = { trait = archmage track = secret_knowledge value < 100 } }
+				modifier = {
+					add = 10
+					var:spn_order_chapter ?= { var:spn_order_way ?= flag:observance }
+				}
+				add_trait_xp = { trait = archmage track = secret_knowledge value = 1 }
+			}
+			10 = {
+				trigger = { has_trait_xp = { trait = archmage track = combat_magic value < 100 } }
+				modifier = {
+					add = 10
+					var:spn_order_chapter ?= { var:spn_order_way ?= flag:subservience }
+				}
+				add_trait_xp = { trait = archmage track = combat_magic value = 1 }
+			}
+			10 = {
+				trigger = { has_trait_xp = { trait = archmage track = demonology value < 100 } }
+				modifier = {
+					add = 10
+					spn_order_prerogative_is_trigger = { P = flag:pit }
+				}
+				add_trait_xp = { trait = archmage track = demonology value = 1 }
+			}
+			10 = {
+				trigger = { has_trait_xp = { trait = archmage track = alchemy value < 100 } }
+				modifier = {
+					add = 10
+					var:spn_order_chapter ?= { var:spn_order_way ?= flag:silence }
+				}
+				add_trait_xp = { trait = archmage track = alchemy value = 1 }
+			}
+		}
+	}
+}
+
+# 2.38c: the golem's material (.0860). Root: the maker; scope:spn_cw_golem. Clay as made; wood and iron stronger.
+spn_order_golem_material_effect = {
+	if = {
+		limit = { var:spn_cw_material ?= flag:iron }
+		scope:spn_cw_golem = { add_prowess_skill = 10 }
+	}
+	else_if = {
+		limit = { var:spn_cw_material ?= flag:wood }
+		scope:spn_cw_golem = { add_prowess_skill = 5 }
+	}
+	if = {
+		limit = { has_variable = spn_cw_material }
+		remove_variable = spn_cw_material
+	}
+}
+
+# 2.38c: the golem goes to the Temple Magus (.0861): his minion, his hook, his court. Root: the maker.
+spn_order_golem_to_magus_effect = {
+	if = {
+		limit = { has_relation_mminion = scope:spn_cw_golem }
+		remove_relation_mminion = scope:spn_cw_golem
+	}
+	if = {
+		limit = { has_hook = scope:spn_cw_golem }
+		remove_hook = { target = scope:spn_cw_golem }
+	}
+	scope:spn_cw_magus = {
+		set_relation_mminion = scope:spn_cw_golem
+		add_hook = {
+			type = magic_domination_hook
+			target = scope:spn_cw_golem
+		}
+		add_courtier = scope:spn_cw_golem
+	}
+}
+
+# 2.38e: renouncing necromancy takes all of it: the trait, Witchcraft's master necromancer modifier and the skeleton
+# warriors it unlocked (Witchcraft clears the same two in 00_magic_advanced_effects.txt). Character scope.
+spn_order_renounce_necromancy_effect = {
+	remove_trait = necromancer
+	if = {
+		limit = { has_character_modifier = master_necromancer_modifier }
+		remove_character_modifier = master_necromancer_modifier
+	}
+	if = {
+		limit = { has_character_flag = skeleton_warriors }
+		remove_character_flag = skeleton_warriors
+	}
+}

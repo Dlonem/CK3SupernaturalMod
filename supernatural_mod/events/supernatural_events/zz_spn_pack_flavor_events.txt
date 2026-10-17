@@ -1,0 +1,244 @@
+﻿namespace = spn_pack
+
+# Supernatural 2.39 -- The Pack Comes Home (WORK-ORDER-2.39 F14 §4, decision D19). Loc:
+# localization/english/event_localization/zz_spn_239_flavor_l_english.yml.
+#
+# One branch of the pack's yearly moment (spn_pack_moment_effect -> spn_pack_moment_home_effect), so a pack still has at
+# most one moment a year. Sent 1-20 days after the pulse to each player wolf who is due (spn_pack_home_due_trigger);
+# re-checked here on arrival. Never two years running (spn_pack_home_seen, set on arrival). Only for a pack: he and two
+# other wolves at least (spn_pack_home_company_trigger, Boot 1, 16 Oct). Not "The Run" (that is the
+# Gathering's, spn_gathering.0200) and not Kindred (between packs). Three openings through random_valid, so the recurring
+# night does not read the same each time.
+
+# .0105 -- The Pack Comes Home.
+spn_pack.0105 = {
+	type = character_event
+	title = spn_pack.0105.t
+	desc = {
+		random_valid = {
+			desc = spn_pack.0105.desc_moon
+			desc = spn_pack.0105.desc_rain
+			desc = spn_pack.0105.desc_stag
+		}
+		triggered_desc = {
+			trigger = {
+				exists = scope:spn_ph_friends
+				scope:spn_ph_a ?= { is_alive = yes }
+				scope:spn_ph_b ?= { is_alive = yes }
+			}
+			desc = spn_pack.0105.desc_friends
+		}
+		triggered_desc = {
+			trigger = {
+				exists = scope:spn_ph_quarrel
+				scope:spn_ph_a ?= { is_alive = yes }
+				scope:spn_ph_b ?= { is_alive = yes }
+			}
+			desc = spn_pack.0105.desc_quarrel
+		}
+	}
+	theme = friendly
+	override_background = { reference = bp1_bonfire }
+	left_portrait = { character = root animation = happiness }
+	right_portrait = {
+		character = scope:spn_ph_other
+		trigger = { exists = scope:spn_ph_other }
+		animation = flirtation
+	}
+	lower_left_portrait = {
+		character = scope:spn_ph_spouse
+		trigger = { exists = scope:spn_ph_spouse }
+	}
+	lower_right_portrait = {
+		character = scope:spn_ph_friend
+		trigger = { exists = scope:spn_ph_friend }
+	}
+	trigger = {
+		is_alive = yes
+		is_ai = no
+		is_imprisoned = no
+		exists = var:spn_pack
+		NOT = { has_character_flag = spn_pack_home_seen }
+		spn_flavor_ready_trigger = yes
+		spn_pack_home_company_trigger = yes # 2.39 (Boot 1, 16 Oct): a pack, not a lone alpha
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		# D19: never two years running. The pulse is yearly to the day and this arrives 1-20 days after it, so 18 months
+		# turns away the next year's night and never the one after (2 years would turn that away too).
+		add_character_flag = { flag = spn_pack_home_seen months = 18 }
+		# Who is by the fire. The spouse, when 18 or older and here.
+		if = {
+			limit = {
+				age >= 18
+				primary_spouse ?= {
+					is_alive = yes
+					age >= 18
+					is_imprisoned = no
+					location = root.location
+				}
+			}
+			primary_spouse = { save_scope_as = spn_ph_spouse }
+		}
+		# A pack-mate who wants you: your lover already, or one the romance test allows (18 or older on both sides,
+		# attraction both ways, not family), never your spouse. The one who thinks most of you, most often.
+		var:spn_pack = {
+			random_in_list = {
+				variable = spn_pack_members
+				limit = {
+					is_alive = yes
+					is_imprisoned = no
+					NOT = { this = root }
+					NOT = { is_spouse_of = root }
+					OR = {
+						AND = {
+							has_relation_lover = root
+							age >= 18
+							root = { age >= 18 }
+						}
+						AND = {
+							# A player pack-mate is never made a lover unasked (the 2.37i rule of Kindred).
+							is_ai = yes
+							spn_romance_ok_trigger = { CHARACTER = root }
+							opinion = {
+								target = root
+								value >= 40
+							}
+							trigger_if = {
+								limit = {
+									OR = {
+										is_married = yes
+										any_relation = { type = lover }
+									}
+								}
+								might_cheat_on_every_partner_trigger = yes
+							}
+						}
+					}
+				}
+				weight = {
+					base = 1
+					modifier = {
+						add = 4
+						has_relation_lover = root
+					}
+					modifier = {
+						add = 2
+						opinion = {
+							target = root
+							value >= 70
+						}
+					}
+				}
+				save_scope_as = spn_ph_other
+			}
+			# A pack-mate who is not your friend yet, and would like to be.
+			random_in_list = {
+				variable = spn_pack_members
+				limit = {
+					is_alive = yes
+					is_imprisoned = no
+					NOT = { this = root }
+					NOT = { has_relation_friend = root }
+					NOT = { is_spouse_of = root }
+					NOT = { scope:spn_ph_other ?= this }
+					opinion = {
+						target = root
+						value >= 10
+					}
+				}
+				save_scope_as = spn_ph_friend
+			}
+		}
+	}
+	option = {
+		name = spn_pack.0105.a
+		trigger = { exists = scope:spn_ph_spouse }
+		had_sex_with_effect = {
+			CHARACTER = scope:spn_ph_spouse
+			PREGNANCY_CHANCE = pregnancy_chance
+		}
+		scope:spn_ph_spouse = {
+			add_opinion = {
+				target = root
+				modifier = romance_opinion
+				opinion = 15
+			}
+		}
+		add_stress = minor_stress_loss
+	}
+	# A married player may take a pack-mate as a lover here (expert call D-F5): vanilla's own gate, and vanilla's adultery
+	# through the lover secret.
+	option = {
+		name = spn_pack.0105.b
+		trigger = {
+			exists = scope:spn_ph_other
+			trigger_if = {
+				limit = { is_married = yes }
+				might_cheat_on_every_partner_trigger = yes
+			}
+		}
+		if = {
+			limit = { NOT = { has_relation_lover = scope:spn_ph_other } }
+			set_relation_lover = {
+				target = scope:spn_ph_other
+				reason = spn_rel_pack_night
+			}
+		}
+		had_sex_with_effect = {
+			CHARACTER = scope:spn_ph_other
+			PREGNANCY_CHANCE = pregnancy_chance
+		}
+		if = {
+			limit = { is_married = yes }
+			stress_and_fulfillment_impact = {
+				honest = minor_stress_impact_gain
+				chaste = minor_stress_impact_gain
+			}
+		}
+	}
+	option = {
+		name = spn_pack.0105.c
+		trigger = { exists = scope:spn_ph_friend }
+		if = {
+			limit = { can_set_relation_friend_trigger = { CHARACTER = scope:spn_ph_friend } }
+			set_relation_friend = {
+				target = scope:spn_ph_friend
+				reason = spn_rel_pack_home
+			}
+		}
+		else = {
+			add_opinion = {
+				target = scope:spn_ph_friend
+				modifier = friendliness_opinion
+				opinion = 15
+			}
+			scope:spn_ph_friend = {
+				add_opinion = {
+					target = root
+					modifier = friendliness_opinion
+					opinion = 15
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_pack.0105.d
+		trigger = { spn_is_alpha_trigger = yes }
+		custom_tooltip = spn_pack.0105.d.tt
+		var:spn_pack = {
+			every_in_list = {
+				variable = spn_pack_members
+				limit = { is_alive = yes }
+				spn_pack_gain_standing_effect = { VALUE = 2 }
+			}
+		}
+	}
+	option = {
+		name = spn_pack.0105.e
+		stress_and_fulfillment_impact = {
+			shy = minor_stress_impact_loss
+			gregarious = minor_stress_impact_gain
+		}
+	}
+}

@@ -1,0 +1,97 @@
+﻿# Supernatural 2.39 -- why an AI mage challenges another to a mage duel (Boot 2, 16 Oct; tool/pkgs/PB/HANDOFF.md).
+#
+# Thomas, playing an Order Magistratus, declined Count Merlin's challenge again and again: "Why do you want to fight me?
+# We're both mages." Witchcraft's AI (mage_duel's ai_will_do, 00_magic_interactions.txt) gives +50 for merely being the
+# stronger mage, so a powerful AI mage challenged every weaker one in reach every year or two, with no grudge and no
+# reason. The AI now needs a reason to challenge at all. Most reasons below are Witchcraft's own (its weights are
+# unchanged); hatred, the demon and ambition are 2.39's. A challenge that was refused is not repeated for five years
+# (spn_refused_mage_duel_opinion).
+
+# Interaction scope (scope:actor challenges scope:recipient). A grudge: rivals or nemeses either way, a war, or hatred
+# (Boot 2's Merlin had been jailed by the man he challenged; that alone is a reason).
+spn_mage_duel_grudge_trigger = {
+	OR = {
+		scope:actor = {
+			opinion = {
+				target = scope:recipient
+				value <= -50
+			}
+		}
+		scope:recipient = {
+			OR = {
+				has_relation_rival = scope:actor
+				has_relation_nemesis = scope:actor
+				is_at_war_with = scope:actor
+			}
+		}
+		scope:actor = {
+			OR = {
+				has_relation_rival = scope:recipient
+				has_relation_nemesis = scope:recipient
+			}
+		}
+	}
+}
+
+# Interaction scope. A reason an AI mage would risk a duel to the death. Two members of the Order settle nothing this way
+# unless there is a grudge between them.
+spn_mage_duel_ai_motive_trigger = {
+	OR = {
+		spn_mage_duel_grudge_trigger = yes
+		AND = {
+			NAND = {
+				scope:actor = { spn_is_order_member_trigger = yes }
+				scope:recipient = { spn_is_order_member_trigger = yes }
+			}
+			scope:recipient = { NOT = { spn_ai_spares_trigger = { ACTOR = scope:actor } } } # 2.39 (final pass, 17 Oct): never kin or a friend without a grudge
+			OR = {
+				# Baba Yaga's line against the witch houses (Witchcraft's own +70)
+				AND = {
+					scope:actor = {
+						OR = {
+							has_character_modifier = yaga_modifier
+							has_character_modifier = yagas_blood_modifier
+							has_trait = yaga
+						}
+						NOT = { has_witch_house_trigger = yes }
+					}
+					scope:recipient = {
+						NOR = {
+							has_character_modifier = yaga_modifier
+							has_character_modifier = yagas_blood_modifier
+							has_trait = yaga
+						}
+						has_witch_house_trigger = yes
+					}
+				}
+				# A demon: a mage who is no demon himself may move against one (Witchcraft admits demons as duel targets)
+				AND = {
+					scope:recipient = { is_a_demon_trigger = yes }
+					scope:actor = { is_a_demon_trigger = no }
+				}
+				# Greed: a greedy mage and a magic item worth taking, or a claim on one the other holds (Witchcraft's +60, +20)
+				AND = {
+					scope:actor = { has_trait = greedy }
+					scope:recipient = { any_character_artifact = { has_variable = magic1 } }
+				}
+				scope:actor = {
+					any_claimed_artifact = {
+						has_variable = magic1
+						artifact_owner = scope:recipient
+					}
+				}
+				# Ambition: a mage who means to rise on another's power, and only against a weaker one
+				AND = {
+					scope:actor = {
+						OR = {
+							has_trait = ambitious
+							has_trait = arrogant
+							has_trait = sadistic
+						}
+					}
+					scope:actor.overall_magic_power_value > scope:recipient.overall_magic_power_p1_value
+				}
+			}
+		}
+	}
+}

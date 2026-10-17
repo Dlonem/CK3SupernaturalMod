@@ -52,7 +52,8 @@ DEFAULT_SRC = Path("localization/english")
 DEFAULT_LANGS = ["spanish", "french", "german", "korean", "polish", "russian", "simp_chinese"]
 
 # ` key:0 "value"`  -- CK3 also allows a bare `key: "value"` with no version number.
-KEY_RE = re.compile(r'^(\s*)([A-Za-z0-9_.\-]+):(\d*)\s+"(.*)"\s*$', re.S)
+# 2.39 (WORK-ORDER-2.39 B8): a `# comment` may follow the closing quote (it held 8 English keys out of every sync).
+KEY_RE = re.compile(r'^(\s*)([A-Za-z0-9_.\-]+):(\d*)\s+"(.*)"\s*(?:#[^"]*)?$', re.S)
 HEADER_RE = re.compile(r'^\s*(l_[a-z_]+)\s*:\s*$')
 
 MT = "# MT"   # machine-translation marker: English text sitting in a non-English file
@@ -207,6 +208,22 @@ def do_canonicalise(src_dir: Path, upstream: Path, scratch: Path) -> None:
 
 # ---------------------------------------------------------------------- report
 
+def malformed(header, lines, lang) -> int:
+    """2.39: lines CK3 cannot read (not blank, not a comment, not the header, not a key), +1 if the header is wrong."""
+    bad = 0 if header == f"l_{lang}" else 1
+    seen_header = False
+    for line in lines:
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        if not seen_header and HEADER_RE.match(line):
+            seen_header = True
+            continue
+        if not KEY_RE.match(line):
+            bad += 1
+    return bad
+
+
 def do_report(src_dir: Path, langs) -> int:
     en_keys, en_dupes = set(), collections.Counter()
     for src in sorted(src_dir.rglob("*.yml")):
@@ -220,18 +237,19 @@ def do_report(src_dir: Path, langs) -> int:
     for k, c in en_dupes.most_common(10):
         print(f"      duplicate: {k} (+{c})")
 
-    print(f"\n  {'lang':<14}{'keys':>8}{'unique':>8}{'dupes':>7}{'missing':>9}{'stale':>7}{'# MT':>7}")
-    print("  " + "-" * 60)
+    print(f"\n  {'lang':<14}{'keys':>8}{'unique':>8}{'dupes':>7}{'missing':>9}{'stale':>7}{'# MT':>7}{'malformed':>11}")
+    print("  " + "-" * 71)
     worst = 0
     for lang in langs:
         d = Path("localization") / lang
         if not d.is_dir():
             print(f"  {lang:<14}{'-- folder missing --':>39}")
             continue
-        keys, dupes, mt = set(), 0, 0
+        keys, dupes, mt, bad = set(), 0, 0, 0
         total = 0
         for p in sorted(d.rglob("*.yml")):
-            _, entries, lines = parse(p)
+            header, entries, lines = parse(p)
+            bad += malformed(header, lines, lang)
             for k, _, _, i in entries:
                 total += 1
                 if k in keys:
@@ -242,11 +260,12 @@ def do_report(src_dir: Path, langs) -> int:
         missing = len(en_keys - keys)
         stale = len(keys - en_keys)
         worst = max(worst, missing)
-        print(f"  {lang:<14}{total:>8}{len(keys):>8}{dupes:>7}{missing:>9}{stale:>7}{mt:>7}")
+        print(f"  {lang:<14}{total:>8}{len(keys):>8}{dupes:>7}{missing:>9}{stale:>7}{mt:>7}{bad:>11}")
 
     print("\n  missing = in English, absent here (run --sync)")
     print("  stale   = here, no longer in English (safe to delete)")
     print("  # MT    = English text sitting in a non-English file, awaiting translation")
+    print("  malformed = lines CK3 cannot read as a key, plus files whose header is not l_<language>")
     return worst
 
 

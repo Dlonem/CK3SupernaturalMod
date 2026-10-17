@@ -1,0 +1,487 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": relics and Zecchia (WORK-ORDER-2.38 §9.3-9.5, §11.3).
+# Loc: localization/english/spn_relic_l_english.yml. A borrowed relic cannot be used up or burned out by its borrower.
+
+# Pledge to the Reliquary (§9.4). Your own item, to your chapter or your coven (asked which when you have both).
+spn_relic_pledge_interaction = {
+	category = interaction_category_favorites
+	icon = artifact
+	desc = spn_relic_pledge_interaction_desc
+	target_type = artifact
+	target_filter = actor_artifacts
+	auto_accept = yes
+	ai_targets = { ai_recipients = self }
+	ai_frequency = 60
+	is_shown = {
+		scope:recipient = scope:actor
+		scope:actor = {
+			OR = {
+				spn_is_order_member_trigger = yes
+				exists = var:spn_coven
+			}
+		}
+	}
+	can_be_picked_artifact = {
+		scope:target = {
+			artifact_owner ?= scope:actor
+			spn_pledgeable_trigger = yes
+			NOT = { has_variable = spn_pledged_to }
+			NOT = { has_variable = spn_borrowed_from }
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_relic_pledge_interaction_tt
+		scope:actor = {
+			if = {
+				limit = {
+					spn_is_order_member_trigger = yes
+					exists = var:spn_coven
+				}
+				scope:target = { save_scope_as = spn_pp_art }
+				trigger_event = spn_relic.0050
+			}
+			else_if = {
+				limit = { spn_is_order_member_trigger = yes }
+				spn_relic_pledge_effect = { ART = scope:target TO = scope:actor.var:spn_order_chapter }
+			}
+			else = {
+				spn_relic_pledge_effect = { ART = scope:target TO = scope:actor.var:spn_coven }
+			}
+		}
+	}
+	ai_will_do = {
+		base = 20
+		modifier = {
+			add = 20
+			scope:actor = { has_trait = gregarious }
+		}
+		modifier = {
+			add = 20
+			scope:actor = { has_trait = diligent }
+		}
+		modifier = {
+			add = -40
+			scope:actor = { has_trait = greedy }
+		}
+		modifier = {
+			add = -30
+			scope:actor = { has_trait = paranoid }
+		}
+	}
+}
+
+# Take It Back (§9.4). Unpledge an item you pledged that is not out on loan.
+spn_relic_take_back_interaction = {
+	category = interaction_category_favorites
+	icon = artifact
+	desc = spn_relic_take_back_interaction_desc
+	target_type = artifact
+	target_filter = actor_artifacts
+	auto_accept = yes
+	is_shown = {
+		scope:recipient = scope:actor
+		scope:actor = {
+			any_character_artifact = { has_variable = spn_pledged_to } # 2.39 (final pass, 17 Oct): also a pledge to a temple that is gone
+		}
+	}
+	can_be_picked_artifact = {
+		scope:target = {
+			artifact_owner ?= scope:actor
+			has_variable = spn_pledged_to # 2.39 (final pass, 17 Oct): also a pledge to a temple that is gone
+			NOT = { has_variable = spn_borrowed_from }
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_relic_take_back_interaction_tt
+		spn_relic_unpledge_effect = { ART = scope:target }
+		scope:actor = { spn_reliquary_apply_any_effect = yes }
+	}
+	ai_will_do = { base = 0 }
+}
+
+# Ask to Borrow (§9.5). A Magistratus asks a member of his chapter for a pledged item; an Adeptus may ask any member he knows
+# (§5.22). Three years; the owner keeps a claim.
+spn_relic_borrow_interaction = {
+	category = interaction_category_favorites
+	icon = artifact
+	desc = spn_relic_borrow_interaction_desc
+	target_type = artifact
+	target_filter = recipient_artifacts
+	use_diplomatic_range = yes
+	ai_targets = {
+		ai_recipients = vassals
+		ai_recipients = courtiers
+		ai_recipients = liege
+		ai_recipients = peer_vassals
+		max = 10
+	}
+	ai_frequency = 60
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			spn_order_on_trigger = yes
+			spn_order_magistratus_plus_trigger = yes
+		}
+		scope:recipient = { spn_is_order_member_trigger = yes }
+		OR = {
+			scope:recipient.var:spn_order_chapter = scope:actor.var:spn_order_chapter
+			AND = {
+				scope:actor = { has_variable = spn_order_adeptus }
+				scope:actor = { spn_order_knows_member_trigger = { WHO = scope:recipient } }
+			}
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_relic_borrow_cd_tt
+				NOT = { has_character_flag = spn_order_borrow_cd }
+			}
+		}
+	}
+	can_be_picked_artifact = {
+		scope:target = {
+			artifact_owner ?= scope:recipient
+			var:spn_pledged_to ?= scope:recipient.var:spn_order_chapter
+			NOT = { has_variable = spn_borrowed_from }
+			NOT = { has_variable = spn_relic_borrow_cd }
+			NOT = { var:spn_relic ?= flag:powder }
+			NOT = { var:spn_relic ?= flag:beetle } # 2.39 (WORK-ORDER-2.39 F4): the beetle is never lent
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_relic_borrow_interaction_tt
+		scope:actor = { add_character_flag = { flag = spn_order_borrow_cd years = 5 } }
+		spn_relic_lend_effect = { ART = scope:target LENDER = scope:recipient BORROWER = scope:actor }
+	}
+	ai_accept = {
+		base = 20
+		opinion_modifier = {
+			who = scope:recipient
+			opinion_target = scope:actor
+			multiplier = 0.5
+		}
+		modifier = {
+			add = 20
+			desc = spn_ai_accept_outranks
+			scope:actor = { spn_order_magistratus_plus_trigger = yes }
+			scope:recipient = { spn_order_magistratus_plus_trigger = no }
+		}
+		modifier = {
+			add = -30
+			desc = spn_ai_accept_greedy
+			scope:recipient = { has_trait = greedy }
+		}
+		modifier = {
+			add = -20
+			desc = spn_ai_accept_paranoid
+			scope:recipient = { has_trait = paranoid }
+		}
+		# A Temple Magus may order it.
+		modifier = {
+			add = 1000
+			desc = spn_ai_accept_temple_magus
+			scope:actor = { spn_is_temple_magus_trigger = yes }
+			scope:recipient.var:spn_order_chapter = scope:actor.var:spn_order_chapter
+		}
+	}
+	ai_will_do = {
+		base = 10
+		modifier = {
+			add = 20
+			scope:actor = { has_trait = ambitious }
+		}
+		modifier = {
+			factor = 0
+			scope:target = { exists = var:spn_relic }
+			scope:actor = {
+				any_character_artifact = { var:spn_relic ?= scope:target.var:spn_relic }
+			}
+		}
+	}
+}
+
+# Question Under the Glove (§9.3). Your prisoner, while you wear the Glove.
+spn_relic_glove_interaction = {
+	category = interaction_category_hostile
+	icon = torture_interaction
+	desc = spn_relic_glove_interaction_desc
+	auto_accept = yes
+	ai_targets = { ai_recipients = prisoners }
+	ai_frequency = 24
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			any_equipped_character_artifact = {
+				var:spn_relic ?= flag:glove
+				NOT = { has_variable = spn_borrowed_from }
+			}
+		}
+		scope:recipient = { is_imprisoned_by = scope:actor }
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_relic_glove_cd_tt
+				NOT = { has_character_flag = spn_glove_cd }
+			}
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_relic_glove_interaction_tt
+		scope:actor = {
+			add_character_flag = { flag = spn_glove_cd years = 2 }
+			save_scope_as = spn_gl_asker
+		}
+		scope:recipient = { trigger_event = spn_relic.0100 }
+	}
+	ai_will_do = {
+		base = 10
+		modifier = {
+			add = 30
+			scope:actor = { has_trait = sadistic }
+		}
+		modifier = {
+			add = 20
+			scope:actor = { has_trait = paranoid }
+		}
+		modifier = {
+			add = -40
+			scope:actor = { has_trait = compassionate }
+		}
+	}
+}
+
+# Call the Dead (§9.3). The Necrophone you wear; once a year; three calls and it cracks.
+spn_relic_necrophone_interaction = {
+	category = interaction_category_favorites
+	icon = icon_magic
+	desc = spn_relic_necrophone_interaction_desc
+	auto_accept = yes
+	ai_targets = { ai_recipients = self }
+	ai_frequency = 24
+	is_shown = {
+		scope:recipient = scope:actor
+		scope:actor = {
+			any_equipped_character_artifact = {
+				var:spn_relic ?= flag:necrophone
+				NOT = { has_variable = spn_borrowed_from }
+			}
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_relic_necrophone_cd_tt
+				NOT = { has_character_flag = spn_necrophone_cd }
+			}
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_relic_necrophone_interaction_tt
+		scope:actor = {
+			random_equipped_character_artifact = {
+				limit = { var:spn_relic ?= flag:necrophone }
+				save_scope_as = spn_nc_phone
+			}
+			trigger_event = spn_relic.0200
+		}
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 40
+			scope:actor = {
+				has_trait = archmage
+				any_character_artifact = { has_variable = spn_vade_page }
+			}
+		}
+	}
+}
+
+# Throw the Powder (§9.3). The trail in the county where you stand goes cold; the Powder is used up.
+spn_relic_powder_interaction = {
+	category = interaction_category_favorites
+	icon = secret
+	desc = spn_relic_powder_interaction_desc
+	auto_accept = yes
+	ai_targets = { ai_recipients = self }
+	ai_frequency = 24
+	is_shown = {
+		scope:recipient = scope:actor
+		scope:actor = {
+			any_equipped_character_artifact = {
+				var:spn_relic ?= flag:powder
+				NOT = { has_variable = spn_borrowed_from }
+			}
+		}
+	}
+	is_valid_showing_failures_only = {
+		custom_tooltip = {
+			text = spn_relic_powder_county_tt
+			scope:actor = { exists = location.county }
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_relic_powder_interaction_tt
+		scope:actor = {
+			location.county = { spn_menace_clear_county_effect = yes }
+			random_equipped_character_artifact = {
+				limit = { var:spn_relic ?= flag:powder }
+				destroy_artifact = this
+			}
+			spn_order_deed_effect = { PREROGATIVE = flag:silence AMOUNT = 5 TOAST = yes }
+		}
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 100
+			scope:actor = {
+				location.county ?= {
+					has_county_modifier = spn_menace_modifier
+					var:spn_menace_culprit ?= scope:actor
+				}
+			}
+		}
+	}
+}
+
+# Bind Our Fates (§9.3). The Mirror Shard you wear; whoever accepts. If either of you is killed, the other dies within a day.
+spn_relic_mirror_interaction = {
+	category = interaction_category_favorites # 2.38a: the Supernatural menu, with every other relic use
+	icon = icon_magic
+	desc = spn_relic_mirror_interaction_desc
+	ai_targets = {
+		ai_recipients = scripted_relations
+		ai_recipients = spouses
+		max = 5
+	}
+	ai_frequency = 120
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			any_equipped_character_artifact = {
+				var:spn_relic ?= flag:mirror
+				NOT = { has_variable = spn_borrowed_from }
+			}
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_relic_mirror_cd_tt
+				NOT = { has_character_flag = spn_mirror_cd }
+			}
+			custom_tooltip = {
+				text = spn_relic_mirror_bound_tt
+				NOT = { exists = var:spn_fates_bound_to }
+			}
+		}
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_relic_mirror_other_bound_tt
+				NOT = { exists = var:spn_fates_bound_to }
+			}
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_relic_mirror_interaction_tt
+		scope:actor = {
+			random_equipped_character_artifact = {
+				limit = { var:spn_relic ?= flag:mirror }
+				save_scope_as = spn_mr_shard
+			}
+			add_character_flag = { flag = spn_mirror_cd years = 10 }
+			set_variable = { name = spn_fates_bound_to value = scope:recipient years = 10 }
+			set_variable = { name = spn_mirror_shard_of value = scope:spn_mr_shard years = 10 }
+			add_character_modifier = { modifier = spn_fates_bound_modifier years = 10 }
+		}
+		scope:recipient = {
+			set_variable = { name = spn_fates_bound_to value = scope:actor years = 10 }
+			set_variable = { name = spn_mirror_shard_of value = scope:spn_mr_shard years = 10 }
+			add_character_modifier = { modifier = spn_fates_bound_modifier years = 10 }
+		}
+	}
+	ai_accept = {
+		base = -100
+		modifier = {
+			add = 150
+			desc = spn_ai_accept_bond
+			scope:recipient = {
+				OR = {
+					has_relation_lover = scope:actor
+					has_relation_best_friend = scope:actor
+				}
+			}
+		}
+		modifier = {
+			add = 150
+			desc = spn_ai_accept_loyal_vassal
+			scope:recipient = {
+				is_imprisoned = no
+				is_vassal_of = scope:actor
+				opinion = { target = scope:actor value >= 60 }
+			}
+		}
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 10
+			scope:recipient = {
+				OR = {
+					has_relation_lover = scope:actor
+					has_relation_best_friend = scope:actor
+				}
+			}
+		}
+		modifier = {
+			factor = 0
+			scope:recipient = { is_imprisoned = yes }
+		}
+	}
+}
+
+# Send Zecchia After Their Treasures (§11.3). The hirer names the target; she comes back in ninety days.
+spn_zecchia_send_interaction = {
+	category = interaction_category_hostile
+	icon = icon_scheme_steal_back_artifact
+	desc = spn_zecchia_send_interaction_desc
+	auto_accept = yes
+	use_diplomatic_range = yes
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			exists = var:spn_zecchia_count
+			NOT = { exists = var:spn_zecchia_target }
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_zecchia_send_seal_tt
+				spn_wears_seal_trigger = no
+			}
+			custom_tooltip = {
+				text = spn_zecchia_send_privilege_tt
+				NOT = { is_target_in_variable_list = { name = spn_zecchia_privilege target = scope:actor } }
+			}
+			custom_tooltip = {
+				text = spn_zecchia_send_nothing_tt
+				any_character_artifact = { spn_zecchia_takeable_trigger = yes }
+			}
+		}
+		custom_tooltip = {
+			text = spn_zecchia_send_alive_tt
+			global_var:spn_zecchia ?= { is_alive = yes }
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_zecchia_send_interaction_tt
+		scope:actor = {
+			set_variable = { name = spn_zecchia_target value = scope:recipient years = 1 }
+			trigger_event = { id = spn_zecchia.0020 days = spn_zecchia_wait_days_value }
+		}
+	}
+	ai_will_do = { base = 0 }
+}

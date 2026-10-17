@@ -10,6 +10,8 @@ spn_invite_to_pack_interaction = {
 	notification_text = spn_invite_to_pack_interaction_notification
 	# Two years between invitations to the same wolf, one for Tundra's champion (§13.2, C10): the engine's cooldown is
 	# the shorter, and a two-year record on the recipient holds everyone else to the longer.
+	# 2.39 (WORK-ORDER-2.39 B1): the record is written when he refuses, not when the invitation is sent, and read in
+	# can_send. While an answer is outstanding the engine's own one-pending-interaction block stops a second invitation.
 	cooldown_against_recipient = { years = 1 }
 	ai_min_reply_days = 1
 	ai_max_reply_days = 5
@@ -45,6 +47,12 @@ spn_invite_to_pack_interaction = {
 			}
 		}
 		scope:recipient = { is_imprisoned = no }
+	}
+	# 2.39 (WORK-ORDER-2.39 B1): was in is_valid_showing_failures_only, reading a record on_send had just written, so the
+	# invitation was dropped silently when the wolf answered (shoutyman5). Vanilla Blackmail checks its own on_send record in
+	# can_send and waits 1-5 days for a reply (00_blackmail_interactions.txt); if can_send were tested again at the reply,
+	# Blackmail could never succeed. Either way the record is now written only on a refusal.
+	can_send = {
 		trigger_if = {
 			limit = { scope:actor = { NOT = { has_trait = spn_champion_tundra } } }
 			custom_tooltip = {
@@ -53,7 +61,9 @@ spn_invite_to_pack_interaction = {
 			}
 		}
 	}
-	on_send = {
+	# 2.39 (WORK-ORDER-2.39 B1): a refused wolf is not asked again for two years (one for Tundra's champion); one who
+	# accepted has joined. Was on_send.
+	on_decline = {
 		scope:recipient = {
 			add_to_variable_list = { name = spn_pack_invited_by target = scope:actor years = 2 }
 		}

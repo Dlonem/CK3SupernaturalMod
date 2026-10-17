@@ -1,0 +1,186 @@
+﻿# Supernatural 2.39 -- how much an AI wants another's magic item (Boot 3, 16 Oct; tool/pkgs/PB/HANDOFF.md §9).
+#
+# Thomas: "I want them to be very layered. Not just 'I have a grudge' or 'I'm greedy': grudge, greedy, rival, friend,
+# lover, family, liege ... an adventurer would be more likely to steal, because they have less to lose ... if they
+# already have a magical artifact, more or less likely depending on their goals ... warlocks and necromancers are
+# definitely fine to steal ... a witch maybe 50% more likely, because mages are the more refined practitioners ... mages
+# should mostly work together." Read by spn_ai_artifact_motive_trigger (zz_spn_239_ai_motive_triggers.txt), and through
+# it by Witchcraft's artifact thief (magic_ev2.10), "striving for power" and the artifact seeker.
+#
+# HOLDER scope (the one who has the item). ROOT MUST BE THE AI who wants it: every caller is an AI's own event or effect.
+spn_ai_artifact_desire_value = {
+	value = 0
+	# A grudge.
+	if = {
+		limit = { has_relation_nemesis = root }
+		add = 60
+	}
+	else_if = {
+		limit = { has_relation_rival = root }
+		add = 40
+	}
+	if = {
+		limit = { is_at_war_with = root }
+		add = 30
+	}
+	if = {
+		limit = { reverse_opinion = { target = root value <= medium_negative_opinion } }
+		add = 20
+	}
+	if = {
+		limit = { reverse_opinion = { target = root value <= very_high_negative_opinion } }
+		add = 20
+	}
+	# A claim he already holds on one of the items.
+	if = {
+		limit = {
+			any_character_artifact = {
+				spn_is_magic_item_trigger = yes
+				root = { has_personal_artifact_claim = prev }
+			}
+		}
+		add = 30
+	}
+	# His nature.
+	if = {
+		limit = { root = { has_trait = greedy } }
+		add = 25
+	}
+	if = {
+		limit = { root = { has_trait = ambitious } }
+		add = 15
+	}
+	if = {
+		limit = { root = { has_trait = arrogant } }
+		add = 10
+	}
+	if = {
+		limit = { root = { has_trait = deceitful } }
+		add = 10
+	}
+	if = {
+		limit = {
+			root = { has_trait = vengeful }
+			OR = {
+				has_relation_rival = root
+				has_relation_nemesis = root
+			}
+		}
+		add = 10
+	}
+	if = {
+		limit = { root = { has_trait = just } }
+		add = -25
+	}
+	if = {
+		limit = { root = { has_trait = content } }
+		add = -25
+	}
+	if = {
+		limit = { root = { has_trait = honest } }
+		add = -15
+	}
+	if = {
+		limit = { root = { has_trait = compassionate } }
+		add = -10
+	}
+	if = {
+		limit = { root = { has_trait = generous } }
+		add = -10
+	}
+	# His practice: a warlock or a necromancer has no scruples about it.
+	if = {
+		limit = {
+			root = {
+				OR = {
+					has_trait = warlock
+					has_trait = necromancer
+				}
+			}
+		}
+		add = 25
+	}
+	# His station: an adventurer has less to lose.
+	if = {
+		limit = { root = { is_landless_adventurer = yes } }
+		add = 15
+	}
+	# What he has already: a collector wants more; a mage who has enough mostly does not; one with none wants a first.
+	if = {
+		limit = {
+			root = {
+				any_character_artifact = {
+					spn_is_magic_item_trigger = yes
+					count >= 3
+				}
+				OR = {
+					has_trait = greedy
+					has_trait = ambitious
+				}
+			}
+		}
+		add = 15
+	}
+	else_if = {
+		limit = {
+			root = {
+				any_character_artifact = {
+					spn_is_magic_item_trigger = yes
+					count >= 3
+				}
+			}
+		}
+		add = -10
+	}
+	else_if = {
+		limit = {
+			root = {
+				NOT = { any_character_artifact = { spn_is_magic_item_trigger = yes } }
+			}
+		}
+		add = 10
+	}
+	# The bond between them: his liege or his vassal.
+	if = {
+		limit = {
+			OR = {
+				target_is_liege_or_above = root
+				target_is_vassal_or_below = root
+			}
+		}
+		add = -20
+	}
+	# Two of the Order mostly work together, unless there is a grudge.
+	if = {
+		limit = {
+			spn_is_order_member_trigger = yes
+			root = { spn_is_order_member_trigger = yes }
+			NOR = {
+				has_relation_rival = root
+				has_relation_nemesis = root
+				is_at_war_with = root
+			}
+		}
+		multiply = 0.25
+	}
+	# A witch is less refined than a Mage.
+	if = {
+		limit = {
+			root = {
+				NOT = { has_trait = archmage }
+				is_witch_trigger = yes
+			}
+		}
+		multiply = 1.5
+	}
+	# Never a friend, a lover, a spouse, kin, or someone he likes.
+	if = {
+		limit = { spn_ai_spares_trigger = { ACTOR = root } }
+		multiply = 0
+	}
+	min = 0
+}
+
+# How much is enough to act on. A grudge alone (a rival, 40) is; greed alone with nothing in hand (25 + 10) is; greed
+# with a just conscience (25 - 25 + 10) is not; a fellow member of the Order rarely is.
+spn_ai_artifact_desire_threshold_value = 30

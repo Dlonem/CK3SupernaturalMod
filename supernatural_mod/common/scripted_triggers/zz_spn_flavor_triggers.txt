@@ -1,0 +1,509 @@
+﻿# Supernatural 2.39 -- flavor that is spread out, not bunched: Order romance, neophyte stress, the council's moments and the
+# pack's night home (WORK-ORDER-2.39 F14). The gate itself (spn_flavor_ready_trigger) and the romance test
+# (spn_romance_ok_trigger) are in 10_spn_triggers.txt.
+#
+# The chapter-moment selectors run from the chapter's year, where ROOT is the story, so no trigger here reads root.
+# Each spn_order_cm_*_ok_trigger saves the candidate as scope:spn_cm_who first and reads that instead; the same trigger
+# is the event's own re-check when it arrives, so selector and event can never disagree.
+
+# ==================================================================================================
+# SMALL TESTS
+# ==================================================================================================
+# 2.39 (F14): this character and $WHO$ hold the same rank in the Order. Ranks are flags, so each is compared by name.
+spn_order_same_rank_trigger = {
+	OR = {
+		AND = {
+			var:spn_order_rank ?= flag:neophyte
+			$WHO$ = { var:spn_order_rank ?= flag:neophyte }
+		}
+		AND = {
+			var:spn_order_rank ?= flag:acolyte
+			$WHO$ = { var:spn_order_rank ?= flag:acolyte }
+		}
+		AND = {
+			var:spn_order_rank ?= flag:medicum
+			$WHO$ = { var:spn_order_rank ?= flag:medicum }
+		}
+		AND = {
+			var:spn_order_rank ?= flag:magistratus
+			$WHO$ = { var:spn_order_rank ?= flag:magistratus }
+		}
+	}
+}
+
+# 2.39 (F14): a junior of the Order: a Neophyte, an Acolyte or a Medicum, and not a Temple Magus.
+spn_order_is_junior_trigger = {
+	exists = var:spn_order_chapter
+	OR = {
+		var:spn_order_rank ?= flag:neophyte
+		var:spn_order_rank ?= flag:acolyte
+		var:spn_order_rank ?= flag:medicum
+	}
+	spn_is_temple_magus_trigger = no
+}
+
+# 2.39 (F14 §2): this character is $JUNIOR$'s patron: the junior's own Temple Magus, or the Grand Magus. Seat holders are
+# partners in the moments, never patrons: they do not decide promotions.
+spn_order_patron_of_trigger = {
+	save_temporary_scope_as = spn_pt_patron
+	spn_is_order_member_trigger = yes
+	NOT = { this = $JUNIOR$ }
+	$JUNIOR$ = {
+		spn_order_is_junior_trigger = yes
+		OR = {
+			var:spn_order_chapter ?= { story_owner = scope:spn_pt_patron }
+			global_var:current_archmage_global ?= scope:spn_pt_patron
+		}
+	}
+}
+
+# 2.39 (F14 §2): a member who could have seen $JUNIOR$'s favour: an AI member of the junior's rank in his temple, neither
+# the junior nor the patron. Root = the candidate witness.
+spn_order_favour_peer_trigger = {
+	is_alive = yes
+	is_ai = yes
+	is_imprisoned = no
+	NOT = { this = $JUNIOR$ }
+	NOT = { this = $PATRON$ }
+	spn_order_same_rank_trigger = { WHO = $JUNIOR$ }
+}
+# ...and one who resents him: his rival, or thinks -10 or less of him.
+spn_order_favour_jealous_trigger = {
+	spn_order_favour_peer_trigger = { JUNIOR = $JUNIOR$ PATRON = $PATRON$ }
+	OR = {
+		has_relation_rival = $JUNIOR$
+		opinion = {
+			target = $JUNIOR$
+			value <= -10
+		}
+	}
+}
+
+# ==================================================================================================
+# THE SUBJECTS OF THE NEW MOMENTS. Root = the candidate; the parameter is the player the moment is for.
+# ==================================================================================================
+# R1, After the Others Have Gone: an AI junior of the senior's temple who wants him. Never his tutee (Late Lessons is
+# that pair), never already his lover or spouse.
+spn_order_advance_junior_trigger = {
+	is_alive = yes
+	is_ai = yes
+	is_imprisoned = no
+	NOT = { this = $SENIOR$ }
+	# Below him in rank (a seat holder can be of any rank).
+	OR = {
+		var:spn_order_rank ?= flag:neophyte
+		AND = {
+			var:spn_order_rank ?= flag:acolyte
+			$SENIOR$ = { spn_order_medicum_plus_trigger = yes }
+		}
+		AND = {
+			var:spn_order_rank ?= flag:medicum
+			$SENIOR$ = { var:spn_order_rank ?= flag:magistratus }
+		}
+	}
+	NOT = { var:spn_order_tutor ?= $SENIOR$ }
+	NOT = { is_spouse_of = $SENIOR$ }
+	NOT = { has_relation_lover = $SENIOR$ }
+	OR = {
+		has_trait = lustful
+		has_trait = ambitious
+		has_trait = gregarious
+		has_trait = seducer
+		has_trait = rakish
+	}
+	opinion = {
+		target = $SENIOR$
+		value >= 25
+	}
+	spn_romance_ok_trigger = { CHARACTER = $SENIOR$ }
+	trigger_if = {
+		limit = {
+			OR = {
+				is_married = yes
+				any_relation = { type = lover }
+			}
+		}
+		might_cheat_on_every_partner_trigger = yes
+	}
+}
+
+# R2, A Door Left Open: an AI senior the junior might say it to. Never his tutor (Late Lessons is that pair).
+spn_order_advance_senior_trigger = {
+	is_alive = yes
+	is_ai = yes
+	is_imprisoned = no
+	NOT = { this = $JUNIOR$ }
+	spn_is_order_member_trigger = yes
+	NOT = { $JUNIOR$ = { var:spn_order_tutor ?= prev } }
+	NOT = { is_spouse_of = $JUNIOR$ }
+	NOT = { has_relation_lover = $JUNIOR$ }
+	spn_romance_ok_trigger = { CHARACTER = $JUNIOR$ }
+	trigger_if = {
+		limit = {
+			OR = {
+				is_married = yes
+				any_relation = { type = lover }
+			}
+		}
+		might_cheat_on_every_partner_trigger = yes
+	}
+}
+
+# S2, Beneath Your Station: an AI Medicum or Magistratus of the acolyte's temple. Not his tutor (The Errand is the
+# tutor's), not his friend or lover.
+spn_order_station_senior_trigger = {
+	is_alive = yes
+	is_ai = yes
+	is_imprisoned = no
+	NOT = { this = $ACOLYTE$ }
+	spn_order_medicum_plus_trigger = yes
+	NOT = { $ACOLYTE$ = { var:spn_order_tutor ?= prev } }
+	NOT = { has_relation_friend = $ACOLYTE$ }
+	NOT = { has_relation_lover = $ACOLYTE$ }
+}
+
+# S3, The Same Night: a close relative who is not of the Order and needs him.
+spn_order_same_night_kin_trigger = {
+	is_alive = yes
+	is_ai = yes
+	is_imprisoned = no
+	NOT = { exists = var:spn_order_chapter }
+}
+
+# S4, One of the Seniors: an AI Medicum or higher of the acolyte's temple who has it in for him. Not his tutor (The
+# Tutor's Quarrel is that pair) and not the Temple Magus (the acolyte can take it to him).
+spn_order_bully_senior_trigger = {
+	is_alive = yes
+	is_ai = yes
+	is_imprisoned = no
+	NOT = { this = $ACOLYTE$ }
+	spn_order_medicum_plus_trigger = yes
+	spn_is_temple_magus_trigger = no
+	NOT = { $ACOLYTE$ = { var:spn_order_tutor ?= prev } }
+	OR = {
+		has_relation_rival = $ACOLYTE$
+		opinion = {
+			target = $ACOLYTE$
+			value <= -10
+		}
+		AND = {
+			OR = {
+				has_trait = arrogant
+				has_trait = sadistic
+				has_trait = callous
+			}
+			opinion = {
+				target = $ACOLYTE$
+				value <= 0
+			}
+		}
+	}
+}
+
+# T1, A Brother Asks for Help: an AI member of the Temple Magus's temple who broke the rules and has not been judged.
+spn_order_brother_asker_trigger = {
+	is_alive = yes
+	is_ai = yes
+	is_imprisoned = no
+	NOT = { this = $HEAD$ }
+	spn_is_order_member_trigger = yes
+	has_character_flag = spn_order_broke_rules
+	NOT = { has_character_flag = spn_conclave_judged }
+	# Never the sitting Grand Magus: the chair's charges are the Conclave's (M3) and Invocare's to read, among them an
+	# exposed staged rift (F12), which no Temple Magus can quietly bury.
+	NOT = { global_var:current_archmage_global ?= this }
+}
+
+# T2, A Feud in the Chapter: an AI member of the Temple Magus's temple who could be one of the feuding pair.
+spn_order_feud_member_trigger = {
+	is_alive = yes
+	is_ai = yes
+	is_imprisoned = no
+	NOT = { this = $HEAD$ }
+	spn_is_order_member_trigger = yes
+}
+# ...and the pair: rivals, or each thinks -25 or less of the other.
+spn_order_feuding_trigger = {
+	NOT = { this = $WITH$ }
+	OR = {
+		has_relation_rival = $WITH$
+		AND = {
+			opinion = {
+				target = $WITH$
+				value <= -25
+			}
+			$WITH$ = {
+				opinion = {
+					target = prev
+					value <= -25
+				}
+			}
+		}
+	}
+}
+# ...a member of the feuding pair who has his other half in the same temple. Root = the candidate.
+spn_order_feud_has_partner_trigger = {
+	spn_order_feud_member_trigger = { HEAD = $HEAD$ }
+	save_temporary_scope_as = spn_cf_first
+	var:spn_order_chapter ?= {
+		any_in_list = {
+			variable = spn_order_members
+			spn_order_feud_member_trigger = { HEAD = $HEAD$ }
+			spn_order_feuding_trigger = { WITH = scope:spn_cf_first }
+		}
+	}
+}
+# T2, A Feud in the Chapter: this Temple Magus has two AI members at odds. Root = the Temple Magus.
+spn_order_chapter_feud_trigger = {
+	save_temporary_scope_as = spn_cf_head
+	spn_is_temple_magus_trigger = yes
+	var:spn_order_chapter ?= {
+		any_in_list = {
+			variable = spn_order_members
+			spn_order_feud_has_partner_trigger = { HEAD = scope:spn_cf_head }
+		}
+	}
+}
+# T2, A Feud on the Council: two AI seat holders, $A$ and $B$ (global variables, so each may be unset).
+spn_order_council_feud_pair_trigger = {
+	$A$ ?= {
+		is_alive = yes
+		is_ai = yes
+		save_temporary_scope_as = spn_cf_a
+	}
+	$B$ ?= {
+		is_alive = yes
+		is_ai = yes
+		spn_order_feuding_trigger = { WITH = scope:spn_cf_a }
+	}
+}
+# The Grand Magus's three seats, any two of them. Root = the Grand Magus.
+spn_order_council_feud_trigger = {
+	global_var:current_archmage_global ?= this
+	OR = {
+		spn_order_council_feud_pair_trigger = { A = global_var:current_loremaster_global B = global_var:current_black_mage_global }
+		spn_order_council_feud_pair_trigger = { A = global_var:current_loremaster_global B = global_var:current_admin_global }
+		spn_order_council_feud_pair_trigger = { A = global_var:current_black_mage_global B = global_var:current_admin_global }
+	}
+}
+
+# T3, Where Do You Go at Night?: the member's AI spouse, at his side, not of the Order.
+spn_order_where_spouse_trigger = {
+	is_alive = yes
+	is_ai = yes
+	is_adult = yes
+	is_imprisoned = no
+	NOT = { exists = var:spn_order_chapter }
+	location = $WHO$.location
+}
+
+# ==================================================================================================
+# THE CHAPTER MOMENTS (F14 V1). One per branch of the chapter's list (spn_order_chapter_year_effect, step 10): the
+# "seen in ten years" flag and "a subject exists". Root = the player. The Collegium's own branch is
+# spn_order_cm_hall_ok_trigger (F15).
+# ==================================================================================================
+# An Outsider Asks Questions (.0160)
+spn_order_cm_outsider_ok_trigger = {
+	NOT = { has_character_flag = spn_cm_seen_0160 }
+	spn_is_order_member_trigger = yes
+}
+# The Relic That Would Not Sleep (.0161). The reliquary test is B12 i's re-check.
+spn_order_cm_relic_ok_trigger = {
+	NOT = { has_character_flag = spn_cm_seen_0161 }
+	spn_is_order_member_trigger = yes
+	var:spn_order_chapter ?= { var:spn_order_reliquary_count > 0 }
+}
+# A Neophyte's Test Gone Wrong (.0162). The neophyte test is B12 i's re-check.
+spn_order_cm_neophyte_ok_trigger = {
+	NOT = { has_character_flag = spn_cm_seen_0162 }
+	spn_is_order_member_trigger = yes
+	var:spn_order_chapter ?= {
+		any_in_list = {
+			variable = spn_order_neophytes
+			count > 0
+		}
+	}
+}
+# The Tutor's Quarrel (.0163)
+spn_order_cm_quarrel_ok_trigger = {
+	NOT = { has_character_flag = spn_cm_seen_0163 }
+	spn_is_order_member_trigger = yes
+	any_in_list = {
+		variable = spn_order_tutees
+		is_alive = yes
+	}
+}
+# R1, After the Others Have Gone (.0350): a Temple Magus, the Grand Magus or a seat holder.
+spn_order_cm_advance_senior_ok_trigger = {
+	save_temporary_scope_as = spn_cm_who
+	NOT = { has_character_flag = spn_cm_seen_0350 }
+	spn_is_order_member_trigger = yes
+	age >= 18
+	NOT = { has_trait = celibate }
+	OR = {
+		spn_is_temple_magus_trigger = yes
+		global_var:current_archmage_global ?= this
+		has_variable = mc_member_var
+	}
+	var:spn_order_chapter ?= {
+		any_in_list = {
+			variable = spn_order_members
+			spn_order_advance_junior_trigger = { SENIOR = scope:spn_cm_who }
+		}
+	}
+}
+# R2, A Door Left Open (.0351): a Neophyte, Acolyte or Medicum, and an AI senior in reach: his Temple Magus, the Grand
+# Magus, or a seat holder.
+spn_order_cm_advance_junior_ok_trigger = {
+	save_temporary_scope_as = spn_cm_who
+	NOT = { has_character_flag = spn_cm_seen_0351 }
+	spn_order_is_junior_trigger = yes
+	age >= 18
+	NOT = { has_trait = celibate }
+	OR = {
+		var:spn_order_chapter ?= {
+			story_owner = { spn_order_advance_senior_trigger = { JUNIOR = scope:spn_cm_who } }
+		}
+		global_var:current_archmage_global ?= {
+			in_diplomatic_range = scope:spn_cm_who
+			spn_order_advance_senior_trigger = { JUNIOR = scope:spn_cm_who }
+		}
+		global_var:current_loremaster_global ?= {
+			in_diplomatic_range = scope:spn_cm_who
+			spn_order_advance_senior_trigger = { JUNIOR = scope:spn_cm_who }
+		}
+		global_var:current_black_mage_global ?= {
+			in_diplomatic_range = scope:spn_cm_who
+			spn_order_advance_senior_trigger = { JUNIOR = scope:spn_cm_who }
+		}
+		global_var:current_admin_global ?= {
+			in_diplomatic_range = scope:spn_cm_who
+			spn_order_advance_senior_trigger = { JUNIOR = scope:spn_cm_who }
+		}
+	}
+}
+# S1, The Masks Are Watching (.0360): a Neophyte or an Acolyte.
+spn_order_cm_watching_ok_trigger = {
+	NOT = { has_character_flag = spn_cm_seen_0360 }
+	exists = var:spn_order_chapter
+	OR = {
+		var:spn_order_rank ?= flag:neophyte
+		var:spn_order_rank ?= flag:acolyte
+	}
+}
+# S2, Beneath Your Station (.0361): a landed Acolyte, and a senior to hand him the bucket.
+spn_order_cm_station_ok_trigger = {
+	save_temporary_scope_as = spn_cm_who
+	NOT = { has_character_flag = spn_cm_seen_0361 }
+	spn_is_order_member_trigger = yes
+	var:spn_order_rank ?= flag:acolyte
+	is_landed = yes
+	var:spn_order_chapter ?= {
+		any_in_list = {
+			variable = spn_order_members
+			spn_order_station_senior_trigger = { ACOLYTE = scope:spn_cm_who }
+		}
+	}
+}
+# S3, The Same Night (.0362): a Neophyte or an Acolyte, with a spouse, a child or a parent outside the Order.
+spn_order_cm_night_ok_trigger = {
+	NOT = { has_character_flag = spn_cm_seen_0362 }
+	exists = var:spn_order_chapter
+	OR = {
+		var:spn_order_rank ?= flag:neophyte
+		var:spn_order_rank ?= flag:acolyte
+	}
+	OR = {
+		primary_spouse ?= { spn_order_same_night_kin_trigger = yes }
+		any_child = {
+			age >= 10
+			spn_order_same_night_kin_trigger = yes
+		}
+		any_parent = { spn_order_same_night_kin_trigger = yes }
+	}
+}
+# S4, One of the Seniors (.0363): an Acolyte, and a senior who has it in for him.
+spn_order_cm_senior_ok_trigger = {
+	save_temporary_scope_as = spn_cm_who
+	NOT = { has_character_flag = spn_cm_seen_0363 }
+	spn_is_order_member_trigger = yes
+	var:spn_order_rank ?= flag:acolyte
+	var:spn_order_chapter ?= {
+		any_in_list = {
+			variable = spn_order_members
+			spn_order_bully_senior_trigger = { ACOLYTE = scope:spn_cm_who }
+		}
+	}
+}
+# T1, A Brother Asks for Help (.0370): a Temple Magus, and a member who needs it buried.
+spn_order_cm_brother_ok_trigger = {
+	save_temporary_scope_as = spn_cm_who
+	NOT = { has_character_flag = spn_cm_seen_0370 }
+	spn_is_temple_magus_trigger = yes
+	var:spn_order_chapter ?= {
+		any_in_list = {
+			variable = spn_order_members
+			spn_order_brother_asker_trigger = { HEAD = scope:spn_cm_who }
+		}
+	}
+}
+# T2, A Feud in the Chapter / on the Council (.0371): a Temple Magus with two AI members at odds, or the Grand Magus with
+# two AI seat holders at odds. Players are never the feuding pair.
+spn_order_cm_feud_ok_trigger = {
+	NOT = { has_character_flag = spn_cm_seen_0371 }
+	spn_is_order_member_trigger = yes
+	OR = {
+		spn_order_chapter_feud_trigger = yes
+		spn_order_council_feud_trigger = yes
+	}
+}
+# T3, Where Do You Go at Night? (.0372): a member whose spouse is at his side and does not know.
+spn_order_cm_where_ok_trigger = {
+	save_temporary_scope_as = spn_cm_who
+	NOT = { has_character_flag = spn_cm_seen_0372 }
+	spn_is_order_member_trigger = yes
+	primary_spouse ?= {
+		spn_order_where_spouse_trigger = { WHO = scope:spn_cm_who }
+		save_temporary_scope_as = spn_cm_spouse
+	}
+	any_secret = {
+		secret_type = spn_secret_blue_rose
+		NOT = { is_known_by = scope:spn_cm_spouse }
+	}
+}
+
+# ==================================================================================================
+# THE PACK'S NIGHT HOME (F14 §4)
+# ==================================================================================================
+# A player wolf due The Pack Comes Home: adult and free, not in the last 18 months (D19: never two years running), the
+# flavor gate open, and a pack to come home to.
+spn_pack_home_due_trigger = {
+	is_alive = yes
+	is_ai = no
+	is_adult = yes
+	is_imprisoned = no
+	NOT = { has_character_flag = spn_pack_home_seen }
+	spn_flavor_ready_trigger = yes
+	spn_pack_home_company_trigger = yes # 2.39 (Boot 1, 16 Oct): a pack, not a lone alpha
+}
+# 2.39 (Boot 1, 16 Oct): the night is a pack's. He and at least two other wolves of his pack, adult, alive and free:
+# every opening reads "the pack came home", and "Speak at the fire" speaks to them (Thomas's run: it came to a lone alpha,
+# "a pack party of one"). Character scope; he is counted himself.
+spn_pack_home_company_trigger = {
+	var:spn_pack ?= {
+		any_in_list = {
+			variable = spn_pack_members
+			is_alive = yes
+			is_adult = yes
+			is_imprisoned = no
+			count >= 3
+		}
+	}
+}
+# An AI wolf of the pack who can be one of the night's pair.
+spn_pack_home_pair_trigger = {
+	is_alive = yes
+	is_ai = yes
+	is_adult = yes
+	is_imprisoned = no
+}

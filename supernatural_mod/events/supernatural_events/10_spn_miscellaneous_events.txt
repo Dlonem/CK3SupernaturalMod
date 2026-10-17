@@ -160,6 +160,10 @@ spn_miscellaneous_events.0003 = {
     type = character_event
     hidden = yes
 
+	# 2.39 (WORK-ORDER-2.39 B11): sent 0-1 year after "Ask to be Turned". Branches 1 and 3 also leave alone anyone who has
+	# become a creature or a hunter since: one who still has the blood is cleared by the 3-year clean-up (.0002).
+	trigger = { is_alive = yes }
+
     immediate = {
 		if = {
 			limit = {
@@ -167,6 +171,8 @@ spn_miscellaneous_events.0003 = {
 					has_character_flag = vampire_blood_in_system
 					NOT = { has_character_flag = changed_mind_on_immortality }
 				}
+				spn_has_supernatural_trait = no # 2.39 (WORK-ORDER-2.39 B11)
+				spn_has_hunter_trait = no # 2.39 (WORK-ORDER-2.39 B11)
 			}
 			spn_bind_blood_donor_as_maker_effect = yes
 			trigger_event = spn_miscellaneous_events.0005
@@ -195,6 +201,10 @@ spn_miscellaneous_events.0003 = {
 					has_character_flag = vampire_blood_in_system
 					has_trait =  supernatural_vampire
 				}
+				# 2.39 (WORK-ORDER-2.39 B11): the broken neck is only for a mortal whose blood ran out without turning him.
+				# Becoming a hybrid removes the blood (spn_initiate.2001), so until now this branch mainly killed hybrids.
+				spn_has_supernatural_trait = no
+				spn_has_hunter_trait = no
 			}
 			trigger_event = spn_miscellaneous_events.0004
 		}
@@ -233,12 +243,12 @@ spn_miscellaneous_events.0005 = {
 	desc = spn_miscellaneous_events.0005.desc
 	theme = secret
 	
-	immediate = {
-		debug_log_scopes = yes
-	}
-	
+	# 2.39 (WORK-ORDER-2.39 B9/B11): debug_log_scopes removed (it wrote every scope to debug.log each time). The portrait
+	# reads the maker the asker carries, set before the delayed call and re-bound to the donor just before this event;
+	# scope:spn_vampire_turner was saved only after the delayed call.
 	left_portrait = {
-		character = scope:spn_vampire_turner # Reference the saved scope for the vampire
+		character = var:spn_conferred_sire
+		trigger = { var:spn_conferred_sire ?= { is_alive = yes } }
 		animation = shock
 	}
 	

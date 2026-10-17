@@ -44,8 +44,53 @@ spn_hunt_coven_next_effect = {
 		limit = { scope:spn_hunt_activity = { var:spn_hunt_coven_round > 5 } }
 		spn_hunt_coven_end_effect = yes
 	}
+	# 2.39 (WORK-ORDER-2.39 F15): The Corridor (spn_hunt.0173) stands in place of the second door when a temple sweep is
+	# in the county of the culprit temple's standing Collegium; once per sweep.
+	else_if = {
+		limit = { spn_hunt_corridor_due_trigger = yes }
+		scope:spn_hunt_activity = { set_variable = { name = spn_hunt_corridor_done value = yes } }
+		trigger_event = { id = spn_hunt.0173 days = 1 }
+	}
 	else = {
+		# 2.39 (WORK-ORDER-2.39 verification): clear the previous round's pick first, so "nobody left" ends the sweep.
 		if = {
+			limit = { exists = scope:spn_hunt_coven_pick }
+			clear_saved_scope = spn_hunt_coven_pick
+		}
+		# 2.38 (§13 step 2): "They answer to a temple." The doors are the culprit's chapter's, not her house's.
+		# 2.39 (WORK-ORDER-2.39 F15): the temple banked on the activity when the sweep began (spn_hunt.0171). By the
+		# second door the culprit is usually dead, and her death removes her var:spn_order_chapter. A sweep already
+		# running when a 2.38 save is loaded has nothing banked, so it reads the temple through the culprit, as 2.38 did.
+		if = {
+			limit = { scope:spn_hunt_activity ?= { has_variable = spn_hunt_chapter_sweep exists = var:spn_hunt_sweep_ch } }
+			scope:spn_hunt_activity.var:spn_hunt_sweep_ch = { save_temporary_scope_as = spn_hunt_sweep_temple }
+		}
+		else_if = {
+			limit = {
+				scope:spn_hunt_activity ?= { has_variable = spn_hunt_chapter_sweep }
+				scope:spn_culprit ?= { exists = var:spn_order_chapter }
+			}
+			scope:spn_culprit.var:spn_order_chapter = { save_temporary_scope_as = spn_hunt_sweep_temple }
+		}
+		if = {
+			limit = { exists = scope:spn_hunt_sweep_temple }
+			scope:spn_hunt_sweep_temple = {
+				random_in_list = {
+					variable = spn_order_members
+					limit = {
+						is_alive = yes
+						is_adult = yes
+						is_imprisoned = no
+						NOT = { is_incapable = yes }
+						NOT = { has_character_flag = spn_hunt_coven_fought }
+						NOT = { this = scope:spn_hunter }
+						location ?= { county ?= { this = scope:spn_hunt_county } }
+					}
+					save_scope_as = spn_hunt_coven_pick
+				}
+			}
+		}
+		else_if = {
 			limit = {
 				exists = scope:spn_culprit
 				scope:spn_culprit = { exists = house }
@@ -95,6 +140,14 @@ spn_hunt_coven_end_effect = {
 		remove_variable = spn_hunt_coven_running
 		remove_variable = spn_hunt_coven_next
 	}
+	# 2.39 (WORK-ORDER-2.39 F2): "They answer to a temple", gone past the culprit: a temple has fallen to this hunter.
+	if = {
+		limit = {
+			scope:spn_hunt_activity ?= { has_variable = spn_hunt_chapter_sweep }
+			scope:spn_hunt_activity ?= { var:spn_hunt_coven_round >= 3 }
+		}
+		spn_order_temple_swept_effect = yes
+	}
 	if = {
 		limit = {
 			OR = {
@@ -115,6 +168,10 @@ spn_hunt_coven_end_effect = {
 	else = {
 		# He stopped, and she is still in there. That is a withdrawal and the county counts it.
 		spn_hunt_set_outcome_effect = { OUTCOME = withdrew }
-		add_prestige = -25
+		# 2.39 (WORK-ORDER-2.39 F15): turning back at The Corridor costs no prestige.
+		if = {
+			limit = { NOT = { scope:spn_hunt_activity ?= { has_variable = spn_hunt_corridor_turned } } }
+			add_prestige = -25
+		}
 	}
 }

@@ -1,0 +1,65 @@
+﻿# Supernatural 2.39 -- the witness misfire (WORK-ORDER-2.39 F3, decision D9).
+
+# How many of the Vade Maecum's four parts have not burned. 4 while the book could still be whole; one less for each burned
+# page. A burned page is permanent (Burn a Page), so this only ever falls.
+spn_vade_parts_surviving_value = {
+	value = 4
+	if = {
+		limit = { global_var:spn_vade_page_1_state ?= flag:burned }
+		subtract = 1
+	}
+	if = {
+		limit = { global_var:spn_vade_page_2_state ?= flag:burned }
+		subtract = 1
+	}
+	if = {
+		limit = { global_var:spn_vade_page_3_state ?= flag:burned }
+		subtract = 1
+	}
+	if = {
+		limit = { global_var:spn_vade_page_4_state ?= flag:burned }
+		subtract = 1
+	}
+}
+
+# The chance that a witness's spell goes wrong. Caster scope. D9 (Thomas): 9.5 per surviving part, so 38 with all four,
+# 28.5 with three, 19 with two, 9.5 with one. +6 while a Contract is open anywhere; -4 at 50 and -4 more at 100 on the
+# archmage's Secret Knowledge track (00_traits_magic.txt). Clamped 3-38: nothing ever lifts it past Thomas's 38.
+# Never shown: the roll runs inside Witchcraft's hidden_effect (set_spell_id).
+spn_vade_misfire_chance_value = {
+	value = spn_vade_parts_surviving_value
+	multiply = 9.5
+	if = {
+		limit = { exists = global_var:spn_vade_contract_running }
+		add = 6
+	}
+	if = {
+		limit = {
+			has_trait = archmage
+			has_trait_xp = {
+				trait = archmage
+				track = secret_knowledge
+				value >= 50
+			}
+		}
+		subtract = 4
+	}
+	if = {
+		limit = {
+			has_trait = archmage
+			has_trait_xp = {
+				trait = archmage
+				track = secret_knowledge
+				value >= 100
+			}
+		}
+		subtract = 4
+	}
+	min = 3
+	max = 38
+	# DEBUG ONLY (spn_vade.0690): force every cast to go wrong (100) or none (0). Players never see it.
+	if = {
+		limit = { exists = global_var:spn_debug_misfire_force }
+		value = global_var:spn_debug_misfire_force
+	}
+}

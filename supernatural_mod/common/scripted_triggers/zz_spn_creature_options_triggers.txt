@@ -1,0 +1,44 @@
+﻿# 2.39 (WORK-ORDER-2.39 F7): vampires, wolves and witches inside the Order. The creature options in the Order's own
+# events are built from gates that already exist; only one of them needs a trigger of its own, because it is read twice
+# (the option's trigger and its show_as_unavailable).
+
+# 2.39 (WORK-ORDER-2.39 F7): "Look him in the eye", An Outsider Asks Questions (spn_order.0160). Root: the member.
+# scope:spn_os_who is the outsider; scope:spn_os_hunter is set when he is a hunter.
+#
+# Everything tested here is an OPEN fact (the B6 rule): root's own blood, the outsider's traits, a hunter's track, and
+# whether root already holds the outsider's witch secret. A SECRET witch passes this test on purpose: the option shows,
+# the compulsion fails in the option's effect and she is revealed to root (TVD 6x06). A wolf's trait is always visible,
+# so a werewolf outsider is hidden here like any open creature (D7: no vampire can compel a werewolf, TVD 2x06, 3x01).
+# A guarded mind (has_immunity_for_magic_domination: the Seal, the Draught of a Clear Mind) is NOT tested here: the
+# option shows greyed out for it, with the reason (spn_mind_guarded_custom).
+spn_order_os_look_shown_trigger = {
+	# Root's blood: the lowest compulsion gate, the one Compel Mortal's Demand Gold reads (10_spn_interactions.txt).
+	OR = {
+		has_trait_xp = { trait = supernatural_vampire track = vampirism value >= 15 }
+		has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 15 }
+	}
+	scope:spn_os_who ?= {
+		is_alive = yes # G6: the event window can stay open
+		NOT = { has_trait = witch }
+		NOT = {
+			any_secret = {
+				secret_type = secret_witch
+				is_known_by = root
+			}
+		}
+		spn_has_supernatural_trait = no
+		spn_is_valid_supernatural_target = yes
+	}
+	# A hunter: only at full strength, and only one who has not yet learned what a vampire's eyes can do. The
+	# confrontation's own rule (spn_confrontation.0001.c) and the hunt's (10_spn_hunt_events.txt).
+	trigger_if = {
+		limit = { exists = scope:spn_os_hunter }
+		OR = {
+			has_trait_xp = { trait = supernatural_vampire track = vampirism value >= 100 }
+			has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 100 }
+		}
+		scope:spn_os_hunter = {
+			NOT = { has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 40 } }
+		}
+	}
+}

@@ -149,16 +149,22 @@ magic_ev.99 = {
 						has_game_rule = eu_magic_arts
 					}
 				}
+				# 2.38e (Supernatural): the finder can be a courtier or a landless adventurer, not only a landed ruler. One ruler is
+				# picked as before (or an adventurer), then the finder: the ruler himself (3 in 4) or an adult courtier of a
+				# dynasty that has found none (1 in 4). The random_ruler now only chooses; the finder runs the list below.
 				random_ruler = {
 					limit = {
-						is_landed_or_landless_administrative = yes	
-						primary_title = { is_mercenary_company = no }	
-						highest_held_title_tier>1
-						exists = dynasty		
-						dynasty={
-							NOT={
-								has_variable=ev1used
+						OR = {
+							AND = {
+								is_landed_or_landless_administrative = yes
+								primary_title = { is_mercenary_company = no }
+								highest_held_title_tier > 1
 							}
+							is_landless_adventurer = yes
+						}
+						OR = {
+							spn_magic_art_finder_ok_trigger = yes
+							any_courtier = { spn_magic_art_courtier_ok_trigger = yes }
 						}
 						# 2.30 bugfix: guarded -- unset in observer mode
 						trigger_if = {
@@ -166,6 +172,9 @@ magic_ev.99 = {
 							in_diplomatic_range = scope:player0
 						}
 					}
+					spn_magic_art_pick_finder_effect = yes # zz_spn_relic_effects.txt: himself 3 in 4, a courtier 1 in 4
+				}
+				scope:spn_magic_art_finder ?= {
 					random_list = {
 						#necro
 						1 = {
@@ -180,6 +189,7 @@ magic_ev.99 = {
 						1 = {
 							trigger = {
 								NOT = { any_artifact = { has_variable = magic_ring0 } }
+								is_ruler = yes # 2.38e (Supernatural): the ring's after-block seats Merlin at the finder's court (employer = root)
 							}
 							trigger_event = magic_ev.97
 							trigger_event = {
@@ -240,18 +250,27 @@ magic_ev.99 = {
 				}
 			}
 			else = {
+				# 2.38e (Supernatural): the finder can be a courtier or a landless adventurer, not only a landed ruler. One ruler is
+				# picked as before (or an adventurer), then the finder: the ruler himself (3 in 4) or an adult courtier of a
+				# dynasty that has found none (1 in 4). The random_ruler now only chooses; the finder runs the list below.
 				random_ruler = {
 					limit = {
-						is_landed_or_landless_administrative = yes	
-						primary_title = { is_mercenary_company = no }	
-						highest_held_title_tier>1
-						exists = dynasty		
-						dynasty={
-							NOT={
-								has_variable=ev1used
+						OR = {
+							AND = {
+								is_landed_or_landless_administrative = yes
+								primary_title = { is_mercenary_company = no }
+								highest_held_title_tier > 1
 							}
+							is_landless_adventurer = yes
+						}
+						OR = {
+							spn_magic_art_finder_ok_trigger = yes
+							any_courtier = { spn_magic_art_courtier_ok_trigger = yes }
 						}
 					}
+					spn_magic_art_pick_finder_effect = yes # zz_spn_relic_effects.txt: himself 3 in 4, a courtier 1 in 4
+				}
+				scope:spn_magic_art_finder ?= {
 					random_list = {
 						#Grimoire
 						1 = {
@@ -266,6 +285,7 @@ magic_ev.99 = {
 						1 = {
 							trigger = {
 								NOT = { any_artifact = { has_variable = magic_ring0 } }
+								is_ruler = yes # 2.38e (Supernatural): the ring's after-block seats Merlin at the finder's court (employer = root)
 							}
 							trigger_event = magic_ev.97
 							trigger_event = {
@@ -484,6 +504,7 @@ magic_ev.98 = {
 				NOT = {
 					has_game_rule = min_num_of_mages
 				}
+				NOR = { has_trait = warlock has_trait = true_witch } # 2.38e (Supernatural): one capstone
 			}
 			give_witch_secret_or_trait_effect2 = yes
 			turn_into_mage_effect = yes
@@ -1241,6 +1262,7 @@ magic_ev.4 = {
 	}
 	immediate = {
 		save_scope_as = watcher
+		spn_ringing_heard_effect = yes # 2.39 (Supernatural): the wolf remembers (WORK-ORDER-2.39 F17 U1; zz_spn_mind_effects.txt)
 		#hidden_effect = {
 		#	if = {
 		#		limit = {
@@ -1795,7 +1817,7 @@ magic_ev.5 = {
 		}
 		mark_as_black_magic_caster_effect = { L = 1 }
 		add_character_modifier = lifestealer_modifier
-		scope:potential_sacrifice = {
+		scope:potential_sacrifice ?= { # 2.38h (Supernatural): there may be no one to drain
 			add_character_modifier = lifestolen_modifier
 		}
 		send_message_4_magic_sense_effect =yes
@@ -1803,7 +1825,7 @@ magic_ev.5 = {
 			base = 100
 			modifier = {
 				add = -90
-				scope:potential_sacrifice = {
+				scope:potential_sacrifice ?= { # 2.38h (Supernatural)
 					NOT = {
 						has_trait = callous
 					}
@@ -1838,7 +1860,7 @@ magic_ev.5 = {
 		set_spell_id = { ID = 28 }
 		mark_as_black_magic_caster_effect = { L = 1 }
 		add_character_modifier = lifestolen_modifier
-		scope:potential_sacrifice = {
+		scope:potential_sacrifice ?= { # 2.38h (Supernatural): there may be no one to drain
 			add_character_modifier = lifestealer_modifier
 		}
 		add_piety = major_piety_gain
@@ -3769,6 +3791,7 @@ magic_ev.12 = {
 		name = ev12.0.a
 		trigger = {
 			NOR = {
+				has_trait = spn_vade_bound # 2.38c (Supernatural): demons obey the Bound
 				any_equipped_character_artifact = {	has_variable = magic_scepter	}
 				AND = {
 					has_trait = archmage
@@ -3913,6 +3936,7 @@ magic_ev.12 = {
 		name = ev12.0.c
 		trigger = {
 			OR = {
+				has_trait = spn_vade_bound # 2.38c (Supernatural): demons obey the Bound
 				any_equipped_character_artifact = {	has_variable = magic_scepter	}
 				AND = {
 					has_trait = archmage
@@ -4084,6 +4108,14 @@ magic_ev.14 = {
 	immediate = {
 		scope:this0 = {
 			random_list = {
+				8 = {
+					# 2.38 (Supernatural): Zecchia, a thief who answers the summoning (WORK-ORDER-2.38 §11.2)
+					trigger = {
+						has_character_flag = no_complications
+						NOT = { exists = global_var:spn_zecchia_busy }
+					}
+					spn_ms_zecchia_demon_effect = yes
+				}
 				24 = {
 					#minor demon
 					ms_minor_demon_effect = yes
@@ -4680,6 +4712,15 @@ magic_ev.16 = {
 					has_trait = warlock
 					has_trait = corrupted
 				}
+			}
+			modifier = { # 2.38e (Supernatural): the AI takes the necromancer trait mostly when its nature fits
+				factor = 0.1
+				NOR = {
+					has_trait = necromancer # no new trait for them (the option's own guard)
+					has_trait = warlock
+					has_trait = corrupted # Witchcraft's own +40 lean above
+				}
+				spn_dark_nature_trigger = no # sadistic, callous, vengeful, lunatic or possessed (zz_spn_order_triggers.txt)
 			}
 		}
 	}
@@ -5880,6 +5921,7 @@ magic_ev.25 = {
 				limit = {
 					OR = {
 						has_game_rule = no_demonic_aggression_mode
+						has_trait = spn_vade_bound # 2.38c (Supernatural): demons obey the Bound
 						has_relation_best_friend = scope:belial
 						has_relation_friend = scope:belial
 						has_relation_lover = scope:belial
@@ -8130,20 +8172,20 @@ magic_ev.54 = {
 
 	option = {
 		name = ev54.0.a
-		root.primary_spouse = {
-			death = {
-				death_reason = death_murder
-				killer = scope:target
-			}
-			
-		}
-		hidden_effect = {
+		hidden_effect = { # 2.38f (Supernatural): the secret first, while the spouse is alive to be named in it
 			scope:target = {
 				add_secret = {
 					type = secret_murder
 					target = root.primary_spouse
 				}
 			}
+		}
+		root.primary_spouse = {
+			death = {
+				death_reason = death_murder
+				killer = scope:target
+			}
+			
 		}
 		#show_as_tooltip = {
 		#	set_primary_spouse = scope:target

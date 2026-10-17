@@ -1,0 +1,188 @@
+﻿# Supernatural 2.39 -- the Order's politics: values (WORK-ORDER-2.39 F1, F2). Triggers: zz_spn_order_politics_triggers.txt.
+
+# ==================================================================================================
+# INVOCARE (F1)
+# ==================================================================================================
+
+# The year before which the chair counts as held for three years (the shape of spn_order_five_years_ago_value).
+spn_order_three_years_ago_value = {
+	value = current_year
+	subtract = 3
+}
+
+# How likely an AI voter is to say Aye (voter scope; scope:spn_iv_magus, scope:spn_iv_caller, scope:activity). Base 50,
+# kept between 10 and 90, rolled hidden. The charges are the ones banked on the activity before anyone was judged
+# (spn_iv_charges: 2 = broke the rules, 1 = favouritism, 3 = both), never the live flags, which the judging may clear.
+spn_invocare_yes_chance_value = {
+	value = 50
+	# What he thinks of the Grand Magus.
+	if = {
+		limit = { opinion = { target = scope:spn_iv_magus value <= -40 } }
+		add = 30
+	}
+	else_if = {
+		limit = { opinion = { target = scope:spn_iv_magus value <= -10 } }
+		add = 10
+	}
+	else_if = {
+		limit = { opinion = { target = scope:spn_iv_magus value >= 40 } }
+		add = -30
+	}
+	if = {
+		limit = {
+			OR = {
+				has_relation_rival = scope:spn_iv_magus
+				has_relation_nemesis = scope:spn_iv_magus
+			}
+		}
+		add = 40
+	}
+	if = {
+		limit = {
+			OR = {
+				has_relation_friend = scope:spn_iv_magus
+				has_relation_lover = scope:spn_iv_magus
+			}
+		}
+		add = -50
+	}
+	# What he thinks of the caller.
+	if = {
+		limit = { has_relation_friend = scope:spn_iv_caller }
+		add = 15
+	}
+	if = {
+		limit = { has_relation_rival = scope:spn_iv_caller }
+		add = -25
+	}
+	# Fear. A Grand Magus who chose to show his teeth is feared more by the fearful, and resented by the rest.
+	if = {
+		limit = { has_dread_level_towards = { target = scope:spn_iv_magus level = 1 } }
+		if = {
+			limit = { scope:spn_iv_magus = { has_character_flag = spn_iv_feared } }
+			add = -40
+		}
+		else = {
+			add = -20
+		}
+	}
+	else_if = {
+		limit = { scope:spn_iv_magus = { has_character_flag = spn_iv_feared } }
+		add = 10
+	}
+	# The charges, as banked (the show's turning point: the hidden offence).
+	if = {
+		limit = {
+			scope:activity = {
+				exists = var:spn_iv_charges
+				var:spn_iv_charges >= 2
+			}
+		}
+		add = 30
+		if = {
+			limit = { has_trait = just }
+			add = 15
+		}
+	}
+	if = {
+		limit = {
+			scope:activity = {
+				OR = {
+					var:spn_iv_charges ?= 1
+					var:spn_iv_charges ?= 3
+				}
+			}
+		}
+		add = 10
+	}
+	# A Grand Magus of high standing who has set the Order's course lately.
+	if = {
+		limit = {
+			scope:spn_iv_magus = {
+				exists = var:spn_order_standing
+				var:spn_order_standing >= 75
+			}
+			exists = global_var:spn_order_prerogative_year
+			global_var:spn_order_prerogative_year > spn_order_ten_years_ago_value
+		}
+		add = -15
+	}
+	# His defence.
+	if = {
+		limit = { has_character_flag = spn_iv_paid }
+		add = -35
+	}
+	if = {
+		limit = { scope:spn_iv_magus = { has_character_flag = spn_iv_spoke_well } }
+		add = -15
+	}
+	if = {
+		limit = {
+			has_trait = archmage
+			scope:spn_iv_magus = { has_character_flag = spn_iv_power }
+		}
+		add = -10
+	}
+	# The voter's own nature.
+	if = {
+		limit = {
+			has_trait = ambitious
+			has_character_flag = spn_order_aspires_chair
+		}
+		add = 20
+	}
+	if = {
+		limit = { has_trait = loyal }
+		add = -15
+	}
+	if = {
+		limit = { has_trait = content }
+		add = -10
+	}
+	min = 10
+	max = 90
+}
+
+# 2.39 (final pass, 17 Oct): how unsure an AI voter is (voter scope, as above): highest when his Aye chance is nearest 50. The coffers buy
+# these votes first (F1: "100 gold buys up to three wavering votes").
+spn_invocare_waver_value = {
+	value = spn_invocare_yes_chance_value
+	subtract = 50
+	abs = yes
+	multiply = -1
+}
+
+# The same, as the weight of the Nay side of the roll (100 minus the Aye chance).
+spn_invocare_no_chance_value = {
+	value = 100
+	subtract = spn_invocare_yes_chance_value
+}
+
+# ==================================================================================================
+# BREAK THE ORDER (F2)
+# ==================================================================================================
+
+# Temple Magi whose Blue Rose secret this character knows (in his own scope). The every_known_secret count is the shape
+# spn_order_known_mages_value already uses in 2.38 (zz_spn_order_values.txt:556).
+spn_order_break_heads_known_value = {
+	value = 0
+	every_known_secret = {
+		limit = {
+			secret_type = spn_secret_blue_rose
+			secret_owner = { spn_is_temple_magus_trigger = yes }
+		}
+		add = 1
+	}
+}
+
+# Half the temples standing, rounded up.
+spn_order_break_half_temples_value = {
+	value = 0
+	every_in_global_list = {
+		variable = spn_order_chapters
+		limit = { exists = var:spn_order_chapter }
+		add = 1
+	}
+	divide = 2
+	ceiling = yes
+}

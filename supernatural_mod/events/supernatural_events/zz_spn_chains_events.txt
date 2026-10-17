@@ -1,0 +1,326 @@
+﻿namespace = spn_hide
+
+# Supernatural 2.39 -- Break the Chains (WORK-ORDER-2.39 F5). Loc: zz_spn_239_chains_l_english.yml.
+# .0400 the hidden roll; .0401 "The Door Gives Way" (success); .0402 "Caught at the Bars" (failure); .0403 "The Empty Cell"
+# (a player gaoler). The same day as the decision, so the roll re-checks the cell in its own trigger (stale audit G5).
+# Ordering rule: everything is banked in .0400, and in .0401 the escape is the LAST line. No death anywhere in the chain.
+# Player-initiated follow-ups and reports: they mark the flavor gate but never check it (F14).
+
+# ==================================================================================================
+# .0400 -- the roll (hidden). Mirrors vanilla's prison.9000: a weight for "breaks" against a weight for "holds"
+# (zz_spn_chains_values.txt). Then one hidden roll for "nobody saw what got out"; the one banked result serves both.
+# ==================================================================================================
+spn_hide.0400 = {
+	hidden = yes
+	trigger = {
+		is_alive = yes
+		is_imprisoned = yes
+		imprisoner ?= { is_alive = yes }
+		spn_held_in_chains_trigger = no
+	}
+	immediate = {
+		# BANK FIRST: the gaoler, the county of the cell, the wolf.
+		imprisoner = { save_scope_as = imprisoner }
+		location ?= {
+			county ?= { save_scope_as = spn_btc_county }
+		}
+		save_scope_as = spn_btc_wolf
+		# Seen or unseen. Hidden, never shown as a number anywhere.
+		random = {
+			chance = spn_btc_unseen_chance_value
+			save_scope_value_as = { name = spn_btc_unseen value = yes }
+		}
+		random_list = {
+			0 = {
+				modifier = { add = spn_btc_break_weight_value }
+				min = 5
+				trigger_event = spn_hide.0401
+			}
+			0 = {
+				modifier = { add = spn_btc_hold_weight_value }
+				min = 5
+				trigger_event = spn_hide.0402
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# .0401 -- The Door Gives Way. The champion. The irreversible step comes last (Thomas's ordering rule):
+#   1. banked already (.0400): the gaoler, the county, the wolf, seen or unseen;
+#   2. the guards: seen, wounded per hide (Midnight two, Silverback and Tundra none), never killed; unseen, dazed;
+#   3. the secret: seen, exposed with the gaoler as accuser (Timber: revealed to the gaoler only); unseen, nothing;
+#   4. the county, both through the menace system's one entry (W6): seen SEVERITY = kill, unseen SEVERITY = prowl;
+#   5. Bond +5;
+#   6. seen only: the gaoler's flag spn_wolf_broke_out (an unseen gaoler does not know it was a wolf);
+#   7. LAST: vanilla's escape_from_prison_effect (opinion, memory, release).
+# ==================================================================================================
+spn_hide.0401 = {
+	type = character_event
+	title = spn_hide.0401.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_btc_unseen }
+				desc = {
+					random_valid = {
+						desc = spn_hide.0401.desc_unseen_a
+						desc = spn_hide.0401.desc_unseen_b
+					}
+				}
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_timber }
+				desc = spn_hide.0401.desc_seen_timber
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_midnight }
+				desc = spn_hide.0401.desc_seen_midnight
+			}
+			triggered_desc = {
+				trigger = {
+					OR = {
+						has_trait = spn_champion_silverback
+						has_trait = spn_champion_tundra
+					}
+				}
+				desc = spn_hide.0401.desc_seen_unhurt
+			}
+			desc = spn_hide.0401.desc_seen
+		}
+	}
+	theme = prison
+	override_background = { reference = wilderness_scope }    # vanilla prison.9001: escape_from_prison_effect saves it
+	left_portrait = { character = root animation = personality_bold }
+	lower_right_portrait = scope:imprisoner
+	trigger = {
+		is_alive = yes
+		is_imprisoned = yes
+		exists = scope:imprisoner
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes    # F14: a follow-up to the player's own choice marks the gate, it does not check it
+		# 2. The guards.
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_btc_unseen }
+				NOR = {
+					has_trait = spn_champion_silverback    # it protects the weak
+					has_trait = spn_champion_tundra        # it talks its way out
+				}
+			}
+			scope:imprisoner = {
+				random_knight = {
+					limit = {
+						is_imprisoned = no
+						NOT = { this = scope:spn_btc_wolf }
+					}
+					save_scope_as = spn_btc_guard
+					increase_wounds_no_death_effect = { REASON = fight }    # vanilla 20_health_effects.txt: never kills
+				}
+			}
+			if = {
+				limit = { has_trait = spn_champion_midnight }
+				scope:imprisoner = {
+					random_knight = {
+						limit = {
+							is_imprisoned = no
+							NOT = { this = scope:spn_btc_wolf }
+							NOT = { this = scope:spn_btc_guard }
+						}
+						increase_wounds_no_death_effect = { REASON = fight }
+					}
+				}
+				add_dread = medium_dread_gain
+			}
+		}
+		# 3. The secret. A wolf already known has no secret left, and random_secret simply matches nothing.
+		if = {
+			limit = { NOT = { exists = scope:spn_btc_unseen } }
+			if = {
+				limit = { has_trait = spn_champion_timber }
+				if = {
+					limit = { has_trait = supernatural_hybrid }
+					spn_give_knowledge_of_hybrid_secret = { CHARACTER = scope:imprisoner }
+				}
+				else = {
+					spn_give_knowledge_of_lycan_secret = { CHARACTER = scope:imprisoner }
+				}
+			}
+			else = {
+				random_secret = {
+					limit = {
+						OR = {
+							secret_type = spn_secret_werewolf
+							secret_type = spn_secret_hybrid
+						}
+					}
+					expose_secret = scope:imprisoner
+				}
+			}
+		}
+		# 4. The county: the menace system's one entry (zz_spn_menace_effects.txt; writer W6). Seen, the gaoler saw it, so
+		#    the higher first-notice odds; unseen, usually a whisper, a trail only if the county is already uneasy.
+		if = {
+			limit = { exists = scope:spn_btc_county }
+			if = {
+				limit = { exists = scope:spn_btc_unseen }
+				spn_mark_menace_effect = { COUNTY = scope:spn_btc_county CULPRIT = scope:spn_btc_wolf KIND = werewolf SEVERITY = prowl }
+			}
+			else = {
+				spn_mark_menace_effect = { COUNTY = scope:spn_btc_county CULPRIT = scope:spn_btc_wolf KIND = werewolf SEVERITY = kill }
+			}
+		}
+		# 5. Bond.
+		spn_hide_add_bond_effect = { VALUE = spn_btc_bond_gain_value }
+		# 6. The gaoler's AI remembers it was a wolf (Ward the Chains, Commission Warded Chains). Seen only. 10 years.
+		if = {
+			limit = { NOT = { exists = scope:spn_btc_unseen } }
+			scope:imprisoner = {
+				add_character_flag = { flag = spn_wolf_broke_out years = 10 }
+			}
+		}
+		# 7. LAST: vanilla's escape. The gaoler still gets its "escaped" opinion: he knows the prisoner is gone, not what.
+		escape_from_prison_effect = yes
+	}
+	option = {
+		name = spn_hide.0401.a
+	}
+	after = {
+		if = {
+			limit = { has_character_flag = block_for_prison_release_notification }
+			remove_character_flag = block_for_prison_release_notification
+		}
+		# A player gaoler is told (vanilla's own pattern, prison.9001 -> prison.9499).
+		if = {
+			limit = {
+				exists = scope:imprisoner
+				scope:imprisoner = {
+					is_alive = yes
+					is_ai = no
+				}
+			}
+			scope:imprisoner = { trigger_event = spn_hide.0403 }
+		}
+	}
+}
+
+# ==================================================================================================
+# .0402 -- Caught at the Bars. The champion. Wounded, moved to the dungeon, and the ten years are spent (the decision's
+# cooldown). Seen: the gaoler learns what he is. Unseen: he was caught at the bars as a man, and the secret holds
+# (expert call, wolves Q5). The gaoler may then do what any gaoler may; that is his choice, never a roll.
+# ==================================================================================================
+spn_hide.0402 = {
+	type = character_event
+	title = spn_hide.0402.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_btc_unseen }
+				desc = spn_hide.0402.desc_unseen
+			}
+			desc = spn_hide.0402.desc_seen
+		}
+	}
+	theme = prison
+	override_background = { reference = dungeon }
+	left_portrait = { character = root animation = prisondungeon }
+	lower_right_portrait = scope:imprisoner
+	trigger = {
+		is_alive = yes
+		is_imprisoned = yes
+		exists = scope:imprisoner
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes    # F14: a follow-up to the player's own choice marks the gate, it does not check it
+		scope:imprisoner = {
+			add_opinion = {
+				target = root
+				modifier = tried_to_escape_from_prison_opinion    # vanilla 00_prison_opinions.txt
+			}
+		}
+		if = {
+			limit = { NOT = { exists = scope:spn_btc_unseen } }
+			if = {
+				limit = { has_trait = supernatural_hybrid }
+				spn_give_knowledge_of_hybrid_secret = { CHARACTER = scope:imprisoner }
+			}
+			else = {
+				spn_give_knowledge_of_lycan_secret = { CHARACTER = scope:imprisoner }
+			}
+		}
+		increase_wounds_no_death_effect = { REASON = fight }
+		if = {
+			limit = { is_in_prison_type = house_arrest }
+			hidden_effect = { change_prison_type = dungeon }    # vanilla's idiom, 00_prison_interactions.txt
+		}
+		if = {
+			limit = { scope:imprisoner = { is_ai = no } }
+			scope:imprisoner = {
+				send_interface_toast = {
+					title = spn_hide.0402.gaoler_toast
+					left_icon = scope:spn_btc_wolf
+					if = {
+						limit = { exists = scope:spn_btc_unseen }
+						custom_tooltip = spn_hide.0402.gaoler_toast_unseen_tt
+					}
+					else = {
+						custom_tooltip = spn_hide.0402.gaoler_toast_seen_tt
+					}
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_hide.0402.a
+	}
+}
+
+# ==================================================================================================
+# .0403 -- The Empty Cell. A player gaoler, after an escape. Seen: the hint that teaches the counter. Unseen: no hint,
+# because he does not know it was a wolf.
+# ==================================================================================================
+spn_hide.0403 = {
+	type = character_event
+	title = spn_hide.0403.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_btc_unseen }
+				desc = spn_hide.0403.desc_unseen
+			}
+			triggered_desc = {
+				trigger = { scope:spn_btc_wolf = { has_trait = spn_champion_timber } }
+				desc = spn_hide.0403.desc_seen_timber
+			}
+			desc = spn_hide.0403.desc_seen
+		}
+	}
+	theme = prison
+	override_background = { reference = dungeon }
+	left_portrait = { character = root animation = anger }
+	lower_right_portrait = scope:spn_btc_wolf
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_btc_wolf
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes    # F14: a report of a change already made marks the gate, it does not check it
+	}
+	option = {
+		name = spn_hide.0403.a
+		stress_and_fulfillment_impact = {
+			wrathful = miniscule_stress_impact_loss
+			calm = minor_stress_impact_gain
+		}
+		ai_chance = { base = 50 }
+	}
+	option = {
+		name = spn_hide.0403.b
+		stress_and_fulfillment_impact = {
+			calm = miniscule_stress_impact_loss
+			wrathful = minor_stress_impact_gain
+		}
+		ai_chance = { base = 50 }
+	}
+}

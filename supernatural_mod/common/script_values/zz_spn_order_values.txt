@@ -1,0 +1,729 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": every knob in one file (WORK-ORDER-2.38 §4.10). Change a number here and nothing
+# else needs to move.
+
+# ==================================================================================================
+# CHAPTERS (§5.2, §5.3)
+# ==================================================================================================
+spn_order_chapters_start_value = 6
+# Squared distance between seats at game start. Vanilla's own scale: 100000 is about one Ireland, 1000000 about one Holy
+# Roman Empire (00_activity_values.txt:907-908).
+spn_order_chapter_spacing_value = 250000
+spn_order_cap_base_value = 30
+# T24: 30 + 5 per 25 years since founding, max 60. Story scope.
+spn_order_cap_value = {
+	value = spn_order_cap_base_value
+	if = {
+		limit = { exists = var:spn_order_founded }
+		add = {
+			value = current_year
+			subtract = var:spn_order_founded
+			divide = 25
+			floor = yes
+			multiply = 5
+		}
+	}
+	max = 60
+	# 2.39 (WORK-ORDER-2.39 F15): beneath a standing Collegium, room for ten more. Operations run in order: the
+	# ceiling becomes 70.
+	if = {
+		limit = { spn_order_hall_stands_trigger = yes }
+		add = 10
+	}
+}
+# How many chapters the world holds: one per 170 counties (about 20 on the vanilla map). The count is taken once at game
+# start (spn_order_count_counties_effect); 20 until it is.
+spn_order_max_chapters_value = {
+	value = 20
+	if = {
+		limit = { exists = global_var:spn_county_count }
+		value = global_var:spn_county_count
+		divide = 170
+		floor = yes
+		min = 1
+	}
+}
+# Story scope: room for one more this year (size and this year's picks against the cap).
+spn_order_room_left_value = {
+	value = 0
+	if = {
+		limit = {
+			exists = var:spn_order_cap
+			exists = var:spn_order_size
+		}
+		value = var:spn_order_cap
+		subtract = var:spn_order_size
+		if = {
+			limit = { exists = var:spn_order_picks }
+			subtract = var:spn_order_picks
+		}
+	}
+}
+# Head scope: older chapters first (the master, §5.18): the earlier the founding, the higher.
+spn_order_chapter_age_value = {
+	value = 0
+	if = {
+		limit = { var:spn_order_chapter ?= { exists = var:spn_order_founded } }
+		subtract = var:spn_order_chapter.var:spn_order_founded
+	}
+}
+# The best-placed Mage for a seat at game start: a landed scholar first.
+spn_order_seat_score_value = {
+	value = learning
+	add = {
+		value = highest_held_title_tier
+		multiply = 5
+	}
+	# 2.38f: the Order's heartland is the West (Thomas, 9 Oct). Its own file, so a map without those regions loses only the lean.
+	add = spn_order_heartland_value
+}
+
+# ==================================================================================================
+# THE SELECTION AND THE PLEDGE (§5.4, §5.5)
+# ==================================================================================================
+spn_order_candidate_score_value = {
+	value = learning
+	# 2.38b: fit, and the player's own roads in (DESIGN-2.38b §5, §8).
+	add = {
+		value = spn_order_fit_value
+		divide = 2
+	}
+	if = {
+		limit = { has_character_flag = spn_order_eyes_open }
+		add = 40
+	}
+	if = {
+		limit = { has_character_flag = spn_order_sponsored }
+		add = 60
+	}
+	if = {
+		limit = {
+			OR = {
+				any_parent = { spn_is_order_member_trigger = yes }
+				has_character_flag = spn_order_legacy # 2.38c: a dead member's child too
+			}
+		}
+		add = 50
+	}
+	if = {
+		limit = {
+			OR = {
+				has_trait = source
+				has_trait = source2
+			}
+		}
+		add = 30
+	}
+	if = {
+		limit = { has_trait = archmage }
+		add = 20
+	}
+	if = {
+		limit = { has_trait = ambitious }
+		add = 10
+	}
+	if = {
+		limit = { has_trait = content }
+		add = -20
+	}
+	# v4: Seek Out the Order (§5.17).
+	if = {
+		limit = { has_character_flag = spn_order_sought }
+		add = 40
+	}
+	# 2.38f: tomorrow's kings are today's Acolytes (Thomas, 9 Oct: the Order invites promising talent who rise later, "not
+	# the other way around"). A young candidate who holds no land yet but is heir to a duchy or more weighs more.
+	if = {
+		limit = {
+			is_landed = no
+			age <= 30
+			any_heir_title = { tier >= tier_duchy }
+		}
+		add = 25
+	}
+	# 2.38e: the Order grows through courtiers, not kings (Thomas, 9 Oct). An AI lord comes last; a king or an emperor
+	# almost never. A player who sought the Order or was named is not held back.
+	if = {
+		limit = {
+			is_ai = yes
+			is_landed = yes
+		}
+		add = -30
+		if = {
+			limit = { highest_held_title_tier >= tier_kingdom }
+			add = -30
+		}
+	}
+}
+# The Coin (§5.5): 40 + 3 x the skill - 30, clamped 10-90. One per road.
+spn_order_coin_chance_prowess_value = {
+	value = 10
+	add = {
+		value = prowess
+		multiply = 3
+	}
+	# 2.38b: who kept watch after the rumour knows how these tests go (DESIGN-2.38b §8).
+	if = {
+		limit = { has_character_flag = spn_order_knows_trick }
+		add = 15
+	}
+	min = 10
+	max = 90
+}
+spn_order_coin_chance_learning_value = {
+	value = 10
+	add = {
+		value = learning
+		multiply = 3
+	}
+	# 2.38b: who kept watch after the rumour knows how these tests go (DESIGN-2.38b §8).
+	if = {
+		limit = { has_character_flag = spn_order_knows_trick }
+		add = 15
+	}
+	min = 10
+	max = 90
+}
+spn_order_coin_chance_intrigue_value = {
+	value = 10
+	add = {
+		value = intrigue
+		multiply = 3
+	}
+	# 2.38b: who kept watch after the rumour knows how these tests go (DESIGN-2.38b §8).
+	if = {
+		limit = { has_character_flag = spn_order_knows_trick }
+		add = 15
+	}
+	min = 10
+	max = 90
+}
+
+# ==================================================================================================
+# STANDING, TEACHING, OFFICES (§5.6, §5.8)
+# ==================================================================================================
+spn_order_standing_yearly_value = 5
+# +2 a year per tutee to his tutor; +4 under More Hands (§5.18).
+spn_order_tutor_report_value = {
+	value = 0
+	every_in_list = {
+		variable = spn_order_tutees
+		add = 2
+	}
+	if = {
+		limit = { global_var:spn_order_prerogative ?= flag:grow }
+		multiply = 2
+	}
+}
+spn_order_promote_medicum_value = 25
+spn_order_promote_magistratus_value = 50
+spn_order_charter_value = {
+	value = 75
+	if = {
+		limit = { global_var:spn_order_prerogative ?= flag:grow }
+		value = 60
+	}
+}
+# T10: 3-6 years to teach a Source acolyte into a Mage: 6 base, -1 Source, -1 learning 15+, -1 a Magistratus tutor, min 3.
+spn_order_teach_years_value = {
+	value = 6
+	if = {
+		limit = {
+			OR = {
+				has_trait = source
+				has_trait = source2
+			}
+		}
+		add = -1
+	}
+	if = {
+		limit = { learning >= 15 }
+		add = -1
+	}
+	if = {
+		limit = { var:spn_order_tutor ?= { var:spn_order_rank ?= flag:magistratus } }
+		add = -1
+	}
+	min = 3
+}
+# Gold a year: 5 + 1 per rank step.
+spn_order_dues_value = {
+	value = 5
+	if = {
+		limit = { var:spn_order_rank ?= flag:medicum }
+		add = 1
+	}
+	else_if = {
+		limit = { var:spn_order_rank ?= flag:magistratus }
+		add = 2
+	}
+}
+# The tutor with the fewest tutees first (§5.6 step 4); a tie goes to the higher standing.
+spn_order_tutor_pick_value = {
+	value = 0
+	every_in_list = {
+		variable = spn_order_tutees
+		add = -10
+	}
+	if = {
+		limit = { exists = var:spn_order_standing }
+		add = {
+			value = var:spn_order_standing
+			divide = 20
+		}
+	}
+}
+# Succession (§5.8): Magistratus, then Medicum, then acolyte; within a rank, standing.
+spn_order_succession_score_value = {
+	value = 0
+	if = {
+		limit = { var:spn_order_rank ?= flag:magistratus }
+		add = 3000
+	}
+	else_if = {
+		limit = { var:spn_order_rank ?= flag:medicum }
+		add = 2000
+	}
+	else_if = {
+		limit = { var:spn_order_rank ?= flag:acolyte }
+		add = 1000
+	}
+	if = {
+		limit = { exists = var:spn_order_standing }
+		add = var:spn_order_standing
+	}
+}
+# The member's own standing (§4.2); the studies modifier's scale (+10% at 100).
+spn_order_standing_scale_value = {
+	value = 0
+	if = {
+		limit = { exists = var:spn_order_standing }
+		value = var:spn_order_standing
+	}
+}
+
+# ==================================================================================================
+# DATES (no date maths: years compared as numbers)
+# ==================================================================================================
+spn_order_two_years_ago_value = {
+	value = current_year
+	subtract = 2
+}
+spn_order_five_years_ago_value = {
+	value = current_year
+	subtract = 5
+}
+spn_order_ten_years_ago_value = {
+	value = current_year
+	subtract = 10
+}
+
+# ==================================================================================================
+# THE RELIQUARIES (§9.5): the 2.37 scale shape. The scale reads only the member's own cached variable.
+# ==================================================================================================
+spn_reliquary_scale_value = {
+	value = 0
+	if = {
+		limit = { exists = var:spn_reliquary_cached }
+		value = var:spn_reliquary_cached
+	}
+}
+# Member scope: 2 per relic, 3 per magic1 item, max 30.
+spn_reliquary_compute_value = {
+	value = 0
+	if = {
+		limit = { var:spn_order_chapter ?= { exists = var:spn_order_reliquary_count } }
+		add = {
+			value = var:spn_order_chapter.var:spn_order_reliquary_count
+			multiply = 2
+		}
+		add = {
+			value = var:spn_order_chapter.var:spn_order_reliquary_magic
+			multiply = 3
+		}
+	}
+	max = 30
+}
+spn_coven_reliquary_scale_value = {
+	value = 0
+	if = {
+		limit = { exists = var:spn_coven_reliquary_cached }
+		value = var:spn_coven_reliquary_cached
+	}
+}
+spn_coven_reliquary_compute_value = {
+	value = 0
+	if = {
+		limit = { var:spn_coven ?= { exists = var:spn_order_reliquary_count } }
+		add = {
+			value = var:spn_coven.var:spn_order_reliquary_count
+			multiply = 2
+		}
+		add = {
+			value = var:spn_coven.var:spn_order_reliquary_magic
+			multiply = 3
+		}
+	}
+	max = 15
+}
+# T23: covens are capped at one per 150 counties (6 until the count is taken).
+spn_coven_cap_value = {
+	value = 22		# 2.38a: the formula's own result on the vanilla map (3,435 / 150), as WORK-ORDER §22.1 row 15 asks; 2.38 had 6
+	if = {
+		limit = { exists = global_var:spn_county_count }
+		value = global_var:spn_county_count
+		divide = 150
+		floor = yes
+		min = 1
+	}
+}
+
+# ==================================================================================================
+# RELICS, ZECCHIA, THE WAR (§9, §10, §11)
+# ==================================================================================================
+# Artifact scope.
+spn_artifact_worth_value = {
+	value = 1
+	if = {
+		limit = { rarity = illustrious }
+		value = 4
+	}
+	else_if = {
+		limit = { rarity = famed }
+		value = 3
+	}
+	else_if = {
+		limit = { rarity = masterwork }
+		value = 2
+	}
+}
+# Hirer scope, at delivery: 100 x the count promised, plus 50 x the worth of what she took (var:spn_zr_worth).
+spn_zecchia_fee_value = {
+	value = 0
+	if = {
+		limit = { exists = var:spn_zecchia_count }
+		add = {
+			value = var:spn_zecchia_count
+			multiply = 100
+		}
+	}
+	if = {
+		limit = { exists = var:spn_zr_worth }
+		add = {
+			value = var:spn_zr_worth
+			multiply = 50
+		}
+	}
+}
+spn_zecchia_wait_days_value = 90
+spn_relic_war_min_items_value = 3
+# The relic war's AI (§10). Scope: the CB's ai_score (scope:attacker, scope:defender).
+spn_relic_war_ai_score_value = {
+	value = 0
+	if = {
+		limit = {
+			scope:attacker = {
+				has_trait = archmage
+				OR = {
+					has_trait = greedy
+					has_trait = ambitious
+				}
+			}
+		}
+		add = 20
+		scope:defender = {
+			every_character_artifact = {
+				limit = { spn_is_magic_item_trigger = yes }
+				add = 10
+			}
+		}
+		if = {
+			limit = {
+				scope:attacker = {
+					OR = {
+						var:spn_knows_page_holder ?= scope:defender
+						var:spn_knows_seal_holder ?= scope:defender
+					}
+				}
+			}
+			add = 30
+		}
+	}
+}
+
+# ==================================================================================================
+# THE BOOK (§12)
+# ==================================================================================================
+spn_vade_contract_days_value = 1095
+spn_vade_five_years_on_value = {
+	value = current_year
+	add = 5
+}
+# A year 10, 20 or 30 years on (lost pages, a lost Seal): the effects pick one with a random_list.
+spn_years_on_10_value = {
+	value = current_year
+	add = 10
+}
+spn_years_on_20_value = {
+	value = current_year
+	add = 20
+}
+spn_years_on_30_value = {
+	value = current_year
+	add = 30
+}
+
+# ==================================================================================================
+# WORKINGS (§5.19)
+# ==================================================================================================
+# The Working's success: 50 + 3 x learning - 30, +10 a Temple Magus, +10 the Observance way; 25-95. Caster scope.
+spn_transference_chance_value = {
+	value = 20
+	add = {
+		value = learning
+		multiply = 3
+	}
+	if = {
+		limit = { spn_is_temple_magus_trigger = yes }
+		add = 10
+	}
+	if = {
+		limit = { var:spn_order_chapter ?= { var:spn_order_way ?= flag:observance } }
+		add = 10
+	}
+	# 2.39 (WORK-ORDER-2.39 F15): the Transference is a temple matter (S1E05): +10 beneath a standing Collegium.
+	if = {
+		limit = { var:spn_order_chapter ?= { spn_order_hall_stands_trigger = yes } }
+		add = 10
+	}
+	min = 25
+	max = 95
+}
+# Who volunteers, in the volunteer's scope; root is the caster (.0821), whose var:spn_transference_patient is the patient.
+spn_transference_volunteer_value = {
+	value = 50
+	if = {
+		limit = { has_trait = compassionate }
+		add = 30
+	}
+	if = {
+		limit = {
+			root.var:spn_transference_patient ?= { is_alive = yes }
+			opinion = {
+				target = root.var:spn_transference_patient
+				value >= 40
+			}
+		}
+		add = 20
+	}
+	if = {
+		limit = { has_trait = craven }
+		add = -40
+	}
+	if = {
+		limit = { has_trait = callous }
+		add = -30
+	}
+}
+
+# The Ring at [Site] (§9.7): 40 + 3 x intrigue - 30, clamped 10-80.
+spn_seal_pilgrim_chance_value = {
+	value = intrigue
+	multiply = 3
+	add = 10
+	min = 10
+	max = 80
+}
+
+# Someone Is Pulling at the Hide (§12.5): the hide holds on 20 + Hide Bond / 2. Champion scope.
+spn_vade_hide_holds_value = {
+	value = spn_hide_bond_value
+	divide = 2
+	add = 20
+	min = 5
+	max = 95
+}
+
+# 2.38a: how many Mages root knows who could join him (Found the Order Anew; spn_order_known_mage_trigger). Character scope.
+# The four groups never overlap: the secret group skips anyone already counted.
+spn_order_known_mages_value = {
+	value = 0
+	every_courtier_or_guest = {
+		limit = { spn_order_known_mage_trigger = { WHO = root } }
+		add = 1
+	}
+	every_vassal = {
+		limit = { spn_order_known_mage_trigger = { WHO = root } }
+		add = 1
+	}
+	if = {
+		limit = {
+			liege ?= {
+				NOT = { this = root }
+				spn_order_known_mage_trigger = { WHO = root }
+			}
+		}
+		add = 1
+	}
+	every_known_secret = {
+		limit = {
+			secret_type = secret_witch
+			secret_owner = { spn_order_known_mage_by_secret_trigger = { WHO = root } }
+		}
+		add = 1
+	}
+}
+
+# 2.38b: the chair (DESIGN-2.38b §3). Temples needed before the chair is chosen at a Conclave instead of held by the
+# senior Temple Magus, and the year before which a called Conclave of the Chair counts as never having sat.
+spn_order_conclave_threshold_value = 3
+spn_conclave_chair_deadline_value = {
+	value = current_year
+	subtract = 3
+}
+
+# 2.38b: THE ORDER'S FIT (DESIGN-2.38b §5). How well a character keeps Silence, Subservience and Observance. It drives the
+# AI only: who is called, who answers, which answer it gives at each test, and who it becomes. A player chooses freely.
+# Gregarious is neither (Thomas, 9 Oct: good company is no sin). Arrogance is forgiven only beside two real virtues.
+spn_order_fit_value = {
+	value = 0
+	# 2.38f: the three ways' groups are their own values, which an AI head's choice of way also reads.
+	add = spn_order_fit_silence_value
+	add = spn_order_fit_subservience_value
+	add = spn_order_fit_observance_value
+	# The Order's taste
+	if = { limit = { has_trait = ambitious } add = 10 }
+	if = { limit = { has_trait = compassionate } add = 5 }
+	if = { limit = { has_trait = callous } add = -15 }
+	if = { limit = { has_trait = deceitful } add = -15 }
+	if = { limit = { has_trait = sadistic } add = -20 }
+	if = {
+		limit = { has_trait = arrogant }
+		if = {
+			limit = {
+				OR = {
+					AND = { has_trait = diligent has_trait = patient }
+					AND = { has_trait = diligent has_trait = loyal }
+					AND = { has_trait = patient has_trait = loyal }
+				}
+			}
+			add = -5
+		}
+		else = { add = -30 }
+	}
+}
+
+# 2.38f: the fit's three groups (spn_order_fit_value adds them; spn_order_ai_pick_way_effect weighs the ways by them).
+spn_order_fit_silence_value = {
+	value = 0
+	if = { limit = { has_trait = shy } add = 10 }
+	if = { limit = { has_trait = patient } add = 10 }
+	if = { limit = { has_trait = calm } add = 10 }
+	if = { limit = { has_trait = paranoid } add = 5 }
+	if = { limit = { has_trait = drunkard } add = -10 }
+	if = { limit = { has_trait = rowdy } add = -10 }
+}
+spn_order_fit_subservience_value = {
+	value = 0
+	if = { limit = { has_trait = humble } add = 10 }
+	if = { limit = { has_trait = loyal } add = 10 }
+	if = { limit = { has_trait = content } add = 5 }
+	if = { limit = { has_trait = zealous } add = 5 }
+	if = { limit = { has_trait = disloyal } add = -15 }
+	if = { limit = { has_trait = arbitrary } add = -10 }
+	if = { limit = { has_trait = stubborn } add = -10 }
+}
+spn_order_fit_observance_value = {
+	value = 0
+	if = { limit = { has_trait = diligent } add = 10 }
+	if = { limit = { has_trait = curious } add = 10 }
+	if = { limit = { has_trait = just } add = 10 }
+	if = { limit = { has_trait = lazy } add = -10 }
+	if = { limit = { has_trait = impatient } add = -15 }
+	if = { limit = { has_trait = fickle } add = -10 }
+}
+
+# 2.38b: the AI fills a temple to 80% of its cap; the rest is room for players and deeds (DESIGN-2.38b §6). Story scope.
+spn_order_ai_room_left_value = {
+	value = 0
+	if = {
+		limit = {
+			exists = var:spn_order_cap
+			exists = var:spn_order_size
+		}
+		value = var:spn_order_cap
+		multiply = 0.8
+		floor = yes
+		subtract = var:spn_order_size
+		if = {
+			limit = { exists = var:spn_order_picks }
+			subtract = var:spn_order_picks
+		}
+	}
+}
+
+# 2.38b: THE CONCLAVE (DESIGN-2.38b §4).
+# A candidate for the chair: standing, his temple's age, and whether he came for it.
+spn_conclave_candidate_score_value = {
+	value = 0
+	if = {
+		limit = { exists = var:spn_order_standing }
+		add = var:spn_order_standing
+	}
+	# Years his temple has stood (spn_order_chapter_age_value is minus the founding year).
+	add = {
+		value = current_year
+		add = spn_order_chapter_age_value
+		divide = 2
+	}
+	if = {
+		limit = { has_activity_intent = spn_seek_the_chair_intent }
+		add = 30
+	}
+	if = {
+		limit = { has_character_flag = spn_order_aspires_chair }
+		add = 20
+	}
+	add = {
+		value = spn_order_fit_value
+		divide = 4
+	}
+}
+# The count: votes first, the candidate's score breaks a tie.
+spn_conclave_tally_value = {
+	value = 0
+	if = {
+		limit = { exists = var:spn_cv_votes }
+		add = {
+			value = var:spn_cv_votes
+			multiply = 1000
+		}
+	}
+	add = spn_conclave_candidate_score_value
+}
+# A seat: who came for one, then standing.
+spn_conclave_seat_score_value = {
+	value = 0
+	if = {
+		limit = { exists = var:spn_order_standing }
+		add = var:spn_order_standing
+	}
+	if = {
+		limit = { has_activity_intent = spn_seek_a_seat_intent }
+		add = 50
+	}
+}
+
+# 2.38b: The Clay Working's chance (DESIGN-2.38b §7b): 40, plus twice learning, at most 90.
+spn_order_clay_chance_value = {
+	value = 40
+	add = {
+		value = learning
+		multiply = 2
+	}
+	# 2.39 (WORK-ORDER-2.39 F15): +10 beneath a standing Collegium.
+	if = {
+		limit = { var:spn_order_chapter ?= { spn_order_hall_stands_trigger = yes } }
+		add = 10
+	}
+	max = 90
+}

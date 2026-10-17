@@ -654,7 +654,7 @@ magic_healing = {
 	icon = icon_magic
 	common_interaction = yes
 	interface_priority = 90
-	category = interaction_category_friendly
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_friendly)
 
 	cooldown_against_recipient = { months = 6 } 
 	cooldown = { months = 3 } 
@@ -2058,7 +2058,41 @@ consume_child = {
 	ai_frequency = 24
 
 	ai_will_do = {
-		base = 50
+		base = 10 # 2.39 (Supernatural): was 50 (Thomas, 16 Oct)
+		modifier = { # 2.39 (Supernatural): the cruel
+			add = 40
+			scope:actor = {
+				OR = {
+					has_trait = sadistic
+					has_trait = callous
+				}
+			}
+		}
+		modifier = { # 2.39 (Supernatural): never the AI's own kin
+			add = -1000
+			scope:recipient = { is_close_or_extended_family_of = scope:actor }
+		}
+		modifier = { # 2.39 (Supernatural): not a ward in its care
+			add = -100
+			scope:recipient = { has_relation_guardian = scope:actor }
+		}
+		modifier = { # 2.39 (Supernatural): never a player who is himself a child (final pass, 17 Oct)
+			add = -1000
+			scope:recipient = { is_ai = no }
+		}
+		modifier = { # 2.39 (Supernatural): a player's child, unless the AI has a grudge against that parent
+			add = -1000
+			scope:recipient = {
+				any_parent = {
+					is_ai = no
+					NOR = {
+						has_relation_rival = scope:actor
+						has_relation_nemesis = scope:actor
+						is_at_war_with = scope:actor
+					}
+				}
+			}
+		}
 		modifier = {
 			add = -150
 			scope:recipient = {
@@ -2677,7 +2711,7 @@ teach_sorcery = {
 	icon = icon_learning
 	common_interaction = yes
 	interface_priority = 90
-	category = interaction_category_friendly
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_friendly)
 	desc = teach_sorcery_desc
 	#prompt = "cast_curse_prompt_text"
 	#custom_description="cast_curse_custom_desc"
@@ -2851,6 +2885,7 @@ witch_trial = {
 					custom_tooltip = witch_trial_ct2
 				}
 				trigger_event = magic_ev3.54
+				spn_order_trial_begun_effect = yes # 2.39 (Supernatural): an Order member on trial; her Temple Magus hears of it (WORK-ORDER-2.39 F11)
 			}
 		}
 	}
@@ -3170,7 +3205,7 @@ demand_submission_cgm_interaction = {
 	ai_max_reply_days = 1
 	common_interaction = yes
 	interface_priority = 100
-	category = interaction_category_diplomacy
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_diplomacy)
 	desc = demand_submission_cgm_interaction_desc
 	greeting = negative
 	notification_text = DEMAND_SUBMISSION_PROPOSAL
@@ -3228,8 +3263,12 @@ demand_submission_cgm_interaction = {
 					if = {
 						limit = {
 							NOT = {	rite = scope:actor.rite	}	# CK3 1.20: the convert follows the actor's Rite, not only the Faith
+							NOT = { faith.religious_head ?= this }
 						}
-						set_character_rite_with_conversion = scope:actor.rite
+						# 2.38 (Supernatural): vanilla's forced-conversion effect (the one ask_for_conversion uses). The
+						# _with_conversion effect applies the convert-UI rules (adult, piety cost, rite knowledge) and refused
+						# most recipients.
+						convert_to_rite_with_consequences_effect = { RITE = scope:actor.rite }
 					}
 					if = {
 						limit = {
@@ -3405,7 +3444,31 @@ demand_submission_cgm_interaction = {
 	}
 	ai_frequency = 24
 	ai_will_do = {
-		base = 50
+		base = 10 # 2.39 (Supernatural): was a flat 50 (Thomas, 16 Oct)
+		modifier = {
+			add = 20
+			scope:actor = {
+				opinion = {
+					target = scope:recipient
+					value < 0
+				}
+			}
+		}
+		modifier = {
+			add = 20
+			scope:actor = { spn_ai_domineering_trigger = yes }
+		}
+		modifier = {
+			add = -100
+			scope:recipient = {
+				OR = {
+					has_relation_friend = scope:actor
+					has_relation_best_friend = scope:actor
+					has_relation_lover = scope:actor
+					has_relation_soulmate = scope:actor
+				}
+			}
+		}
 	}
 	auto_accept = no
 }
@@ -3623,6 +3686,10 @@ command_minion_interaction = {
 			is_imprisoned = no
 			is_adult = yes
 			OR = {
+				AND = { # 2.38 (Supernatural): bound to the Vade Maecum Infernal (WORK-ORDER-2.38 §12.7)
+					has_trait = spn_vade_bound
+					scope:recipient = { is_a_demon_trigger = yes }
+				}
 				AND = {
 					has_relation_mminion = scope:recipient
 					has_hook_of_type = {
@@ -3671,6 +3738,7 @@ command_minion_interaction = {
 			custom_description = {
 				text = has_ready_hook_custom
 				OR = {
+					has_trait = spn_vade_bound # 2.38 (Supernatural): WORK-ORDER-2.38 §12.7
 					has_strong_usable_hook = scope:recipient
 					AND = {
 						OR = {
@@ -3694,8 +3762,14 @@ command_minion_interaction = {
 			}
 		}
 		scope:recipient = {
-			NOT = {
-				has_trait = demon2
+			trigger_if = { # 2.38 (Supernatural): the bound master commands greater demons too (WORK-ORDER-2.38 §12.7)
+				limit = { scope:actor = { has_trait = spn_vade_bound } }
+				always = yes
+			}
+			trigger_else = {
+				NOT = {
+					has_trait = demon2
+				}
 			}
 		}
 		scope:recipient = {
@@ -3711,7 +3785,7 @@ command_minion_interaction = {
 	ai_max_reply_days = 1
 	common_interaction = yes
 	interface_priority = 100
-	category = interaction_category_diplomacy
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_diplomacy)
 	desc = command_minion_interaction_desc
 	greeting = negative
 	notification_text = COMMAND_MINION_PROPOSAL
@@ -4899,7 +4973,13 @@ command_minion_interaction = {
 	#ai_will_do = {
 	#	base = 50
 	#}
-	auto_accept = no
+	auto_accept = { # 2.38c (Supernatural): demons obey the Bound
+		scope:actor = { has_trait = spn_vade_bound }
+		scope:recipient = {
+			is_ai = yes
+			is_a_demon_trigger = yes
+		}
+	}
 }
 
 power_strike = {
@@ -5442,7 +5522,7 @@ teach_spells = {
 	icon = icon_learning
 	common_interaction = yes
 	interface_priority = 90
-	category = interaction_category_friendly
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_friendly)
 	desc = teach_spells_desc
 	#prompt = "cast_curse_prompt_text"
 	#custom_description="cast_curse_custom_desc"
@@ -5535,7 +5615,7 @@ aura_boost = {
 	icon = icon_magic
 	common_interaction = yes
 	interface_priority = 90
-	category = interaction_category_friendly
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_friendly)
 
 	cooldown_against_recipient = { years = 1 } 
 	cooldown = { months = 6 } 
@@ -5766,7 +5846,7 @@ bless_land = {
 	icon = icon_magic
 	common_interaction = yes
 	interface_priority = 90
-	category = interaction_category_friendly
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_friendly)
 
 	cooldown_against_recipient = { years = 2 } 
 	cooldown = { years = 2 } 
@@ -5917,7 +5997,7 @@ shadowstep_spell = {
 	icon = icon_magic
 	common_interaction = yes
 	interface_priority = 90
-	category = interaction_category_friendly
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_friendly)
 	desc = shadowstep_spell_desc
 
 	cooldown_against_recipient = { years = 1 } 
@@ -6000,32 +6080,18 @@ shadowstep_spell = {
 					custom_tooltip = shadow_step_prison_ct
 				}
 				else = {
-					release_from_prison = yes
-					scope:actor.imprisoner = {
-						if = {
-							limit = {
-								OR = {
-									has_revoke_title_reason = scope:actor
-									has_banish_reason = scope:actor
-									has_execute_reason = scope:actor
-								}
-							}
-							add_opinion = {
-								target = scope:actor
-								modifier = escaped_from_prison_crime
-							}
-						}
-						else = {
-							add_opinion = {
-								target = scope:actor
-								modifier = escaped_from_prison_opinion
-							}
-						}
-						save_scope_as = imprisoner
+					# 2.38 (Supernatural): the gaoler is saved while the caster is still his prisoner, then vanilla's escape
+					# success event (prison.9001) runs escape_from_prison_effect: opinion, memory, release, and a message to a
+					# player gaoler. The old block released first and then fired the escape ATTEMPT on_action, which found no
+					# imprisoner and could even roll a failure after the release.
+					if = {
+						limit = { exists = imprisoner }
+						imprisoner = { save_scope_as = imprisoner }
+						show_as_tooltip = { release_from_prison = yes }
+						trigger_event = prison.9001
 					}
-					#custom_tooltip = escape_from_prison_decision_effect_tooltip	#to removing?
-					trigger_event = {
-						on_action = escape_from_prison
+					else = {
+						release_from_prison = yes
 					}
 				}
 			}
@@ -6362,7 +6428,7 @@ hipercognition = {
 	icon = icon_magic
 	common_interaction = yes
 	interface_priority = 90
-	category = interaction_category_friendly
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_friendly)
 
 	cooldown_against_recipient = { years = 8 } 
 	cooldown = { years = 8 } 
@@ -6749,7 +6815,7 @@ mana_siphon_spell = {
 	ai_max_reply_days = 1
 	common_interaction = yes
 	interface_priority = 100
-	category = interaction_category_diplomacy
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_diplomacy)
 	desc = mana_siphon_spell_desc
 	greeting = negative
 	#notification_text = MANA_SIPHON_PROPOSAL
@@ -7200,7 +7266,7 @@ mage_duel = {
 	ai_max_reply_days = 1
 	common_interaction = yes
 	interface_priority = 100
-	category = interaction_category_diplomacy
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_diplomacy)
 	desc = mage_duel_desc
 	greeting = negative
 	#notification_text = MANA_SIPHON_PROPOSAL
@@ -7578,6 +7644,17 @@ mage_duel = {
 		}
 		flag = mage_duel_forced
 		localization = MAGE_DUEL_O3b
+	}
+	on_decline = { # 2.39 (Supernatural): an AI challenger remembers a refusal (Boot 2, 16 Oct)
+		scope:actor = {
+			if = {
+				limit = { is_ai = yes }
+				add_opinion = {
+					target = scope:recipient
+					modifier = spn_refused_mage_duel_opinion
+				}
+			}
+		}
 	}
 	
 	ai_accept = {
@@ -7962,6 +8039,19 @@ mage_duel = {
 	ai_frequency = 24
 	ai_will_do = {
 		base = 0
+		modifier = { # 2.39 (Supernatural): no challenge without a reason (Boot 2, 16 Oct)
+			add = -1000
+			spn_mage_duel_ai_motive_trigger = no
+		}
+		modifier = { # 2.39 (Supernatural): a refused challenge is not repeated for five years (Boot 2, 16 Oct)
+			add = -1000
+			scope:actor = {
+				has_opinion_modifier = {
+					target = scope:recipient
+					modifier = spn_refused_mage_duel_opinion
+				}
+			}
+		}
 		modifier = {
 			add = 50
 			scope:actor.overall_magic_power_value > scope:recipient.overall_magic_power_p1_value
@@ -9244,7 +9334,7 @@ cyro_proposal_interaction = {
 	ai_max_reply_days = 1
 	common_interaction = yes
 	interface_priority = 100
-	category = interaction_category_diplomacy
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_diplomacy)
 	desc = cyro_proposal_interaction_desc
 	greeting = negative
 	notification_text = DEMON_CYRO_PROPOSAL
@@ -9715,7 +9805,7 @@ drink_magic_potion_interaction = {
 	icon = icon_elixir
 	common_interaction = yes
 	interface_priority = 90
-	category = interaction_category_friendly
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_friendly)
 	desc = drink_magic_potion_interaction_desc
 
 	cooldown = { 
@@ -10711,7 +10801,7 @@ drink_magic_potion_interaction = {
 	auto_accept = yes
 }
 upgrade_amulet_interaction = {
-	category = interaction_category_friendly
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_friendly)
 	common_interaction = yes
 	interface_priority = 60
 	desc = upgrade_amulet_interaction_desc
@@ -10973,7 +11063,7 @@ body_adaptation = {
 	common_interaction = yes
 	interface_priority = 90
 	popup_on_receive = no
-	category = interaction_category_friendly
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_friendly)
 	cooldown = { years = 0 } 
 	ignores_pending_interaction_block = yes
 	use_diplomatic_range = no
@@ -11578,6 +11668,7 @@ invite_to_high_council_interaction = {
 	}
 	is_valid_showing_failures_only = {
 		scope:recipient = {
+			spn_order_council_member_ok_trigger = yes # 2.38b (Supernatural): the council is the Order's (DESIGN-2.38b §3)
 			custom_description = {
 				text = is_mc_member
 				NOT = { has_variable = mc_member_var }
@@ -11617,7 +11708,7 @@ invite_to_high_council_interaction = {
 	ai_max_reply_days = 0
 	common_interaction = yes
 	interface_priority = 100
-	category = interaction_category_diplomacy
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_diplomacy)
 	desc = invite_to_high_council_interaction_desc
 	greeting = positive
 	#notification_text = MANA_SIPHON_PROPOSAL
@@ -11884,6 +11975,7 @@ appoint_me_to_high_council_interaction = {
 				has_trait = yaga
 			}
 			NOT = { has_variable = mc_member_var }
+			spn_order_council_known_trigger = yes # 2.39 (Supernatural): with the Order's council, its own members only (Boot 1, 16 Oct)
 		}
 		scope:recipient = {
 			is_imprisoned = no
@@ -11912,6 +12004,7 @@ appoint_me_to_high_council_interaction = {
 				text = is_incapable_custom
 				NOT = { has_trait = incapable }
 			}
+			spn_order_council_member_ok_trigger = yes # 2.38b (Supernatural): the council is the Order's (DESIGN-2.38b §3)
 		}
 		scope:recipient = {
 			custom_description = {
@@ -11926,7 +12019,7 @@ appoint_me_to_high_council_interaction = {
 	ai_max_reply_days = 1
 	common_interaction = yes
 	interface_priority = 100
-	category = interaction_category_diplomacy
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_diplomacy)
 	desc = appoint_me_to_high_council_interaction_desc
 	greeting = positive
 	notification_text = {
@@ -12213,7 +12306,7 @@ remove_from_high_council_interaction = {
 	ai_max_reply_days = 1
 	common_interaction = yes
 	interface_priority = 100
-	category = interaction_category_diplomacy
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_diplomacy)
 	desc = remove_from_high_council_interaction_desc
 	greeting = negative
 	cooldown_against_recipient = { years = 1 } 
@@ -12317,7 +12410,10 @@ remove_from_high_council_interaction = {
 demand_submission_archmage_interaction = {
 	is_shown = {
 		NOT = { scope:recipient = scope:actor }
-		exists = global_var:archmage_can_deman_submision
+		OR = { # 2.39 (Supernatural): Imperium (WORK-ORDER-2.39 F12)
+			exists = global_var:archmage_can_deman_submision
+			scope:actor = { spn_imperium_holds_trigger = yes }
+		}
 		scope:actor = {	
 			is_imprisoned = no
 			is_adult = yes
@@ -12363,7 +12459,7 @@ demand_submission_archmage_interaction = {
 	ai_max_reply_days = 1
 	common_interaction = yes
 	interface_priority = 100
-	category = interaction_category_diplomacy
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_diplomacy)
 	desc = demand_submission_archmage_interaction_desc
 	greeting = negative
 	#notification_text = DEMAND_SUBMISSION_PROPOSAL
@@ -12579,6 +12675,20 @@ demand_submission_archmage_interaction = {
 	ai_frequency = 24
 	ai_will_do = {
 		base = 10
+		modifier = { # 2.39 (Supernatural): a reason to demand it (Thomas, 16 Oct)
+			add = -1000
+			scope:actor = {
+				NOR = {
+					opinion = {
+						target = scope:recipient
+						value < 0
+					}
+					has_relation_rival = scope:recipient
+					has_relation_nemesis = scope:recipient
+					spn_ai_domineering_trigger = yes
+				}
+			}
+		}
 		modifier = {
 			add = -10
 			scope:recipient = {
@@ -12610,6 +12720,7 @@ ask_mc_for_support_interaction = {
 		scope:actor = {	
 			is_imprisoned = no
 			has_character_modifier = mc_supporter_modifier
+			spn_order_council_known_trigger = yes # 2.39 (Supernatural): with the Order's council, its own members only (Boot 1, 16 Oct)
 		}
 		#scope:recipient = {
 		#	is_imprisoned = no
@@ -12652,7 +12763,7 @@ ask_mc_for_support_interaction = {
 	#ai_max_reply_days = 1
 	common_interaction = yes
 	interface_priority = 100
-	category = interaction_category_diplomacy
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_diplomacy)
 	desc = ask_mc_for_support_interaction_desc
 	greeting = positive
 	cooldown_against_recipient = { years = 10 } 
@@ -13571,7 +13682,7 @@ threaten_with_magic_interaction = {
 	ai_max_reply_days = 1
 	common_interaction = yes
 	interface_priority = 100
-	category = interaction_category_diplomacy
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_diplomacy)
 	desc = threaten_with_magic_interaction_desc
 	greeting = negative
 	notification_text = threaten_with_magic_interaction_proposal
@@ -14277,7 +14388,7 @@ join_mages_summit = {
 	common_interaction = no
 	interface_priority = 90
 	popup_on_receive = no
-	category = interaction_category_diplomacy
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_diplomacy)
 	desc = join_mages_summit_desc
 	#prompt = "cast_curse_prompt_text"
 	#custom_description="cast_curse_custom_desc"
@@ -14368,7 +14479,7 @@ thorn_walls_spell = {
 	icon = icon_magic
 	common_interaction = yes
 	interface_priority = 90
-	category = interaction_category_friendly
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_friendly)
 
 	cooldown_against_recipient = { years = 2 } 
 	cooldown = { years = 2 } 
@@ -14491,7 +14602,7 @@ ask_tw_for_initiation_interaction = {
 	#ai_max_reply_days = 1
 	common_interaction = yes
 	interface_priority = 100
-	category = interaction_category_diplomacy
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_diplomacy)
 	desc = ask_tw_for_initiation_interaction_desc
 	greeting = positive
 	cooldown_against_recipient = { years = 10 } 
@@ -14994,7 +15105,7 @@ stop_the_cataclysm_spell = {
 	common_interaction = no
 	interface_priority = 90
 	popup_on_receive = no
-	category = interaction_category_friendly
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_friendly)
 	desc = stop_the_cataclysm_spell_desc
 
 	cooldown_against_recipient = { years = 1 } 
@@ -15115,7 +15226,7 @@ teleportation_spell = {
 	common_interaction = no
 	interface_priority = 90
 	popup_on_receive = no
-	category = interaction_category_friendly
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_friendly)
 	desc = teleportation_spell_desc
 
 	#cooldown_against_recipient = { years = 1 } 
@@ -15173,7 +15284,7 @@ use_nyx_powers_interaction = {
 	common_interaction = no
 	interface_priority = 90
 	popup_on_receive = no
-	category = interaction_category_friendly
+	category = interaction_category_favorites # 2.38a (Supernatural): the Supernatural menu (was interaction_category_friendly)
 	desc = use_nyx_powers_interaction_desc
 
 	cooldown = { years = 1 } 

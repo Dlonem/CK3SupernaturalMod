@@ -1,0 +1,193 @@
+﻿# Supernatural 2.39 -- Imperium and the council's works (WORK-ORDER-2.39 F12, F13). Effects: zz_spn_imperium_effects.txt.
+# Values: zz_spn_imperium_values.txt. Events: zz_spn_imperium_events.txt (spn_order.1000-.1009), zz_spn_imperium_conclave_events.txt
+# (spn_conclave.0210). Loc: zz_spn_239_imperium_l_english.yml.
+#
+# THE STATE (on the Grand Magus, 60 days; spn_imperium_open_effect resets all of it at every motion, and
+# spn_imperium_start_effect gives it 60 days again from the day the vote starts, so it outlives the 30-day fallback count):
+#   var spn_imp_open (a vote is running), spn_imp_vote_id (this vote's number, from global_var:spn_imp_serial),
+#   spn_imp_motion (flag:imperium | flag:respondeo), spn_imp_crisis (flag:none | death | rift | plague | hunters),
+#   spn_imp_yes, spn_imp_no, spn_imp_pledge_slips (pledges cast), spn_imp_pledges (pledges paid at the count),
+#   spn_imp_counted (set once, by the count), spn_imp_in_meeting (set by I1; the count of a motion he brought moves it
+#   into the result's chain as scope:spn_imp_ends_meeting), spn_imp_struck (the councillor a staged rift struck),
+#   spn_imp_rm_target (the Great Respondeo's ruler), lists spn_imp_voters, spn_imp_nays, spn_imp_pledgers.
+# On a voter (60 days): flags spn_imp_voted, spn_imp_bound, spn_imp_favour, spn_imp_paid, spn_imp_spoke; var spn_imp_seat.
+# A player's ballot carries the vote's number as scope:spn_imp_ballot, so a window left open from an earlier vote never
+# counts in a later one. The count banks what the result windows show as saved values (scope:spn_imp_ayes,
+# spn_imp_nays_n, spn_imp_was_crisis, spn_imp_ends_meeting; for the Great Respondeo also spn_rm_pledges).
+
+# ==================================================================================================
+# IMPERIUM (F12)
+# ==================================================================================================
+# The Grand Magus holds Imperium: the rule is On, he is in the chair, a member, and carries Witchcraft's council support
+# modifier (by vote, or by Witchcraft's own Extraordinary Measures). Every power reads this, so they end the day he leaves
+# the chair even though the modifier stays on the man until it runs out. Character scope.
+spn_imperium_holds_trigger = {
+	spn_order_on_trigger = yes
+	global_var:current_archmage_global ?= this
+	spn_is_order_member_trigger = yes
+	has_character_modifier = mage_council_support_modifier
+}
+
+# A seat holder who may vote on the Grand Magus's motion: alive, free, and not the Grand Magus himself (he never votes on
+# his own motion). Voter scope.
+spn_imperium_voter_ok_trigger = {
+	is_alive = yes
+	is_imprisoned = no
+	NOT = { global_var:current_archmage_global ?= this }
+}
+
+# At least one seat holder could vote. Any scope.
+spn_imperium_has_voter_trigger = {
+	OR = {
+		global_var:current_black_mage_global ?= { spn_imperium_voter_ok_trigger = yes }
+		global_var:current_loremaster_global ?= { spn_imperium_voter_ok_trigger = yes }
+		global_var:current_admin_global ?= { spn_imperium_voter_ok_trigger = yes }
+	}
+}
+
+# A vote of the council is running on this Grand Magus (opened and not yet counted).
+spn_imperium_vote_running_trigger = {
+	has_variable = spn_imp_open
+	NOT = { has_variable = spn_imp_counted }
+}
+
+# The Grand Magus may ask the council for Imperium. He does not hold it (by either road), no vote is running, and at
+# least one seat holder can vote. Grand Magus scope.
+spn_imperium_askable_trigger = {
+	spn_order_on_trigger = yes
+	global_var:current_archmage_global ?= this
+	spn_is_order_member_trigger = yes
+	NOT = { has_character_modifier = mage_council_support_modifier }
+	NOT = { spn_imperium_vote_running_trigger = yes }
+	spn_imperium_has_voter_trigger = yes
+}
+
+# I1: "I bring a motion before the council" shows. Only with the Order rule On (the first line), so with the rule Off
+# Witchcraft's meeting is exactly as it was. Grand Magus scope (the second part of the meeting is sent to him alone).
+spn_council_motion_available_trigger = {
+	spn_order_on_trigger = yes
+	global_var:current_archmage_global ?= this
+	spn_is_order_member_trigger = yes
+	NOT = { spn_imperium_vote_running_trigger = yes }
+	OR = {
+		spn_imperium_askable_trigger = yes
+		AND = {
+			spn_council_work_due_trigger = yes
+			spn_imperium_has_voter_trigger = yes
+		}
+	}
+}
+
+# The ballot in this event still counts: the vote it was sent for is the one running, and it has not been counted.
+# Voter scope (or the Grand Magus's own lever event); reads scope:spn_imp_gm and scope:spn_imp_ballot.
+spn_imperium_ballot_live_trigger = {
+	exists = scope:spn_imp_ballot
+	scope:spn_imp_gm ?= {
+		is_alive = yes
+		spn_imperium_vote_running_trigger = yes
+		exists = var:spn_imp_vote_id
+		var:spn_imp_vote_id >= scope:spn_imp_ballot
+		var:spn_imp_vote_id <= scope:spn_imp_ballot
+	}
+}
+
+# A player voter whose turn has not come or not passed yet. Voter scope.
+spn_imperium_awaits_trigger = {
+	is_ai = no
+	is_alive = yes
+	NOT = { has_character_flag = spn_imp_voted }
+}
+
+# This voter knows the Grand Magus staged a rift (the secret wins over a hook: Nay). Voter scope; reads scope:spn_imp_gm.
+spn_imperium_knows_rift_trigger = {
+	any_known_secret = {
+		secret_type = spn_secret_staged_rift
+		secret_owner = scope:spn_imp_gm
+	}
+}
+
+# Root may be struck by a staged rift from $GM$: an AI Grand Magus never strikes a friend, lover or close family.
+spn_imperium_stage_target_ok_trigger = {
+	is_alive = yes
+	NOT = { this = $GM$ }
+	NOR = {
+		has_relation_friend = $GM$
+		has_relation_lover = $GM$
+		is_close_family_of = $GM$
+	}
+}
+
+# The Grand Magus has the means to stage a rift: magic without price (he pays later through the Fors Factorum's own
+# cycle), or a huge spend of power.
+spn_imperium_stage_means_trigger = {
+	OR = {
+		has_character_modifier = spn_fors_factorum_modifier
+		can_spend_huge_ps_trigger = yes
+	}
+}
+
+# ==================================================================================================
+# THE COUNCIL'S WORKS (F13)
+# ==================================================================================================
+# Thomas: "not triggered easily or in the first 50 years". The debug override is for the boot test only; players never
+# see the option that sets it (debug_only, vanilla 00_casus_belli_types.txt:8).
+spn_council_works_open_trigger = {
+	OR = {
+		years_from_game_start >= 50
+		AND = {
+			debug_only = yes
+			exists = global_var:spn_debug_works_open
+		}
+	}
+}
+
+# A work is due: the Great Respondeo has a target (the yearly pulse's cache) and its 20-year cooldown is over.
+spn_council_work_due_trigger = {
+	spn_order_on_trigger = yes
+	spn_council_works_open_trigger = yes
+	NOT = { exists = global_var:spn_respondeo_magna_cd }
+	global_var:spn_respondeo_magna_target ?= { is_alive = yes }
+}
+
+# An Order member lives in $RULER$'s realm (a pass over the temples' member lists, no world walk).
+spn_respondeo_magna_member_there_trigger = {
+	any_in_global_list = {
+		variable = spn_order_chapters
+		exists = var:spn_order_chapter
+		var:spn_order_chapter = {
+			any_in_list = {
+				variable = spn_order_members
+				is_alive = yes
+				spn_is_order_member_trigger = yes
+				top_liege ?= $RULER$
+			}
+		}
+	}
+}
+
+# The re-check when the motion opens: the cached ruler $RULER$ is still independent, still has five or more trailed
+# counties in his realm, and an Order member still lives there. One realm, once, at a meeting. Any scope.
+spn_respondeo_magna_target_ok_trigger = {
+	$RULER$ = {
+		is_alive = yes
+		is_independent_ruler = yes
+		any_realm_county = {
+			count >= 5
+			has_county_modifier = spn_menace_modifier
+		}
+	}
+	spn_respondeo_magna_member_there_trigger = { RULER = $RULER$ }
+}
+
+# A seat holder can pay his part of the Great Respondeo: the Chancellor commits 200 from the council's funds; the Keeper
+# and the Adeptus Major spend power. Voter scope.
+spn_respondeo_magna_can_pledge_trigger = {
+	trigger_if = {
+		limit = { global_var:current_admin_global ?= this }
+		exists = global_var:mc_gold_global
+		global_var:mc_gold_global >= 200
+	}
+	trigger_else = {
+		can_spend_standard_ps_trigger = yes
+	}
+}

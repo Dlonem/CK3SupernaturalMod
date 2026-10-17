@@ -1,0 +1,223 @@
+﻿# Supernatural 2.38 -- "The Blue Rose": lines of the chapter and coven panels (WORK-ORDER-2.38 §4.4, §5.16, §5.18, §5.22).
+# Called as [Story.Custom('...')] from the panels' strings: root is the story (the shape of vanilla's DogStoryNameAll,
+# 00_pet_custom_loc.txt:2500, type = all). On a mirror the variables are copies, and story_owner is the member who
+# owns the mirror, which is the player reading it.
+
+# "The seat of the Gnostic Council." when the chapter's head holds the chair (§5.9).
+spn_OrderCouncilSeat = {
+	type = all
+	# 2.39 (WORK-ORDER-2.39 F15): the chair, and the Collegium the temple meets beneath.
+	text = {
+		trigger = {
+			exists = var:spn_order_head
+			global_var:current_archmage_global ?= { this = root.var:spn_order_head }
+			exists = var:spn_order_hall
+		}
+		localization_key = spn_order_line_council_seat_hall
+	}
+	text = {
+		trigger = {
+			exists = var:spn_order_head
+			global_var:current_archmage_global ?= { this = root.var:spn_order_head }
+		}
+		localization_key = spn_order_line_council_seat
+	}
+	# 2.39 (WORK-ORDER-2.39 F15): "It meets beneath the Collegium there."
+	text = {
+		trigger = { exists = var:spn_order_hall }
+		localization_key = spn_order_line_hall
+	}
+	text = {
+		localization_key = spn_order_line_empty
+	}
+}
+
+# The temple's word from the motto (§5.22).
+spn_OrderWay = {
+	type = all
+	text = {
+		trigger = { var:spn_order_way ?= flag:silence }
+		localization_key = spn_order_line_way_silence
+	}
+	text = {
+		trigger = { var:spn_order_way ?= flag:subservience }
+		localization_key = spn_order_line_way_subservience
+	}
+	text = {
+		trigger = { var:spn_order_way ?= flag:observance }
+		localization_key = spn_order_line_way_observance
+	}
+	text = {
+		localization_key = spn_order_line_empty
+	}
+}
+
+# "You are a [rank]. Next: [rank] at [N] standing." for the one reading the panel (§5.16).
+spn_OrderNextRank = {
+	type = all
+	text = {
+		trigger = { story_owner = { var:spn_order_rank ?= flag:neophyte } }
+		localization_key = spn_order_line_rank_neophyte
+	}
+	text = {
+		trigger = {
+			story_owner = {
+				var:spn_order_rank ?= flag:acolyte
+				spn_order_taught_trigger = yes # 2.38e
+			}
+		}
+		localization_key = spn_order_line_rank_acolyte_mage
+	}
+	text = { # 2.38e: a Warlock or a True Witch is taught the craft, not made a Mage
+		trigger = {
+			story_owner = {
+				var:spn_order_rank ?= flag:acolyte
+				OR = {
+					has_trait = warlock
+					has_trait = true_witch
+				}
+			}
+		}
+		localization_key = spn_order_line_rank_acolyte_craft
+	}
+	text = {
+		trigger = { story_owner = { var:spn_order_rank ?= flag:acolyte } }
+		localization_key = spn_order_line_rank_acolyte
+	}
+	text = {
+		trigger = { story_owner = { var:spn_order_rank ?= flag:medicum } }
+		localization_key = spn_order_line_rank_medicum
+	}
+	text = {
+		trigger = {
+			story_owner = {
+				var:spn_order_rank ?= flag:magistratus
+				spn_is_temple_magus_trigger = no
+				exists = var:spn_order_adeptus
+			}
+		}
+		localization_key = spn_order_line_rank_adeptus
+	}
+	text = {
+		trigger = {
+			story_owner = {
+				var:spn_order_rank ?= flag:magistratus
+				spn_is_temple_magus_trigger = no
+			}
+		}
+		localization_key = spn_order_line_rank_magistratus
+	}
+	text = {
+		trigger = {
+			story_owner = {
+				spn_is_temple_magus_trigger = yes
+				NOT = { has_variable = mc_member_var }
+			}
+		}
+		localization_key = spn_order_line_rank_temple_magus
+	}
+	text = {
+		trigger = {
+			story_owner = {
+				has_variable = mc_member_var
+				NOT = { global_var:current_archmage_global ?= this }
+			}
+		}
+		localization_key = spn_order_line_rank_councilor
+	}
+	text = {
+		trigger = { story_owner = { global_var:current_archmage_global ?= this } }
+		localization_key = spn_order_line_rank_grand_magus
+	}
+	text = {
+		localization_key = spn_order_line_empty
+	}
+}
+
+# "The Order's prerogative: ..." (§5.18).
+spn_OrderPrerogative = {
+	type = all
+	text = {
+		trigger = { global_var:spn_order_prerogative ?= flag:recover }
+		localization_key = spn_order_line_prerogative_recover
+	}
+	text = {
+		trigger = { global_var:spn_order_prerogative ?= flag:silence }
+		localization_key = spn_order_line_prerogative_silence
+	}
+	text = {
+		trigger = { global_var:spn_order_prerogative ?= flag:book }
+		localization_key = spn_order_line_prerogative_book
+	}
+	text = {
+		trigger = { global_var:spn_order_prerogative ?= flag:grow }
+		localization_key = spn_order_line_prerogative_grow
+	}
+	text = {
+		trigger = { global_var:spn_order_prerogative ?= flag:pit }
+		localization_key = spn_order_line_prerogative_pit
+	}
+	text = {
+		localization_key = spn_order_line_prerogative_none
+	}
+}
+
+# The name of the current prerogative alone, for toasts and events (§5.18). Root: anything.
+spn_OrderPrerogativeName = {
+	type = all
+	text = {
+		trigger = { global_var:spn_order_prerogative ?= flag:recover }
+		localization_key = spn_order_prerogative_recover
+	}
+	text = {
+		trigger = { global_var:spn_order_prerogative ?= flag:silence }
+		localization_key = spn_order_prerogative_silence
+	}
+	text = {
+		trigger = { global_var:spn_order_prerogative ?= flag:book }
+		localization_key = spn_order_prerogative_book
+	}
+	text = {
+		trigger = { global_var:spn_order_prerogative ?= flag:grow }
+		localization_key = spn_order_prerogative_grow
+	}
+	text = {
+		trigger = { global_var:spn_order_prerogative ?= flag:pit }
+		localization_key = spn_order_prerogative_pit
+	}
+	text = {
+		localization_key = spn_order_prerogative_none
+	}
+}
+
+# The Contract: whether a witness and a son are named yet (§12.6).
+spn_VadeWitnessLine = {
+	type = all
+	text = {
+		trigger = { story_owner = { exists = var:spn_vade_witness } }
+		localization_key = spn_vade_line_witness_named
+	}
+	text = {
+		localization_key = spn_vade_line_witness_none
+	}
+}
+spn_VadeSonLine = {
+	type = all
+	text = {
+		trigger = { story_owner = { var:spn_vade_firstborn ?= { is_alive = yes } } }
+		localization_key = spn_vade_line_son_named
+	}
+	text = {
+		localization_key = spn_vade_line_son_none
+	}
+}
+spn_VadeLastSoulLine = {
+	type = all
+	text = {
+		trigger = { exists = global_var:spn_vade_soul_last }
+		localization_key = spn_vade_line_last_soul
+	}
+	text = {
+		localization_key = spn_vade_line_no_soul
+	}
+}

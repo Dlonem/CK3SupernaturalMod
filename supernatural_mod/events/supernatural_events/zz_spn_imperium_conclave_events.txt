@@ -1,0 +1,55 @@
+﻿namespace = spn_conclave
+
+# Supernatural 2.39 -- the staged rift at a Conclave (WORK-ORDER-2.39 F12, red team M3). Sent in The Masks, the phase
+# before the Reckoning, by spn_conclave_unmask_ask_effect, so a player's answer is in before anyone is judged. If no one
+# has said it by the Reckoning, the AI who knows it best may (spn_conclave_unmask_ai_effect, the Reckoning's first step).
+# At most one exposure a Conclave (activity variable spn_cv_unmasked). Loc: zz_spn_239_imperium_l_english.yml.
+
+# .0210 -- What the Grand Magus Did. A player member who came and knows the Grand Magus's staged-rift secret.
+spn_conclave.0210 = {
+	type = activity_event
+	title = spn_conclave.0210.t
+	desc = spn_conclave.0210.desc
+	theme = intrigue
+	override_background = { reference = mc_shadows }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_cv_gm animation = personality_rational }
+	trigger = {
+		is_alive = yes
+		scope:spn_cv_gm ?= { is_alive = yes }
+	}
+	option = {
+		name = spn_conclave.0210.a
+		trigger = {
+			NOT = { scope:activity ?= { has_variable = spn_cv_unmasked } }
+			scope:spn_cv_gm = {
+				any_secret = {
+					secret_type = spn_secret_staged_rift
+					is_known_by = root
+				}
+			}
+		}
+		custom_tooltip = spn_conclave.0210.a.tt
+		hidden_effect = {
+			scope:activity ?= { set_variable = { name = spn_cv_unmasked value = yes days = 60 } }
+			scope:spn_cv_gm = {
+				random_secret = {
+					limit = {
+						secret_type = spn_secret_staged_rift
+						is_known_by = root
+					}
+					expose_secret = root
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_conclave.0210.b
+		trigger = { NOT = { scope:activity ?= { has_variable = spn_cv_unmasked } } }
+		custom_tooltip = spn_conclave.0210.b.tt
+	}
+	option = {
+		name = spn_conclave.0210.c
+		trigger = { scope:activity ?= { has_variable = spn_cv_unmasked } }
+	}
+}

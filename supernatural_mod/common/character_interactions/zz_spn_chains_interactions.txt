@@ -1,0 +1,155 @@
+﻿# Supernatural 2.39 -- Commission Warded Chains (WORK-ORDER-2.39 F6, D13 (x)). Loc: zz_spn_239_chains_l_english.yml.
+# A hunter cannot work magic (archmage's opposites, 00_traits_magic.txt), and every other road a hunter has to a relic is
+# closed: lending, Seize Their Relics, the artifact search and court seeding. So he pays a Mage. The shape is the hide's
+# Ask to Unbind (zz_spn_hide_interactions.txt): a great caster, 150 gold, standard power, the ringing.
+#
+# Shown on the archmage and true_witch TRAITS only, never on Order rank: a menu entry that appeared only on a Magistratus
+# would tell a stranger who belongs (B6, D2; the Order's rule that non-members never see who belongs).
+
+spn_commission_chains_interaction = {
+	category = interaction_category_favorites    # the mod's Supernatural menu
+	icon = icon_gold
+	desc = spn_commission_chains_interaction_desc
+	greeting = positive
+	notification_text = spn_commission_chains_interaction_notification
+	ai_min_reply_days = 1
+	ai_max_reply_days = 5
+	cooldown = { years = 5 }
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:recipient = {
+			OR = {
+				has_trait = archmage
+				has_trait = true_witch
+			}
+			spn_is_valid_supernatural_target = yes    # the compatibility patch's species hook (§6)
+		}
+		scope:actor = { spn_is_valid_supernatural_target = yes }
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_ask_to_unbind_gold_tt       # "You have 150 gold" (Ask to Unbind's own line)
+				gold >= 150
+			}
+		}
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_ask_to_unbind_power_tt      # "The mage has the power to spare"
+				can_spend_standard_ps_trigger = yes
+			}
+			is_imprisoned = no
+		}
+	}
+	on_accept = {
+		scope:actor = {
+			pay_short_term_gold = {
+				target = scope:recipient
+				gold = 150
+			}
+		}
+		scope:recipient = {
+			spend_standard_ps_effect = yes
+		}
+		scope:actor = {
+			custom_tooltip = spn_commission_chains_effect_tt
+		}
+		spn_relic_make_chains_effect = { OWNER = scope:actor }
+		# The ringing: the Mage is the caster.
+		scope:recipient = {
+			save_scope_as = magic_user
+			send_message_4_magic_sense_effect = yes
+		}
+	}
+	ai_accept = {
+		base = 10
+		opinion_modifier = {
+			who = scope:recipient
+			opinion_target = scope:actor
+			multiplier = 1
+		}
+		modifier = {
+			add = 20
+			scope:recipient = { has_trait = greedy }
+			desc = spn_ai_greedy
+		}
+		# A hunter who burned out a hall of Mages in the last two years (the sweep's own flag, 10_spn_witch_trail_events.txt).
+		modifier = {
+			add = -50
+			scope:actor = { has_character_flag = spn_order_swept_chapter }
+			desc = spn_ai_swept_chapter
+		}
+	}
+
+	# AI: a lord who holds a wolf he knows of, a gaoler a wolf broke out on, and hunters. Never twice: not while he owns a
+	# pair already. Five years between, and a gold floor so a commission never empties a treasury.
+	ai_targets = {
+		ai_recipients = courtiers
+	}
+	ai_targets = {
+		ai_recipients = guests
+	}
+	ai_targets = {
+		ai_recipients = vassals
+	}
+	ai_targets = {
+		ai_recipients = liege
+	}
+	ai_targets = {
+		ai_recipients = peer_vassals
+	}
+	ai_targets = {
+		ai_recipients = neighboring_rulers
+	}
+	ai_frequency = 60
+	ai_potential = {
+		gold >= 300
+		NOT = { any_character_artifact = { var:spn_relic ?= flag:chains } }
+		OR = {
+			spn_has_hunter_trait = yes
+			has_character_flag = spn_wolf_broke_out
+			any_prisoner = {
+				OR = {
+					has_trait = spn_known_werewolf
+					has_trait = spn_known_hybrid
+					any_secret = {
+						OR = {
+							secret_type = spn_secret_werewolf
+							secret_type = spn_secret_hybrid
+						}
+						is_known_by = root
+					}
+				}
+			}
+		}
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 50
+			scope:actor = {
+				any_prisoner = {
+					OR = {
+						has_trait = spn_known_werewolf
+						has_trait = spn_known_hybrid
+						any_secret = {
+							OR = {
+								secret_type = spn_secret_werewolf
+								secret_type = spn_secret_hybrid
+							}
+							is_known_by = scope:actor
+						}
+					}
+				}
+			}
+		}
+		modifier = {
+			add = 30
+			scope:actor = { has_character_flag = spn_wolf_broke_out }
+		}
+		modifier = {
+			add = 30
+			scope:actor = { spn_has_hunter_trait = yes }
+		}
+	}
+}

@@ -1,0 +1,219 @@
+﻿# Supernatural 2.39 -- "The Hermetic Order of the Blue Rose, Part 2": the Homunculus Beetle's three uses
+# (WORK-ORDER-2.39 F4). Loc: localization/english/event_localization/zz_spn_239_beetle_l_english.yml.
+#
+# It is never a gift: vanilla's Gift Artifact would hand over the jar, not the plague. A beetle sealed in a Reliquary
+# cannot be used until it is taken back (Take It Back): all three uses show, greyed, and say so. It can never be lent. None of the three works while a beetle
+# plague is running. The AI never swallows it, an AI member of the Order never uses it, and any other AI slips it only
+# rarely: sadistic or callous, and only to a rival at its own court. All three end in spn_beetle_swallowed_effect.
+# Every recipient passes spn_is_valid_supernatural_target (the compatibility patch's species hook).
+
+# Swallow the Beetle. You are the carrier. No roll.
+spn_beetle_swallow_interaction = {
+	category = interaction_category_favorites # the Supernatural menu, with every other relic use
+	icon = icon_magic
+	desc = spn_beetle_swallow_interaction_desc
+	auto_accept = yes
+	is_shown = {
+		scope:actor = { is_adult = yes } # 2.39 (Boot 3, 16 Oct): a child does not
+		scope:recipient = scope:actor
+		scope:actor = {
+			spn_is_valid_supernatural_target = yes
+			spn_beetle_holds_trigger = yes
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_beetle_sealed_tt
+				spn_beetle_usable_trigger = yes
+			}
+		}
+		custom_tooltip = {
+			text = spn_beetle_plague_running_tt
+			spn_beetle_plague_running_trigger = no
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_beetle_swallow_interaction_tt
+		scope:actor = {
+			if = {
+				limit = { spn_is_order_member_trigger = yes }
+				custom_tooltip = spn_beetle_breaks_rules_tt
+			}
+		}
+		hidden_effect = {
+			spn_beetle_swallowed_effect = { CARRIER = scope:actor USER = scope:actor HOW = flag:swallowed }
+		}
+	}
+	ai_will_do = { base = 0 } # an AI never swallows it
+}
+
+# Slip the Beetle. Hostile, and needs no acceptance: the target does not know. Someone at your court, your guest, your
+# spouse, or anyone where you are. A hidden intrigue roll a few days later (spn_relic.0701).
+spn_beetle_slip_interaction = {
+	category = interaction_category_hostile
+	icon = icon_scheme_murder
+	desc = spn_beetle_slip_interaction_desc
+	auto_accept = yes
+	ai_targets = {
+		ai_recipients = scripted_relations
+		max = 5
+	}
+	ai_frequency = 60
+	is_shown = {
+		scope:actor = { is_adult = yes } # 2.39 (Boot 3, 16 Oct): a child does not
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = { spn_beetle_holds_trigger = yes } # 2.39 review L3: a pledged beetle greys the use, as with Swallow
+		scope:recipient = {
+			spn_is_valid_supernatural_target = yes
+			NOT = { is_imprisoned_by = scope:actor } # a prisoner has his own way (Feed It to the Prisoner)
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_beetle_sealed_tt
+				spn_beetle_usable_trigger = yes
+			}
+			custom_tooltip = {
+				text = spn_beetle_actor_free_tt
+				is_imprisoned = no
+			}
+		}
+		custom_tooltip = {
+			text = spn_beetle_plague_running_tt
+			spn_beetle_plague_running_trigger = no
+		}
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_beetle_slip_reach_tt
+				spn_beetle_slip_reach_trigger = { ACTOR = scope:actor }
+			}
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_beetle_slip_interaction_tt
+		scope:actor = {
+			if = {
+				limit = { spn_is_order_member_trigger = yes }
+				custom_tooltip = spn_beetle_slip_breaks_rules_tt # 2.39 (final pass, 17 Oct): the penalty comes only if it works
+			}
+		}
+		hidden_effect = {
+			scope:recipient = { save_scope_as = spn_bs_target }
+			scope:actor = {
+				trigger_event = { id = spn_relic.0701 days = { 2 5 } }
+			}
+		}
+	}
+	ai_potential = {
+		spn_is_order_member_trigger = no
+		spn_beetle_usable_trigger = yes
+		OR = {
+			has_trait = sadistic
+			has_trait = callous
+		}
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 5
+			scope:actor = { has_trait = sadistic }
+		}
+		modifier = {
+			add = 5
+			scope:actor = { has_trait = callous }
+		}
+		modifier = {
+			factor = 0
+			NOT = { scope:actor = { has_relation_rival = scope:recipient } }
+		}
+		modifier = {
+			factor = 0
+			scope:recipient = {
+				NOT = { spn_beetle_same_court_trigger = { ACTOR = scope:actor } }
+			}
+		}
+		modifier = {
+			factor = 0
+			scope:actor = { spn_is_order_member_trigger = yes }
+		}
+	}
+}
+
+# Feed It to the Prisoner. Your own prisoner. No roll.
+spn_beetle_prisoner_interaction = {
+	category = interaction_category_hostile
+	icon = prison
+	desc = spn_beetle_prisoner_interaction_desc
+	auto_accept = yes
+	ai_targets = {
+		ai_recipients = prisoners
+		max = 5
+	}
+	ai_frequency = 60
+	is_shown = {
+		scope:actor = { is_adult = yes } # 2.39 (Boot 3, 16 Oct): a child does not
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = { spn_beetle_holds_trigger = yes } # 2.39 review L3: a pledged beetle greys the use, as with Swallow
+		scope:recipient = {
+			spn_is_valid_supernatural_target = yes
+			is_imprisoned_by = scope:actor
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_beetle_sealed_tt
+				spn_beetle_usable_trigger = yes
+			}
+			custom_tooltip = {
+				text = spn_beetle_actor_free_tt
+				is_imprisoned = no
+			}
+		}
+		custom_tooltip = {
+			text = spn_beetle_plague_running_tt
+			spn_beetle_plague_running_trigger = no
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_beetle_prisoner_interaction_tt
+		scope:actor = {
+			if = {
+				limit = { spn_is_order_member_trigger = yes }
+				custom_tooltip = spn_beetle_breaks_rules_tt
+			}
+		}
+		hidden_effect = {
+			spn_beetle_swallowed_effect = { CARRIER = scope:recipient USER = scope:actor HOW = flag:forced }
+		}
+	}
+	ai_potential = {
+		spn_is_order_member_trigger = no
+		spn_beetle_usable_trigger = yes
+		OR = {
+			has_trait = sadistic
+			has_trait = callous
+		}
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 5
+			scope:actor = { has_trait = sadistic }
+		}
+		modifier = {
+			add = 5
+			scope:actor = { has_trait = callous }
+		}
+		modifier = {
+			factor = 0
+			NOT = { scope:actor = { has_relation_rival = scope:recipient } }
+		}
+		modifier = {
+			factor = 0
+			scope:actor = { spn_is_order_member_trigger = yes }
+		}
+	}
+}
