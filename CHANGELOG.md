@@ -8,6 +8,20 @@ Newest first. Notes for 2.29 and earlier are on the Workshop's
 
 ---
 
+## 2.40: Fixes and Balance
+
+A fixes-and-balance release built from long multiplayer sessions. Borrowing and pledging to the Order's Reliquary work again, and temples now get their first relics. Respondeo can be paid by your temple or an Obfuscation Powder, and a Temple Magus or the Grand Magus can send someone to cast it. The Order sends far fewer pop-ups, the masks can run your temple, you can ask to join another temple, and every seat of the Gnostic Council can draw on its treasury. The embrace pickers give the level you choose. There are three new kinds of puppet: your golem, a lover you turned through the Sire Bond, and the Compelled, a mortal bent by Compel Mortal for one command. The Fors Factorum and the Elemental Transference were reworked. Hide champions can duel on the battlefield, alphas can offer each other terms, and a hide can lead you to a page of the Vade Maecum. The new Supernatural Trails window lists every open trail, and a Trailsman tells you what left it. Safe for running saves. Russian translation by Adrian; the new lines are in English until he updates them.
+
+Questions about the mod? Read the wiki: [dlonem.com/mods/supernatural/wiki](https://dlonem.com/mods/supernatural/wiki/)
+
+---
+
+## 2.39a — Hotfix
+
+Mage, Warlock and True Witch are one path each: finishing one closes the last perk of the other two trees. The warning added in 2.39 sat on the paths themselves, where hovering shows only the trait, so nobody saw it. The perk before each path now carries the warning, and a tree whose last perk is already closed to you says so on its first perk. Safe for running saves.
+
+---
+
 ## 2.39 — The Hermetic Order of the Blue Rose, Part 2
 
 The temples of the Order of the Blue Rose can now vote out the Grand Magus with Invocare, the Gnostic Council can grant him Imperium, and its members can pledge to the council's first great work, the Great Respondeo. Outsiders who learn of the Order can break it, or be invited in. Also new: spells that go wrong for a Vade Maecum witness, the Homunculus Beetle, the Warded Chains, prison breaks for Champions and jailed vampires, the Draught of a Clear Mind, the Collegium, two Embrace decisions and an optional rule that keeps AI characters from becoming demons. Vampires can no longer compel werewolves, AI mages now need a reason to duel you or go after your magic items, and a Temple Magus can invite people into the Order himself. Fixes include pack invitations, a stuck council meeting and the Reset Lifetime Events rule. Russian translation by Adrian.

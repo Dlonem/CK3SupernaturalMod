@@ -1,0 +1,274 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40, package Q5: hides and packs). New triggers. Loc: zz_spn_240_q5_l_english.yml.
+
+# ==================================================================================================
+# C8 Let It Take Me: at war for this purpose. The same rule as the war prompt (spn_hide_war_prompt_valid_trigger): his
+# own war, or, holding no land, his lord's. Character scope = the champion.
+# ==================================================================================================
+spn_hide_lets_it_take_at_war_trigger = {
+	OR = {
+		is_at_war = yes
+		AND = {
+			is_landed = no
+			liege_or_court_owner ?= { is_at_war = yes }
+		}
+	}
+}
+
+# ==================================================================================================
+# F5 Word at the Fire: WHO has never heard of this hide at all (no pointer of either kind). Artifact scope = a hide.
+# ==================================================================================================
+spn_hide_never_heard_trigger = {
+	OR = {
+		AND = {
+			var:spn_hide = flag:silverback
+			$WHO$ = {
+				NOT = { exists = var:spn_knows_hide_silverback }
+				NOT = { exists = var:spn_knows_shrine_silverback }
+			}
+		}
+		AND = {
+			var:spn_hide = flag:timber
+			$WHO$ = {
+				NOT = { exists = var:spn_knows_hide_timber }
+				NOT = { exists = var:spn_knows_shrine_timber }
+			}
+		}
+		AND = {
+			var:spn_hide = flag:tundra
+			$WHO$ = {
+				NOT = { exists = var:spn_knows_hide_tundra }
+				NOT = { exists = var:spn_knows_shrine_tundra }
+			}
+		}
+		AND = {
+			var:spn_hide = flag:graybeard
+			$WHO$ = {
+				NOT = { exists = var:spn_knows_hide_graybeard }
+				NOT = { exists = var:spn_knows_shrine_graybeard }
+			}
+		}
+		AND = {
+			var:spn_hide = flag:midnight
+			$WHO$ = {
+				NOT = { exists = var:spn_knows_hide_midnight }
+				NOT = { exists = var:spn_knows_shrine_midnight }
+			}
+		}
+		AND = {
+			var:spn_hide = flag:alpha
+			$WHO$ = {
+				NOT = { exists = var:spn_knows_hide_alpha }
+				NOT = { exists = var:spn_knows_shrine_alpha }
+			}
+		}
+	}
+}
+
+# F5 (4) Seek the Old Ways, widened: a hide nobody wears, held by someone else who is not its champion. Artifact scope;
+# LISTENER = the wolf who asked.
+spn_hide_unworn_elsewhere_trigger = {
+	NOT = { exists = var:spn_hide_shrine_county }
+	is_equipped = no
+	artifact_owner ?= {
+		NOT = { this = $LISTENER$ }
+		spn_is_champion_trigger = no
+	}
+}
+
+# ==================================================================================================
+# C6 Offer Pack Terms. Root = anyone; A and B = the two alphas (A takes B's pack in). Neither pack was joined by the
+# Unification (its co-alpha and its Evolved belong to the married rite), and together they fit under the cap.
+# ==================================================================================================
+spn_pack_terms_merge_ok_trigger = {
+	# Boot 1 (22 Oct): guarded. The engine checks send options for characters who are not alphas, and an unguarded
+	# var:spn_pack read logged a "Failed context switch" each time.
+	$A$ = { exists = var:spn_pack }
+	$B$ = { exists = var:spn_pack }
+	custom_tooltip = {
+		text = spn_pack_terms_unified_tt
+		$A$.var:spn_pack ?= { NOT = { exists = var:spn_pack_unified } }
+		$B$.var:spn_pack ?= { NOT = { exists = var:spn_pack_unified } }
+	}
+	trigger_if = {
+		limit = {
+			$A$ = { exists = var:spn_pack }
+			$B$ = { exists = var:spn_pack }
+		}
+		custom_tooltip = {
+			text = spn_unification_too_many_tt
+			$B$.var:spn_pack.var:spn_pack_size <= {
+				value = spn_pack_cap_value
+				subtract = $A$.var:spn_pack.var:spn_pack_size
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# B5 + G11 Send for a Hide: who may take each road at the shrine (spn_hide.0381). Character scope = the one who sent.
+# ==================================================================================================
+# "Go yourself, by night": a werewolf who has The Prowl, or a hybrid who has the Master Hunt.
+spn_hide_errand_by_night_trigger = {
+	OR = {
+		AND = {
+			has_trait = supernatural_werewolf
+			has_perk = the_prowl_perk
+		}
+		AND = {
+			has_trait = supernatural_hybrid
+			has_perk = master_hunt_perk
+		}
+	}
+}
+
+# "Make the keeper bring it to you": a hybrid deep enough in the blood to reach a mind across the distance, and a keeper
+# who can be reached (never a player: his own lord's will is his).
+spn_hide_errand_compel_trigger = {
+	has_trait = supernatural_hybrid
+	has_trait_xp = {
+		trait = supernatural_hybrid
+		track = hybrid_vampirism
+		value >= 50
+	}
+	scope:spn_errand_keeper ?= {
+		is_alive = yes
+		is_ai = yes
+		NOT = { this = root }
+		has_immunity_for_magic_domination = no
+		spn_has_supernatural_trait = no
+	}
+}
+
+# ==================================================================================================
+# C5 Red Eyes in Your Pack (spn_pack.2000): still the same question when the player answers. Root = the old alpha.
+# ==================================================================================================
+spn_pack_2000_still_trigger = {
+	exists = scope:spn_ta_pack
+	scope:spn_ta_pack.story_owner ?= root
+	scope:spn_ta ?= {
+		is_alive = yes
+		var:spn_pack ?= scope:spn_ta_pack
+		spn_is_alpha_trigger = no
+	}
+}
+
+# ==================================================================================================
+# B5 Send for a Hide: the man who goes (spn_hide.0380). Character scope = a candidate; root = the one who sends.
+# ==================================================================================================
+spn_hide_errand_agent_ok_trigger = {
+	is_alive = yes
+	is_adult = yes
+	is_imprisoned = no
+	NOT = { this = root }
+	NOT = { has_trait = incapable }
+}
+
+# G11/B5 "Send a wolf of the pack": a wolf of the alpha's pack he can send in his place. An AI only: a player is never
+# sent on another's errand unasked. Character scope = the member; root = the alpha.
+spn_hide_errand_pack_wolf_trigger = {
+	is_alive = yes
+	is_adult = yes
+	is_ai = yes
+	is_imprisoned = no
+	NOT = { this = root }
+	spn_is_wolf_trigger = yes
+	NOT = { has_trait = incapable }
+}
+
+# ==================================================================================================
+# C4 Hold the Unification: a spouse who leads another pack, or who already runs in HOST's pack. Character scope = the
+# spouse.
+# ==================================================================================================
+spn_unification_spouse_ok_trigger = {
+	OR = {
+		spn_is_alpha_trigger = yes
+		trigger_if = {
+			limit = { $HOST$ = { exists = var:spn_pack } }
+			var:spn_pack ?= $HOST$.var:spn_pack
+		}
+		trigger_else = { always = no }
+	}
+}
+
+# C4 .0305's re-check for a spouse who already runs in his pack. Root = the host. Nested, so nothing reads a pack that
+# is gone.
+spn_unification_same_pack_ok_trigger = {
+	exists = var:spn_pack
+	trigger_if = {
+		limit = { exists = var:spn_pack }
+		NOT = { var:spn_pack = { exists = var:spn_pack_unified } }
+		$SPOUSE$ = {
+			is_alive = yes
+			is_spouse_of = root
+			var:spn_pack ?= root.var:spn_pack
+		}
+	}
+}
+
+# ==================================================================================================
+# Boot 2 (j) Offer Pack Terms: may $HOST$ know this alpha runs a pack? Root = the other alpha. The mod's own rule for
+# knowing a wolf (spn_host_knows_wolf_trigger), a Blood Pact between them, or a moment between their packs that named
+# him to $HOST$ (spn_pack_alpha_scented_effect: Another Pack's Scent, A Wolf Asks to Run With You, Young Wolves Fight).
+# Every one is something $HOST$ was told or saw, so the menu entry never appears on a secret (B6).
+# ==================================================================================================
+spn_pack_alpha_known_trigger = {
+	OR = {
+		spn_host_knows_wolf_trigger = { HOST = $HOST$ }
+		spn_pack_pact_bound_trigger = { WHO = $HOST$ }
+		$HOST$ = { is_target_in_variable_list = { name = spn_alphas_scented target = prev } }
+	}
+}
+
+# ==================================================================================================
+# Boot 2 (k) Young Wolves Fight. Are the two packs at odds? A and B = the two alphas. A rivalry either way, a feud over
+# a hide either way, or one thinks badly of the other; never between packs bound by a Blood Pact.
+# ==================================================================================================
+spn_pack_young_fight_at_odds_trigger = {
+	NOT = { $A$ = { spn_pack_pact_bound_trigger = { WHO = $B$ } } }
+	OR = {
+		$A$ = {
+			OR = {
+				has_relation_rival = $B$
+				has_relation_potential_rival = $B$
+				has_opinion_modifier = { target = $B$ modifier = spn_hide_feud_opinion }
+				opinion = { target = $B$ value <= -25 }
+			}
+		}
+		$B$ = {
+			OR = {
+				has_relation_rival = $A$
+				has_relation_potential_rival = $A$
+				has_opinion_modifier = { target = $A$ modifier = spn_hide_feud_opinion }
+				opinion = { target = $A$ value <= -25 }
+			}
+		}
+	}
+}
+
+# Boot 3: the two alphas belong to two different houses (the same test as spn_pack_house_step_effect) and vanilla
+# will track a relation between those houses (its own is_valid_to_start test, house_relation_is_valid_to_start_trigger,
+# called as in vanilla's 10_tgp_test_interactions.txt:19). Gates the Back option's house line, so it never promises a
+# step the engine would not take. Root = anyone.
+spn_pack_young_fight_houses_differ_trigger = {
+	scope:spn_mo_alpha = { exists = house }
+	scope:spn_mo_other = { exists = house }
+	NOT = { scope:spn_mo_alpha.house = scope:spn_mo_other.house }
+	house_relation_is_valid_to_start_trigger = {
+		HOUSE = scope:spn_mo_alpha.house
+		OTHER_HOUSE = scope:spn_mo_other.house
+	}
+}
+
+# The two young wolves are still there to fight (spn_pack.0102 can stay open). Root = anyone.
+spn_pack_young_fight_still_trigger = {
+	exists = scope:spn_mo_ours
+	exists = scope:spn_mo_theirs
+	scope:spn_mo_ours = {
+		is_alive = yes
+		is_imprisoned = no
+	}
+	scope:spn_mo_theirs = {
+		is_alive = yes
+		is_imprisoned = no
+	}
+}

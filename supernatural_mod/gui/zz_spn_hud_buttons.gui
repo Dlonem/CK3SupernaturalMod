@@ -1,14 +1,32 @@
 ﻿# Supernatural 2.38 -- the three HUD buttons (WORK-ORDER-2.38 §6). Each is a copy of Witchcraft's working council button
 # (window_high_council.gui, window_mage_counc_tab_button1) with six things changed: name, position, visible, and inside
-# button_hud_character_bar the onclick, tooltip and highlight_icon texture. There is no deep link to one story, so each
-# opens the Situations window, where the pack, chapter or coven is listed.
+# button_hud_character_bar the onclick, tooltip and highlight_icon texture.
+# 2.40 boot 2 (item c): CK3 has no window for one story cycle, so each button sets the UI variable 'spn_story_focus'
+# ('pack', 'order', 'coven') and opens the Situations window, which the mod's copy of window_situation_list.gui then
+# narrows to that one story (with "Show All Situations"; closing the window clears the focus).
+#
+# 2.40 (WORK-ORDER-2.40 A12): the buttons sit in one collapsing column (vanilla's idiom, hud.gui: flowcontainer, vertical,
+# ignoreinvisible), so a hidden button leaves no gap. The column's bottom edge is the bottom of Witchcraft's Gnostic Council
+# button (window_high_council.gui, at { -5 -450 }, 52 px high; no widgetanchor, so -450 is its BOTTOM edge and it spans
+# 450-502 px up: boot 3 fix, the column used to start at -400 and put the Order button over the council); a spacer keeps the council's
+# slot while a council button shows, so the Order sits right above the council. Upward: council, Order, coven, pack. Each
+# button is a 50 x 50 widget, the 50 px steps of 2.38, without a layer of its own (the column's layer). Q9's trails
+# button goes in after the pack (marked below).
 
-container = {
-	name = "spn_hud_pack_button"
+flowcontainer = {
+	name = "spn_hud_column"
 	parentanchor = bottom|left
-	position = { -5 -500 }
-	alwaystransparent = no
+	widgetanchor = bottom|left
+	position = { -5 -450 }
+	direction = vertical
+	ignoreinvisible = yes
+	alwaystransparent = yes
 	layer = bottom
+
+widget = {
+	name = "spn_hud_pack_button"
+	size = { 50 50 }
+	alwaystransparent = no
 	#visible = "[GetGlobalVariable( 'mc_has_been_formed' ).IsSet]"
 	visible = "[GetPlayer.MakeScope.Var( 'spn_pack' ).IsSet]"
 	
@@ -19,6 +37,7 @@ container = {
 		enabled = yes
 		#onclick = "[OpenGameViewData( 'faith', GetPlayer.GetFaith.GetID )]"
 		#onclick = "[ToggleGameViewData( 'faith', GetPlayer.GetFaith.GetID )]"
+		onclick = "[GetVariableSystem.Set( 'spn_story_focus', 'pack' )]"
 		onclick = "[OpenGameView( 'situations' )]"
 		#onclick = "[GetScriptedGui('load_mc_variables').Execute( GuiScope.SetRoot( GetPlayer.MakeScope ).End )]"
 
@@ -41,12 +60,88 @@ container = {
 	}
 }
 
-container = {
-	name = "spn_hud_order_button"
-	parentanchor = bottom|left
-	position = { -5 -550 }
+# 2.40 Q9 trails button
+# 2.40 (WORK-ORDER-2.40 G12): the Trails button. Boot 3 (TRAILS): it opens the Supernatural Trails WINDOW
+# (gui/zz_spn_240_trails_window.gui), a list of every open trail, instead of the situation's panel. The click first runs
+# spn_trails_fill_gui, which fills the window's lists on the player, then shows the window: vanilla's own two-onclick
+# pattern (funeral_deceased_selection_button.gui:27-28). Shown only to the players the trails concern, spelled out here
+# with GetPlayer.HasTrait / GetPlayer.MakeScope.Var (Witchcraft's council buttons use the same calls, and they are silent
+# with no player): creatures (vampire, werewolf, hybrid, demon1, demon2), witch, true_witch, archmage, Order members, both
+# hunter traits. It mirrors spn_trails_watcher_trigger. Boot 2 called a scripted gui here with GetPlayer as root, which
+# with no player (observer, loading) logged 22,506 errors in boot 3; with no player the button is now simply hidden.
+widget = {
+	name = "spn_hud_trails_button"
+	size = { 50 50 }
+	visible = "[Or( Or( Or( GetPlayer.HasTrait( GetTrait( 'supernatural_vampire' ) ), GetPlayer.HasTrait( GetTrait( 'supernatural_werewolf' ) ) ), Or( GetPlayer.HasTrait( GetTrait( 'supernatural_hybrid' ) ), Or( GetPlayer.HasTrait( GetTrait( 'demon1' ) ), GetPlayer.HasTrait( GetTrait( 'demon2' ) ) ) ) ), Or( Or( Or( GetPlayer.HasTrait( GetTrait( 'witch' ) ), GetPlayer.HasTrait( GetTrait( 'true_witch' ) ) ), Or( GetPlayer.HasTrait( GetTrait( 'archmage' ) ), GetPlayer.MakeScope.Var( 'spn_order_member' ).IsSet ) ), Or( GetPlayer.HasTrait( GetTrait( 'supernatural_hunter' ) ), GetPlayer.HasTrait( GetTrait( 'witch_hunter' ) ) ) ) )]"
 	alwaystransparent = no
-	layer = bottom
+
+	button_hud_character_bar = {
+		name = "spn_trails_button"
+		parentanchor = left
+		enabled = yes
+		onclick = "[GetScriptedGui( 'spn_trails_fill_gui' ).Execute( GuiScope.SetRoot( GetPlayer.MakeScope ).End )]"
+		onclick = "[GetVariableSystem.Toggle( 'spn_trails_window_show' )]"
+
+		using = tooltip_es
+
+		tooltip = spn_hud_trails_tt
+
+		highlight_icon = {
+			texture = "gfx/interface/icons/court_position_task_types/spn_trailsman_task_follow_the_trail.dds"
+			size = { 40 40 }
+			position = { 0 1 }
+			parentanchor = center
+
+			glow = {
+				color = { 0 0 0 0.8 }
+				glow_radius = 3
+				using = Glow_Standard
+			}
+		}
+	}
+}
+
+widget = {
+	name = "spn_hud_coven_button"
+	size = { 50 50 }
+	alwaystransparent = no
+	#visible = "[GetGlobalVariable( 'mc_has_been_formed' ).IsSet]"
+	visible = "[GetPlayer.MakeScope.Var( 'spn_coven' ).IsSet]"
+	
+	button_hud_character_bar = {
+		name = "mage_counc_button"
+		datacontext = "[GetPlayer.GetFaith]"
+		parentanchor = left
+		enabled = yes
+		#onclick = "[OpenGameViewData( 'faith', GetPlayer.GetFaith.GetID )]"
+		#onclick = "[ToggleGameViewData( 'faith', GetPlayer.GetFaith.GetID )]"
+		onclick = "[GetVariableSystem.Set( 'spn_story_focus', 'coven' )]"
+		onclick = "[OpenGameView( 'situations' )]"
+		#onclick = "[GetScriptedGui('load_mc_variables').Execute( GuiScope.SetRoot( GetPlayer.MakeScope ).End )]"
+
+		using = tooltip_es
+
+		tooltip = spn_hud_coven_tt
+
+		highlight_icon = {
+			texture = "gfx/interface/icons/spn_hud/spn_hud_coven.dds"
+			size = { 40 40 }
+			position = { 0 1 }
+			parentanchor = center
+
+			glow = {
+				color = { 0 0 0 0.8 }
+				glow_radius = 3
+				using = Glow_Standard
+			}
+		}
+	}
+}
+
+widget = {
+	name = "spn_hud_order_button"
+	size = { 50 50 }
+	alwaystransparent = no
 	#visible = "[GetGlobalVariable( 'mc_has_been_formed' ).IsSet]"
 	visible = "[GetPlayer.MakeScope.Var( 'spn_order_member' ).IsSet]"
 	
@@ -57,6 +152,7 @@ container = {
 		enabled = yes
 		#onclick = "[OpenGameViewData( 'faith', GetPlayer.GetFaith.GetID )]"
 		#onclick = "[ToggleGameViewData( 'faith', GetPlayer.GetFaith.GetID )]"
+		onclick = "[GetVariableSystem.Set( 'spn_story_focus', 'order' )]"
 		onclick = "[OpenGameView( 'situations' )]"
 		#onclick = "[GetScriptedGui('load_mc_variables').Execute( GuiScope.SetRoot( GetPlayer.MakeScope ).End )]"
 
@@ -79,40 +175,14 @@ container = {
 	}
 }
 
-container = {
-	name = "spn_hud_coven_button"
-	parentanchor = bottom|left
-	position = { -5 -600 }
-	alwaystransparent = no
-	layer = bottom
-	#visible = "[GetGlobalVariable( 'mc_has_been_formed' ).IsSet]"
-	visible = "[GetPlayer.MakeScope.Var( 'spn_coven' ).IsSet]"
-	
-	button_hud_character_bar = {
-		name = "mage_counc_button"
-		datacontext = "[GetPlayer.GetFaith]"
-		parentanchor = left
-		enabled = yes
-		#onclick = "[OpenGameViewData( 'faith', GetPlayer.GetFaith.GetID )]"
-		#onclick = "[ToggleGameViewData( 'faith', GetPlayer.GetFaith.GetID )]"
-		onclick = "[OpenGameView( 'situations' )]"
-		#onclick = "[GetScriptedGui('load_mc_variables').Execute( GuiScope.SetRoot( GetPlayer.MakeScope ).End )]"
 
-		using = tooltip_es
+# 2.40 (WORK-ORDER-2.40 A12): the Gnostic Council's slot, held while either council button shows (the OR of the visible
+# expressions of window_mage_counc_tab_button0 and _button1, window_high_council.gui), so the Order sits right above it.
+widget = {
+	name = "spn_hud_council_slot"
+	size = { 50 52 }
+	alwaystransparent = yes
+	visible = "[Or( Or( And( Not( GetGlobalVariable( 'spn_order_council_ours' ).IsSet ), Or( GetPlayer.HasTrait( GetTrait( 'archmage' ) ), GetPlayer.HasTrait( GetTrait( 'true_witch' ) ) ) ), GetPlayer.MakeScope.Var( 'spn_order_member' ).IsSet ), GetGlobalVariable( 'mc_revealed' ).IsSet )]"
+}
 
-		tooltip = spn_hud_coven_tt
-
-		highlight_icon = {
-			texture = "gfx/interface/icons/spn_hud/spn_hud_coven.dds"
-			size = { 40 40 }
-			position = { 0 1 }
-			parentanchor = center
-
-			glow = {
-				color = { 0 0 0 0.8 }
-				glow_radius = 3
-				using = Glow_Standard
-			}
-		}
-	}
 }

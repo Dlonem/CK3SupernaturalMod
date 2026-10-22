@@ -133,10 +133,17 @@ spn_order.0101 = {
 	type = character_event
 	title = spn_order.0101.t
 	desc = {
-		random_valid = {
-			desc = spn_order.0101.desc_pillow
-			desc = spn_order.0101.desc_market
-			desc = spn_order.0101.desc_book
+		random_valid = { # 2.40 (WORK-ORDER-2.40 G3): how the note comes, then the letter, which names the town
+			desc = spn_order.0101.desc_pillow_open
+			desc = spn_order.0101.desc_market_open
+			desc = spn_order.0101.desc_book_open
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_pl_seat }
+				desc = spn_order.0101.desc_letter_seat
+			}
+			desc = spn_order.0101.desc_letter
 		}
 	}
 	theme = secret
@@ -150,6 +157,7 @@ spn_order.0101 = {
 	}
 	immediate = {
 		spn_flavor_mark_effect = yes # 2.39 (WORK-ORDER-2.39 F14): marks the flavor gate
+		spn_order_place_scopes_effect = yes # 2.40 (WORK-ORDER-2.40 G3): the places and people the text names
 	}
 	option = {
 		name = spn_order.0101.a
@@ -191,7 +199,17 @@ spn_order.0102 = {
 	type = character_event
 	title = spn_order.0102.t
 	desc = {
-		desc = spn_order.0102.desc_open
+		first_valid = { # 2.40 (WORK-ORDER-2.40 G3): where the chapel is, or the servant who leads you to the Collegium
+			triggered_desc = {
+				trigger = { exists = scope:spn_pl_hall }
+				desc = spn_order.0102.desc_open_hall
+			}
+			triggered_desc = {
+				trigger = { exists = scope:spn_pl_seat }
+				desc = spn_order.0102.desc_open_seat
+			}
+			desc = spn_order.0102.desc_open
+		}
 		first_valid = {
 			triggered_desc = {
 				trigger = {
@@ -210,7 +228,8 @@ spn_order.0102 = {
 	theme = secret
 	override_background = { reference = magic_temple }
 	left_portrait = { character = root animation = interested }
-	right_portrait = { character = var:spn_order_chapter.story_owner animation = personality_rational }
+	# 2.40 (WORK-ORDER-2.40 G3): no right portrait. The text says you cannot see a face; the Temple Magus is shown at the
+	# initiation (.0130), when the masks come off.
 	trigger = {
 		is_alive = yes
 		is_imprisoned = no
@@ -240,6 +259,7 @@ spn_order.0102 = {
 	}
 	immediate = {
 		spn_flavor_mark_effect = yes # 2.39 (WORK-ORDER-2.39 F14): marks the flavor gate
+		spn_order_place_scopes_effect = yes # 2.40 (WORK-ORDER-2.40 G3): the places and people the text names
 	}
 	option = {
 		name = spn_order.0102.a
@@ -297,20 +317,28 @@ spn_order.0110 = {
 	title = spn_order.0110.t
 	# 2.38b: the place is chosen once (immediate), so the answers can belong to it; the cage is new (DESIGN-2.38b §9).
 	desc = {
+		desc = spn_order.0110.desc_call # 2.40 (WORK-ORDER-2.40 G3): who calls you, then the place and why
 		first_valid = {
 			triggered_desc = {
 				trigger = { var:spn_coin_place ?= flag:cage }
-				desc = spn_order.0110.desc_cage
+				desc = spn_order.0110.desc_cage_place
 			}
 			triggered_desc = {
 				trigger = { var:spn_coin_place ?= flag:tower }
-				desc = spn_order.0110.desc_tower
+				desc = spn_order.0110.desc_tower_place
+			}
+			triggered_desc = {
+				trigger = {
+					var:spn_coin_place ?= flag:mill
+					exists = scope:spn_pl_seat
+				}
+				desc = spn_order.0110.desc_mill_seat
 			}
 			triggered_desc = {
 				trigger = { var:spn_coin_place ?= flag:mill }
-				desc = spn_order.0110.desc_mill
+				desc = spn_order.0110.desc_mill_place
 			}
-			desc = spn_order.0110.desc_tomb
+			desc = spn_order.0110.desc_tomb_place
 		}
 	}
 	theme = intrigue
@@ -351,6 +379,7 @@ spn_order.0110 = {
 			10 = { set_variable = { name = spn_coin_place value = flag:mill days = 120 } }
 			15 = { set_variable = { name = spn_coin_place value = flag:cage days = 120 } }
 		}
+		spn_order_place_scopes_effect = yes # 2.40 (WORK-ORDER-2.40 G3): the places and people the text names
 	}
 	option = {
 		name = {
@@ -511,10 +540,31 @@ spn_order.0120 = {
 	type = character_event
 	title = spn_order.0120.t
 	desc = {
-		random_valid = {
-			desc = spn_order.0120.desc_1
-			desc = spn_order.0120.desc_2
-			desc = spn_order.0120.desc_3
+		random_valid = { # 2.40 (WORK-ORDER-2.40 G3): the house is in the temple's town when it has one
+			triggered_desc = {
+				trigger = { exists = scope:spn_pl_seat }
+				desc = spn_order.0120.desc_1_seat
+			}
+			triggered_desc = {
+				trigger = { exists = scope:spn_pl_seat }
+				desc = spn_order.0120.desc_2_seat
+			}
+			triggered_desc = {
+				trigger = { exists = scope:spn_pl_seat }
+				desc = spn_order.0120.desc_3_seat
+			}
+			triggered_desc = {
+				trigger = { NOT = { exists = scope:spn_pl_seat } }
+				desc = spn_order.0120.desc_1
+			}
+			triggered_desc = {
+				trigger = { NOT = { exists = scope:spn_pl_seat } }
+				desc = spn_order.0120.desc_2
+			}
+			triggered_desc = {
+				trigger = { NOT = { exists = scope:spn_pl_seat } }
+				desc = spn_order.0120.desc_3
+			}
 		}
 	}
 	theme = secret
@@ -549,6 +599,7 @@ spn_order.0120 = {
 	}
 	immediate = {
 		spn_flavor_mark_effect = yes # 2.39 (WORK-ORDER-2.39 F14): marks the flavor gate
+		spn_order_place_scopes_effect = yes # 2.40 (WORK-ORDER-2.40 G3): the places and people the text names
 	}
 	option = {
 		name = spn_order.0120.a
@@ -651,7 +702,14 @@ spn_order.0130 = {
 				desc = spn_order.0130.desc_conclave
 			}
 			random_valid = {
-				desc = spn_order.0130.desc_1
+				triggered_desc = { # 2.40 (WORK-ORDER-2.40 G3): the temple beneath the town
+					trigger = { exists = scope:spn_pl_seat }
+					desc = spn_order.0130.desc_1_seat
+				}
+				triggered_desc = {
+					trigger = { NOT = { exists = scope:spn_pl_seat } }
+					desc = spn_order.0130.desc_1
+				}
 				desc = spn_order.0130.desc_2
 				desc = spn_order.0130.desc_3
 			}
@@ -691,6 +749,7 @@ spn_order.0130 = {
 	}
 	immediate = {
 		spn_flavor_mark_effect = yes # 2.39 (WORK-ORDER-2.39 F14): marks the flavor gate
+		spn_order_place_scopes_effect = yes # 2.40 (WORK-ORDER-2.40 G3): the places and people the text names
 	}
 	option = {
 		name = spn_order.0130.a
@@ -891,12 +950,23 @@ spn_order.0104 = {
 				spn_order_can_join_trigger = yes
 			}
 			add_character_flag = { flag = spn_order_sought years = 5 }
-			send_interface_toast = {
-				type = event_toast_text_good
-				title = spn_order_toast_sought
-				desc = spn_order_toast_sought_desc
-				left_icon = this
+			# 2.40 (WORK-ORDER-2.40 G3): one who never heard the rumour gets the rumour itself as the answer (a boy, a sprig
+			# of rosemary, a name: Talk of a Learned Society's first text); one who has gets a quiet line. The Selection
+			# weight stays (spn_order_sought, +40). If nothing has come of it in 400 days, he is told and may try again.
+			if = {
+				limit = { NOT = { has_character_flag = spn_order_whispered } }
+				add_character_flag = { flag = spn_order_sought_answer days = 90 }
+				spn_order_whisper_effect = yes
 			}
+			else = {
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_order_toast_sought
+					desc = spn_order_toast_sought_desc
+					left_icon = this
+				}
+			}
+			trigger_event = { id = spn_order.2110 days = 400 }
 		}
 		# 2.38a: the toast says why (Thomas, 9 Oct: "I didn't know if it worked or not").
 		else_if = {
@@ -1041,6 +1111,16 @@ spn_order.0140 = {
 	title = spn_order.0140.t
 	desc = {
 		first_valid = {
+			triggered_desc = { # 2.40 (WORK-ORDER-2.40 G3): the same, with the tutor by name
+				trigger = {
+					OR = {
+						has_trait = warlock
+						has_trait = true_witch
+					}
+					exists = scope:spn_pl_tutor
+				}
+				desc = spn_order.0140.desc_craft_tutor
+			}
 			triggered_desc = { # 2.38e: a Warlock or a True Witch had her own craft before the Order's
 				trigger = {
 					OR = {
@@ -1049,6 +1129,10 @@ spn_order.0140 = {
 					}
 				}
 				desc = spn_order.0140.desc_craft
+			}
+			triggered_desc = { # 2.40 (WORK-ORDER-2.40 G3): the tutor by name
+				trigger = { exists = scope:spn_pl_tutor }
+				desc = spn_order.0140.desc_tutor
 			}
 			desc = spn_order.0140.desc
 		}
@@ -1068,6 +1152,7 @@ spn_order.0140 = {
 	}
 	immediate = {
 		spn_flavor_mark_effect = yes # 2.39 (WORK-ORDER-2.39 F14): marks the flavor gate
+		spn_order_place_scopes_effect = yes # 2.40 (WORK-ORDER-2.40 G3): the places and people the text names
 	}
 	option = {
 		name = spn_order.0140.a
@@ -1075,6 +1160,13 @@ spn_order.0140 = {
 		turn_into_mage_effect = yes
 		custom_tooltip = archmage_perk_tt # 2.39 (WORK-ORDER-2.39 B2): the perk's own warning; the perks above are added hidden
 		remove_variable = spn_order_taught_years
+		hidden_effect = {
+			spn_order_tutee_finished_effect = yes # 2.40 (WORK-ORDER-2.40 A9, G4): the tutor rests, and is told
+			if = { # 2.40 (WORK-ORDER-2.40 G4): a Mage the temple made, for its ten-year cap (AI acolytes only)
+				limit = { is_ai = yes }
+				set_variable = { name = spn_order_mage_year value = current_year years = 10 }
+			}
+		}
 	}
 	# 2.39 (WORK-ORDER-2.39 B2): a member who wants the Warlock's or the True Witch's path can decline the Mage. Until now
 	# option a was the only choice for most members, so its warning could not be acted on. Counts as taught, exactly as
@@ -1086,6 +1178,7 @@ spn_order.0140 = {
 		add_magic_lifestyle_xp = medium_lifestyle_xp
 		add_character_flag = spn_order_taught
 		remove_variable = spn_order_taught_years
+		hidden_effect = { spn_order_tutee_finished_effect = yes } # 2.40 (WORK-ORDER-2.40 A9, G4)
 		ai_chance = { base = 0 }
 	}
 	# 2.38e: one capstone. A Warlock or a True Witch learns the Order's craft and stays on her own path; she counts as
@@ -1101,6 +1194,7 @@ spn_order.0140 = {
 		add_magic_lifestyle_xp = medium_lifestyle_xp
 		add_character_flag = spn_order_taught
 		remove_variable = spn_order_taught_years
+		hidden_effect = { spn_order_tutee_finished_effect = yes } # 2.40 (WORK-ORDER-2.40 A9, G4)
 	}
 }
 
@@ -1120,11 +1214,19 @@ spn_order.0141 = {
 		name = spn_order.0141.a
 		custom_tooltip = spn_order.0141.a_tt
 		add_character_flag = spn_order_tutor_strict
+		if = { # 2.40 (WORK-ORDER-2.40 A9): one way of teaching at a time
+			limit = { has_character_flag = spn_order_tutor_patient }
+			remove_character_flag = spn_order_tutor_patient
+		}
 	}
 	option = {
 		name = spn_order.0141.b
 		custom_tooltip = spn_order.0141.b_tt
 		add_character_flag = spn_order_tutor_patient
+		if = { # 2.40 (WORK-ORDER-2.40 A9): one way of teaching at a time
+			limit = { has_character_flag = spn_order_tutor_strict }
+			remove_character_flag = spn_order_tutor_strict
+		}
 	}
 }
 
@@ -1222,6 +1324,62 @@ spn_order.0150 = {
 	trigger = {
 		is_alive = yes
 		spn_is_temple_magus_trigger = yes
+		# 2.40 (WORK-ORDER-2.40 A2/A3): someone is still to be raised; the player is free, not asked twice inside 30 days,
+		# and has not left the temple to the masks meanwhile.
+		OR = {
+			scope:spn_yr_to_medicum ?= {
+				is_alive = yes
+				var:spn_order_rank ?= flag:acolyte
+			}
+			scope:spn_yr_to_magistratus ?= {
+				is_alive = yes
+				var:spn_order_rank ?= flag:medicum
+			}
+		}
+		spn_order_player_free_trigger = yes
+		spn_order_business_ready_trigger = yes
+		NOT = { has_character_flag = spn_order_auto_picks }
+	}
+	# 2.40 (WORK-ORDER-2.40 A2/A3): nothing waits. Only the spacing: ask again in 31 days. Busy, or the masks run the
+	# temple now: the masks hold the Rite (the same names), and tell him.
+	on_trigger_fail = {
+		if = {
+			limit = {
+				is_alive = yes
+				spn_is_temple_magus_trigger = yes
+				OR = {
+					scope:spn_yr_to_medicum ?= {
+						is_alive = yes
+						var:spn_order_rank ?= flag:acolyte
+					}
+					scope:spn_yr_to_magistratus ?= {
+						is_alive = yes
+						var:spn_order_rank ?= flag:medicum
+					}
+				}
+			}
+			if = {
+				limit = {
+					spn_order_player_free_trigger = yes
+					NOT = { has_character_flag = spn_order_auto_picks }
+				}
+				trigger_event = { id = spn_order.0150 days = 31 }
+			}
+			else = {
+				if = {
+					limit = { NOT = { has_character_flag = spn_order_auto_picks } }
+					send_interface_toast = {
+						type = event_toast_text_neutral
+						title = spn_order_toast_rite_busy
+						desc = spn_order_toast_rite_busy_desc
+					}
+				}
+				spn_order_masks_rite_effect = yes
+			}
+		}
+	}
+	immediate = {
+		spn_order_business_mark_effect = yes # 2.40 (WORK-ORDER-2.40 A3)
 	}
 	option = {
 		name = spn_order.0150.a
@@ -1244,6 +1402,31 @@ spn_order.0150 = {
 	}
 	option = {
 		name = spn_order.0150.d
+		custom_tooltip = spn_order.0150.d.tt # 2.40 (WORK-ORDER-2.40 pop-ups): what "Not this year" really does
+	}
+	# 2.40 (WORK-ORDER-2.40 A2): raise those named, and leave the temple to the masks from now on.
+	option = {
+		name = spn_order.0150.e
+		custom_tooltip = spn_order.0150.e.tt
+		add_character_flag = spn_order_auto_picks # identity state: the player's standing choice (the 2.38b flag)
+		if = {
+			limit = {
+				scope:spn_yr_to_medicum ?= {
+					is_alive = yes
+					var:spn_order_rank ?= flag:acolyte
+				}
+			}
+			spn_order_promote_effect = { WHO = scope:spn_yr_to_medicum }
+		}
+		if = {
+			limit = {
+				scope:spn_yr_to_magistratus ?= {
+					is_alive = yes
+					var:spn_order_rank ?= flag:medicum
+				}
+			}
+			spn_order_promote_effect = { WHO = scope:spn_yr_to_magistratus }
+		}
 	}
 }
 
@@ -1502,13 +1685,41 @@ spn_order.0160 = {
 		}
 	}
 }
+# 2.40 boot 3 (Thomas: "I picked every option and never saw anything happen"). The event names the relic and its keeper,
+# every option says in words what it does, and each has a visible result: Quiet It a toast, Listen a follow-up
+# (spn_order.2052, What the Relic Wanted: the relic's wish, learning experience, and a way to Ask to Borrow it), Leave It
+# Be a follow-up weeks later (spn_order.2053: it went quiet by itself, or another member quieted it and took the standing).
 spn_order.0161 = {
 	type = character_event
 	title = spn_order.0161.t
-	desc = spn_order.0161.desc
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					exists = scope:spn_hum_relic
+					exists = scope:spn_hum_keeper
+					NOT = { scope:spn_hum_keeper = root }
+				}
+				desc = spn_order.0161.desc_keeper
+			}
+			triggered_desc = {
+				trigger = { exists = scope:spn_hum_relic }
+				desc = spn_order.0161.desc_named
+			}
+			desc = spn_order.0161.desc
+		}
+	}
 	theme = witchcraft
 	override_background = { reference = magic_temple }
 	left_portrait = { character = root animation = interested }
+	right_portrait = {
+		character = scope:spn_hum_keeper
+		trigger = {
+			exists = scope:spn_hum_keeper
+			NOT = { scope:spn_hum_keeper = root }
+		}
+		animation = worry
+	}
 	trigger = {
 		is_alive = yes
 		spn_is_order_member_trigger = yes
@@ -1518,23 +1729,54 @@ spn_order.0161 = {
 	immediate = {
 		spn_flavor_mark_effect = yes # 2.39 (WORK-ORDER-2.39 F14): marks the flavor gate
 		add_character_flag = { flag = spn_cm_seen_0161 years = 10 } # 2.39 (WORK-ORDER-2.39 F14 V1): once in ten years
+		# Boot 3: which relic hums, and who keeps it (a member who pledged it, or a borrower). A magical item is likelier.
+		var:spn_order_chapter ?= {
+			random_in_list = {
+				variable = spn_order_reliquary
+				limit = { artifact_owner ?= { is_alive = yes } }
+				weight = {
+					base = 1
+					modifier = {
+						add = 2
+						has_variable = magic1
+					}
+				}
+				save_scope_as = spn_hum_relic
+			}
+		}
+		scope:spn_hum_relic ?= {
+			artifact_owner = { save_scope_as = spn_hum_keeper }
+		}
 	}
 	option = {
 		name = spn_order.0161.a
 		trigger = { has_trait = archmage }
+		custom_tooltip = spn_order.0161.a.tt
 		spend_minor_ps_effect = yes
 		spn_order_add_standing_effect = { VALUE = 5 }
+		send_interface_toast = {
+			type = event_toast_text_good
+			title = spn_order.0161.a.toast
+			desc = spn_order.0161.a.toast_desc
+			left_icon = root
+		}
+		ai_chance = { base = 50 }
 	}
 	# 2.39 (WORK-ORDER-2.39 F7): one who hears magic (Magical Senses, or a hide's Champion: spn_senses_magic_trigger,
 	# the ringing's own test) listens to the relic instead of forcing it quiet. Option a's standing, with no power spent.
 	option = {
 		name = spn_order.0161.listen
 		trigger = { spn_senses_magic_trigger = yes }
-		custom_tooltip = spn_order.0161.listen.tt
+		custom_tooltip = spn_order.0161.listen_tt # boot 3: a new key, so every language gets the new text
 		spn_order_add_standing_effect = { VALUE = 5 }
+		trigger_event = { id = spn_order.2052 days = { 2 5 } } # boot 3: What the Relic Wanted
+		ai_chance = { base = 50 }
 	}
 	option = {
 		name = spn_order.0161.b
+		custom_tooltip = spn_order.0161.b.tt
+		trigger_event = { id = spn_order.2053 days = { 20 45 } } # boot 3: the hum, weeks later
+		ai_chance = { base = 10 }
 	}
 }
 spn_order.0162 = {
@@ -1600,30 +1842,114 @@ spn_order.0163 = {
 		name = spn_order.0163.b
 		spn_order_add_standing_effect = { VALUE = 5 }
 	}
+	# 2.40 (WORK-ORDER-2.40 A10): four more answers, each by what he is. Outcomes in words only.
+	option = {
+		name = spn_order.0163.c
+		trigger = { has_trait = archmage }
+		custom_tooltip = spn_order.0163.c.tt
+		spend_minor_ps_effect = yes
+		spn_order_add_standing_effect = { VALUE = 5 }
+		scope:spn_q_tutee ?= { add_opinion = { target = root modifier = spn_tutor_opinion } }
+	}
+	option = {
+		name = spn_order.0163.d
+		trigger = {
+			OR = {
+				has_trait = patient
+				has_character_flag = spn_order_tutor_patient
+			}
+		}
+		custom_tooltip = spn_order.0163.d.tt
+		spn_order_add_standing_effect = { VALUE = -2 }
+		scope:spn_q_tutee ?= {
+			add_opinion = { target = root modifier = spn_tutor_opinion }
+			hidden_effect = {
+				if = {
+					limit = { exists = var:spn_order_taught_years }
+					change_variable = { name = spn_order_taught_years add = 1 }
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_order.0163.e
+		trigger = { diplomacy >= 12 }
+		custom_tooltip = spn_order.0163.e.tt
+		scope:spn_q_tutee ?= { add_opinion = { target = root modifier = respect_opinion opinion = 10 } }
+		if = {
+			limit = { exists = scope:spn_q_tutee }
+			add_opinion = { target = scope:spn_q_tutee modifier = respect_opinion opinion = 10 }
+		}
+	}
+	option = {
+		name = spn_order.0163.f
+		trigger = {
+			OR = {
+				has_trait = wrathful
+				has_trait = arrogant
+			}
+		}
+		custom_tooltip = spn_order.0163.f.tt
+		add_dread = minor_dread_gain
+		spn_order_add_standing_effect = { VALUE = 5 }
+		scope:spn_q_tutee ?= { add_opinion = { target = root modifier = disappointed_opinion opinion = -15 } }
+	}
 }
 
 # ==================================================================================================
 # EXPOSURE, RESPONDEO (§5.11, §5.12)
 # ==================================================================================================
-# .0170 -- One of Us Is Known. A player Temple Magus; scope:spn_ex_who (fired with no delay from the on_expose).
+# .0170 -- One of Us Is Known. A player Temple Magus; scope:spn_ex_who, scope:spn_ex_county (fired with no delay from the
+# on_expose). 2.40 (WORK-ORDER-2.40 G1): a real choice. Send the nearest Magistratus (or, for the Grand Magus, the nearest
+# Temple Magus) to speak Respondeo there, go himself, or let it lie. An exposure from before 2.40 has no county: go or lie.
 spn_order.0170 = {
 	type = character_event
 	title = spn_order.0170.t
-	desc = spn_order.0170.desc
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_ex_county }
+				desc = spn_order.0170.desc_county
+			}
+			desc = spn_order.0170.desc
+		}
+	}
 	theme = secret
 	override_background = { reference = magic_temple }
 	left_portrait = { character = root animation = rage }
 	right_portrait = { character = scope:spn_ex_who animation = worry }
+	lower_right_portrait = {
+		trigger = { exists = scope:spn_rs_agent }
+		character = scope:spn_rs_agent
+	}
 	trigger = {
 		is_alive = yes
 		exists = scope:spn_ex_who
 	}
+	immediate = {
+		if = {
+			limit = { exists = scope:spn_ex_county }
+			spn_order_respondeo_pick_agent_effect = { COUNTY = scope:spn_ex_county }
+		}
+	}
+	option = {
+		name = spn_order.0170.send
+		trigger = { exists = scope:spn_rs_agent }
+		custom_tooltip = spn_order.0170.send.tt
+		spn_order_respondeo_order_agent_effect = yes
+	}
 	option = {
 		name = spn_order.0170.a
+		custom_tooltip = spn_order.0170.a.tt
+	}
+	option = {
+		name = spn_order.0170.c
+		custom_tooltip = spn_order.0170.c.tt
 	}
 }
 
-# .0180 -- Respondeo. The caster.
+# .0180 -- Respondeo. The caster. 2.40 (WORK-ORDER-2.40 G1, B9): the ladder. A Powder (his own or the Reliquary's), the
+# temple's share, or his own power (standard now, not huge). The AI takes the first it can.
 spn_order.0180 = {
 	type = character_event
 	title = spn_order.0180.t
@@ -1634,20 +1960,28 @@ spn_order.0180 = {
 	trigger = {
 		is_alive = yes
 		spn_order_magistratus_plus_trigger = yes
+		exists = location.county
 	}
 	option = {
-		name = spn_order.0180.a
-		trigger = { can_spend_huge_ps_trigger = yes }
-		spend_huge_ps_effect = yes
-		spn_order_respondeo_effect = yes
-		ai_chance = { base = 50 }
+		name = spn_order.0180.a_powder
+		trigger = { spn_relic_can_spend_powder_trigger = yes }
+		spn_order_respondeo_use_powder_effect = yes
+		spn_order_respondeo_effect = { COUNTY = location.county }
+		ai_chance = { base = 100 }
 	}
 	option = {
 		name = spn_order.0180.b
 		trigger = { spn_order_respondeo_chapter_can_pay_trigger = yes }
 		spn_order_respondeo_chapter_pays_effect = yes
-		spn_order_respondeo_effect = yes
+		spn_order_respondeo_effect = { COUNTY = location.county }
 		ai_chance = { base = 50 }
+	}
+	option = {
+		name = spn_order.0180.a
+		trigger = { can_spend_standard_ps_trigger = yes }
+		spend_standard_ps_effect = yes
+		spn_order_respondeo_effect = { COUNTY = location.county }
+		ai_chance = { base = 10 }
 	}
 	option = {
 		name = spn_order.0180.c
@@ -1978,10 +2312,20 @@ spn_order.0800 = {
 # ==================================================================================================
 # v4 -- WORKINGS: THE ELEMENTAL TRANSFERENCE (§5.19)
 # ==================================================================================================
-# .0815 -- A Brother Is Dying. A player Temple Magus asked by a sick member; scope:spn_tr_asker.
+# .0815 -- A Brother Is Dying (or A Sister Is Dying). A player Temple Magus asked by a sick member; scope:spn_tr_asker.
+# 2.40 (WORK-ORDER-2.40 B7, G6, A3): the title follows the asker; the nine illnesses besides the deadly five; a head who
+# is busy (spn_order_player_free_trigger) is not asked: the masks answer as an AI head would, and he is told.
 spn_order.0815 = {
 	type = character_event
-	title = spn_order.0815.t
+	title = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_tr_asker ?= { is_female = yes } }
+				desc = spn_order.0815.t_sister
+			}
+			desc = spn_order.0815.t
+		}
+	}
 	desc = spn_order.0815.desc
 	theme = healthcare
 	override_background = { reference = magic_temple }
@@ -1991,7 +2335,31 @@ spn_order.0815 = {
 		is_alive = yes
 		scope:spn_tr_asker ?= {
 			is_alive = yes
-			spn_order_deadly_disease_trigger = yes
+			spn_transference_curable_trigger = yes # 2.40 (WORK-ORDER-2.40 B7 step 3)
+		}
+		spn_order_player_free_trigger = yes # 2.40 (WORK-ORDER-2.40 A3): not at war, not in an activity, not imprisoned
+	}
+	# 2.40 (WORK-ORDER-2.40 A3): busy, so the masks answer as an AI head would (the decision's own AI branch), and he is
+	# told. Nothing waits behind a war.
+	on_trigger_fail = {
+		if = {
+			limit = {
+				is_alive = yes
+				scope:spn_tr_asker ?= {
+					is_alive = yes
+					spn_transference_curable_trigger = yes
+					NOT = { exists = var:spn_transference_pending }
+					NOT = { exists = var:spn_transference_disease }
+				}
+				spn_transference_caster_trigger = yes
+				opinion = { target = scope:spn_tr_asker value >= 0 }
+			}
+			spn_transference_begin_effect = { CASTER = root PATIENT = scope:spn_tr_asker }
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = spn_order_toast_masks_heal
+				left_icon = scope:spn_tr_asker
+			}
 		}
 	}
 	option = {
@@ -2002,6 +2370,9 @@ spn_order.0815 = {
 	}
 	option = {
 		name = spn_order.0815.b
+		# 2.40 (WORK-ORDER-2.40 A3, B7 step 4): the same member does not ask again for five years.
+		scope:spn_tr_asker = { add_character_flag = { flag = spn_transference_refused years = 5 } }
+		custom_tooltip = spn_order.0815.b.tt
 		ai_chance = {
 			base = 40
 			modifier = { add = 30 has_trait = callous }
@@ -2022,6 +2393,7 @@ spn_order.0820 = {
 		is_alive = yes
 		exists = scope:spn_tb_caster
 		exists = scope:spn_tb_patient
+		spn_order_player_free_trigger = yes # 2.40 (WORK-ORDER-2.40 A3): a busy member is not asked; others carry it
 	}
 	option = {
 		# 2.39 (WORK-ORDER-2.39 F7): a creature says it in its own words; the option is the same.
@@ -2037,10 +2409,33 @@ spn_order.0820 = {
 			spn_transference_volunteer_ok_trigger = yes
 			scope:spn_tb_caster = {
 				var:spn_transference_patient ?= scope:spn_tb_patient
-				variable_list_size = { name = spn_transference_volunteers value < 5 }
+				OR = { # 2.40: the list does not exist before the first volunteer (2.38e)
+					NOT = { has_variable_list = spn_transference_volunteers }
+					variable_list_size = { name = spn_transference_volunteers value < 5 }
+				}
 			}
 		}
 		scope:spn_tb_caster = { add_to_variable_list = { name = spn_transference_volunteers target = root } }
+		add_character_flag = spn_transference_asked # 2.40 (WORK-ORDER-2.40 B7): a preference record, kept for good
+		custom_tooltip = spn_order.0820.a.tt
+	}
+	# 2.40 (WORK-ORDER-2.40 B7 step 2): carry it, and be asked whenever the temple needs blood.
+	option = {
+		name = spn_order.0820.willing
+		trigger = {
+			spn_transference_volunteer_ok_trigger = yes
+			scope:spn_tb_caster = {
+				var:spn_transference_patient ?= scope:spn_tb_patient
+				OR = { # the list does not exist before the first volunteer (2.38e)
+					NOT = { has_variable_list = spn_transference_volunteers }
+					variable_list_size = { name = spn_transference_volunteers value < 5 }
+				}
+			}
+		}
+		scope:spn_tb_caster = { add_to_variable_list = { name = spn_transference_volunteers target = root } }
+		add_character_flag = spn_transference_asked # a preference record, kept for good
+		add_character_flag = spn_transference_volunteers_willingly # his standing answer, until he says no
+		custom_tooltip = spn_order.0820.willing.tt
 	}
 	option = {
 		name = spn_order.0820.b
@@ -2048,7 +2443,10 @@ spn_order.0820 = {
 			scope:spn_tb_caster = {
 				OR = {
 					NOT = { var:spn_transference_patient ?= scope:spn_tb_patient }
-					NOT = { variable_list_size = { name = spn_transference_volunteers value < 5 } }
+					AND = { # 2.40: a missing list is an empty one
+						has_variable_list = spn_transference_volunteers
+						NOT = { variable_list_size = { name = spn_transference_volunteers value < 5 } }
+					}
 				}
 			}
 		}
@@ -2056,6 +2454,13 @@ spn_order.0820 = {
 	option = {
 		name = spn_order.0820.c
 		spn_order_add_standing_effect = { VALUE = -5 }
+		# 2.40 (WORK-ORDER-2.40 B7 step 2): he is not asked again.
+		add_character_flag = spn_transference_asked
+		if = {
+			limit = { has_character_flag = spn_transference_volunteers_willingly }
+			remove_character_flag = spn_transference_volunteers_willingly
+		}
+		custom_tooltip = spn_order.0820.c.tt
 	}
 }
 
@@ -2074,12 +2479,37 @@ spn_order.0821 = {
 		spn_transference_pick_one_effect = yes
 		spn_transference_pick_one_effect = yes
 		spn_transference_pick_one_effect = yes
+		# 2.40 (WORK-ORDER-2.40 B7, G6): then townsfolk, each family paid; one who is not paid for does not sign. Only
+		# when the patient and the caster can pay for every place left (review R2): nobody is paid for a Working that
+		# ends in Not Enough Blood.
+		save_scope_value_as = { name = spn_tt_needed value = spn_transference_town_needed_value }
+		save_scope_value_as = {
+			name = spn_tt_afford
+			value = {
+				value = spn_transference_caster_fees_value
+				if = { # the patient pays first, unless he is the caster
+					limit = { scope:spn_tw_patient = { NOT = { this = root } } }
+					add = scope:spn_tw_patient.spn_transference_fees_held_value
+				}
+			}
+		}
+		if = {
+			limit = {
+				scope:spn_tw_patient = { spn_transference_curable_trigger = yes }
+				scope:spn_tt_afford >= scope:spn_tt_needed
+			}
+			spn_transference_town_one_effect = yes
+			spn_transference_town_one_effect = yes
+			spn_transference_town_one_effect = yes
+			spn_transference_town_one_effect = yes
+			spn_transference_town_one_effect = yes
+		}
 		if = {
 			limit = {
 				variable_list_size = { name = spn_transference_volunteers value >= 5 }
 				scope:spn_tw_patient = {
 					is_alive = yes
-					spn_order_deadly_disease_trigger = yes
+					spn_transference_curable_trigger = yes # 2.40 (WORK-ORDER-2.40 B7 step 3)
 				}
 			}
 			trigger_event = spn_order.0823
@@ -2118,7 +2548,13 @@ spn_order.0822 = {
 spn_order.0823 = {
 	type = character_event
 	title = spn_order.0823.t
-	desc = spn_order.0823.desc
+	desc = {
+		desc = spn_order.0823.desc
+		triggered_desc = { # 2.40 (WORK-ORDER-2.40 G6): paid townsfolk stand in the circle
+			trigger = { has_variable = spn_transference_town_count }
+			desc = spn_order.0823.desc_town
+		}
+	}
 	theme = witchcraft
 	override_background = { reference = magic_temple }
 	left_portrait = { character = root animation = personality_rational }
@@ -2173,6 +2609,15 @@ spn_order.0823 = {
 		trigger = { can_spend_standard_ps_trigger = yes }
 		spend_standard_ps_effect = yes
 		custom_tooltip = spn_transference_lean_tt
+		if = { # 2.40 (WORK-ORDER-2.40 G5 step 4)
+			limit = {
+				scope:spn_tw_patient = {
+					has_variable = spn_fors_price_paid
+					has_trait = cancer
+				}
+			}
+			custom_tooltip = spn_order_fors_broken_tt
+		}
 		hidden_effect = {
 			random = {
 				chance = spn_transference_chance_value
@@ -2207,13 +2652,27 @@ spn_order.0823 = {
 spn_order.0824 = {
 	type = character_event
 	title = spn_order.0824.t
-	desc = spn_order.0824.desc
+	desc = {
+		desc = spn_order.0824.desc
+		triggered_desc = { # 2.40 (WORK-ORDER-2.40 G6): he paid the townsfolk's families
+			trigger = { has_variable = spn_transference_patient_paid }
+			desc = spn_order.0824.desc_paid
+		}
+		triggered_desc = { # 2.40 (WORK-ORDER-2.40 G5 step 4): the spell went with the cancer
+			trigger = { exists = scope:spn_tw_fors_broken }
+			desc = spn_order.0824.desc_fors
+		}
+	}
 	theme = healthcare
 	override_background = { reference = bedchamber }
 	left_portrait = { character = root animation = happiness }
 	trigger = { is_alive = yes }
 	option = {
 		name = spn_order.0824.a
+		if = {
+			limit = { exists = scope:spn_tw_fors_broken }
+			custom_tooltip = spn_order_fors_broken_tt
+		}
 	}
 }
 
@@ -2281,6 +2740,7 @@ spn_order.0827 = {
 					limit = {
 						scope:spn_rv_killer ?= { spn_is_wolf_trigger = yes }
 						var:spn_order_chapter ?= { story_owner = { is_ai = no } }
+						NOT = { var:spn_order_chapter.story_owner = scope:spn_rv_killer } # 2.40 (WORK-ORDER-2.40 C2): 
 					}
 					var:spn_order_chapter.story_owner = {
 						save_scope_as = spn_od_head
@@ -2301,6 +2761,13 @@ spn_order.0828 = {
 		triggered_desc = {
 			trigger = { scope:spn_rv_killer ?= { spn_is_wolf_trigger = yes } }
 			desc = spn_order.0828.desc_wolf
+		}
+		triggered_desc = { # 2.40 (WORK-ORDER-2.40 G5 step 4)
+			trigger = {
+				has_variable = spn_fors_lost_to_cure
+				has_trait = cancer
+			}
+			desc = spn_order.0828.desc_fors
 		}
 	}
 	theme = healthcare
@@ -2333,7 +2800,17 @@ spn_order.0829 = {
 		trigger = { exists = scope:spn_wolf_killer }
 		animation = menacing
 	}
-	trigger = { is_alive = yes }
+	trigger = {
+		is_alive = yes
+		# 2.40 (WORK-ORDER-2.40 C2): backstop: never the killer himself (the immediate below picks the same scope)
+		trigger_if = {
+			limit = { exists = scope:spn_rv_killer }
+			NOT = { scope:spn_rv_killer = root }
+		}
+		trigger_else = {
+			NOT = { scope:killer ?= root }
+		}
+	}
 	immediate = {
 		if = {
 			limit = { exists = scope:spn_rv_killer }
@@ -2356,6 +2833,35 @@ spn_order.0829 = {
 		if = {
 			limit = { exists = scope:spn_wk_target }
 			add_opinion = { target = scope:spn_wk_target modifier = spn_blood_debt_opinion }
+			# 2.40 (WORK-ORDER-2.40 C2): the temple remembers: every living member takes the debt, and the two houses (his,
+			# and the killer's alpha's, or the killer's own if he runs alone) step down.
+			custom_tooltip = spn_order.0829.b.tt
+			hidden_effect = {
+				var:spn_order_chapter ?= {
+					every_in_list = {
+						variable = spn_order_members
+						limit = {
+							is_alive = yes
+							NOT = { this = root }
+							NOT = { this = scope:spn_wk_target }
+						}
+						add_opinion = { target = scope:spn_wk_target modifier = spn_blood_debt_opinion }
+					}
+				}
+				if = {
+					limit = { scope:spn_wk_target.var:spn_pack ?= { exists = story_owner } }
+					scope:spn_wk_target.var:spn_pack.story_owner = { save_scope_as = spn_wk_alpha }
+				}
+				else = {
+					scope:spn_wk_target = { save_scope_as = spn_wk_alpha }
+				}
+				spn_pack_house_step_effect = {
+					A = root
+					B = scope:spn_wk_alpha
+					VALUE = house_relation_damage_medium_value
+					REASON = spn_blood_debt
+				}
+			}
 		}
 	}
 	# 2.39 (WORK-ORDER-2.39 F7): a wolf Temple Magus knows the killer's scent and learns his wolf secret. Shown on open
@@ -2609,11 +3115,25 @@ spn_order.0840 = {
 	trigger = {
 		is_alive = yes
 		NOT = { has_character_modifier = spn_fors_factorum_modifier }
+		# 2.40 (WORK-ORDER-2.40 G5): re-checked when it arrives (the research road sends it 7 days later): his rank, the
+		# letter, no cancer (the spell will not take a body that carries its price), five years since the last casting.
+		spn_order_fors_eligible_trigger = yes
+		spn_order_fors_castable_trigger = yes
 	}
 	option = {
 		name = spn_order.0840.a
 		add_character_modifier = spn_fors_factorum_modifier
-		trigger_event = { id = spn_order.0841 days = { 1095 3650 } }
+		# 2.40 (WORK-ORDER-2.40 G5): two to five free years, then the price, once (.0841). The flag is the five years
+		# between castings; a price paid for an earlier casting is cleared (a new casting, a new price).
+		hidden_effect = {
+			if = {
+				limit = { has_variable = spn_fors_price_paid }
+				remove_variable = spn_fors_price_paid
+			}
+			add_character_flag = { flag = spn_fors_cast_cd years = 5 }
+		}
+		custom_tooltip = spn_order.0840.a.tt
+		trigger_event = { id = spn_order.0841 days = { 730 1825 } }
 		ai_chance = { base = 100 }
 	}
 	option = {
@@ -2622,24 +3142,28 @@ spn_order.0840 = {
 	}
 }
 
-# .0841 -- (hidden) the price. While the spell lasts, it comes back, three to ten years apart (§22.1 row 5).
+# .0841 -- (hidden) the price. 2.40 (WORK-ORDER-2.40 G5): it comes ONCE. The spell stays, and casting stays free while
+# the cancer is in the body (spn_casts_without_price_trigger); the watch (.2200) ends the spell when the cancer goes.
+# A save's old chain (one re-scheduled under 2.39) runs this body once and stops: the price is then paid.
 spn_order.0841 = {
 	type = character_event
 	hidden = yes
 	trigger = {
 		is_alive = yes
 		has_character_modifier = spn_fors_factorum_modifier
+		NOT = { has_variable = spn_fors_price_paid }
 	}
 	immediate = {
 		if = {
 			limit = { NOT = { has_trait = cancer } }
 			add_trait = cancer
-			if = {
-				limit = { is_ai = no }
-				trigger_event = spn_order.0842
-			}
 		}
-		trigger_event = { id = spn_order.0841 days = { 1095 3650 } }
+		set_variable = spn_fors_price_paid # identity state until the spell ends (spn_order_fors_end_effect)
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_order.0842
+		}
+		trigger_event = { id = spn_order.2200 days = 90 }
 	}
 }
 
@@ -3022,65 +3546,174 @@ spn_order.0975 = {
 }
 
 # .0108 -- A Name for the Rose (2.38b, DESIGN-2.38b §6). A player Temple Magus decides whether his temple calls the
-# Selection's pick. scope:spn_sel_pick, scope:spn_sel_ch from the Selection.
+# Selection's picks. 2.40 (WORK-ORDER-2.40 A3): once a year, with up to three names, collected by the Selection in his
+# chapter's list spn_order_rose_names (spn_order_rose_queue_effect). A caller that still passes one name as
+# scope:spn_sel_pick (an event queued before 2.40, or any other sender) is folded into the list. A busy player, or one who
+# has left the temple to the masks, gets the masks' default (every name sent) and a toast; a second piece of Order
+# business inside 30 days waits and asks again.
 spn_order.0108 = {
 	type = character_event
 	title = spn_order.0108.t
-	desc = spn_order.0108.desc
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_rose_3 }
+				desc = spn_order.0108.desc_three
+			}
+			triggered_desc = {
+				trigger = { exists = scope:spn_rose_2 }
+				desc = spn_order.0108.desc_two
+			}
+			desc = spn_order.0108.desc_one
+		}
+	}
 	theme = learning
 	override_background = { reference = study }
 	left_portrait = { character = root animation = thinking }
-	right_portrait = { character = scope:spn_sel_pick animation = idle }
+	right_portrait = {
+		character = scope:spn_rose_1
+		trigger = { exists = scope:spn_rose_1 }
+		animation = idle
+	}
+	lower_left_portrait = {
+		character = scope:spn_rose_2
+		trigger = { exists = scope:spn_rose_2 }
+	}
+	lower_right_portrait = {
+		character = scope:spn_rose_3
+		trigger = { exists = scope:spn_rose_3 }
+	}
 	trigger = {
 		is_alive = yes
+		is_ai = no
 		spn_is_temple_magus_trigger = yes
+		spn_order_rose_waiting_trigger = yes
+		spn_order_player_free_trigger = yes
+		spn_order_business_ready_trigger = yes
+		NOT = { has_character_flag = spn_order_auto_picks }
+	}
+	on_trigger_fail = {
+		if = {
+			limit = {
+				is_alive = yes
+				spn_is_temple_magus_trigger = yes
+				spn_order_rose_waiting_trigger = yes
+			}
+			# Only the 30-day spacing stood in the way: ask again when it has passed.
+			if = {
+				limit = {
+					is_ai = no
+					spn_order_player_free_trigger = yes
+					NOT = { has_character_flag = spn_order_auto_picks }
+				}
+				trigger_event = { id = spn_order.0108 days = 31 }
+			}
+			# Busy, or the masks run the temple now (or its head is no longer a player): they send every note, and tell him.
+			else = {
+				spn_order_rose_masks_effect = yes
+			}
+		}
+		# He handed the temple on while the question waited: it goes to the new Temple Magus.
+		else_if = {
+			limit = {
+				is_alive = yes
+				spn_is_temple_magus_trigger = no
+				var:spn_order_chapter ?= {
+					exists = var:spn_order_rose_queued
+					NOT = { story_owner = root }
+				}
+			}
+			var:spn_order_chapter.story_owner = { trigger_event = { id = spn_order.0108 days = 1 } }
+		}
+	}
+	immediate = {
+		spn_order_business_mark_effect = yes
+		var:spn_order_chapter = { save_scope_as = spn_rose_ch }
 		scope:spn_sel_pick ?= {
-			is_alive = yes
-			NOT = { exists = var:spn_order_chapter }
+			if = {
+				limit = {
+					spn_order_rose_valid_trigger = yes
+					NOT = { scope:spn_rose_ch = { is_target_in_variable_list = { name = spn_order_rose_names target = prev } } }
+				}
+				scope:spn_rose_ch = { add_to_variable_list = { name = spn_order_rose_names target = prev } }
+			}
+		}
+		scope:spn_rose_ch = {
+			ordered_in_list = {
+				variable = spn_order_rose_names
+				limit = { spn_order_rose_valid_trigger = yes }
+				order_by = spn_order_candidate_score_value
+				position = 0
+				save_scope_as = spn_rose_1
+			}
+			ordered_in_list = {
+				variable = spn_order_rose_names
+				limit = { spn_order_rose_valid_trigger = yes }
+				order_by = spn_order_candidate_score_value
+				position = 1
+				save_scope_as = spn_rose_2
+			}
+			ordered_in_list = {
+				variable = spn_order_rose_names
+				limit = { spn_order_rose_valid_trigger = yes }
+				order_by = spn_order_candidate_score_value
+				position = 2
+				save_scope_as = spn_rose_3
+			}
 		}
 	}
+	# One name: send it.
 	option = {
-		name = spn_order.0108.a
-		custom_tooltip = spn_order.0108.a.tt
-		scope:spn_sel_pick = {
-			# 2.39 (final pass, 17 Oct): the note comes 30-300 days from now: the pick's marks last a year from this answer
-			if = {
-				limit = { has_character_flag = spn_order_picked }
-				remove_character_flag = spn_order_picked
-			}
-			add_character_flag = { flag = spn_order_picked years = 1 }
-			if = {
-				limit = { exists = scope:spn_sel_ch }
-				set_variable = { name = spn_order_picker value = scope:spn_sel_ch years = 1 }
-			}
-			spn_order_send_note_effect = yes
-		}
+		name = spn_order.0108.send_one
+		trigger = { NOT = { exists = scope:spn_rose_2 } }
+		custom_tooltip = spn_order.0108.send_tt
+		scope:spn_rose_1 ?= { spn_order_rose_send_effect = { CH = scope:spn_rose_ch } }
+	}
+	# Several: send them all.
+	option = {
+		name = spn_order.0108.send_all
+		trigger = { exists = scope:spn_rose_2 }
+		custom_tooltip = spn_order.0108.send_tt
+		scope:spn_rose_1 ?= { spn_order_rose_send_effect = { CH = scope:spn_rose_ch } }
+		scope:spn_rose_2 ?= { spn_order_rose_send_effect = { CH = scope:spn_rose_ch } }
+		scope:spn_rose_3 ?= { spn_order_rose_send_effect = { CH = scope:spn_rose_ch } }
+	}
+	# Several: only the masks' first choice.
+	option = {
+		name = spn_order.0108.only
+		trigger = { exists = scope:spn_rose_2 }
+		custom_tooltip = spn_order.0108.send_tt
+		custom_tooltip = spn_order.0108.only_tt
+		scope:spn_rose_1 ?= { spn_order_rose_send_effect = { CH = scope:spn_rose_ch } }
+		scope:spn_rose_2 ?= { spn_order_rose_pass_effect = yes }
+		scope:spn_rose_3 ?= { spn_order_rose_pass_effect = yes }
+	}
+	# None this year.
+	option = {
+		name = spn_order.0108.none_one
+		trigger = { NOT = { exists = scope:spn_rose_2 } }
+		custom_tooltip = spn_order.0108.none_one_tt
+		scope:spn_rose_1 ?= { spn_order_rose_pass_effect = yes }
 	}
 	option = {
-		name = spn_order.0108.b
-		custom_tooltip = spn_order.0108.b.tt
-		scope:spn_sel_pick = {
-			remove_variable = spn_order_picker
-			add_character_flag = { flag = spn_order_passed_over years = 5 }
-		}
+		name = spn_order.0108.none_all
+		trigger = { exists = scope:spn_rose_2 }
+		custom_tooltip = spn_order.0108.none_all_tt
+		scope:spn_rose_1 ?= { spn_order_rose_pass_effect = yes }
+		scope:spn_rose_2 ?= { spn_order_rose_pass_effect = yes }
+		scope:spn_rose_3 ?= { spn_order_rose_pass_effect = yes }
 	}
+	# Send them, and let the masks run the temple from now on.
 	option = {
-		name = spn_order.0108.c
-		custom_tooltip = spn_order.0108.c.tt
-		add_character_flag = spn_order_auto_picks
-		scope:spn_sel_pick = {
-			# 2.39 (final pass, 17 Oct): the note comes 30-300 days from now: the pick's marks last a year from this answer
-			if = {
-				limit = { has_character_flag = spn_order_picked }
-				remove_character_flag = spn_order_picked
-			}
-			add_character_flag = { flag = spn_order_picked years = 1 }
-			if = {
-				limit = { exists = scope:spn_sel_ch }
-				set_variable = { name = spn_order_picker value = scope:spn_sel_ch years = 1 }
-			}
-			spn_order_send_note_effect = yes
-		}
+		name = spn_order.0108.masks
+		custom_tooltip = spn_order.0108.masks_tt
+		add_character_flag = spn_order_auto_picks # identity state: the player's standing choice (the 2.38b flag)
+		scope:spn_rose_1 ?= { spn_order_rose_send_effect = { CH = scope:spn_rose_ch } }
+		scope:spn_rose_2 ?= { spn_order_rose_send_effect = { CH = scope:spn_rose_ch } }
+		scope:spn_rose_3 ?= { spn_order_rose_send_effect = { CH = scope:spn_rose_ch } }
+	}
+	after = {
+		spn_order_rose_clear_effect = yes
 	}
 }
 
@@ -3093,6 +3726,10 @@ spn_order.0090 = {
 	title = spn_order.0090.t
 	desc = {
 		first_valid = {
+			triggered_desc = { # 2.40 (WORK-ORDER-2.40 G3): the rumour as the answer to Seek Out the Order
+				trigger = { has_character_flag = spn_order_sought_answer }
+				desc = spn_order.0090.desc_sought
+			}
 			# 2.39 (WORK-ORDER-2.39 F15): a lord who holds a Collegium's county hears it in the show's own words.
 			triggered_desc = {
 				trigger = {
@@ -3287,12 +3924,12 @@ spn_order.0320 = {
 	override_background = { reference = study }
 	left_portrait = { character = root animation = thinking }
 	right_portrait = {
-		trigger = { this = scope:spn_tp_tutee }
+		trigger = { root = scope:spn_tp_tutee } # 2.40 (WORK-ORDER-2.40 A9): root, not this
 		character = scope:spn_tp_tutor
 		animation = personality_rational
 	}
 	lower_right_portrait = {
-		trigger = { this = scope:spn_tp_tutor }
+		trigger = { root = scope:spn_tp_tutor } # 2.40 (WORK-ORDER-2.40 A9): root, not this
 		character = scope:spn_tp_tutee
 	}
 	trigger = {
@@ -3321,12 +3958,20 @@ spn_order.0320 = {
 		trigger = { this = scope:spn_tp_tutor }
 		custom_tooltip = spn_order.0141.a_tt
 		add_character_flag = spn_order_tutor_strict
+		if = { # 2.40 (WORK-ORDER-2.40 A9): one way of teaching at a time
+			limit = { has_character_flag = spn_order_tutor_patient }
+			remove_character_flag = spn_order_tutor_patient
+		}
 	}
 	option = {
 		name = spn_order.0320.d
 		trigger = { this = scope:spn_tp_tutor }
 		custom_tooltip = spn_order.0141.b_tt
 		add_character_flag = spn_order_tutor_patient
+		if = { # 2.40 (WORK-ORDER-2.40 A9): one way of teaching at a time
+			limit = { has_character_flag = spn_order_tutor_strict }
+			remove_character_flag = spn_order_tutor_strict
+		}
 	}
 }
 
@@ -3426,12 +4071,12 @@ spn_order.0322 = {
 	override_background = { reference = magic_academy_lib }
 	left_portrait = { character = root animation = thinking }
 	right_portrait = {
-		trigger = { this = scope:spn_tp_tutee }
+		trigger = { root = scope:spn_tp_tutee } # 2.40 (WORK-ORDER-2.40 A9): root, not this
 		character = scope:spn_tp_tutor
 		animation = personality_rational
 	}
 	lower_right_portrait = {
-		trigger = { this = scope:spn_tp_tutor }
+		trigger = { root = scope:spn_tp_tutor } # 2.40 (WORK-ORDER-2.40 A9): root, not this
 		character = scope:spn_tp_tutee
 	}
 	trigger = {
@@ -3449,16 +4094,10 @@ spn_order.0322 = {
 		name = spn_order.0322.a
 		custom_tooltip = spn_order.0322.a.tt
 		scope:spn_tp_tutor = {
-			if = {
-				limit = { involved_activity ?= { has_activity_type = magical_research } }
-				add_character_flag = { flag = spn_order_research_help years = 2 }
-			}
+			spn_order_research_progress_effect = yes # 2.40 (WORK-ORDER-2.40 B11): progress now, not a flag at the end
 		}
 		scope:spn_tp_tutee = {
-			if = {
-				limit = { involved_activity ?= { has_activity_type = magical_research } }
-				add_character_flag = { flag = spn_order_research_help years = 2 }
-			}
+			spn_order_research_progress_effect = yes # 2.40 (WORK-ORDER-2.40 B11): progress now, not a flag at the end
 			spn_order_add_standing_effect = { VALUE = 5 }
 			add_learning_lifestyle_xp = minor_lifestyle_xp
 		}
@@ -3486,12 +4125,12 @@ spn_order.0323 = {
 	override_background = { reference = study }
 	left_portrait = { character = root animation = happiness }
 	right_portrait = {
-		trigger = { this = scope:spn_tp_tutee }
+		trigger = { root = scope:spn_tp_tutee } # 2.40 (WORK-ORDER-2.40 A9): root, not this
 		character = scope:spn_tp_tutor
 		animation = admiration
 	}
 	lower_right_portrait = {
-		trigger = { this = scope:spn_tp_tutor }
+		trigger = { root = scope:spn_tp_tutor } # 2.40 (WORK-ORDER-2.40 A9): root, not this
 		character = scope:spn_tp_tutee
 	}
 	trigger = {
@@ -3526,12 +4165,12 @@ spn_order.0324 = {
 	override_background = { reference = study }
 	left_portrait = { character = root animation = flirtation }
 	right_portrait = {
-		trigger = { this = scope:spn_tp_tutee }
+		trigger = { root = scope:spn_tp_tutee } # 2.40 (WORK-ORDER-2.40 A9): root, not this
 		character = scope:spn_tp_tutor
 		animation = flirtation
 	}
 	lower_right_portrait = {
-		trigger = { this = scope:spn_tp_tutor }
+		trigger = { root = scope:spn_tp_tutor } # 2.40 (WORK-ORDER-2.40 A9): root, not this
 		character = scope:spn_tp_tutee
 	}
 	trigger = {
@@ -3596,7 +4235,7 @@ spn_order.0330 = {
 	option = {
 		name = spn_order.0330.a
 		custom_tooltip = spn_order.0330.a.tt
-		add_character_flag = { flag = spn_order_research_help years = 2 }
+		spn_order_research_progress_effect = yes # 2.40 (WORK-ORDER-2.40 B11): an event still queued from 2.39
 	}
 }
 
@@ -3707,5 +4346,12 @@ spn_order.0861 = {
 		name = spn_order.0861.b
 		trigger = { NOT = { exists = scope:spn_cw_golem } }
 		add_stress = medium_stress_gain
+	}
+	# 2.40 (WORK-ORDER-2.40 D4): its name, its upgrade and its calibration, Witchcraft's way (spn_order.2301, .2302).
+	after = {
+		if = {
+			limit = { exists = scope:spn_cw_golem }
+			trigger_event = { id = spn_order.2301 days = 3 }
+		}
 	}
 }

@@ -1,0 +1,379 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40, package Q4): the Fors Factorum, the Elemental Transference, the Vade Maecum's page
+# hunt. House rules: bank before anything irreversible; every create_story / create_character is followed by an exists
+# guard; saved scopes a loop reuses are cleared at the end of each pass.
+
+# ==================================================================================================
+# B3 + B4 "YOU NOW KNOW WHO HOLDS IT" (the one shared effect, used by every naming route)
+# ==================================================================================================
+# The learner (this scope) gains a personal claim on every page and on the book that $HOLDER$ holds today
+# (WORK-ORDER-2.40 B3 step 1, B4). A claim is what opens vanilla's Steal Back Artifact scheme and vanilla's claim war,
+# against anyone, the Pope included. A destroyed or burned page takes its claims with it. Never a claim on his own items.
+spn_vade_claim_holder_items_effect = {
+	save_scope_as = spn_lh_learner
+	$HOLDER$ = { save_scope_as = spn_lh_holder }
+	if = {
+		limit = {
+			scope:spn_lh_holder = {
+				is_alive = yes
+				NOT = { this = scope:spn_lh_learner }
+			}
+		}
+		# Hidden: an option's preview must not name the item before he chooses; each caller says it in its own words.
+		hidden_effect = {
+			scope:spn_lh_holder = {
+				every_character_artifact = {
+					limit = {
+						OR = {
+							has_variable = spn_vade_page
+							has_variable = spn_vade_book
+						}
+						NOT = { scope:spn_lh_learner = { has_personal_artifact_claim = prev } }
+					}
+					save_scope_as = spn_lh_art
+					scope:spn_lh_learner = { add_personal_artifact_claim = scope:spn_lh_art }
+				}
+			}
+		}
+	}
+}
+
+# This scope learns who holds a page or the book: the record the AI reads (spn_knows_page_holder, 10 years, as before), the
+# Order's deed for the Book (members only, as before), and the claim. Called by It Wants to Be Whole's successor (The Hide
+# Finds a Page), spn_vade_name_a_holder_effect (The Pages Answer, What the Golem Found, the Order's favor, A Name in Your
+# Notes), It Shows You Where, the Necrophone and the Ringing.
+spn_vade_learn_holder_effect = {
+	$HOLDER$ = { save_scope_as = spn_lh_named }
+	set_variable = { name = spn_knows_page_holder value = scope:spn_lh_named years = 10 }
+	spn_order_deed_heard_effect = yes
+	spn_vade_claim_holder_items_effect = { HOLDER = scope:spn_lh_named }
+}
+
+# ==================================================================================================
+# G5 THE FORS FACTORUM
+# ==================================================================================================
+# The Fors Factorum ends (WORK-ORDER-2.40 G5 step 3): the watch found the price gone from his body, the Transference drew
+# it out, or he left the Order by Pulveris. The cancer is not touched here.
+spn_order_fors_end_effect = {
+	if = {
+		limit = { has_character_modifier = spn_fors_factorum_modifier }
+		remove_character_modifier = spn_fors_factorum_modifier
+	}
+	if = {
+		limit = { has_variable = spn_fors_price_paid }
+		remove_variable = spn_fors_price_paid
+	}
+}
+
+# ==================================================================================================
+# B7 + G6 THE ELEMENTAL TRANSFERENCE: PAID TOWNSFOLK
+# ==================================================================================================
+# One townsperson signs for the Working, if someone pays his family (WORK-ORDER-2.40 B7 step 2, G6 step 1). Root: the
+# caster (.0821); scope:spn_tw_patient. The patient pays (it is his life), else the caster: a player caster from any
+# purse that holds the fee, an AI caster only from one three fees deep. Nobody pays: nobody signs, and the Working runs
+# with fewer (the chance value already reads the count).
+spn_transference_town_one_effect = {
+	if = {
+		limit = {
+			OR = { # the list does not exist before the first volunteer (2.38e)
+				NOT = { has_variable_list = spn_transference_volunteers }
+				variable_list_size = { name = spn_transference_volunteers value < 5 }
+			}
+			scope:spn_tw_patient ?= { is_alive = yes }
+		}
+		save_scope_as = spn_tt_caster
+		if = {
+			limit = {
+				scope:spn_tw_patient = {
+					NOT = { this = scope:spn_tt_caster }
+					gold >= spn_transference_fee_value
+				}
+			}
+			scope:spn_tw_patient = { save_scope_as = spn_tt_payer }
+		}
+		else_if = {
+			limit = {
+				OR = {
+					AND = {
+						is_ai = no
+						gold >= spn_transference_fee_value
+					}
+					AND = {
+						is_ai = yes
+						gold >= spn_transference_ai_reserve_value
+					}
+				}
+			}
+			save_scope_as = spn_tt_payer
+		}
+		if = {
+			limit = { exists = scope:spn_tt_payer }
+			# The town is his capital's, else wherever he stands.
+			if = {
+				limit = { exists = capital_province }
+				capital_province = { save_scope_as = spn_tt_prov }
+			}
+			else_if = {
+				limit = { exists = location }
+				location = { save_scope_as = spn_tt_prov }
+			}
+			if = {
+				limit = { exists = scope:spn_tt_prov }
+				random_pool_character = {
+					province = scope:spn_tt_prov
+					limit = {
+						spn_transference_townsfolk_ok_trigger = yes
+						NOT = { this = scope:spn_tw_patient }
+						NOT = { scope:spn_tt_caster = { is_target_in_variable_list = { name = spn_transference_volunteers target = prev } } }
+					}
+					save_scope_as = spn_tt_one
+				}
+				if = {
+					limit = { NOT = { exists = scope:spn_tt_one } }
+					# Nobody waiting in the town's inns: a townsperson of the caster's own people steps forward.
+					create_character = {
+						template = generic_peasant_character
+						location = scope:spn_tt_prov
+						age = { 18 45 }
+						save_scope_as = spn_tt_one
+					}
+				}
+			}
+			if = {
+				limit = { exists = scope:spn_tt_one }
+				add_to_variable_list = { name = spn_transference_volunteers target = scope:spn_tt_one }
+				spn_transference_pay_family_effect = { CARRIER = scope:spn_tt_one PAYER = scope:spn_tt_payer }
+				# Counted for the Working's own text (.0823): townsfolk stand in the circle. 60 days, the Working's span.
+				if = {
+					limit = { NOT = { has_variable = spn_transference_town_count } }
+					set_variable = { name = spn_transference_town_count value = 0 days = 60 }
+				}
+				change_variable = { name = spn_transference_town_count add = 1 }
+				if = {
+					limit = { scope:spn_tt_payer = scope:spn_tw_patient }
+					scope:spn_tw_patient = { set_variable = { name = spn_transference_patient_paid value = yes days = 60 } }
+				}
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_tt_one }
+			clear_saved_scope = spn_tt_one
+		}
+		if = {
+			limit = { exists = scope:spn_tt_payer }
+			clear_saved_scope = spn_tt_payer
+		}
+	}
+}
+
+# A townsperson's family is paid for his part (WORK-ORDER-2.40 G6 step 1). The payee is the head of his house when that
+# is someone else and alive, else his spouse, else the carrier himself; banked before any gold moves. The fee is the
+# PAYER's spn_transference_fee_value. His children under 16 are schooled as vanilla's "send to university" schools them
+# (the small extra, G6 step 2).
+spn_transference_pay_family_effect = {
+	$CARRIER$ = { save_scope_as = spn_tf_carrier }
+	$PAYER$ = { save_scope_as = spn_tf_payer }
+	scope:spn_tf_payer = { save_scope_value_as = { name = spn_tf_fee value = spn_transference_fee_value } }
+	scope:spn_tf_carrier = {
+		if = {
+			limit = {
+				house ?= {
+					house_head ?= {
+						is_alive = yes
+						NOT = { this = scope:spn_tf_carrier }
+					}
+				}
+			}
+			house.house_head = { save_scope_as = spn_tf_payee }
+		}
+		else_if = {
+			limit = { primary_spouse ?= { is_alive = yes } }
+			primary_spouse = { save_scope_as = spn_tf_payee }
+		}
+		else = {
+			save_scope_as = spn_tf_payee
+		}
+	}
+	if = {
+		limit = { NOT = { scope:spn_tf_payee = scope:spn_tf_payer } }
+		scope:spn_tf_payer = { remove_short_term_gold = scope:spn_tf_fee }
+		scope:spn_tf_payee = {
+			add_gold = scope:spn_tf_fee
+			add_opinion = {
+				target = scope:spn_tf_payer
+				modifier = spn_transference_paid_opinion
+			}
+		}
+	}
+	scope:spn_tf_carrier = {
+		every_child = {
+			limit = {
+				is_alive = yes
+				age < 16
+				NOT = { has_character_modifier = studying_at_university_modifier }
+			}
+			add_character_modifier = studying_at_university_modifier
+		}
+	}
+	clear_saved_scope = spn_tf_payee
+}
+
+# ==================================================================================================
+# B7 THE TRACKER (a Situation, the mod's story pattern: zz_spn_order_stories.txt)
+# ==================================================================================================
+# After a success (.0823). Root: the caster; scope:spn_tw_patient holds spn_transference_carriers and
+# spn_transference_disease already (spn_transference_succeed_effect). A player patient owns the tracker; a player caster
+# who is not the patient owns a mirror. AI characters own none (nobody could see it).
+spn_transference_story_start_effect = {
+	save_scope_as = spn_ts_caster
+	scope:spn_tw_patient ?= {
+		if = {
+			limit = {
+				is_ai = no
+				exists = var:spn_transference_disease
+			}
+			every_owned_story = {
+				limit = { story_type = story_spn_transference }
+				end_story = yes
+			}
+			create_story = {
+				type = story_spn_transference
+				save_scope_as = spn_ts_story
+			}
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_ts_story }
+		scope:spn_ts_story = {
+			set_variable = { name = spn_tr_caster_shown value = scope:spn_ts_caster }
+			set_variable = { name = spn_tr_disease value = scope:spn_tw_patient.var:spn_transference_disease }
+			set_variable = { name = spn_tr_until value = spn_transference_until_value }
+		}
+		scope:spn_tw_patient = {
+			every_in_list = {
+				variable = spn_transference_carriers
+				scope:spn_ts_story = { add_to_variable_list = { name = spn_tr_carriers target = prev } }
+			}
+		}
+	}
+	if = {
+		limit = {
+			scope:spn_ts_caster = {
+				is_ai = no
+				NOT = { this = scope:spn_tw_patient }
+			}
+			scope:spn_tw_patient ?= { exists = var:spn_transference_disease }
+		}
+		scope:spn_ts_caster = {
+			create_story = {
+				type = story_spn_transference_mirror
+				save_scope_as = spn_ts_mirror
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_ts_mirror }
+			scope:spn_ts_mirror = {
+				set_variable = { name = spn_tr_patient_shown value = scope:spn_tw_patient }
+				set_variable = { name = spn_tr_disease value = scope:spn_tw_patient.var:spn_transference_disease }
+				set_variable = { name = spn_tr_until value = spn_transference_until_value }
+			}
+			scope:spn_tw_patient = {
+				every_in_list = {
+					variable = spn_transference_carriers
+					scope:spn_ts_mirror = { add_to_variable_list = { name = spn_tr_carriers target = prev } }
+				}
+			}
+		}
+	}
+}
+
+# The Working unravelled (.0827). Patient scope, run before his record is cleared. The trackers' own 30-day check is the
+# backstop for the expiry and for a patient's death.
+spn_transference_story_end_effect = {
+	save_scope_as = spn_te_patient
+	every_owned_story = {
+		limit = { story_type = story_spn_transference }
+		end_story = yes
+	}
+	var:spn_transference_cast_by ?= {
+		every_owned_story = {
+			limit = {
+				story_type = story_spn_transference_mirror
+				var:spn_tr_patient_shown ?= scope:spn_te_patient
+			}
+			end_story = yes
+		}
+	}
+}
+
+# ==================================================================================================
+# REPAIR FOR THE RUNNING SAVE (WORK-ORDER-2.40 §4 item 2): once, behind a global flag
+# ==================================================================================================
+# Everyone who was already told who holds a page (var:spn_knows_page_holder) gains the claim 2.40 gives at the naming. No
+# deed, no new record: only the claim. A walk of the living, once per save (the 2.34a secret-knowers precedent).
+spn_vade_240_claims_repair_effect = {
+	set_global_variable = { name = spn_vade_240_claims_repaired value = yes }
+	if = {
+		limit = { NOT = { has_game_rule = spn_vade_off } }
+		every_living_character = {
+			limit = {
+				exists = var:spn_knows_page_holder
+				var:spn_knows_page_holder ?= { is_alive = yes }
+			}
+			spn_vade_claim_holder_items_effect = { HOLDER = var:spn_knows_page_holder }
+		}
+	}
+}
+
+# ==================================================================================================
+# Boot 2 (22 Oct, Thomas item a): THE RINGING'S CHAMPION OPTIONS, one body each. Follow the ringing, Let it ring for [name]
+# no more (magic_ev.4) and Go after them (magic_ev.44) are each written six times in events/ev1.txt, one per champion trait,
+# so each shows the champion's own hide as its reason (the option's `trait` and the first has_trait of its trigger). The
+# single 2.40 option showed "available because you have the Mage trait": the engine took the has_trait = archmage inside
+# spn_ringing_knows_source_trigger. Open conditions: spn_ringing_*_open_trigger (zz_spn_240_q4_triggers.txt).
+# Root: the champion who hears it; scope:magic_user: the caster.
+# ==================================================================================================
+# Follow the ringing (2.37, with B8's additions): the hide's duty pays a little (+2 bond); he knows this caster from now on;
+# a holder of the book is named to him (the claim) unless the hide spares him (G10). All banked before magic_ev.44 fires.
+spn_ringing_follow_effect = {
+	custom_tooltip = spn_ev4.0.ring.tt
+	add_character_flag = { flag = spn_hide_chased_ringing years = 1 }
+	spn_hide_add_bond_effect = { VALUE = 2 }
+	if = {
+		limit = { NOT = { is_target_in_variable_list = { name = spn_ringing_traced target = scope:magic_user } } }
+		add_to_variable_list = { name = spn_ringing_traced target = scope:magic_user }
+	}
+	if = {
+		limit = {
+			NOT = { has_game_rule = spn_vade_off }
+			NOT = { exists = global_var:spn_vade_destroyed }
+			scope:magic_user = {
+				spn_vade_holds_part_trigger = yes
+				NOT = { spn_vade_page_spared_trigger = { HEARER = root } }
+			}
+		}
+		hidden_effect = { spn_vade_learn_holder_effect = { HOLDER = scope:magic_user } }
+		custom_tooltip = spn_ev4.0.ring.book.tt
+	}
+	trigger_event = magic_ev.44
+}
+
+# Let it ring for [name] no more (B8): "Listen Again" (spn_ringing_listen_decision) undoes it. Silencing does not stop the
+# ring being counted (the event's immediate runs before any option).
+spn_ringing_silence_effect = {
+	custom_tooltip = spn_ev4.0.silence.tt
+	add_to_variable_list = { name = spn_ringing_silenced target = scope:magic_user }
+}
+
+# Go after them (2.37): creature against caster; never a death (the hide's rule C5).
+spn_ringing_go_effect = {
+	custom_tooltip = spn_ev4b.0.go.tt
+	save_scope_as = spn_ring_champion
+	spn_clash_lean_tooltip_effect = { A = ROOT B = scope:magic_user FORM = no }
+	spn_creature_clash_effect = {
+		A = ROOT
+		B = scope:magic_user
+		THEN = spn_hide_ringing_after_effect
+		FORM = no
+	}
+	clear_saved_scope = magic_user
+}

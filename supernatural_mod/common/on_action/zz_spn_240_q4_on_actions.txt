@@ -1,0 +1,37 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 §4 item 2, package Q4): the claims a named page holder now gives, for characters a
+# save from before 2.40 already told. on_game_start_after_lobby fires on every load (zz_spn_secret_knowers_on_actions.txt),
+# and the global variable keeps it to once per save. on_actions = { } sub-lists merge across files.
+
+on_game_start_after_lobby = {
+	on_actions = {
+		spn_vade_240_claims_repair
+	}
+}
+
+spn_vade_240_claims_repair = {
+	trigger = {
+		NOT = { has_global_variable = spn_vade_240_claims_repaired }
+	}
+	effect = {
+		spn_vade_240_claims_repair_effect = yes
+	}
+}
+
+# 2.40 boot 3: on_game_start_after_lobby fires when a game leaves the lobby, not when a single-player save is loaded
+# (Thomas's boot-3 autosave never got the global below). So the repair also runs from a player's first quarterly
+# pulse; the same global keeps it to once per save.
+quarterly_playable_pulse = {
+	on_actions = {
+		spn_vade_240_claims_repair_pulse
+	}
+}
+
+spn_vade_240_claims_repair_pulse = {
+	trigger = {
+		is_ai = no
+		NOT = { has_global_variable = spn_vade_240_claims_repaired }
+	}
+	effect = {
+		spn_vade_240_claims_repair_effect = yes
+	}
+}

@@ -41,9 +41,13 @@ spn_vade_create_page_effect = {
 			limit = { has_global_variable = spn_vade_page_$N$_lost_until }
 			remove_global_variable = spn_vade_page_$N$_lost_until
 		}
+		# 2.40 (boot 2): only page 4 is ever guarded by a hide (spn_vade_page_4_hide); no read of pages 1-3's, never set.
 		if = {
-			limit = { has_global_variable = spn_vade_page_$N$_hide }
-			remove_global_variable = spn_vade_page_$N$_hide
+			limit = {
+				scope:spn_new_page = { var:spn_vade_page = 4 }
+				has_global_variable = spn_vade_page_4_hide
+			}
+			remove_global_variable = spn_vade_page_4_hide
 		}
 		spn_vade_set_state_effect = { N = $N$ STATE = held }
 		# Creation fires no owner hook: count the four now (§12.6).
@@ -299,6 +303,7 @@ spn_vade_champion_hears_effect = {
 						NOT = { artifact_owner = scope:spn_ch_champ }
 						artifact_owner = { in_diplomatic_range = scope:spn_ch_champ }
 						NOT = { is_target_in_variable_list = { name = spn_page_heard_by target = scope:spn_ch_champ } }
+						NOT = { artifact_owner = { spn_vade_page_spared_trigger = { HEARER = scope:spn_ch_champ } } } # 2.40 (WORK-ORDER-2.40 G10)
 					}
 					add_to_variable_list = { name = spn_page_heard_by target = scope:spn_ch_champ }
 					add_to_temporary_list = spn_ch_heard_$HIDE$
@@ -1208,7 +1213,8 @@ spn_vade_step_felt_effect = {
 }
 
 # A random page's holder, named to whoever asks (The Pages Answer, What the Golem Found). Asker scope. The book's holder
-# first, then a held, unguarded page that is not his. Sets var:spn_knows_page_holder and saves scope:spn_named_holder.
+# first, then a held, unguarded page that is not his. Saves scope:spn_named_holder; 2.40 (WORK-ORDER-2.40 B3): what he
+# learns goes through spn_vade_learn_holder_effect (the record, the deed, and a claim on what the holder keeps).
 spn_vade_name_a_holder_effect = {
 	if = {
 		limit = {
@@ -1239,8 +1245,7 @@ spn_vade_name_a_holder_effect = {
 	}
 	if = {
 		limit = { exists = scope:spn_named_holder }
-		set_variable = { name = spn_knows_page_holder value = scope:spn_named_holder years = 10 }
-		spn_order_deed_heard_effect = yes
+		spn_vade_learn_holder_effect = { HOLDER = scope:spn_named_holder }
 	}
 }
 

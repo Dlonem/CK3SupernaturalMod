@@ -1,0 +1,83 @@
+﻿# Supernatural 2.40 boot 4 -- THE COMPELLED, a fourth puppet type. Package QC (agent COMPEL).
+# Compel Mortal (spn_compulsion, 10_spn_interactions.txt), when it takes, makes the mortal the vampire's Compelled puppet
+# for ONE command (common/puppets/types/zz_spn_240_compel_puppet_types.txt). These are its gates.
+# B6: nothing here reads another character's secret to show or hide a menu entry. The knowledge test at the bottom is
+# read only inside the aftermath event, about the compelled's own knowledge.
+
+# Root: the vampire. True Vampire: the last perk of the vampire tree (true_vampire_perk) or of the hybrid's vampire tree
+# (true_vampire_hybrid_perk, 00_hybrid_1_vampire_perks.txt). With it the compulsion costs 15, not 25 (Thomas's numbers).
+spn_compel_capstone_trigger = {
+	OR = {
+		has_perk = true_vampire_perk
+		has_perk = true_vampire_hybrid_perk
+	}
+}
+
+# Root: the vampire. Enough Vampirism to compel: 25, or 15 with True Vampire.
+spn_compel_can_pay_trigger = {
+	OR = {
+		has_trait_xp = { trait = supernatural_vampire track = vampirism value >= 25 }
+		has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 25 }
+		AND = {
+			spn_compel_capstone_trigger = yes
+			OR = {
+				has_trait_xp = { trait = supernatural_vampire track = vampirism value >= 15 }
+				has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 15 }
+			}
+		}
+	}
+}
+
+# Root: the vampire. AMOUNT more Vampirism, for the two commands that keep their old extra price.
+spn_compel_can_pay_extra_trigger = {
+	OR = {
+		has_trait_xp = { trait = supernatural_vampire track = vampirism value >= $AMOUNT$ }
+		has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= $AMOUNT$ }
+	}
+}
+
+# Interaction scope (Compel Mortal). The PLAYER's compulsion makes a puppet. A jailed vampire's only order is Release Me
+# (2.39 F16, unchanged), and the AI still sends one of the old commands, chosen by spn_compel_ai_choice_value (the AI does
+# not drive puppets; zz_spn_ai_command_values.txt, Thomas's cascade of 8 Sep 2026).
+spn_compel_makes_puppet_trigger = {
+	scope:actor = {
+		is_ai = no
+		is_imprisoned = no
+	}
+}
+
+# Interaction scope. Acting as the actor's own Compelled puppet (vanilla's link forms: puppet:<type>, pam_values.txt;
+# scope:puppet_or_actor, 00_character_interactions.txt). Used without acting as a puppet, puppet_or_actor is the actor
+# himself, who is never his own puppet, so nothing shows.
+spn_compel_verb_shown_trigger = {
+	exists = scope:puppet_or_actor
+	scope:actor.puppet:spn_compel_puppet ?= scope:puppet_or_actor
+}
+
+# Root: the would-be compelled. The aftermath's Wary, and the two months after any compulsion (the month it can be held,
+# and the days until someone tells them). No chain-compelling, by anyone.
+spn_compel_mind_open_trigger = {
+	NOT = { has_character_modifier = spn_compel_wary_modifier }
+	NOT = { has_character_flag = spn_compel_recent }
+}
+
+# Root: the compelled. Does he know what MASTER is (the open trait, or the secret he holds)? Only then does the aftermath
+# name the vampire (B6: the mod's own knowledge triggers, 10_spn_immortal_triggers.txt).
+spn_compel_knows_master_trigger = {
+	OR = {
+		spn_knows_about_character_being_vampire_trigger = { CHARACTER = $MASTER$ }
+		spn_knows_about_character_being_hybrid_trigger = { CHARACTER = $MASTER$ }
+	}
+}
+
+# Root: the compelled puppet, scope:puppeteer set (puppet decision). End Your Life is a death another player may care
+# about: vanilla's multiplayer murder rules (as spn_golem_order_mp_rules_trigger, Q7).
+spn_compel_end_life_mp_trigger = {
+	NAND = {
+		has_game_rule = no_player_families_multiplayer_murder_schemes
+		any_close_family_member = {
+			is_ai = no
+			this != scope:puppeteer
+		}
+	}
+}

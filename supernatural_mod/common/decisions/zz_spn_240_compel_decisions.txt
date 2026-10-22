@@ -1,0 +1,119 @@
+﻿# Supernatural 2.40 boot 4 -- THE COMPELLED: the two orders on its puppet card. Package QC (agent COMPEL).
+# Puppet decisions (zz_spn_240_compel_puppet_actions.txt): ROOT is the compelled, scope:puppeteer the vampire
+# (_puppet_actions.info). is_invisible = yes keeps them out of the decision list; they show on the puppet card only
+# (vanilla's holy-site decisions; Q7's golem orders). The AI never takes them (ai_check_interval = 0), and the AI holds no
+# Compelled puppet. New decisions use group spn_blood (BRIEF-240-boot2.md, Decision groups).
+
+# END YOUR LIFE. 2.39's last and dearest option, now a command on the card (an option the vampire chooses for the person
+# in front of him, not a menu line on his own portrait). It keeps its old price: 60 more Vampirism, 85 in all with the
+# compulsion. Thomas's standing ordering rule: the ground is banked, the Rite weighs the kill, the body goes through the
+# mod's one front door (What They Will Find, spn_body_after_the_kill_effect: hide it, pay it away, blame someone, own it),
+# and the death is the very last line. Vanilla's multiplayer murder rules apply (spn_compel_end_life_mp_trigger).
+spn_compel_end_life_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	decision_group_type = spn_blood
+	is_invisible = yes
+	ai_check_interval = 0
+	desc = spn_compel_end_life_decision_desc
+	selection_tooltip = spn_compel_end_life_decision_tooltip
+	confirm_text = spn_compel_end_life_decision_confirm
+
+	is_shown = {
+		scope:puppeteer ?= { puppet:spn_compel_puppet ?= root }
+	}
+
+	is_valid = {
+		is_alive = yes
+		scope:puppeteer = {
+			custom_tooltip = {
+				text = spn_compel_extra_60_tt
+				spn_compel_can_pay_extra_trigger = { AMOUNT = 60 }
+			}
+		}
+		custom_tooltip = {
+			text = spn_compel_end_life_mp_tt
+			spn_compel_end_life_mp_trigger = yes
+		}
+	}
+
+	effect = {
+		save_scope_as = spn_compel_victim
+		scope:puppeteer = { save_scope_as = spn_compel_master }
+		# BANK THE GROUND FIRST: a dead man's location is not something to build a county lookup on afterwards.
+		location ?= {
+			county ?= { save_scope_as = spn_compel_death_county }
+		}
+		scope:puppeteer = {
+			spn_compel_pay_amount_effect = { AMOUNT = 60 }
+			# The vampire's own Rite weighs it, outside any toast so a player gets the faith's own (2.36, as before)
+			spn_creature_act_fulfillment_effect = { ACT = kill }
+		}
+		custom_tooltip = spn_compel_end_life_tt
+		hidden_effect = {
+			# What They Will Find, a day later, for the vampire (player only: only a player holds this puppet)
+			if = {
+				limit = { exists = scope:spn_compel_death_county }
+				scope:spn_compel_master = { spn_body_after_the_kill_effect = { COUNTY = scope:spn_compel_death_county } }
+			}
+			if = {
+				limit = { has_variable = spn_compelled_by }
+				remove_variable = spn_compelled_by
+			}
+			if = {
+				limit = { has_variable = spn_compel_unspent }
+				remove_variable = spn_compel_unspent
+			}
+			scope:spn_compel_master = {
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_compel_end_life_decision
+					left_icon = scope:spn_compel_master
+					right_icon = scope:spn_compel_victim
+					custom_tooltip = spn_compel_end_life_toast_tt
+				}
+			}
+		}
+		# LAST.
+		death = { death_reason = death_suicide }
+	}
+
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# LET THEM GO. Ends the compulsion with no command (vanilla's Fire Puppet would do it too, with an opinion line that
+# means nothing here). Nothing is refunded. They are told they were not themselves, all the same.
+spn_compel_let_go_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	decision_group_type = spn_blood
+	is_invisible = yes
+	ai_check_interval = 0
+	desc = spn_compel_let_go_decision_desc
+	selection_tooltip = spn_compel_let_go_decision_tooltip
+	confirm_text = spn_compel_let_go_decision_confirm
+
+	is_shown = {
+		scope:puppeteer ?= { puppet:spn_compel_puppet ?= root }
+	}
+
+	is_valid = {
+		is_alive = yes
+	}
+
+	effect = {
+		save_scope_as = spn_compel_victim
+		scope:puppeteer = {
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = spn_compel_let_go_decision
+				left_icon = scope:puppeteer
+				right_icon = scope:spn_compel_victim
+				custom_tooltip = spn_compel_let_go_toast_tt
+			}
+		}
+		spn_compel_command_given_effect = { MASTER = scope:puppeteer PUPPET = scope:spn_compel_victim }
+	}
+
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}

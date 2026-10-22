@@ -1,0 +1,190 @@
+﻿# Supernatural 2.40 boot 2 (item h) -- the Sire Bond's effects. Package QS.
+# Boot 3: the claim cost is gone (the bond forms by itself); the bond is recorded on the puppet so it outlasts the
+# romance; the vampire-blood gift is one shared body. Boot 4: no strain at all; the careless trace stays.
+
+# THE BOND FORMS. Scope: any. SIRE, PUPPET: characters. Caller has checked spn_sire_bond_forms_trigger (or, for Sense the
+# Sire Bond, the bond already recorded). Records the bond on the puppet (identity state, no expiry: it is who they are
+# bound to; Release the Sire Bond removes it), clears an old release, and makes them the sire's Sire Bond puppet when he
+# holds none (one puppet per type, the engine's rule).
+spn_sire_bond_form_effect = {
+	$PUPPET$ = {
+		set_variable = { name = spn_sire_bond_of value = $SIRE$ }
+		if = {
+			limit = { has_variable = spn_sire_bond_released_by }
+			remove_variable = spn_sire_bond_released_by
+		}
+	}
+	$SIRE$ = {
+		if = {
+			limit = {
+				NOT = { exists = puppet:spn_sire_puppet }
+				$PUPPET$ = { NOT = { exists = puppeteer } }
+			}
+			set_puppet = {
+				target = $PUPPET$
+				type = spn_sire_puppet
+			}
+		}
+	}
+}
+
+# What one favour through the bond can leave behind. Called at the END of each favour's on_accept, before
+# spn_puppet_shared_verb_done_effect. Interaction scope: scope:actor = the sire, scope:puppet_or_actor = the puppet,
+# scope:recipient = the target.
+#
+# 1. WHERE, banked first (the standing ordering rule): the county the puppet stands in.
+# 2. CARELESSNESS, a hidden roll (no odds shown). Read BEFORE this use sets its own pattern flag. A hit leaves a hole in
+#    that county's memory through the mod's one compulsion trace, spn_compel_left_a_hole_effect
+#    (zz_spn_consequence_effects.txt): three holes in five years and the county's lord investigates (spn_hunt.0130),
+#    which writes a real trail with the sire's name on it. Mostly zero for a careful, rested sire; it grows with a low
+#    reserve, overuse, a stressed puppet, a puppet who has come to hate him, a lord as the target and a sire already known
+#    for what he is.
+# Boot 4 (Thomas: "Every favor does not wear on them"): the strain is gone. Was stress and a decaying opinion of the sire
+# on the puppet for every favour (spn_sire_bond_strain_effect) and once a year. The careless trace stays: it is a
+# consequence of being seen, not a cost to the bound one.
+spn_sire_bond_careless_effect = {
+	scope:puppet_or_actor.location ?= {
+		county ?= { save_scope_as = spn_body_county }
+	}
+	hidden_effect = {
+		if = {
+			limit = { exists = scope:spn_body_county }
+			random = {
+				chance = {
+					value = 3
+					if = {
+						limit = { scope:actor = { spn_vampiric_reserve_value < 30 } }
+						add = 10
+					}
+					if = {
+						limit = { scope:actor = { has_character_flag = spn_sire_bond_leaned_on } }
+						add = 10
+					}
+					if = {
+						limit = { scope:puppet_or_actor = { stress_level >= 2 } }
+						add = 8
+					}
+					if = {
+						limit = { scope:puppet_or_actor = { opinion = { target = scope:actor value < -50 } } }
+						add = 10
+					}
+					if = {
+						limit = { scope:recipient = { is_ruler = yes } }
+						add = 5
+					}
+					if = {
+						limit = { scope:actor = { spn_hunt_is_known_creature_trigger = yes } }
+						add = 10
+					}
+					if = {
+						limit = { scope:actor = { has_trait = deceitful } }
+						subtract = 4
+					}
+					min = 0
+					max = 40
+				}
+				scope:actor = { spn_compel_left_a_hole_effect = yes }
+			}
+		}
+	}
+	# The pattern (3 years): leaning on the bond again soon is what makes it careless.
+	scope:actor = {
+		add_character_flag = { flag = spn_sire_bond_leaned_on years = 3 }
+	}
+}
+
+# Boot 3: VAMPIRE BLOOD, GIVEN. The one body of "Offer Vampire Blood" (10_spn_confer_interactions.txt, whose on_accept now
+# calls this) and the sire-bound puppet's "Give Them Your Blood". Scope: the one who drinks. DONOR: the vampire whose
+# blood it is; when the blood finishes its work, spn_bind_blood_donor_as_maker_effect makes the DONOR their maker.
+# Unchanged from the interaction's own lines but for the donor parameter.
+spn_give_vampire_blood_effect = {
+	#Adds a modifier to increase their health temporarily from the healing properties of Vampire Blood
+	add_character_modifier = {
+		modifier = ingested_vampire_blood_modifier
+	}
+
+	#Adds a flag to indicate they have Vampire Blood in their system
+	add_character_flag = vampire_blood_in_system
+
+	#Adds a flag to track who gave them the Vampire Blood
+	spn_assign_vampire_blood_donor = { CHARACTER = $DONOR$ }
+
+	#Effect that heals curable wounds and ailments due to the restorative properties in Vampire Blood
+	hidden_effect = {
+		vampire_blood_effect = yes
+	}
+
+	# Trigger an event to remove the flag and modifier after 3 years
+	trigger_event = {
+		id = spn_miscellaneous_events.0002
+		years = 3
+	}
+}
+
+# Boot 3: the one-time look for an old save. Scope: a player sire. Once per character (the flag is identity state: it
+# records that this character was looked at once, and is never read again after). Asks him through spn_sire.0002, which
+# re-checks everything in its own trigger.
+spn_sire_bond_old_save_check_effect = {
+	add_character_flag = spn_240_sire_bond_checked
+	save_scope_as = spn_sire_bond_sire
+	if = {
+		limit = {
+			spn_sire_bond_holder_trigger = yes
+			NOT = { exists = puppet:spn_sire_puppet }
+		}
+		random_relation = {
+			type = pprogeny
+			limit = { spn_sire_bond_forms_trigger = { SIRE = scope:spn_sire_bond_sire } }
+			save_scope_as = spn_sire_bond_puppet
+		}
+		if = {
+			limit = { exists = scope:spn_sire_bond_puppet }
+			trigger_event = { id = spn_sire.0002 days = 1 }
+		}
+	}
+}
+
+# Boot 3: THE SIRE LETS THEM GO. Scope: any. SIRE, PUPPET: characters. The record goes, the release is remembered
+# (identity state, no expiry: it is the sire's choice, and it stops the bond forming again by itself; Sense the Sire
+# Bond is the deliberate way back), and they stop being his puppet. Last: the puppet status.
+spn_sire_bond_release_effect = {
+	$PUPPET$ = {
+		if = {
+			limit = { has_variable = spn_sire_bond_of }
+			remove_variable = spn_sire_bond_of
+		}
+		set_variable = { name = spn_sire_bond_released_by value = $SIRE$ }
+		if = {
+			limit = { $SIRE$.puppet:spn_sire_puppet ?= this }
+			clear_puppet_status = yes
+		}
+	}
+}
+
+# Boot 3: HAND IT OVER, the chosen item (spn_puppet.0001). Root: the puppeteer. scope:spn_pa_puppet, scope:spn_pa_target,
+# scope:spn_pa_item. The item passes with set_owner (Q7's spn_golem_hand_over_effect does the same) and the target is
+# told. Boot 4: no strain on a bound lover (Thomas); no carelessness roll either: handing over what one carries leaves
+# nothing odd in a county's memory.
+spn_puppet_hand_over_item_effect = {
+	scope:spn_pa_item = {
+		set_owner = {
+			target = scope:spn_pa_target
+			history = {
+				type = given
+				actor = scope:spn_pa_puppet
+				recipient = scope:spn_pa_target
+			}
+		}
+	}
+	if = {
+		limit = { NOT = { scope:spn_pa_target = root } }
+		scope:spn_pa_target = {
+			send_interface_message = {
+				type = event_generic_good
+				title = spn_puppet_gift_msg
+				left_icon = scope:spn_pa_puppet
+				custom_tooltip = spn_puppet_gift_msg_tt
+			}
+		}
+	}
+}

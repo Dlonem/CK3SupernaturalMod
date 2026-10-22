@@ -1,0 +1,38 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 E4): THE CREATURE GATE on the yearly everyone pulse.
+#
+# random_yearly_everyone_pulse fires once a year for every living character (774,442 runs in the 24-year session-3 save).
+# Nine of the mod's hooks on it can only ever do anything for a creature, a hunter, a demon, a champion or a character
+# caught mid-transition, yet each one evaluated its own trigger for every character in the world. They now sit under this
+# one parent. "If an on_action fires and its trigger returns false, nothing happens" (vanilla _on_actions.info), and
+# vanilla gates children the same way (prison_maintenance_pulse, on_birthday_childhood), so for everyone else the nine
+# triggers are never read. For the characters the gate lets through, behaviour is identical: each child keeps its own
+# trigger, and every child's trigger already implies this gate (proved clause by clause by the 2.40 build's gate check, gatecheck.py).
+#
+# KEEP THIS LIST IN STEP. A child added here must not be able to fire for anyone outside the gate; a new creature trait
+# that one of the nine reads must be added to the gate. Two hooks stay outside on purpose (10_spn_on_actions.txt):
+# spn_check_for_random_embrace (for NON-creatures) and spn_npc_trait_dist_yearly (for AI mortals).
+spn_yearly_creature_pulse = {
+	trigger = {
+		OR = {
+			has_trait = supernatural_vampire
+			has_trait = supernatural_werewolf
+			has_trait = supernatural_hybrid
+			has_trait = supernatural_hunter
+			has_trait = demon1
+			has_trait = demon2
+			has_character_flag = spn_in_transition
+			spn_is_champion_trigger = yes # a champion is always a wolf, but spn_age_trait_cleanup reads the trait itself
+		}
+	}
+	on_actions = {
+		spn_supernatural_secret_check
+		spn_check_hunter_skill_traits
+		spn_recover_immortal_wounds
+		spn_recover_disfigurement
+		spn_age_trait_cleanup
+		spn_check_lifetime_flags_for_spn
+		spn_retro_disease_immunity
+		spn_transition_stuck_cleanup
+		spn_wolf_year
+	}
+}

@@ -1,0 +1,302 @@
+﻿namespace = spn_pack
+
+# Supernatural 2.40 (WORK-ORDER-2.40, package Q5: hides and packs). spn_pack 2000-2099 are Q5's.
+# Loc: localization/english/zz_spn_240_q5_l_english.yml.
+
+# ==================================================================================================
+# .2000 -- Red Eyes in Your Pack (C5). A player alpha whose pack's True Alpha has claimed the lead (spn_pack.0300 a).
+# scope:spn_ta = the True Alpha, scope:spn_ta_pack = the pack. Yield, fight him for it, or let him go with whoever
+# follows. Each option re-checks the pack: the window can stay open.
+# ==================================================================================================
+spn_pack.2000 = {
+	type = character_event
+	title = spn_pack.2000.t
+	desc = spn_pack.2000.desc
+	theme = dread
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = worry }
+	right_portrait = { character = scope:spn_ta animation = personality_bold }
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_ta
+		exists = scope:spn_ta_pack
+		scope:spn_ta_pack.story_owner ?= root
+		scope:spn_ta = {
+			is_alive = yes
+			var:spn_pack ?= scope:spn_ta_pack
+		}
+	}
+	immediate = {
+		save_scope_as = spn_ta_old_alpha
+	}
+	# He leads now.
+	option = {
+		name = spn_pack.2000.a
+		if = {
+			limit = { spn_pack_2000_still_trigger = yes }
+			custom_tooltip = spn_pack.2000.a.tt
+			scope:spn_ta_pack = { spn_pack_set_alpha_effect = { NEW = scope:spn_ta } }
+			add_opinion = { target = scope:spn_ta modifier = spn_true_alpha_rose_opinion }
+		}
+		else = {
+			custom_tooltip = spn_moment_passed_tt
+		}
+		ai_chance = {
+			base = 30
+			modifier = { add = 30 has_trait = just }
+			modifier = { add = 20 has_trait = content }
+		}
+	}
+	# Then he must take it.
+	option = {
+		name = spn_pack.2000.b
+		if = {
+			limit = { spn_pack_2000_still_trigger = yes }
+			custom_tooltip = spn_pack.2000.b.tt
+			spn_clash_lean_tooltip_effect = { A = root B = scope:spn_ta FORM = yes }
+			scope:spn_ta = { spn_pack_true_alpha_fight_effect = yes }
+		}
+		else = {
+			custom_tooltip = spn_moment_passed_tt
+		}
+		ai_chance = {
+			base = 30
+			modifier = { add = 30 has_trait = wrathful }
+			modifier = { add = 30 has_trait = arrogant }
+			modifier = { factor = 0 has_trait = craven }
+		}
+	}
+	# Go, and take who will follow.
+	option = {
+		name = spn_pack.2000.c
+		if = {
+			limit = { spn_pack_2000_still_trigger = yes }
+			custom_tooltip = spn_pack.2000.c.tt
+			scope:spn_ta = { spn_true_alpha_found_own_effect = yes }
+		}
+		else = {
+			custom_tooltip = spn_moment_passed_tt
+		}
+		ai_chance = {
+			base = 40
+		}
+	}
+}
+
+# ==================================================================================================
+# .0102 -- Pack Members Clash (boot 2, item k; renamed from Young Wolves Fight in boot 3). Moved here from zz_spn_pack_events.txt and rebuilt: it was a notice with
+# one button after the fight had already happened. Now the player alpha is asked before anything is rolled. Fired by
+# spn_pack_young_fight_begin_effect with the moment's scopes. The young wolves are AI wolves (never a player), so the
+# rare death can only fall on an AI wolf, and only between packs at odds.
+# ==================================================================================================
+spn_pack.0102 = {
+	type = character_event
+	title = spn_pack.0102.t
+	desc = {
+		desc = spn_pack.0102.desc_intro
+		# Boot 3: the other pack by name (its alpha's house, where it runs) and its alpha. A house only names it when
+		# it is not the reader's own house (two packs of one house would read the same).
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					exists = scope:spn_yf_other_land
+					scope:spn_mo_other = { exists = house }
+					NOT = { house ?= scope:spn_mo_other.house }
+				}
+				desc = spn_pack.0102.desc_pack_house
+			}
+			triggered_desc = {
+				trigger = { exists = scope:spn_yf_other_land }
+				desc = spn_pack.0102.desc_pack_land
+			}
+			desc = spn_pack.0102.desc_pack_alpha
+		}
+		desc = spn_pack.0102.desc_ring
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_yf_at_odds }
+				desc = spn_pack.0102.desc_odds
+			}
+			desc = spn_pack.0102.desc_game
+		}
+	}
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = scope:spn_mo_ours animation = rage }
+	right_portrait = { character = scope:spn_mo_theirs animation = anger }
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_mo_other
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes # 2.39 (WORK-ORDER-2.39 F14): marks the flavor gate
+	}
+	# Pull them apart.
+	option = {
+		name = spn_pack.0102.part
+		if = {
+			limit = { spn_pack_young_fight_still_trigger = yes }
+			spn_pack_young_fight_part_effect = yes
+		}
+		else = {
+			custom_tooltip = spn_moment_passed_tt
+		}
+		ai_chance = {
+			base = 30
+			modifier = { add = 20 has_trait = calm }
+			modifier = { add = 20 has_trait = compassionate }
+		}
+	}
+	# Let them settle it.
+	option = {
+		name = spn_pack.0102.settle
+		if = {
+			limit = { spn_pack_young_fight_still_trigger = yes }
+			spn_clash_lean_tooltip_effect = { A = scope:spn_mo_ours B = scope:spn_mo_theirs FORM = yes }
+			if = {
+				limit = { exists = scope:spn_yf_at_odds }
+				custom_tooltip = spn_pack.0102.settle.tt_odds
+			}
+			else = {
+				custom_tooltip = spn_pack.0102.settle.tt
+			}
+			spn_pack_young_fight_settle_effect = yes
+			trigger_event = spn_pack.2001
+		}
+		else = {
+			custom_tooltip = spn_moment_passed_tt
+		}
+		ai_chance = {
+			base = 40
+		}
+	}
+	# Stand behind your own wolf.
+	option = {
+		name = spn_pack.0102.back
+		if = {
+			limit = { spn_pack_young_fight_still_trigger = yes }
+			save_scope_value_as = { name = spn_yf_backed value = yes }
+			spn_clash_lean_tooltip_effect = { A = scope:spn_mo_ours B = scope:spn_mo_theirs FORM = yes }
+			custom_tooltip = spn_pack.0102.back.tt
+			if = {
+				limit = { exists = scope:spn_yf_at_odds }
+				custom_tooltip = spn_pack.0102.settle.tt_odds
+				custom_tooltip = spn_pack.0102.back.tt_odds
+			}
+			else = { # RB3 review: the loser's wound is said here too, as under Let Them Settle It
+				custom_tooltip = spn_pack.0102.settle.tt
+			}
+			# Boot 3: taking a side sours the two alphas' houses a little (spn_pack_young_fight_after_effect, step 3).
+			if = {
+				limit = { spn_pack_young_fight_houses_differ_trigger = yes }
+				custom_tooltip = spn_pack.0102.back.tt_house
+			}
+			spn_pack_young_fight_settle_effect = yes
+			trigger_event = spn_pack.2001
+		}
+		else = {
+			custom_tooltip = spn_moment_passed_tt
+		}
+		ai_chance = {
+			base = 15
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = 15 has_trait = arrogant }
+		}
+	}
+}
+
+# ==================================================================================================
+# .2001 -- After the Fight (boot 2, item k). What came of spn_pack.0102's fight. Root = the player alpha; the clash's
+# scopes and the moment's. Told in words; never a dead character's portrait.
+# ==================================================================================================
+spn_pack.2001 = {
+	type = character_event
+	title = spn_pack.2001.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					exists = scope:spn_yf_dead
+					scope:spn_clash_winner ?= scope:spn_mo_ours
+				}
+				desc = spn_pack.2001.desc_killed
+			}
+			triggered_desc = {
+				trigger = { exists = scope:spn_yf_dead }
+				desc = spn_pack.2001.desc_died
+			}
+			triggered_desc = {
+				trigger = { exists = scope:spn_mo_fight_friends }
+				desc = spn_pack.0102.desc_friends
+			}
+			# RB3 review: between packs at odds it was no game, so not "the way young wolves do".
+			triggered_desc = {
+				trigger = {
+					exists = scope:spn_yf_at_odds
+					scope:spn_clash_winner ?= scope:spn_mo_ours
+				}
+				desc = spn_pack.2001.desc_won_odds
+			}
+			triggered_desc = {
+				trigger = { exists = scope:spn_yf_at_odds }
+				desc = spn_pack.2001.desc_lost_odds
+			}
+			triggered_desc = {
+				trigger = { scope:spn_clash_winner ?= scope:spn_mo_ours }
+				desc = spn_pack.0102.desc_won
+			}
+			desc = spn_pack.0102.desc_lost
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					exists = scope:spn_yf_backed
+					scope:spn_clash_winner ?= scope:spn_mo_ours
+				}
+				desc = spn_pack.2001.desc_backed_won
+			}
+			triggered_desc = {
+				trigger = { exists = scope:spn_yf_backed }
+				desc = spn_pack.2001.desc_backed_lost
+			}
+			desc = spn_pack.2001.desc_none
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_yf_seen }
+				desc = spn_pack.2001.desc_seen
+			}
+			desc = spn_pack.2001.desc_none
+		}
+	}
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = {
+		character = root
+		triggered_animation = {
+			trigger = { exists = scope:spn_yf_dead }
+			animation = shock
+		}
+		triggered_animation = {
+			trigger = { scope:spn_clash_winner ?= scope:spn_mo_ours }
+			animation = personality_bold
+		}
+		animation = worry
+	}
+	right_portrait = { character = scope:spn_clash_winner animation = personality_bold }
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_clash_winner
+		exists = scope:spn_clash_loser
+	}
+	option = {
+		name = {
+			trigger = { exists = scope:spn_yf_dead }
+			text = spn_pack.2001.a_dead
+		}
+		name = {
+			trigger = { NOT = { exists = scope:spn_yf_dead } }
+			text = spn_pack.2001.a
+		}
+	}
+}

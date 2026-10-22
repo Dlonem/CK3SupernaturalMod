@@ -260,6 +260,27 @@ spn_hide_make_champion_effect = {
 				}
 			}
 		}
+		# 2b. 2.40 (WORK-ORDER-2.40 C10): how many wore this hide before him (spn_hide_lineage_walk_value in count mode).
+		if = {
+			limit = { exists = scope:spn_mc_fit_was }
+			clear_saved_scope = spn_mc_fit_was
+		}
+		if = {
+			limit = { exists = scope:spn_fit_hide }
+			spn_hide_save_flag_effect = { NAME = spn_mc_fit_was FROM = scope:spn_fit_hide }
+		}
+		save_scope_value_as = { name = spn_fit_hide value = flag:$HIDE$ }
+		save_scope_value_as = { name = spn_lin_count_mode value = yes }
+		save_scope_value_as = { name = spn_mc_past value = spn_hide_lineage_walk_value }
+		clear_saved_scope = spn_lin_count_mode
+		if = {
+			limit = { exists = scope:spn_mc_fit_was }
+			spn_hide_save_flag_effect = { NAME = spn_fit_hide FROM = scope:spn_mc_fit_was }
+			clear_saved_scope = spn_mc_fit_was
+		}
+		else = {
+			clear_saved_scope = spn_fit_hide
+		}
 		# 3. The trait and its starting Bond.
 		add_trait = spn_champion_$HIDE$
 		set_variable = { name = spn_champion_of value = flag:$HIDE$ }
@@ -270,6 +291,35 @@ spn_hide_make_champion_effect = {
 		else_if = {
 			limit = { scope:spn_mc_legacy > 0 }
 			add_trait_xp = { trait = spn_champion_$HIDE$ track = hide_bond value = scope:spn_mc_legacy }
+		}
+		# 3b. 2.40 (WORK-ORDER-2.40 C10): the strength passed on. 5 lycanthropy per earlier champion, at most 25 (the Gathering's
+		#     own werewolf/hybrid branch); at three or more, a free perk point in his wolf tree once in a life
+		#     (spn_hide_gift_effect; flag spn_hide_gift_lineage is identity state, no expiry, like the other two gifts).
+		if = {
+			limit = {
+				scope:spn_mc_past > 0
+				spn_is_wolf_trigger = yes
+			}
+			save_scope_value_as = {
+				name = spn_mc_passed
+				value = {
+					value = scope:spn_mc_past
+					multiply = spn_hide_strength_passed_per_value
+					max = spn_hide_strength_passed_max_value
+				}
+			}
+			if = {
+				limit = { has_trait = supernatural_werewolf }
+				add_trait_xp = { trait = supernatural_werewolf track = lycanthropy value = scope:spn_mc_passed }
+			}
+			else_if = {
+				limit = { has_trait = supernatural_hybrid }
+				add_trait_xp = { trait = supernatural_hybrid track = hybrid_lycanthropy value = scope:spn_mc_passed }
+			}
+			if = {
+				limit = { scope:spn_mc_past >= spn_hide_strength_passed_perk_count_value }
+				spn_hide_gift_effect = { FLAG = spn_hide_gift_lineage }
+			}
 		}
 		# 4. The tongues: every culture that left its mark on this hide.
 		every_in_global_list = {
@@ -912,6 +962,22 @@ spn_hide_exit_hide_effect = {
 		}
 	}
 	set_global_variable = { name = spn_hide_$HIDE$_last value = scope:spn_exit_champ }
+	# 2.40 (WORK-ORDER-2.40 F4): he died wearing it (spn_hide_lineage_walk_value reads it on his kin). Identity, no expiry.
+	# Boot 2 fix (22 Oct): kept in global lists, not on the man. The game cannot read a dead character's variables
+	# ("This scope doesn't support variables"), so the lineage walk could never see Bond or death on a dead father.
+	if = {
+		limit = { scope:spn_exit_reason = flag:death }
+		add_to_global_variable_list = { name = spn_hide_$HIDE$_died_wearing target = scope:spn_exit_champ }
+	}
+	if = {
+		limit = {
+			OR = {
+				has_character_flag = spn_hide_left_mark_$HIDE$
+				spn_hide_bond_value >= 75
+			}
+		}
+		add_to_global_variable_list = { name = spn_hide_$HIDE$_honoured target = scope:spn_exit_champ }
+	}
 	# 3. The guard off the artifact.
 	scope:spn_exit_hide ?= {
 		if = {
@@ -1033,6 +1099,8 @@ spn_hide_move_on_death_effect = {
 					spn_is_valid_supernatural_target = yes
 				}
 			}
+			# 2.40 (WORK-ORDER-2.40 C6): marks the pass as taken by force for the feud hook (spn_hide_owner_changed)
+			scope:killer = { add_character_flag = { flag = spn_hide_taken_by_force days = 1 } }
 			scope:spn_exit_hide = {
 				set_owner = {
 					target = scope:killer
@@ -1667,22 +1735,8 @@ spn_hide_battle_aftermath_effect = {
 			scope:spn_battle_side.enemy_side = { spn_hide_men_saw_side_effect = { OURS = no } }
 		}
 	}
-	# Two Wolves on One Field, for every champion who clashed (the event names one of them).
-	every_in_list = {
-		list = spn_battle_champs
-		limit = {
-			is_alive = yes
-			has_variable_list = spn_clash_done_with
-		}
-		random_in_list = {
-			variable = spn_clash_done_with
-			save_scope_as = spn_field_foe
-		}
-		if = {
-			limit = { is_ai = no }
-			trigger_event = spn_hide.0202
-		}
-	}
+	# 2.40 (WORK-ORDER-2.40 F1): Two Wolves on One Field is the duel's own result now, sent to each player of the
+	# two by spn_hide_duel_after_effect / spn_hide_duel_escaped_effect (every pair with a player in it duels).
 	# 3. Clean up, so a second battle in the same province starts fresh.
 	every_in_list = {
 		list = spn_battle_champs
@@ -1757,6 +1811,11 @@ spn_hide_battle_cleanup_effect = {
 	if = {
 		limit = { has_variable_list = spn_clash_done_with }
 		clear_variable_list = spn_clash_done_with
+	}
+	# 2.40 (WORK-ORDER-2.40 F1): the pairs that never found each other, with the pairs that did.
+	if = {
+		limit = { has_variable_list = spn_clash_missed_with }
+		clear_variable_list = spn_clash_missed_with
 	}
 	# Midnight's Let It Take Me: the battle is over, and so is the frenzy. It costs him.
 	if = {
@@ -2433,6 +2492,11 @@ spn_hide_ringing_after_effect = {
 # the caller passes a var: path, and a parameter is pasted text.
 spn_hide_errand_send_effect = {
 	$COUNTY$ = { save_scope_as = spn_errand_to }
+	# 2.40 (WORK-ORDER-2.40 B5): the man spn_hide.0380 picked goes with it (3 years, as the errand's other records)
+	if = {
+		limit = { exists = scope:spn_errand_agent }
+		set_variable = { name = spn_hide_errand_agent value = scope:spn_errand_agent years = 3 }
+	}
 	if = {
 		limit = {
 			location ?= {
@@ -2460,25 +2524,36 @@ spn_hide_errand_send_effect = {
 	}
 }
 
-# Debug (§24): give me this hide. Character scope. 2.37 (Thomas, 3 Oct: a second Silverback sat in a shrine while he wore
-# the one the console made): if the hide is already in the world it is handed over -- out of its shrine or off its holder,
-# set_owner as vanilla's siege theft does (steal_artifact_in_siege_effect), and the owner hook clears the shrine marker --
-# so the world never holds two of one hide. A hide worn by its living champion is left alone (unbind him first). A lost
-# hide is made.
+# Debug (§24): give me this hide. # 2.40 (WORK-ORDER-2.40 F2): the body is now spn_hide_grant_effect below, the one hand-over.
 spn_debug_give_hide_effect = {
-	save_scope_as = spn_dbg_taker
+	spn_hide_grant_effect = { HIDE = $HIDE$ }
+}
+
+# 2.40 (WORK-ORDER-2.40 F2): THE ONE HAND-OVER. Give root this hide. Character scope. Used by the six debug options and by
+# "Send for the Family Hide" (zz_spn_240_household_effects.txt); Q6 may use it. 2.37 (Thomas, 3 Oct: a second Silverback
+# sat in a shrine while he wore the one the console made): if the hide is already in the world it is handed over -- out
+# of its shrine or off its holder, set_owner as vanilla's siege theft does (steal_artifact_in_siege_effect), and the owner
+# hook clears the shrine marker -- so the world never holds two of one hide. A hide worn by its living champion is left
+# alone (unbind him first). A lost hide is made. Either way the hide then decides (spn_hide_start_check_effect).
+# 2.40: the old hide's scope is cleared first, so a second call in the same effect never reads the first call's hide.
+spn_hide_grant_effect = {
+	save_scope_as = spn_grant_taker
+	if = {
+		limit = { exists = scope:spn_grant_old_hide }
+		clear_saved_scope = spn_grant_old_hide
+	}
 	every_artifact = {
 		limit = { var:spn_hide ?= flag:$HIDE$ }
-		save_scope_as = spn_dbg_old_hide
+		save_scope_as = spn_grant_old_hide
 	}
 	if = {
-		limit = { NOT = { exists = scope:spn_dbg_old_hide } }
-		spn_hide_create_effect = { HIDE = $HIDE$ OWNER = scope:spn_dbg_taker }
+		limit = { NOT = { exists = scope:spn_grant_old_hide } }
+		spn_hide_create_effect = { HIDE = $HIDE$ OWNER = scope:spn_grant_taker }
 	}
 	else_if = {
 		limit = {
-			scope:spn_dbg_old_hide ?= { # ?=: a tooltip walk reads this limit without the loop having run
-				NOT = { artifact_owner ?= scope:spn_dbg_taker }
+			scope:spn_grant_old_hide ?= { # ?=: a tooltip walk reads this limit without the loop having run
+				NOT = { artifact_owner ?= scope:spn_grant_taker }
 				NOT = {
 					artifact_owner ?= {
 						is_alive = yes
@@ -2487,19 +2562,19 @@ spn_debug_give_hide_effect = {
 				}
 			}
 		}
-		scope:spn_dbg_old_hide ?= {
+		scope:spn_grant_old_hide ?= {
 			set_owner = {
-				target = scope:spn_dbg_taker
+				target = scope:spn_grant_taker
 				history = {
 					type = given
-					recipient = scope:spn_dbg_taker
+					recipient = scope:spn_grant_taker
 				}
 			}
 		}
-		scope:spn_dbg_taker = { spn_hide_start_check_effect = yes }
+		scope:spn_grant_taker = { spn_hide_start_check_effect = yes }
 	}
 	else = {
-		debug_log = "spn_debug_give_hide_effect: that hide is already yours or worn by its living champion"
+		debug_log = "spn_hide_grant_effect: that hide is already yours or worn by its living champion"
 	}
 }
 
@@ -2610,11 +2685,41 @@ spn_hide_word_at_fire_effect = {
 				spn_hide_fact_lacked_trigger = { WHO = scope:spn_waf_who }
 			}
 		}
+		# 2.40 (WORK-ORDER-2.40 F5): he hears first of the hides he has never heard of (+3) and of the ones that would
+		# have him (+2). Whether one would have him is read once per hide here, with the same test every choosing uses.
+		clear_variable_list = spn_waf_suits
+		if = {
+			limit = { spn_is_wolf_trigger = yes }
+			every_in_list = {
+				list = spn_all_hides
+				limit = { spn_hide_fact_lacked_trigger = { WHO = scope:spn_waf_who } }
+				save_temporary_scope_as = spn_waf_try
+				scope:spn_waf_who = {
+					spn_hide_save_flag_effect = { NAME = spn_fit_hide FROM = scope:spn_waf_try.var:spn_hide }
+					if = {
+						limit = { spn_hide_accepts_wolf_trigger = yes }
+						add_to_variable_list = { name = spn_waf_suits target = scope:spn_waf_try days = 1 }
+					}
+				}
+			}
+		}
 		random_in_list = {
 			list = spn_all_hides
 			limit = { spn_hide_fact_lacked_trigger = { WHO = scope:spn_waf_who } }
+			weight = {
+				base = 1
+				modifier = {
+					add = 3
+					spn_hide_never_heard_trigger = { WHO = scope:spn_waf_who }
+				}
+				modifier = {
+					add = 2
+					scope:spn_waf_who = { is_target_in_variable_list = { name = spn_waf_suits target = prev } }
+				}
+			}
 			save_scope_as = spn_waf_hide
 		}
+		clear_variable_list = spn_waf_suits # read once; the 1-day expiry is only a backstop
 		if = {
 			limit = { scope:spn_waf_hide = { exists = var:spn_hide_shrine_county } }
 			save_scope_value_as = { name = spn_waf_kind value = flag:shrine }
@@ -2626,6 +2731,14 @@ spn_hide_word_at_fire_effect = {
 			save_scope_value_as = { name = spn_waf_kind value = flag:held }
 			scope:spn_waf_hide.artifact_owner = { save_scope_as = spn_waf_holder }
 			spn_hide_learn_where_effect = { HIDE_SCOPE = scope:spn_waf_hide WHERE = scope:spn_waf_holder WANTS = no }
+			# 2.40 (WORK-ORDER-2.40 F5): word of his hide has got out (the true part of the old held_mine line)
+			if = {
+				limit = {
+					NOT = { scope:spn_waf_holder = scope:spn_waf_who }
+					scope:spn_waf_holder = { is_ai = no }
+				}
+				scope:spn_waf_holder = { add_character_flag = { flag = spn_hide_word_out years = 1 } }
+			}
 			if = {
 				limit = {
 					NOT = { scope:spn_waf_holder = scope:spn_waf_who }
@@ -2749,6 +2862,7 @@ spn_hide_choosing_give_effect = {
 spn_hide_choosing_clash_after_effect = {
 	if = {
 		limit = { scope:spn_clash_winner = scope:spn_ch_chosen }
+		scope:spn_clash_winner = { add_character_flag = { flag = spn_hide_won_from_holder days = 1 } } # 2.40 (WORK-ORDER-2.40 C6): taken in a fight
 		scope:spn_clash_winner = { spn_hide_choosing_give_effect = yes }
 	}
 	else = {
@@ -3189,12 +3303,20 @@ spn_gathering_circle_effect = {
 					limit = {
 						any_in_list = {
 							list = spn_all_hides
-							exists = var:spn_hide_shrine_county
+							OR = { # 2.40 (WORK-ORDER-2.40 F5): or an unworn hide in someone else's keeping
+								exists = var:spn_hide_shrine_county
+								spn_hide_unworn_elsewhere_trigger = { LISTENER = scope:spn_tale_listener }
+							}
 						}
 					}
 					ordered_in_list = {
 						list = spn_all_hides
-						limit = { exists = var:spn_hide_shrine_county }
+						limit = {
+							OR = { # 2.40 (WORK-ORDER-2.40 F5): 
+								exists = var:spn_hide_shrine_county
+								spn_hide_unworn_elsewhere_trigger = { LISTENER = scope:spn_tale_listener }
+							}
+						}
 						order_by = {
 							value = 0
 							if = {
@@ -3224,7 +3346,14 @@ spn_gathering_circle_effect = {
 						}
 						save_scope_as = spn_tale_shrine_hide
 					}
-					scope:spn_tale_shrine_hide.var:spn_hide_shrine_county = { save_scope_as = spn_tale_shrine_county }
+					# 2.40 (WORK-ORDER-2.40 F5): a shrine has a county; a hide in someone's keeping has its holder
+					if = {
+						limit = { scope:spn_tale_shrine_hide = { exists = var:spn_hide_shrine_county } }
+						scope:spn_tale_shrine_hide.var:spn_hide_shrine_county = { save_scope_as = spn_tale_shrine_county }
+					}
+					else = {
+						scope:spn_tale_shrine_hide.artifact_owner = { save_scope_as = spn_tale_holder }
+					}
 					if = {
 						limit = {
 							scope:spn_tale_shrine_hide.var:spn_hide = flag:silverback
@@ -3268,7 +3397,13 @@ spn_gathering_circle_effect = {
 						save_scope_value_as = { name = spn_tale_takes value = yes }
 					}
 					scope:host = {
-						spn_hide_learn_where_effect = { HIDE_SCOPE = scope:spn_tale_shrine_hide WHERE = scope:spn_tale_shrine_county WANTS = yes }
+						if = { # 2.40 (WORK-ORDER-2.40 F5): 
+							limit = { exists = scope:spn_tale_holder }
+							spn_hide_learn_where_effect = { HIDE_SCOPE = scope:spn_tale_shrine_hide WHERE = scope:spn_tale_holder WANTS = no }
+						}
+						else = {
+							spn_hide_learn_where_effect = { HIDE_SCOPE = scope:spn_tale_shrine_hide WHERE = scope:spn_tale_shrine_county WANTS = yes }
+						}
 					}
 					scope:spn_tale_listener = { trigger_event = spn_gathering.0307 }
 				}
@@ -3732,20 +3867,11 @@ spn_hide_field_clash_effect = {
 			is_alive = yes
 			exists = scope:spn_fc_foe
 		}
-		# 1. The pair, first: once a battle, the feat unblocked for both, and the aftermath finds them.
-		add_to_variable_list = { name = spn_clash_done_with target = scope:spn_fc_foe days = 60 }
-		scope:spn_fc_foe = { add_to_variable_list = { name = spn_clash_done_with target = scope:spn_fc_champ days = 60 } }
-		set_variable = { name = spn_feat_province value = scope:combat_side.combat.location days = 60 }
-		scope:spn_fc_foe = { set_variable = { name = spn_feat_province value = scope:combat_side.combat.location days = 60 } }
-		add_character_flag = { flag = spn_feat_seen days = 60 }
-		scope:spn_fc_foe = { add_character_flag = { flag = spn_feat_seen days = 60 } }
-		# 2. The clash.
-		spn_creature_clash_effect = {
-			A = scope:spn_fc_champ
-			B = scope:spn_fc_foe
-			THEN = spn_hide_field_clash_after_effect
-			FORM = no
-		}
+		# 2.40 (WORK-ORDER-2.40 F1): the hide duel. A hidden roll decides whether the two find each other at all; a miss writes
+		# the pair as missed (no line, no event, the feats unblock). Then the chain for a player in the pair, a word to a
+		# player whose AI knight it is, or AI against AI: a break-off roll, then the 2.37 clash and its battle line. The pair
+		# record that was step 1 here is spn_hide_field_record_pair_effect (zz_spn_240_hide_duel_effects.txt).
+		spn_hide_duel_field_effect = yes
 	}
 }
 

@@ -1,0 +1,307 @@
+﻿# Supernatural 2.40 boot 4 -- THE COMPELLED: its own commands. Package QC (agent COMPEL).
+# Listed as puppet actions of spn_compel_puppet (zz_spn_240_compel_puppet_actions.txt). Each runs with scope:actor = the
+# vampire and scope:puppet_or_actor = the compelled (vanilla 1.20, QS HANDOFF-BOOT2.md). Six are aimed at the vampire
+# himself: right-click your own portrait and act as them (the golem's Guard showed there in boot 3, so self works).
+# Each ends the compulsion as its LAST step (spn_compel_command_given_effect). The old Compel Mortal options moved here:
+# Demand Gold is the shared Send Me Your Gold (QS), Leave Prison is now Release Them (you bend the gaoler, not the
+# prisoner), End Your Life is a puppet decision on the card (zz_spn_240_compel_decisions.txt).
+# No ai_frequency: players only (logs3: an interaction with ai_frequency and no ai_targets is reported). Shown only for
+# the actor's own Compelled puppet (spn_compel_verb_shown_trigger) and on open facts (B6).
+
+# JOIN MY WAR (Thomas: "right-click himself and use Join My War"). A landed puppet joins every war the vampire leads, on
+# his side. Vanilla's call-to-arms rules, as far as they apply to a ruler who is at no war: no liege or vassal of theirs
+# may be fighting you.
+spn_compel_join_war_interaction = {
+	category = interaction_category_diplomacy
+	icon = alliance
+	interface_priority = 60
+	desc = spn_compel_join_war_interaction_desc
+	auto_accept = yes
+
+	is_shown = {
+		spn_compel_verb_shown_trigger = yes
+		scope:recipient = scope:actor
+		scope:puppet_or_actor = { is_landed = yes }
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_compel_needs_your_war_tt
+				any_character_war = { scope:actor = { is_leader_in_war = prev } }
+			}
+		}
+		scope:puppet_or_actor = {
+			custom_tooltip = {
+				text = spn_compel_own_war_tt
+				is_at_war = no
+			}
+			custom_tooltip = {
+				text = spn_compel_war_ties_tt
+				NOR = {
+					any_liege_or_above = { is_at_war_with = scope:actor }
+					any_vassal_or_below = { is_at_war_with = scope:actor }
+				}
+			}
+		}
+	}
+
+	on_accept = {
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_compel_join_war_interaction
+				left_icon = scope:actor
+				right_icon = scope:puppet_or_actor
+				spn_compel_join_war_effect = { MASTER = scope:actor JOINER = scope:puppet_or_actor }
+			}
+		}
+		spn_compel_command_given_effect = { MASTER = scope:actor PUPPET = scope:puppet_or_actor }
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# JOIN MY COURT. Unlanded people only (Thomas: "not literally the King of the Holy Roman Empire"): vanilla
+# invite_to_court_interaction's is_shown (not a ruler, not already yours, not a holy-order member) and its
+# can_recruit_character_to_court_trigger (prisoners, regents, councillors and the rest stay where they are).
+spn_compel_join_court_interaction = {
+	category = interaction_category_vassal
+	icon = guest
+	interface_priority = 59
+	desc = spn_compel_join_court_interaction_desc
+	auto_accept = yes
+
+	is_shown = {
+		spn_compel_verb_shown_trigger = yes
+		scope:recipient = scope:actor
+		scope:actor = { is_ruler = yes }
+		scope:puppet_or_actor = {
+			NOR = {
+				is_courtier_of = scope:actor
+				is_ruler = yes
+				has_trait = order_member
+				location ?= { is_sea_province = yes } # vanilla invite_to_court_interaction's own line
+			}
+		}
+	}
+
+	is_valid_showing_failures_only = {
+		can_recruit_character_to_court_trigger = {
+			RECRUITER = scope:actor
+			RECRUITEE = scope:puppet_or_actor
+		}
+		scope:puppet_or_actor = {
+			is_concubine = no
+			is_hostage = no
+		}
+	}
+
+	on_accept = {
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_compel_join_court_interaction
+				left_icon = scope:actor
+				right_icon = scope:puppet_or_actor
+				spn_compel_join_court_effect = { MASTER = scope:actor JOINER = scope:puppet_or_actor }
+			}
+		}
+		spn_compel_command_given_effect = { MASTER = scope:actor PUPPET = scope:puppet_or_actor }
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# BECOME MY LOVER. 2.39's option, unchanged in what it does (spn_compel_become_lover_effect, the F14 flags first).
+spn_compel_lover_interaction = {
+	category = interaction_category_friendly
+	icon = seducer
+	interface_priority = 58
+	desc = spn_compel_lover_interaction_desc
+	auto_accept = yes
+
+	is_shown = {
+		spn_compel_verb_shown_trigger = yes
+		scope:recipient = scope:actor
+		scope:puppet_or_actor = {
+			NOR = {
+				has_relation_lover = scope:actor
+				has_relation_soulmate = scope:actor
+			}
+		}
+	}
+
+	is_valid_showing_failures_only = {
+		scope:puppet_or_actor = {
+			custom_tooltip = {
+				text = spn_compel_not_family_tt
+				NOT = { is_close_family_of = scope:actor }
+			}
+		}
+	}
+
+	on_accept = {
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_compel_lover_interaction
+				left_icon = scope:actor
+				right_icon = scope:puppet_or_actor
+				spn_compel_become_lover_effect = { MASTER = scope:actor LOVER = scope:puppet_or_actor }
+			}
+		}
+		spn_compel_command_given_effect = { MASTER = scope:actor PUPPET = scope:puppet_or_actor }
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# DO WHAT I SAY. 2.39's Be Obedient: a strong loyalty hook (vanilla loyalty_hook, strong, no expiry). It keeps its old
+# price: 10 more Vampirism, 35 in all with the compulsion (Thomas, 9 Sep 2026: "like a free hook").
+spn_compel_obey_interaction = {
+	category = interaction_category_hostile
+	icon = hook_icon
+	interface_priority = 57
+	desc = spn_compel_obey_interaction_desc
+	auto_accept = yes
+
+	is_shown = {
+		spn_compel_verb_shown_trigger = yes
+		scope:recipient = scope:actor
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_compel_extra_10_tt
+				spn_compel_can_pay_extra_trigger = { AMOUNT = 10 }
+			}
+			custom_tooltip = {
+				text = spn_compel_has_hook_tt
+				NOT = { has_strong_hook = scope:puppet_or_actor }
+			}
+		}
+	}
+
+	on_accept = {
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_compel_obey_interaction
+				left_icon = scope:actor
+				right_icon = scope:puppet_or_actor
+				spn_compel_pay_amount_effect = { AMOUNT = 10 }
+				add_hook = {
+					type = loyalty_hook
+					target = scope:puppet_or_actor
+				}
+			}
+		}
+		spn_compel_command_given_effect = { MASTER = scope:actor PUPPET = scope:puppet_or_actor }
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# TELL ME YOUR SECRETS. Their own secrets and every secret they know of others (more than 2.39's option). Always
+# available: whether they have anything is told only after, in a toast (B6: the old option hid itself on their secrets).
+spn_compel_secrets_interaction = {
+	category = interaction_category_hostile
+	icon = secret
+	interface_priority = 56
+	desc = spn_compel_secrets_interaction_desc
+	auto_accept = yes
+
+	is_shown = {
+		spn_compel_verb_shown_trigger = yes
+		scope:recipient = scope:actor
+	}
+
+	on_accept = {
+		spn_compel_tell_secrets_effect = { MASTER = scope:actor TELLER = scope:puppet_or_actor }
+		spn_compel_command_given_effect = { MASTER = scope:actor PUPPET = scope:puppet_or_actor }
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# BECOME MY PATRON. 2.39's option for a landless adventurer: a landed or administrative patron becomes his contact.
+spn_compel_patron_interaction = {
+	category = interaction_category_friendly
+	icon = icon_personal
+	interface_priority = 55
+	desc = spn_compel_patron_interaction_desc
+	auto_accept = yes
+
+	is_shown = {
+		spn_compel_verb_shown_trigger = yes
+		scope:recipient = scope:actor
+		scope:actor = { is_landless_adventurer = yes }
+		scope:puppet_or_actor = { is_landed_or_landless_administrative = yes }
+	}
+
+	is_valid_showing_failures_only = {
+		scope:puppet_or_actor = {
+			custom_tooltip = {
+				text = spn_compel_already_contact_tt
+				NOT = { is_contact_of = scope:actor }
+			}
+		}
+	}
+
+	on_accept = {
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_compel_patron_interaction
+				left_icon = scope:actor
+				right_icon = scope:puppet_or_actor
+				add_contact = scope:puppet_or_actor
+			}
+		}
+		spn_compel_command_given_effect = { MASTER = scope:actor PUPPET = scope:puppet_or_actor }
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# RELEASE THEM. 2.39's Leave Prison made the prisoner walk out; now the vampire bends the one who holds the key. Shown on
+# their own prisoners (an open fact). No back door out of the Warded Chains (2.39 F6, the same line Leave Prison used).
+spn_compel_release_interaction = {
+	category = interaction_category_prison
+	icon = prison
+	interface_priority = 54
+	desc = spn_compel_release_interaction_desc
+	auto_accept = yes
+	use_diplomatic_range = no # review RD1: their own prisoner is always within their reach, wherever the vampire is
+
+	is_shown = {
+		spn_compel_verb_shown_trigger = yes
+		scope:recipient = { is_imprisoned_by = scope:puppet_or_actor }
+	}
+
+	is_valid_showing_failures_only = {
+		scope:recipient = {
+			custom_description = {
+				text = spn_held_in_chains_other_custom
+				spn_held_in_chains_trigger = no
+			}
+		}
+	}
+
+	on_accept = {
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_compel_release_interaction
+				left_icon = scope:puppet_or_actor
+				right_icon = scope:recipient
+				scope:recipient = { release_from_prison = yes }
+			}
+		}
+		spn_compel_command_given_effect = { MASTER = scope:actor PUPPET = scope:puppet_or_actor }
+	}
+
+	ai_will_do = { base = 0 }
+}

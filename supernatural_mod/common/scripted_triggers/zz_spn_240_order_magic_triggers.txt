@@ -1,0 +1,181 @@
+﻿# Supernatural 2.40 -- the Order's magic and people (WORK-ORDER-2.40 A9, A10, G1, G4). Effects:
+# zz_spn_240_order_magic_effects.txt. Loc: localization/english/zz_spn_240_q3_l_english.yml.
+
+# ==================================================================================================
+# RESPONDEO (G1, B9)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 G1): a member who would pay his share for $CALLER$. A player is asked (spn_order.0181), but only
+# while he is free for the Order's business (Q2's busy rule); an AI pays if he does not dislike the caller. Payer scope.
+spn_order_respondeo_willing_payer_trigger = {
+	spn_order_respondeo_payer_trigger = { CALLER = $CALLER$ }
+	trigger_if = {
+		limit = { is_ai = no }
+		spn_order_player_free_trigger = yes
+	}
+	trigger_else = {
+		opinion = { target = $CALLER$ value >= 0 }
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 G1): a member $COMMANDER$ may send to speak Respondeo for the temple: a living, free, grown
+# Magistratus or Temple Magus who can pay it himself, with a Powder or his own power. (His temple's share is a third rung
+# when he gets there, but it cannot be tested here: the payers' test names the caster from inside a list.) A busy
+# player is never sent. Candidate scope.
+spn_order_respondeo_agent_ok_trigger = {
+	is_alive = yes
+	is_adult = yes
+	is_imprisoned = no
+	NOT = { this = $COMMANDER$ }
+	spn_is_order_member_trigger = yes
+	spn_order_magistratus_plus_trigger = yes
+	trigger_if = {
+		limit = { is_ai = no }
+		spn_order_player_free_trigger = yes
+	}
+	OR = {
+		spn_relic_can_spend_powder_trigger = yes
+		can_spend_standard_ps_trigger = yes
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 G1): the exposure $COUNTY$ is still unanswered in this character's temple. Character scope.
+spn_order_respondeo_exposure_open_trigger = {
+	var:spn_order_chapter ?= {
+		var:spn_order_exposed_county ?= $COUNTY$
+		var:spn_order_exposed_member ?= { is_alive = yes }
+	}
+}
+
+# ==================================================================================================
+# TEACHING (A10, G4)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 A10): Witchcraft's Teach Sorcery (teach_sorcery, 00_magic_interactions.txt) would accept this
+# pair: its own is_shown and is_valid tests, copied, plus its cooldown flag (magic_ev3.10) and the Order's rest
+# (G4). Tutee scope; $TUTOR$ the Mage who would teach.
+spn_order_can_teach_sorcery_trigger = {
+	is_alive = yes
+	is_adult = yes
+	NOT = { this = $TUTOR$ }
+	NOR = {
+		is_a_demon_trigger = yes
+		has_trait = witch_hunter
+		has_trait = yaga
+	}
+	OR = {
+		has_trait = witch
+		has_trait = true_witch
+		has_focus = witch_focus
+		any_secret = {
+			secret_type = secret_witch
+			is_known_by = $TUTOR$
+		}
+	}
+	NOR = {
+		has_focus = arcane_focus
+		has_trait = archmage
+		has_character_flag = start_sorcery_training
+		has_perk = magical_experiments_p1_perk
+		has_character_flag = arcane_unlocked_flag
+	}
+	spn_is_valid_supernatural_target = yes
+	in_diplomatic_range = $TUTOR$
+	$TUTOR$ = {
+		is_alive = yes
+		has_trait = archmage
+		is_imprisoned = no
+		NOT = { has_trait = incapable }
+		NOT = { any_secret = { secret_type = secret_false_mage } }
+		NOT = { has_character_flag = teach_sorcery_cooldown_flag }
+		NOT = { has_character_flag = spn_order_tutor_rests }
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 G4): an acolyte whose years are counted may finish this year. His tutor is not resting after
+# the last Mage he made (an acolyte with no tutor is taught by the masks, as before), and an AI acolyte also needs room
+# under his temple's cap: fewer than $CAP$ Mages made by the temple in ten years (spn_order_mage_year lasts ten years,
+# so the count reads members only and a Mage who leaves or dies frees the slot; an acolyte already sent to The First True
+# Working this year counts too, so two cannot slip under one free slot). A player acolyte is never capped.
+# Acolyte scope.
+spn_order_acolyte_may_finish_trigger = {
+	trigger_if = {
+		limit = { var:spn_order_tutor ?= { is_alive = yes } }
+		var:spn_order_tutor = { NOT = { has_character_flag = spn_order_tutor_rests } }
+	}
+	trigger_if = {
+		limit = { is_ai = yes }
+		var:spn_order_chapter ?= {
+			NOT = {
+				any_in_list = {
+					variable = spn_order_members
+					count >= $CAP$
+					OR = {
+						has_variable = spn_order_mage_year
+						has_character_flag = spn_order_finishing # queued for The First True Working this year
+					}
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE GNOSTIC COUNCIL (boot 4, COUNCIL)
+# ==================================================================================================
+
+# 2.40 (boot 4, COUNCIL 1): holds one of the four seats of the Gnostic Council (Witchcraft's own globals, the same ones
+# appoint_to_mc*_effect sets with mc_member_var). Character scope. The seat holder's own fact, never a secret of another.
+spn_council_seat_trigger = {
+	OR = {
+		global_var:current_archmage_global ?= this
+		global_var:current_loremaster_global ?= this
+		global_var:current_black_mage_global ?= this
+		global_var:current_admin_global ?= this
+	}
+}
+
+# 2.40 (boot 4, COUNCIL 1): an AI seat needs the money: in debt or nearly broke, or at war with little in hand.
+spn_council_draw_funds_need_trigger = {
+	OR = {
+		gold < 50
+		AND = {
+			is_at_war = yes
+			gold < 300
+		}
+	}
+}
+
+# 2.40 (boot 4, COUNCIL 2): Witchcraft's own research funding (Ask for the High Council's support, option "Ask for research
+# funding", ask_mc_for_support_interaction) is open to him: a donor (mc_supporter_modifier) of that option's kind. Then the
+# Order's own way in stays hidden, so he never sees the same request twice. The option's test, copied from the mod's copy.
+spn_council_wc_research_ask_open_trigger = {
+	has_character_modifier = mc_supporter_modifier
+	OR = {
+		has_trait = true_witch
+		has_trait = archmage
+		has_focus = arcane_focus
+		AND = {
+			has_trait = erudite
+			is_witch_trigger = yes
+		}
+	}
+}
+
+# 2.40 (boot 4, COUNCIL 2): a reason to ask for research money: a Mage (his own study is research, and the Research Fund
+# feeds it), or anyone taking part in a Magical Research now (its host or his assistant).
+spn_council_research_reason_trigger = {
+	OR = {
+		is_true_mage = yes
+		involved_activity ?= { has_activity_type = magical_research }
+	}
+}
+
+# 2.40 (boot 4, COUNCIL 3): conducting a Magical Research of his own (its host), so the temple's help lands on HIS work.
+spn_order_hosts_research_trigger = {
+	involved_activity ?= {
+		has_activity_type = magical_research
+		activity_host = root
+		exists = var:activity_special_type_progression # RD3: begun (set at its on_start); on the road to it, help would move nothing
+	}
+}

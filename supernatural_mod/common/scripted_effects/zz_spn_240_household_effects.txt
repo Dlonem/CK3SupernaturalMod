@@ -1,0 +1,202 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 F2) -- household administration. See zz_spn_240_household_triggers.txt for what
+# this is. Every effect here is safe to repeat: the decisions have no cooldowns, as in the Long Night.
+
+# Root = a player. Runs once per game (zz_spn_240_household_on_actions.txt). Stamps the house if the key matches and no
+# house holds the door yet. global_var:spn_household_dynasty is identity state: it never expires.
+spn_household_claim_effect = {
+	if = {
+		limit = {
+			NOT = { has_global_variable = spn_household_dynasty }
+			spn_household_key_trigger = yes
+			exists = dynasty
+		}
+		set_global_variable = { name = spn_household_dynasty value = dynasty }
+	}
+}
+
+# ---- Send for the Family Hide -----------------------------------------------------------------------------------------
+# Root = the heir. Weighs every free hide by spn_hide_fit_value (the same score every other choosing reads) and sends for
+# the best. scope:spn_fit_hide is saved before the score is read, every time (the 2.37b error). A hide that has turned him
+# away still counts, last (it may well do so again; the hide decides, as the tooltip says). The hand-over is the mod's
+# one hand-over effect, spn_hide_grant_effect, so a hide in a shrine or in an AI's hands is moved, never duplicated.
+spn_household_pick_hide_effect = {
+	set_local_variable = { name = spn_hh_best_score value = -100000 }
+	spn_household_weigh_hide_effect = { HIDE = silverback }
+	spn_household_weigh_hide_effect = { HIDE = timber }
+	spn_household_weigh_hide_effect = { HIDE = tundra }
+	spn_household_weigh_hide_effect = { HIDE = graybeard }
+	spn_household_weigh_hide_effect = { HIDE = midnight }
+	spn_household_weigh_hide_effect = { HIDE = alpha }
+	if = {
+		limit = { local_var:spn_hh_best ?= flag:silverback }
+		spn_hide_grant_effect = { HIDE = silverback }
+	}
+	else_if = {
+		limit = { local_var:spn_hh_best ?= flag:timber }
+		spn_hide_grant_effect = { HIDE = timber }
+	}
+	else_if = {
+		limit = { local_var:spn_hh_best ?= flag:tundra }
+		spn_hide_grant_effect = { HIDE = tundra }
+	}
+	else_if = {
+		limit = { local_var:spn_hh_best ?= flag:graybeard }
+		spn_hide_grant_effect = { HIDE = graybeard }
+	}
+	else_if = {
+		limit = { local_var:spn_hh_best ?= flag:midnight }
+		spn_hide_grant_effect = { HIDE = midnight }
+	}
+	else_if = {
+		limit = { local_var:spn_hh_best ?= flag:alpha }
+		spn_hide_grant_effect = { HIDE = alpha }
+	}
+}
+
+# Root = the heir. One hide: free, and Alpha only for a leader (spn_hide_leader_ok_trigger reads scope:spn_fit_hide).
+spn_household_weigh_hide_effect = {
+	save_scope_value_as = { name = spn_fit_hide value = flag:$HIDE$ }
+	if = {
+		limit = {
+			spn_household_hide_free_trigger = { HIDE = $HIDE$ }
+			spn_hide_leader_ok_trigger = yes
+		}
+		set_local_variable = { name = spn_hh_score value = spn_hide_fit_value }
+		if = {
+			limit = {
+				has_character_flag = spn_hide_refused_$HIDE$
+				exists = local_var:spn_hh_score
+			}
+			change_local_variable = { name = spn_hh_score add = -1000 }
+		}
+		# Boot 1 (22 Oct): guarded. The decision window evaluates effects for its preview without running
+		# set_local_variable, so an unguarded read logged ~25,000 lines a session.
+		if = {
+			limit = {
+				exists = local_var:spn_hh_score
+				exists = local_var:spn_hh_best_score
+				local_var:spn_hh_score > local_var:spn_hh_best_score
+			}
+			set_local_variable = { name = spn_hh_best_score value = local_var:spn_hh_score }
+			set_local_variable = { name = spn_hh_best value = flag:$HIDE$ }
+		}
+	}
+}
+
+# ---- Open the Family Strongbox ------------------------------------------------------------------------------------------
+# Root = the heir. 500 gold, 5 perk points in each of the six base lifestyles, and 5 in every creature tree he can use
+# (each tree's own is_valid, common/lifestyles/01_lifestyles_spn.txt).
+spn_household_strongbox_effect = {
+	add_gold = 500
+	# Boot 1 (22 Oct, Thomas): "5 points in all the trees I have unlocked". The six base lifestyles always, as the Long
+	# Night's charter gives (ln_household_charter_effect), and every creature tree his blood or craft opens.
+	add_diplomacy_lifestyle_perk_points = 5
+	add_martial_lifestyle_perk_points = 5
+	add_stewardship_lifestyle_perk_points = 5
+	add_intrigue_lifestyle_perk_points = 5
+	add_learning_lifestyle_perk_points = 5
+	add_wanderer_lifestyle_perk_points = 5
+	if = {
+		limit = { has_trait = supernatural_vampire }
+		add_vampire_lifestyle_perk_points = 5
+	}
+	if = {
+		limit = { has_trait = supernatural_werewolf }
+		add_werewolf_lifestyle_perk_points = 5
+	}
+	if = {
+		limit = { has_trait = supernatural_hybrid }
+		add_hybrid_lifestyle_perk_points = 5
+	}
+	if = {
+		limit = { has_trait = supernatural_hunter }
+		add_hunter_lifestyle_perk_points = 5
+	}
+	if = {
+		limit = { spn_household_magic_tree_trigger = yes }
+		add_magic_lifestyle_perk_points = 5
+	}
+	if = {
+		limit = {
+			OR = {
+				has_trait = demon1
+				has_trait = demon2
+			}
+		}
+		add_demon_lifestyle_perk_points = 5
+	}
+}
+
+# ---- Let the Blood Mend You ---------------------------------------------------------------------------------------------
+# Root = the heir. The mod's own healing effects (20_spn_health_effects.txt), which already cover the Long Night's list
+# and the sicknesses, plus the scars they leave out; 100 stress. Names, secrets, known traits, ww_infected_wound (a turning
+# in progress) and bloodlust are not damage and are left alone. A cure ends the Fors Factorum, as any cure does (G5).
+spn_household_mend_effect = {
+	spn_remove_wounds = yes
+	spn_remove_treatable_disease = yes
+	spn_remove_negative_age_traits = yes
+	if = { limit = { has_trait = disfigured } remove_trait = disfigured }
+	if = { limit = { has_trait = one_eyed } remove_trait = one_eyed }
+	if = { limit = { has_trait = one_legged } remove_trait = one_legged }
+	add_stress = -100
+}
+
+# ---- The Household Keeps Its Silence ------------------------------------------------------------------------------------
+# Root = the heir. Up to three adult courtiers are made loyal, those who know one of his secrets first. The Long Night's
+# retainer pass, the loyalty half only (its vice swaps are not wanted here), re-implemented: that effect does not exist
+# without the Long Night. Each pick excludes the earlier ones by saved scope, so a decision preview never names one man
+# twice (the Long Night's 1.0.9 lesson).
+spn_household_silence_effect = {
+	save_scope_as = spn_hh_lord
+	random_courtier = {
+		limit = { spn_household_retainer_trigger = yes }
+		weight = {
+			base = 1
+			modifier = {
+				add = 1000
+				spn_household_knows_lord_trigger = yes
+			}
+		}
+		save_scope_as = spn_hh_loyal_1
+		spn_household_make_loyal_effect = yes
+	}
+	random_courtier = {
+		limit = {
+			spn_household_retainer_trigger = yes
+			NOT = { this ?= scope:spn_hh_loyal_1 }
+		}
+		weight = {
+			base = 1
+			modifier = {
+				add = 1000
+				spn_household_knows_lord_trigger = yes
+			}
+		}
+		save_scope_as = spn_hh_loyal_2
+		spn_household_make_loyal_effect = yes
+	}
+	random_courtier = {
+		limit = {
+			spn_household_retainer_trigger = yes
+			NOT = { this ?= scope:spn_hh_loyal_1 }
+			NOT = { this ?= scope:spn_hh_loyal_2 }
+		}
+		weight = {
+			base = 1
+			modifier = {
+				add = 1000
+				spn_household_knows_lord_trigger = yes
+			}
+		}
+		spn_household_make_loyal_effect = yes
+	}
+}
+
+# Root = one courtier. Disloyal first: loyal lists it as its opposite, and an opposite refuses add_trait.
+spn_household_make_loyal_effect = {
+	if = {
+		limit = { has_trait = disloyal }
+		remove_trait = disloyal
+	}
+	add_trait_force_tooltip = loyal
+}

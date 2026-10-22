@@ -592,6 +592,7 @@ spn_gathering.0300 = {
 		name = spn_gathering.0300.b
 		trigger = { NOT = { scope:spn_ch_chosen = root } }
 		custom_tooltip = spn_gathering.0300.b.tt
+		scope:spn_ch_chosen = { add_character_flag = { flag = spn_hide_passed_kindly days = 1 } } # 2.40 (WORK-ORDER-2.40 C6): no feud
 		scope:spn_ch_chosen = { spn_hide_choosing_give_effect = yes }
 		ai_chance = {
 			base = 70
@@ -636,13 +637,6 @@ spn_gathering.0301 = {
 			triggered_desc = {
 				trigger = { scope:spn_waf_kind ?= flag:shrine }
 				desc = spn_gathering.0301.shrine
-			}
-			triggered_desc = {
-				trigger = {
-					scope:spn_waf_kind ?= flag:held
-					scope:spn_waf_holder ?= root
-				}
-				desc = spn_gathering.0301.held_mine
 			}
 			triggered_desc = {
 				trigger = { scope:spn_waf_kind ?= flag:held }
@@ -696,6 +690,10 @@ spn_gathering.0301 = {
 			}
 			desc = spn_gathering.0301.nothing
 		}
+		triggered_desc = { # 2.40 (WORK-ORDER-2.40 F5): others have heard where his hide is
+			trigger = { has_character_flag = spn_hide_word_out }
+			desc = spn_gathering.0301.held_mine
+		}
 	}
 	theme = hunting
 	override_background = { reference = wilderness_forest }
@@ -707,6 +705,10 @@ spn_gathering.0301 = {
 	}
 	option = {
 		name = spn_gathering.0301.a
+		if = { # 2.40 (WORK-ORDER-2.40 F5): told once
+			limit = { has_character_flag = spn_hide_word_out }
+			remove_character_flag = spn_hide_word_out
+		}
 	}
 }
 
@@ -880,11 +882,21 @@ spn_gathering.0307 = {
 	type = activity_event
 	title = spn_gathering.0307.t
 	desc = {
-		desc = spn_gathering.0307.desc
+		first_valid = { # 2.40 (WORK-ORDER-2.40 F5): a shrine, or someone's keeping
+			triggered_desc = {
+				trigger = { exists = scope:spn_tale_holder }
+				desc = spn_gathering.0307.desc_held
+			}
+			desc = spn_gathering.0307.desc
+		}
 		first_valid = {
 			triggered_desc = {
 				trigger = { exists = scope:spn_tale_takes }
 				desc = spn_gathering.0307.takes
+			}
+			triggered_desc = {
+				trigger = { exists = scope:spn_tale_holder }
+				desc = spn_gathering.0307.not_yet_held
 			}
 			desc = spn_gathering.0307.not_yet
 		}
@@ -899,11 +911,20 @@ spn_gathering.0307 = {
 	}
 	trigger = {
 		exists = scope:spn_tale_shrine_hide
-		exists = scope:spn_tale_shrine_county
+		OR = { # 2.40 (WORK-ORDER-2.40 F5): 
+			exists = scope:spn_tale_shrine_county
+			exists = scope:spn_tale_holder
+		}
 	}
 	option = {
 		name = spn_gathering.0307.a
-		custom_tooltip = spn_gathering.0307.a.tt
+		if = {
+			limit = { exists = scope:spn_tale_holder }
+			custom_tooltip = spn_gathering.0307.a.tt_held
+		}
+		else = {
+			custom_tooltip = spn_gathering.0307.a.tt
+		}
 	}
 }
 
@@ -940,7 +961,21 @@ spn_gathering.0304 = {
 spn_gathering.0305 = {
 	type = activity_event
 	title = spn_gathering.0305.t
-	desc = spn_gathering.0305.desc
+	desc = {
+		first_valid = { # 2.40 (WORK-ORDER-2.40 C4): one pack already
+			triggered_desc = {
+				trigger = {
+					trigger_if = {
+						limit = { exists = root.var:spn_pack }
+						scope:spn_un_spouse.var:spn_pack ?= root.var:spn_pack
+					}
+					trigger_else = { always = no }
+				}
+				desc = spn_gathering.0305.desc_same
+			}
+			desc = spn_gathering.0305.desc
+		}
+	}
 	theme = hunting
 	override_background = { reference = wilderness_forest }
 	left_portrait = { character = root animation = personality_bold }
@@ -985,6 +1020,15 @@ spn_gathering.0305 = {
 				}
 			}
 			custom_tooltip = spn_gathering.0305.a.tt
+			spn_pack_unify_effect = { OTHER = scope:spn_un_spouse }
+		}
+		# 2.40 (WORK-ORDER-2.40 C4): she already runs in his pack: the same re-check, no merge
+		else_if = {
+			limit = {
+				spn_is_alpha_trigger = yes
+				spn_unification_same_pack_ok_trigger = { SPOUSE = scope:spn_un_spouse }
+			}
+			custom_tooltip = spn_gathering.0305.a.tt_same
 			spn_pack_unify_effect = { OTHER = scope:spn_un_spouse }
 		}
 		else = {

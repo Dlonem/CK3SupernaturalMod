@@ -1,0 +1,77 @@
+﻿# Supernatural 2.40 boot 4 -- THE COMPELLED, a fourth puppet type. Package QC (agent COMPEL).
+# Thomas: Compel Mortal, when it takes, makes the mortal your puppet for ONE command. The set-up interaction is Compel
+# Mortal itself (spn_compulsion, 10_spn_interactions.txt): its ai_targets (courtiers, guests, councillors, prisoners,
+# activity guests) are the picker list in Intrigue > Puppets, and its on_accept runs set_puppet
+# (spn_compel_take_hold_effect) on the player's path. Every command ends the status (spn_compel_command_given_effect,
+# vanilla clear_puppet_status). Unused, var:spn_compelled_by expires after 30 days, is_valid fails, and the engine removes
+# the puppet (vanilla: "will be checked daily", _puppet_types.info).
+# Vanilla puppet actions (puppet_action_*) are NOT listed: they run no mod code, so they could not end the compulsion.
+spn_compel_puppet = {
+	color = { 0.42 0.12 0.36 1 }
+	interaction = spn_compulsion
+
+	# Vampires and hybrids only, so the slot shows to those it concerns (Thomas). Players only: the AI compels the old way.
+	# The engine also evaluates this with no character at load and logs "untyped trigger" for every type, vanilla's
+	# included (Q7 HANDOFF-BOOT2.md): engine behaviour.
+	can_have = {
+		is_ai = no
+		is_adult = yes
+		OR = {
+			has_trait = supernatural_vampire
+			has_trait = supernatural_hybrid
+		}
+	}
+
+	is_valid = {
+		OR = {
+			has_trait = supernatural_vampire
+			has_trait = supernatural_hybrid
+		}
+		scope:puppet = {
+			is_alive = yes
+			is_ai = yes # a puppet is never another player
+			var:spn_compelled_by ?= root # 30 days: the compulsion fades unused
+		}
+	}
+
+	priority = {
+		value = 16
+	}
+
+	actions = {
+		# Aimed at the vampire himself (right-click yourself, act as them): common/character_interactions/zz_spn_240_compel_interactions.txt
+		puppet_action_spn_compel_join_war
+		puppet_action_spn_compel_join_court
+		puppet_action_spn_compel_lover
+		puppet_action_spn_compel_obey
+		puppet_action_spn_compel_secrets
+		puppet_action_spn_compel_patron
+		# Aimed at one of their own prisoners
+		puppet_action_spn_compel_release
+		# The shared puppet verbs (QS/Q7; each ends the compulsion through spn_puppet_shared_verb_done_effect, and accepts
+		# this type through spn_puppet_shared_verb_type_trigger, the line QC/edits.py inserts)
+		puppet_action_spn_puppet_send_gold
+		puppet_action_spn_puppet_seize
+		puppet_action_spn_puppet_strike
+		puppet_action_spn_puppet_loom
+		puppet_action_spn_puppet_befriend
+		puppet_action_spn_puppet_seduce
+		puppet_action_spn_puppet_court
+		puppet_action_spn_puppet_murder
+		puppet_action_spn_puppet_give_artifact
+		# On the puppet card (puppet decisions): common/decisions/zz_spn_240_compel_decisions.txt
+		puppet_action_spn_compel_end_life
+		puppet_action_spn_compel_let_go
+	}
+
+	# Existing art only: Compel Mortal's own icon (mod gfx list) and vanilla's spouse council scene (window_council gui).
+	asset = {
+		icon = "gfx/interface/icons/character_interactions/vampire_no_turn.dds"
+		background = "gfx/interface/skinned/illustrations/council/bg_council_spouse.dds"
+	}
+
+	# Vanilla portrait animation (47 vanilla events; the example in _puppet_types.info). Documented puppet form.
+	animation = {
+		reference = "obsequious_bow"
+	}
+}

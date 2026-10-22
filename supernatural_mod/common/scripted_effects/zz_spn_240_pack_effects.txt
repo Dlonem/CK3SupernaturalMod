@@ -1,0 +1,537 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40, package Q5: hides and packs). New effects. Loc: zz_spn_240_q5_l_english.yml.
+
+# ==================================================================================================
+# C6 THE MERGE: the member-move half of the Unification (spn_pack_unify_effect), moved here whole so Offer Pack Terms
+# can use it without the Unification's own marks (co-alpha, unified, Evolved, the hybrid gift).
+# Character scope = the alpha whose pack takes the other in. OTHER = the other alpha, who becomes a member of it at his
+# standing. HOW = joined (the Unification) | terms (Offer Pack Terms): the line the joined players read (spn_pack.0013).
+# The other pack's members move first, its alpha last; then the empty story ends and leaves the list.
+# ==================================================================================================
+spn_pack_merge_effect = {
+	save_scope_as = spn_mg_host
+	$OTHER$ = { save_scope_as = spn_mg_other }
+	scope:spn_mg_host.var:spn_pack = { save_scope_as = spn_mg_pack }
+	scope:spn_mg_other.var:spn_pack = { save_scope_as = spn_mg_old }
+	scope:spn_mg_old = {
+		every_in_list = {
+			variable = spn_pack_members
+			limit = { NOT = { this = scope:spn_mg_other } }
+			add_to_temporary_list = spn_mg_list
+		}
+	}
+	every_in_list = {
+		list = spn_mg_list
+		save_temporary_scope_as = spn_mg_m
+		spn_pack_remove_member_effect = { WHO = scope:spn_mg_m REASON = flag:quiet }
+		spn_pack_add_member_effect = { WHO = scope:spn_mg_m PACK = scope:spn_mg_pack }
+	}
+	spn_pack_remove_member_effect = { WHO = scope:spn_mg_other REASON = flag:quiet }
+	if = {
+		limit = { is_target_in_global_variable_list = { name = spn_packs target = scope:spn_mg_other } }
+		remove_list_global_variable = { name = spn_packs target = scope:spn_mg_other }
+	}
+	scope:spn_mg_old = { end_story = yes }
+	spn_pack_add_member_effect = { WHO = scope:spn_mg_other PACK = scope:spn_mg_pack }
+	scope:spn_mg_pack = { spn_pack_refresh_effect = yes }
+	# Every player whose pack was joined to this one is told, the other alpha included (2.37o, the review of 4 Oct, F4).
+	# The flag is cleared once the events are sent (a triggered event keeps its copy).
+	scope:spn_mg_host = { save_scope_as = spn_sa_new }
+	save_scope_value_as = { name = spn_mg_how value = flag:$HOW$ }
+	if = {
+		limit = { scope:spn_mg_how = flag:terms }
+		save_scope_value_as = { name = spn_sa_terms value = yes }
+	}
+	else = {
+		save_scope_value_as = { name = spn_sa_joined value = yes }
+	}
+	every_in_list = {
+		list = spn_mg_list
+		limit = { is_ai = no }
+		trigger_event = spn_pack.0013
+	}
+	scope:spn_mg_other = {
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_pack.0013
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_sa_terms }
+		clear_saved_scope = spn_sa_terms
+	}
+	if = {
+		limit = { exists = scope:spn_sa_joined }
+		clear_saved_scope = spn_sa_joined
+	}
+}
+
+# ==================================================================================================
+# C4 OTHER PACKS: the alphas of the other packs this pack's alpha can reach (in diplomatic range), for the pack's
+# Situation panel. Story scope = a pack. Read from the short global list of alphas (one a pack), never a world walk.
+# The list is rebuilt on every refresh, so it carries no expiry.
+# ==================================================================================================
+spn_pack_known_alphas_effect = {
+	save_scope_as = spn_ka_pack
+	clear_variable_list = spn_pack_known_alphas
+	if = {
+		limit = { story_owner ?= { is_alive = yes } }
+		every_in_global_list = {
+			variable = spn_packs
+			limit = {
+				is_alive = yes
+				exists = var:spn_pack
+				NOT = { this = scope:spn_ka_pack.story_owner }
+				in_diplomatic_range = scope:spn_ka_pack.story_owner
+				# Orchestrator (R2 review, B6): only an alpha the viewer may know is a wolf: openly known, his wolf secret
+				# known to the viewer, or pact-bound to him.
+				OR = {
+					has_trait = spn_known_werewolf
+					has_trait = spn_known_hybrid
+					any_secret = {
+						OR = { secret_type = spn_secret_werewolf secret_type = spn_secret_hybrid }
+						is_known_by = scope:spn_ka_pack.story_owner
+					}
+					spn_pack_pact_bound_trigger = { WHO = scope:spn_ka_pack.story_owner }
+					# Boot 2 (j): or a moment between the packs named him (spn_pack_alpha_scented_effect).
+					scope:spn_ka_pack.story_owner = { is_target_in_variable_list = { name = spn_alphas_scented target = prev } }
+				}
+			}
+			scope:spn_ka_pack = { add_to_variable_list = { name = spn_pack_known_alphas target = prev } }
+		}
+	}
+}
+
+# ==================================================================================================
+# C5 THE TRUE ALPHA'S ANSWER, for an AI alpha (a player alpha is asked: spn_pack.2000). Character scope = the True
+# Alpha; scope:spn_ta_pack = his pack; scope:spn_ta_old_alpha = its alpha now. The old alpha yields, fights, or lets
+# him go with whoever follows, by his temper. A True Alpha beaten in the fight leaves to found his own pack, so he is
+# never kept as a beaten subordinate. All of it hidden: the option says what may happen in words.
+# ==================================================================================================
+spn_pack_true_alpha_ai_answer_effect = {
+	save_scope_as = spn_ta
+	hidden_effect = {
+		random_list = {
+			# He leads now.
+			10 = {
+				modifier = {
+					add = 30
+					scope:spn_ta_old_alpha = { has_trait = just }
+				}
+				modifier = {
+					add = 20
+					scope:spn_ta_old_alpha = { has_trait = content }
+				}
+				modifier = {
+					add = 20
+					scope:spn_ta_old_alpha = { has_trait = humble }
+				}
+				modifier = {
+					add = 20
+					scope:spn_ta_old_alpha = { has_trait = craven }
+				}
+				modifier = {
+					factor = 0.25
+					scope:spn_ta_old_alpha = { has_trait = ambitious }
+				}
+				scope:spn_ta_pack = { spn_pack_set_alpha_effect = { NEW = scope:spn_ta } }
+				scope:spn_ta_old_alpha = {
+					add_opinion = { target = scope:spn_ta modifier = spn_true_alpha_rose_opinion }
+				}
+			}
+			# Then he must take it.
+			10 = {
+				modifier = {
+					add = 30
+					scope:spn_ta_old_alpha = { has_trait = arrogant }
+				}
+				modifier = {
+					add = 30
+					scope:spn_ta_old_alpha = { has_trait = wrathful }
+				}
+				modifier = {
+					add = 20
+					scope:spn_ta_old_alpha = { has_trait = brave }
+				}
+				modifier = {
+					add = 15
+					scope:spn_ta_old_alpha = { has_trait = ambitious }
+				}
+				modifier = {
+					factor = 0
+					scope:spn_ta_old_alpha = { has_trait = craven }
+				}
+				spn_pack_true_alpha_fight_effect = yes
+			}
+			# Go, and take who will follow.
+			15 = {
+				spn_true_alpha_found_own_effect = yes
+			}
+		}
+	}
+}
+
+# The fight for the pack (spn_pack.2000 option b and the AI answer). Character scope = the True Alpha; the old alpha is
+# scope:spn_ta_old_alpha. The Challenge's own clash and aftermath: a True Alpha who wins leads (the challenge path sets
+# him alpha); one who loses leaves to found his own. The loser is read after the clash and before anyone moves.
+spn_pack_true_alpha_fight_effect = {
+	save_scope_as = spn_ta
+	spn_pack_challenge_effect = { A = scope:spn_ta B = scope:spn_ta_old_alpha }
+	if = {
+		limit = {
+			scope:spn_clash_loser ?= scope:spn_ta
+			scope:spn_ta = {
+				is_alive = yes
+				var:spn_pack ?= scope:spn_ta_pack
+				spn_is_alpha_trigger = no
+			}
+		}
+		scope:spn_ta = { spn_true_alpha_found_own_effect = yes }
+	}
+}
+
+# ==================================================================================================
+# B5 + G11 SEND FOR A HIDE, and the Pilgrimage's theft (spn_hide.0360): a hide taken out of its shrine. One effect for
+# both (the duplication pass: .0360 carried the same block inline). Character scope = the taker. HIDE = the enshrined
+# hide; KEEPER = the county's holder, the one robbed (may be unset: an enshrined hide has no character owner);
+# HOW = stolen | given (the artifact's history).
+# ==================================================================================================
+spn_hide_shrine_take_effect = {
+	if = {
+		limit = { exists = scope:spn_st_keeper }
+		clear_saved_scope = spn_st_keeper
+	}
+	$HIDE$ = { save_scope_as = spn_st_hide }
+	if = {
+		limit = { exists = $KEEPER$ }
+		$KEEPER$ = { save_scope_as = spn_st_keeper }
+	}
+	save_scope_as = spn_st_taker
+	scope:spn_st_hide = {
+		if = {
+			limit = { exists = scope:spn_st_keeper }
+			set_owner = {
+				target = scope:spn_st_taker
+				history = {
+					type = $HOW$
+					actor = scope:spn_st_keeper
+					recipient = scope:spn_st_taker
+				}
+			}
+		}
+		else = {
+			set_owner = {
+				target = scope:spn_st_taker
+				history = {
+					type = $HOW$
+					recipient = scope:spn_st_taker
+				}
+			}
+		}
+		spn_hide_shrine_left_effect = yes
+	}
+	spn_hide_start_check_effect = yes
+}
+
+# Words, not odds (Thomas's rule): how the road at the shrine looks. CHANCE = a script value of the sender's scope.
+spn_hide_errand_lean_tooltip_effect = {
+	if = {
+		limit = { $CHANCE$ >= 65 }
+		custom_tooltip = spn_hide_errand_lean_good_tt
+	}
+	else_if = {
+		limit = { $CHANCE$ <= 35 }
+		custom_tooltip = spn_hide_errand_lean_poor_tt
+	}
+	else = {
+		custom_tooltip = spn_hide_errand_lean_even_tt
+	}
+}
+
+# ==================================================================================================
+# Boot 2 (j) A moment between packs named another alpha to this one (Another Pack's Scent, A Wolf Asks to Run With You,
+# Young Wolves Fight). Character scope = the alpha who was told; WHO = the other alpha. From then on he knows who runs
+# that pack: Offer Pack Terms and the Other Packs list read it (spn_pack_alpha_known_trigger). Twenty years, refreshed
+# by every later moment between the two packs.
+# ==================================================================================================
+spn_pack_alpha_scented_effect = {
+	if = {
+		limit = { is_target_in_variable_list = { name = spn_alphas_scented target = $WHO$ } }
+		remove_list_variable = { name = spn_alphas_scented target = $WHO$ }
+	}
+	add_to_variable_list = { name = spn_alphas_scented target = $WHO$ years = 20 }
+}
+
+# ==================================================================================================
+# Boot 2 (b) "The Rest of the Pack": the pack's wolves not already named above it in the panel (the Alpha, the Second,
+# the Co-Alpha, the Champions of the Six), so nobody is listed twice under the lists. A display list only: every rule
+# still reads spn_pack_members. Story scope = a pack. Rebuilt by spn_pack_update_second_effect (every standing change)
+# and by the refresh after the Co-Alpha list, so it carries no expiry.
+# ==================================================================================================
+spn_pack_rest_list_effect = {
+	save_scope_as = spn_rl_pack
+	clear_variable_list = spn_pack_rest_list
+	every_in_list = {
+		variable = spn_pack_members
+		limit = {
+			is_alive = yes
+			NOT = { this = scope:spn_rl_pack.story_owner }
+			NOT = { scope:spn_rl_pack = { is_target_in_variable_list = { name = spn_pack_second_list target = prev } } }
+			NOT = { scope:spn_rl_pack = { is_target_in_variable_list = { name = spn_pack_co_alpha_list target = prev } } }
+			NOT = { scope:spn_rl_pack = { is_target_in_variable_list = { name = spn_pack_champions target = prev } } }
+		}
+		scope:spn_rl_pack = { add_to_variable_list = { name = spn_pack_rest_list target = prev } }
+	}
+}
+
+# Save compatibility: a pack from a save before this build has no spn_pack_rest_list until its next refresh, so its
+# panel would show nobody under "The Rest of the Pack". Once per save (zz_spn_240_pack_on_actions.txt): every pack is
+# refreshed now. One entry a pack in spn_packs, never a world walk.
+spn_pack_rest_list_repair_effect = {
+	set_global_variable = { name = spn_pack_rest_list_240 value = yes } # identity state of the save: no expiry
+	every_in_global_list = {
+		variable = spn_packs
+		limit = {
+			is_alive = yes
+			spn_is_alpha_trigger = yes
+		}
+		var:spn_pack = { spn_pack_refresh_effect = yes }
+	}
+}
+
+# ==================================================================================================
+# Boot 2 (k) PACK MEMBERS CLASH (boot 3 name; was Young Wolves Fight). The moment's scopes: spn_mo_pack / spn_mo_alpha (this pack), spn_mo_other_pack /
+# spn_mo_other (the neighbour), spn_mo_ours / spn_mo_theirs (one young wolf of each: AI, adult, never an alpha:
+# spn_pack_moment_member_trigger). A player alpha chooses (spn_pack.0102); an AI alpha by his temper. Nothing is rolled
+# until the choice: pull them apart, let them settle it, or stand behind his own wolf.
+# ==================================================================================================
+spn_pack_young_fight_begin_effect = {
+	if = {
+		limit = { spn_pack_young_fight_at_odds_trigger = { A = scope:spn_mo_alpha B = scope:spn_mo_other } }
+		save_scope_value_as = { name = spn_yf_at_odds value = yes }
+	}
+	# Boot 3: where the other pack runs, to name it in spn_pack.0102 (its alpha's capital, else where he is).
+	scope:spn_mo_other = {
+		if = {
+			limit = { exists = capital_county }
+			capital_county = { save_scope_as = spn_yf_other_land }
+		}
+		else_if = {
+			limit = { exists = location.county }
+			location.county = { save_scope_as = spn_yf_other_land }
+		}
+	}
+	scope:spn_mo_alpha = {
+		if = {
+			limit = { is_ai = no }
+			spn_pack_alpha_scented_effect = { WHO = scope:spn_mo_other }
+			trigger_event = spn_pack.0102
+		}
+		else = {
+			spn_pack_young_fight_ai_effect = yes
+		}
+	}
+}
+
+# An AI alpha's answer. Character scope = the alpha. He never stands behind his wolf against a player alpha (that player
+# would be made a rival without a word) or against a spouse or lover.
+spn_pack_young_fight_ai_effect = {
+	random_list = {
+		30 = {
+			modifier = { add = 20 has_trait = calm }
+			modifier = { add = 20 has_trait = compassionate }
+			modifier = { add = 15 has_trait = content }
+			spn_pack_young_fight_part_effect = yes
+		}
+		40 = {
+			spn_pack_young_fight_settle_effect = yes
+		}
+		15 = {
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = 15 has_trait = arrogant }
+			modifier = { add = 10 has_trait = ambitious }
+			modifier = {
+				factor = 0
+				OR = {
+					scope:spn_mo_other = { is_ai = no }
+					is_spouse_of = scope:spn_mo_other
+					has_relation_lover = scope:spn_mo_other
+				}
+			}
+			save_scope_value_as = { name = spn_yf_backed value = yes }
+			spn_pack_young_fight_settle_effect = yes
+		}
+	}
+}
+
+# Pull them apart. His wolf resents it; between packs at odds the other alpha marks it as a kindness.
+spn_pack_young_fight_part_effect = {
+	scope:spn_mo_ours = {
+		add_opinion = {
+			target = scope:spn_mo_alpha
+			modifier = disappointed_opinion
+			opinion = -10
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_yf_at_odds }
+		spn_pack_scent_truce_effect = yes
+	}
+}
+
+# Let them settle it, or stand behind his own wolf (scope:spn_yf_backed). The fight itself is the mod's clash, in wolf
+# shape, rolled hidden (spn_creature_clash_effect).
+spn_pack_young_fight_settle_effect = {
+	if = {
+		limit = { exists = scope:spn_yf_backed }
+		scope:spn_mo_ours = {
+			add_opinion = {
+				target = scope:spn_mo_alpha
+				modifier = support_opinion
+				opinion = 20
+			}
+		}
+	}
+	spn_creature_clash_effect = {
+		A = scope:spn_mo_ours
+		B = scope:spn_mo_theirs
+		THEN = spn_pack_young_fight_after_effect
+		FORM = yes
+	}
+}
+
+# Inside the clash's hidden block: scope:spn_clash_winner / spn_clash_loser are set. Order (Thomas's rule): every
+# outcome is banked first, the living consequences next, the trail, and the death last.
+spn_pack_young_fight_after_effect = {
+	# 1. Between packs at odds this is no game: rarely, the loser does not get up. Only ever an AI wolf (re-checked:
+	# a player may have taken him over while the event was open).
+	if = {
+		limit = {
+			exists = scope:spn_yf_at_odds
+			scope:spn_clash_loser = { is_ai = yes }
+		}
+		random = {
+			chance = 10
+			save_scope_value_as = { name = spn_yf_dead value = yes }
+		}
+	}
+	# 2. The living: the loser is hurt. Friends after, if both are kind or fair and the packs are not at odds; else the
+	# loser holds it against the winner.
+	if = {
+		limit = { NOT = { exists = scope:spn_yf_dead } }
+		scope:spn_clash_loser = {
+			increase_wounds_no_death_effect = { REASON = fight }
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_yf_at_odds }
+				scope:spn_clash_winner = {
+					OR = {
+						has_trait = compassionate
+						has_trait = just
+					}
+				}
+				scope:spn_clash_loser = {
+					OR = {
+						has_trait = compassionate
+						has_trait = just
+					}
+				}
+				scope:spn_clash_winner = { can_set_relation_friend_trigger = { CHARACTER = scope:spn_clash_loser } }
+			}
+			scope:spn_clash_winner = {
+				set_relation_friend = {
+					target = scope:spn_clash_loser
+					reason = spn_rel_young_wolves_fought
+				}
+			}
+			save_scope_value_as = { name = spn_mo_fight_friends value = yes }
+		}
+		else_if = {
+			limit = {
+				scope:spn_clash_loser = {
+					NOT = { has_relation_rival = scope:spn_clash_winner }
+					can_set_relation_potential_rival_trigger = { CHARACTER = scope:spn_clash_winner }
+				}
+			}
+			scope:spn_clash_loser = { set_relation_potential_rival = scope:spn_clash_winner }
+		}
+	}
+	# 3. The alpha who stood behind his wolf: his name rises or falls with it, and between packs at odds the other
+	# alpha takes it as a challenge.
+	if = {
+		limit = { exists = scope:spn_yf_backed }
+		if = {
+			limit = { scope:spn_clash_winner = scope:spn_mo_ours }
+			scope:spn_mo_alpha = { add_prestige = minor_prestige_gain }
+			scope:spn_mo_ours = { spn_pack_add_standing_effect = { VALUE = 5 } }
+		}
+		else = {
+			scope:spn_mo_alpha = { add_prestige = minor_prestige_loss }
+		}
+		if = {
+			limit = { exists = scope:spn_yf_at_odds }
+			spn_pack_scent_rival_effect = yes
+		}
+		# Boot 3: an alpha who takes a side in a clash between packs sours his house and the other alpha's house a
+		# little, through vanilla's house relations (the mod's one helper, spn_pack_house_step_effect: only between
+		# two different houses). One fight is a small step (vanilla's minor step, a tenth of a level); a death in it
+		# is a medium step. Only repeated fights move two houses toward a feud. Banked before the death below.
+		if = {
+			limit = { exists = scope:spn_yf_dead }
+			spn_pack_house_step_effect = {
+				A = scope:spn_mo_alpha
+				B = scope:spn_mo_other
+				VALUE = house_relation_damage_medium_value
+				REASON = spn_backed_in_clash
+			}
+		}
+		else = {
+			spn_pack_house_step_effect = {
+				A = scope:spn_mo_alpha
+				B = scope:spn_mo_other
+				VALUE = house_relation_damage_minor_value
+				REASON = spn_backed_in_clash
+			}
+		}
+	}
+	# 4. A trail, where the fight was: 10%, or 20% between packs at odds. Through the menace system's own mark (it decides
+	# whether the county only whispers or opens a trail). A death is not marked here: the killer is known, so the menace
+	# on_death hook marks it (zz_spn_menace_on_actions.txt), and marking it here too would count one night twice.
+	if = {
+		limit = {
+			NOT = { exists = scope:spn_yf_dead }
+			exists = scope:spn_mo_ours.location.county
+		}
+		scope:spn_mo_ours.location.county = { save_scope_as = spn_yf_county }
+		if = {
+			limit = { exists = scope:spn_yf_at_odds }
+			random = {
+				chance = 20
+				save_scope_value_as = { name = spn_yf_seen value = yes }
+			}
+		}
+		else = {
+			random = {
+				chance = 10
+				save_scope_value_as = { name = spn_yf_seen value = yes }
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_yf_seen }
+			spn_mark_menace_effect = { COUNTY = scope:spn_yf_county CULPRIT = scope:spn_clash_winner KIND = werewolf SEVERITY = prowl }
+		}
+	}
+	# 5. Last: the death.
+	if = {
+		limit = {
+			exists = scope:spn_yf_dead
+			scope:spn_clash_loser = { is_alive = yes }
+		}
+		scope:spn_clash_loser = {
+			death = {
+				death_reason = spn_death_throat_ripped_out
+				killer = scope:spn_clash_winner
+			}
+		}
+	}
+}

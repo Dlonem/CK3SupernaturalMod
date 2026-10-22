@@ -62,7 +62,16 @@ spn_conclave = {
 				limit = { has_character_flag = spn_conclave_may_call }
 				remove_character_flag = spn_conclave_may_call
 			}
-			trigger_event = spn_conclave.0002
+			# 2.40 (WORK-ORDER-2.40 pop-ups): The Call Goes Out had one option and no choice: a toast for a player host.
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_conclave.0002.t
+					desc = spn_conclave.0002.desc
+					left_icon = this
+				}
+			}
 		}
 	}
 
@@ -234,8 +243,20 @@ spn_conclave = {
 		exists = county
 		custom_tooltip = {
 			text = spn_conclave_location_tt
-			is_county_capital = yes
-			county ?= { holder ?= scope:host }
+			OR = {
+				AND = {
+					is_county_capital = yes
+					county ?= { holder ?= scope:host }
+				}
+				# 2.40 (WORK-ORDER-2.40 A6): a landless host meets the masks at his camp or estate.
+				AND = {
+					scope:host = {
+						is_landed = no
+						exists = domicile
+					}
+					this = scope:host.domicile.domicile_location
+				}
+			}
 		}
 	}
 	province_filter = domicile_domain
@@ -247,7 +268,7 @@ spn_conclave = {
 	province_score = {
 		value = 10
 		if = {
-			limit = { this = scope:host.capital_province }
+			limit = { scope:host.capital_province ?= this } # 2.40 (WORK-ORDER-2.40 A6): a landless host has none
 			add = 40
 		}
 		if = {

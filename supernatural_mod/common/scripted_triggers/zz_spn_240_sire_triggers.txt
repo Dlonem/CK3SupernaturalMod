@@ -1,0 +1,107 @@
+﻿# Supernatural 2.40 boot 2 (item h) -- the Sire Bond's triggers. Package QS.
+# Boot 3 (Thomas's calls, 22 Oct): the bond forms by itself and lasts; the end of the romance does not end it.
+# Boot 4: a hybrid needs no perk, a vampire needs Vampire's Kiss; no favour wears on the bound one (no strain).
+
+# Who may hold a Sire Bond. Scope: the sire. Own traits and perks only (never another's secret).
+# Boot 4 (Thomas's call: "remove the hybrid requirement ... but we can still require vampire has to get that one perk"):
+# a HYBRID needs no perk; a pure VAMPIRE needs Vampire's Kiss (vampire_seduction_perk, 00_vampire_1_vampirism_perks.txt).
+# Read by the type's can_have, automatic formation (spn_sire_bond_forms_trigger), the old-save check and Sense the Sire
+# Bond. A bond already held is never broken by it: the type's is_valid does not read it, and can_have also passes while
+# the sire holds a Sire Bond puppet.
+spn_sire_bond_holder_trigger = {
+	is_adult = yes
+	OR = {
+		has_trait = supernatural_hybrid
+		AND = {
+			has_trait = supernatural_vampire
+			has_perk = vampire_seduction_perk
+		}
+	}
+}
+
+# The puppet's side of a bond that holds, read daily by the type's is_valid. Scope: the puppet. SIRE = the sire.
+# Maker bond read as the mod reads it (has_relation_mmaker on the turned, 10_spn_interactions.txt invoke_the_bond).
+# Boot 3: the bond lasts once formed. It is formed when var:spn_sire_bond_of names the sire (written when the bond
+# forms, identity state), or, for a bond claimed in boot 2 before that record existed, while the romance lasts.
+spn_sire_bond_pair_trigger = {
+	is_alive = yes
+	is_adult = yes
+	is_ai = yes
+	has_relation_mmaker = $SIRE$
+	OR = {
+		var:spn_sire_bond_of ?= $SIRE$
+		has_relation_lover = $SIRE$
+		has_relation_soulmate = $SIRE$
+	}
+	OR = {
+		has_trait = supernatural_vampire
+		has_trait = supernatural_hybrid
+	}
+}
+
+# May the bond FORM now between this turned lover and SIRE? Scope: the turned. Every way in reads this: the relation
+# hooks (on_set_relation_mmaker/pprogeny/lover/soulmate), the one-time check for old saves, and Sense the Sire Bond.
+# The sire turned them (maker bond) and they love him (lover or soulmate), both are vampires or hybrids, the turned is an
+# adult played by no one, the sire is an adult player. A bond the sire let go (Release the Sire Bond) does not form again
+# by itself.
+spn_sire_bond_forms_trigger = {
+	is_alive = yes
+	is_adult = yes
+	is_ai = yes
+	has_relation_mmaker = $SIRE$
+	OR = {
+		has_relation_lover = $SIRE$
+		has_relation_soulmate = $SIRE$
+	}
+	OR = {
+		has_trait = supernatural_vampire
+		has_trait = supernatural_hybrid
+	}
+	NOT = { var:spn_sire_bond_released_by ?= $SIRE$ }
+	$SIRE$ = {
+		is_alive = yes
+		is_ai = no
+		spn_sire_bond_holder_trigger = yes
+	}
+}
+
+# Is this interaction being used as a Sire Bond puppet action against a fit target? Interaction scope.
+# Open facts only: whose puppet it is (the sire's own), and the target is an adult who is not the puppet.
+# Boot 3: the sire himself may be the target (vanilla's puppet actions allow it: gift_interaction's is_shown tests
+# scope:recipient = scope:actor for a puppet, and seduce/murder toast the puppeteer only when he is not the target);
+# each favour that makes no sense on the sire excludes him in its own is_shown.
+spn_sire_bond_action_shown_trigger = {
+	# RB1 (boot-2 review): no scope:is_puppet_action here. Vanilla never reads it in an is_shown (only in is_valid and
+	# effects), so it may be unset when the "interact as" menu is built; the puppet test below is false outside the
+	# puppet menu anyway (there scope:puppet_or_actor is the actor, who is never his own puppet).
+	exists = scope:puppet_or_actor
+	scope:actor.puppet:spn_sire_puppet ?= scope:puppet_or_actor
+	scope:recipient = {
+		is_adult = yes
+		NOT = { this = scope:puppet_or_actor }
+	}
+}
+
+# Can the puppet reach this person? Scope: the target. PUPPET = the puppet. Open facts: same court, spouse, close
+# family, the puppet's vassal or liege, or standing in the same place.
+spn_sire_bond_reach_trigger = {
+	OR = {
+		is_in_the_same_court_as = $PUPPET$
+		is_spouse_of = $PUPPET$
+		is_close_family_of = $PUPPET$
+		is_vassal_of = $PUPPET$
+		$PUPPET$.liege ?= this
+		location = $PUPPET$.location
+	}
+}
+
+# Does this person trust the puppet? Scope: the target. PUPPET = the puppet. Open facts (opinion and relations).
+spn_sire_bond_trusts_trigger = {
+	OR = {
+		opinion = { target = $PUPPET$ value >= 20 }
+		has_relation_friend = $PUPPET$
+		has_relation_best_friend = $PUPPET$
+		is_spouse_of = $PUPPET$
+		is_close_family_of = $PUPPET$
+	}
+}

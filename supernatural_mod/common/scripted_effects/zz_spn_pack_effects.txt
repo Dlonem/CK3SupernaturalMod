@@ -333,6 +333,7 @@ spn_pack_refresh_effect = {
 			limit = { var:spn_pack_co_alpha ?= { is_alive = yes } }
 			add_to_variable_list = { name = spn_pack_co_alpha_list target = var:spn_pack_co_alpha }
 		}
+		spn_pack_rest_list_effect = yes # 2.40 boot 2 (b): after the Co-Alpha list it leaves out
 		# The size each member's modifier scales by: doubled in a pack that holds a living True Alpha (§16).
 		save_scope_value_as = {
 			name = spn_ref_scale
@@ -379,6 +380,7 @@ spn_pack_refresh_effect = {
 				remove_all_character_modifier_instances = spn_alone_in_the_woods_modifier
 			}
 		}
+		spn_pack_known_alphas_effect = yes # 2.40 (WORK-ORDER-2.40 C4): the Other Packs list
 		if = {
 			limit = { spn_pack_use_mirrors_trigger = yes }
 			spn_pack_sync_mirrors_effect = yes
@@ -416,6 +418,8 @@ spn_pack_update_second_effect = {
 		limit = { exists = var:spn_pack_second }
 		add_to_variable_list = { name = spn_pack_second_list target = var:spn_pack_second }
 	}
+	# 2.40 boot 2 (b): the panel's Rest of the Pack follows the Second
+	spn_pack_rest_list_effect = yes
 }
 
 # The membership mirror (§4.7), off unless the boot shows members cannot see the alpha's story. Left in place so
@@ -444,7 +448,18 @@ spn_pack_sync_mirrors_effect = {
 			clear_variable_list = spn_pack_co_alpha_list
 			clear_variable_list = spn_pack_champions
 			clear_variable_list = spn_pack_members
+			clear_variable_list = spn_pack_known_alphas # 2.40 (WORK-ORDER-2.40 C4): 
+			clear_variable_list = spn_pack_rest_list # 2.40 boot 2 (b): 
 			scope:spn_mirror_pack = {
+				every_in_list = {
+					variable = spn_pack_known_alphas
+					scope:spn_mirror_story = { add_to_variable_list = { name = spn_pack_known_alphas target = prev } }
+				}
+				# 2.40 boot 2 (b): the Rest of the Pack list
+				every_in_list = {
+					variable = spn_pack_rest_list
+					scope:spn_mirror_story = { add_to_variable_list = { name = spn_pack_rest_list target = prev } }
+				}
 				every_in_list = {
 					variable = spn_pack_second_list
 					scope:spn_mirror_story = { add_to_variable_list = { name = spn_pack_second_list target = prev } }
@@ -806,7 +821,8 @@ spn_pack_yearly_effect = {
 			add_trait_xp = { trait = supernatural_hybrid track = hybrid_lycanthropy value = scope:spn_yr_lyc }
 		}
 		# +5 standing a year in a pack (design §6.4).
-		spn_pack_gain_standing_effect = { VALUE = 5 }
+		# 2.40 (WORK-ORDER-2.40 C12 a): +5 below 50, +3 from 50, +1 from 75 (spn_pack_yearly_standing_value)
+		spn_pack_gain_standing_effect = { VALUE = spn_pack_yearly_standing_value }
 		# The True Alpha's floor (§16): his standing never falls below 75.
 		if = {
 			limit = {
@@ -1129,6 +1145,7 @@ spn_pack_moment_scent_effect = {
 	scope:spn_mo_alpha = {
 		if = {
 			limit = { is_ai = no }
+			spn_pack_alpha_scented_effect = { WHO = scope:spn_mo_other } # 2.40 boot 2 (j): 
 			trigger_event = spn_pack.0100
 		}
 		else = {
@@ -1197,6 +1214,7 @@ spn_pack_moment_asks_effect = {
 	scope:spn_mo_alpha = {
 		if = {
 			limit = { is_ai = no }
+			spn_pack_alpha_scented_effect = { WHO = scope:spn_mo_other } # 2.40 boot 2 (j): 
 			trigger_event = spn_pack.0101
 		}
 		else_if = {
@@ -1224,7 +1242,9 @@ spn_pack_take_asker_effect = {
 	}
 }
 
-# Young Wolves Fight: one of each, a brawl. Rivals after, or friends if both are kind or fair.
+# Young Wolves Fight: one young wolf of each pack. 2.40 boot 2 (k): nothing is rolled here any more. The alpha is asked
+# (spn_pack.0102) or answers by his temper, and only then do they fight, part, or fight with the alpha behind his own
+# (spn_pack_young_fight_begin_effect and the effects after it, zz_spn_240_pack_effects.txt).
 spn_pack_moment_fight_effect = {
 	scope:spn_mo_pack = {
 		random_in_list = {
@@ -1240,57 +1260,7 @@ spn_pack_moment_fight_effect = {
 			save_scope_as = spn_mo_theirs
 		}
 	}
-	spn_creature_clash_effect = {
-		A = scope:spn_mo_ours
-		B = scope:spn_mo_theirs
-		THEN = spn_pack_fight_after_effect
-		FORM = yes
-	}
-	scope:spn_mo_alpha = {
-		if = {
-			limit = { is_ai = no }
-			trigger_event = spn_pack.0102
-		}
-	}
-}
-
-spn_pack_fight_after_effect = {
-	scope:spn_clash_loser = {
-		increase_wounds_no_death_effect = { REASON = fight }
-	}
-	if = {
-		limit = {
-			scope:spn_clash_winner = {
-				OR = {
-					has_trait = compassionate
-					has_trait = just
-				}
-			}
-			scope:spn_clash_loser = {
-				OR = {
-					has_trait = compassionate
-					has_trait = just
-				}
-			}
-			scope:spn_clash_winner = { can_set_relation_friend_trigger = { CHARACTER = scope:spn_clash_loser } }
-		}
-		scope:spn_clash_winner = {
-			set_relation_friend = {
-				target = scope:spn_clash_loser
-				reason = spn_rel_young_wolves_fought
-			}
-		}
-		save_scope_value_as = { name = spn_mo_fight_friends value = yes }
-	}
-	else_if = {
-		limit = {
-			scope:spn_clash_loser = {
-				NOT = { has_relation_rival = scope:spn_clash_winner }
-				can_set_relation_potential_rival_trigger = { CHARACTER = scope:spn_clash_winner }
-			}
-		}
-		scope:spn_clash_loser = { set_relation_potential_rival = scope:spn_clash_winner }
-	}
+	spn_pack_young_fight_begin_effect = yes
 }
 
 # Kindred: two wolves of different packs find each other. A friend, or a lover where vanilla allows it.
@@ -1410,7 +1380,10 @@ spn_pack_moment_hide_seen_effect = {
 	scope:spn_mo_pack = {
 		every_in_list = {
 			variable = spn_pack_members
-			limit = { NOT = { this = scope:spn_mo_alpha } }
+			limit = {
+				is_alive = yes # 2.40 boot 2: never a dead member
+				NOT = { this = scope:spn_mo_alpha }
+			}
 			spn_hide_word_at_fire_effect = { SEND = no }
 		}
 	}
@@ -1487,6 +1460,14 @@ spn_pack_challenge_after_effect = {
 		spn_pack_add_standing_effect = { VALUE = -10 }
 		add_opinion = { target = scope:spn_clash_winner modifier = spn_challenge_lost_opinion }
 	}
+	# 2.40 (WORK-ORDER-2.40 C2): a blood debt answered: the winner who held it lets it go, and is seen to have.
+	scope:spn_clash_winner = {
+		if = {
+			limit = { has_opinion_modifier = { target = scope:spn_clash_loser modifier = spn_blood_debt_opinion } }
+			remove_opinion = { target = scope:spn_clash_loser modifier = spn_blood_debt_opinion }
+			add_prestige = minor_prestige_gain
+		}
+	}
 	# +15 only against a wolf who stood near him: no farming the weak.
 	if = {
 		limit = {
@@ -1495,7 +1476,8 @@ spn_pack_challenge_after_effect = {
 				subtract = 10
 			}
 		}
-		scope:spn_clash_winner = { spn_pack_gain_standing_effect = { VALUE = 15 } }
+		# 2.40 (WORK-ORDER-2.40 C12 d): not doubled under Alpha's champion (a doubled +30 swing a fight)
+		scope:spn_clash_winner = { spn_pack_add_standing_effect = { VALUE = 15 } }
 	}
 	# The same pack: beating the alpha makes the winner alpha; the Second who lost to the alpha opens the way for
 	# everyone else for two years.
@@ -1541,28 +1523,13 @@ spn_pack_unify_effect = {
 	save_scope_as = spn_un_host
 	$OTHER$ = { save_scope_as = spn_un_other }
 	scope:spn_un_host.var:spn_pack = { save_scope_as = spn_un_pack }
-	scope:spn_un_other.var:spn_pack = { save_scope_as = spn_un_old }
-	scope:spn_un_old = {
-		every_in_list = {
-			variable = spn_pack_members
-			limit = { NOT = { this = scope:spn_un_other } }
-			add_to_temporary_list = spn_un_list
-		}
-	}
-	every_in_list = {
-		list = spn_un_list
-		save_temporary_scope_as = spn_un_m
-		spn_pack_remove_member_effect = { WHO = scope:spn_un_m REASON = flag:quiet }
-		spn_pack_add_member_effect = { WHO = scope:spn_un_m PACK = scope:spn_un_pack }
-	}
-	# Its alpha last; then the empty story ends and leaves the list.
-	spn_pack_remove_member_effect = { WHO = scope:spn_un_other REASON = flag:quiet }
+	# 2.40 (WORK-ORDER-2.40 C4, C6): the member move is spn_pack_merge_effect (zz_spn_240_pack_effects.txt), shared with
+	# Offer Pack Terms; it tells every joined player itself. A spouse who already runs in his pack is not moved.
 	if = {
-		limit = { is_target_in_global_variable_list = { name = spn_packs target = scope:spn_un_other } }
-		remove_list_global_variable = { name = spn_packs target = scope:spn_un_other }
+		limit = { NOT = { scope:spn_un_other.var:spn_pack ?= scope:spn_un_pack } }
+		save_scope_value_as = { name = spn_un_merged value = yes }
+		scope:spn_un_host = { spn_pack_merge_effect = { OTHER = scope:spn_un_other HOW = joined } }
 	}
-	scope:spn_un_old = { end_story = yes }
-	spn_pack_add_member_effect = { WHO = scope:spn_un_other PACK = scope:spn_un_pack }
 	scope:spn_un_pack = {
 		set_variable = { name = spn_pack_co_alpha value = scope:spn_un_other }
 		set_variable = { name = spn_pack_unified value = yes }
@@ -1578,31 +1545,22 @@ spn_pack_unify_effect = {
 		}
 		spn_pack_refresh_effect = yes
 	}
-	# 2.37o: every player whose pack was joined to the host's is told, the partner included (the review of 4 Oct, F4).
-	# .0013, the pack's own "new alpha" event, with its own line. The flag is cleared once the events are sent (a
-	# triggered event keeps its copy), so a later change of alpha in the same chain reads as one.
-	scope:spn_un_host = { save_scope_as = spn_sa_new }
-	save_scope_value_as = { name = spn_sa_joined value = yes }
-	every_in_list = {
-		list = spn_un_list
-		limit = { is_ai = no }
-		trigger_event = spn_pack.0013
-	}
-	scope:spn_un_other = {
-		if = {
-			limit = { is_ai = no }
-			trigger_event = spn_pack.0013
-		}
-	}
-	clear_saved_scope = spn_sa_joined
+	# 2.40 (WORK-ORDER-2.40 C4): the joined players were told by the merge; only a merge steps the houses up
 	if = {
-		limit = { spn_pack_politics_built_trigger = yes }
+		limit = {
+			spn_pack_politics_built_trigger = yes
+			exists = scope:spn_un_merged
+		}
 		spn_pack_house_step_effect = {
 			A = scope:spn_un_host
 			B = scope:spn_un_other
 			VALUE = house_relation_improve_major_value
 			REASON = spn_unified
 		}
+	}
+	if = {
+		limit = { exists = scope:spn_un_merged }
+		clear_saved_scope = spn_un_merged
 	}
 }
 
@@ -1627,7 +1585,8 @@ spn_pack_blood_pact_effect = {
 			}
 		}
 	}
-	else_if = {
+	# 2.40 (WORK-ORDER-2.40 G10): was else_if: the relation is the record for landed pacts too (opinion 0, hidden)
+	if = {
 		limit = { scope:spn_bp_a = { NOT = { has_relation_spn_blood_pact = scope:spn_bp_b } } }
 		# 2.37e: hidden; the option's own tooltip names the pact, and the relation has no effect text.
 		hidden_effect = { scope:spn_bp_a = { set_relation_spn_blood_pact = scope:spn_bp_b } }

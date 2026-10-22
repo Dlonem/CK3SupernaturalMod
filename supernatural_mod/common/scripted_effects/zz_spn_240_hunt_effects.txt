@@ -1,0 +1,176 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 D6) -- the hunt, in the hunt window.
+#
+# In CK3 an activity_event sent to someone at the activity shows in the activity window; a character_event is a map
+# popup. Five of the hunter's own beats (Overmatched, Gone, Turned Back, This Is Not the Man, The Price of Silence) and
+# Decide on the Fate of the Witch were map popups in the middle of a hunt. Each now has a hunt-window twin
+# (zz_spn_240_hunt_events.txt) with the same words, sent when the hunter is still at his hunt; the original stays for
+# every other case (the hunt has ended, the Fate of the Witch outside a hunt). The 2.39 hide-event pattern (spn_hide.0306).
+# Every option body lives here once and both events call it, so the two can never drift apart. Each body is moved, word
+# for word, out of the original event (the build checks that: tool/pkgs/Q8/edits.py, cut()).
+
+# Root: anyone in the confrontation's chain (scope:spn_hunter and scope:spn_hunt_activity bound). EVENT = the map event's
+# number, TWIN = its hunt-window twin's. scope:activity is set to the hunt before the twin is sent, as vanilla does before
+# an activity event from elsewhere (travel_start_events.txt).
+spn_hunt_send_beat_effect = {
+	scope:spn_hunter ?= {
+		if = {
+			limit = {
+				exists = scope:spn_hunt_activity
+				involved_activity ?= scope:spn_hunt_activity
+			}
+			scope:spn_hunt_activity = { save_scope_as = activity }
+			trigger_event = spn_hunt.$TWIN$
+		}
+		else = {
+			trigger_event = spn_hunt.$EVENT$
+		}
+	}
+}
+
+# ---- Overmatched (spn_hunt.0210 / .2000). Root = the hunter. ----
+# Fall back.
+spn_hunt_overmatched_fall_back_effect = {
+	increase_wounds_no_death_effect = { REASON = fight }
+	add_character_modifier = { modifier = spn_hunter_recovering_modifier years = 1 }
+	add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 10 } }
+}
+# Press on.
+spn_hunt_overmatched_press_on_effect = {
+	scope:spn_hunt_activity = {
+		set_variable = { name = spn_hunt_final_stand value = yes }
+		change_variable = { name = spn_hunt_fight_bonus subtract = 20 }
+	}
+	spn_hunt_fight_effect = { DEFENDER = scope:spn_defender }
+}
+
+# ---- This Is Not the Man (spn_hunt.0221 / .2003). Root = the hunter. ----
+# Then he dies first.
+spn_hunt_not_the_man_fight_effect = {
+	spn_hunt_fight_effect = { DEFENDER = scope:spn_proxy }
+}
+# Stand aside. I came for the one who made you.
+spn_hunt_not_the_man_stand_aside_effect = {
+	scope:spn_hunt_activity = { set_variable = { name = spn_hunt_proxy_refused value = yes } }
+	if = {
+		limit = { exists = scope:spn_culprit  scope:spn_culprit = { is_alive = yes } }
+		scope:spn_culprit = { trigger_event = spn_hunt.0200 }
+	}
+}
+
+# ---- The Price of Silence (spn_hunt.0240 / .2004). Root = the hunter. ----
+# Take the gold.
+spn_hunt_price_take_effect = {
+	add_gold = 50
+	scope:spn_culprit = {
+		remove_short_term_gold = 50
+		add_hook = { type = strong_favor_hook target = root years = 5 }
+	}
+	add_character_modifier = { modifier = spn_on_the_payroll_modifier years = 5 }
+	spn_write_took_the_coin_memory_effect = { CREATURE = scope:spn_culprit }
+	spn_hunt_set_outcome_effect = { OUTCOME = bought }
+}
+# Refuse.
+spn_hunt_price_refuse_effect = {
+	add_prestige = 25
+	scope:spn_hunt_activity = { change_variable = { name = spn_hunt_fight_bonus add = 5 } }
+	spn_hunt_fight_effect = { DEFENDER = scope:spn_culprit }
+}
+
+# ---- Decide on the Fate of the Witch (spn_hunters.0003 / spn_hunt.2005). Root = the one deciding; scope:witch. ----
+# Burn her. The death is last, after everything that reads her.
+spn_witch_fate_burn_effect = {
+	# 2.39 (review L4): the 10-25 gold moved into the burn below, paid only when she is burned.
+
+	if = {
+		limit = {
+			has_trait = supernatural_hunter
+		}
+		add_trait_xp = {
+			trait = supernatural_hunter
+			track = witch_hunting
+			value = { 15 25 }
+		}
+	}
+
+	if = {
+		limit = {
+			NOT = {
+				has_trait = supernatural_hunter
+			}
+		}
+		add_character_flag = supernatural_embrace_hunter
+		trigger_event = {
+			id = spn_initiate.3001
+		}
+		set_variable = { name = spn_initiate_xp_witch value = { integer_range = { min = 10 max = 20 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hunter witch_hunting, applied by the door
+	}
+	
+
+	
+	stress_and_fulfillment_impact = {
+		compassionate = medium_stress_impact_gain			
+		just = minor_stress_gain
+		supernatural_hunter = medium_stress_impact_loss
+	}
+
+	# 2.39 (WORK-ORDER-2.39 B10, decision D17 (b)): the burn, last in the option. A player's choice is unchanged. An AI
+	# burns only a witch in his power: his own prisoner, courtier or guest, as vanilla needs someone in your hands to
+	# execute them. Anyone else is exposed instead, or her county gets a trail, through the existing entry points
+	# (vanilla expose_secret; spn_mark_menace_effect). This ends player characters burned by a stranger with no warning.
+	if = {
+		limit = {
+			OR = {
+				is_ai = no
+				scope:witch = {
+					OR = {
+						is_imprisoned_by = root
+						is_courtier_of = root
+						is_foreign_court_or_pool_guest_of = root
+					}
+				}
+			}
+		}
+		add_gold = { # 2.39 (review L4): moved here from the top of the option; the reward is for the burning
+			value = { 10 25 }
+		}
+		scope:witch = {
+			death = { death_reason = death_burned }
+		}
+	}
+	else_if = {
+		limit = { scope:witch = { any_secret = { secret_type = secret_witch } } }
+		scope:witch = {
+			random_secret = {
+				limit = { secret_type = secret_witch }
+				expose_secret = root
+			}
+		}
+	}
+	else = {
+		scope:witch = {
+			location ?= {
+				county ?= { save_scope_as = spn_wf_county }
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_wf_county }
+			spn_mark_menace_effect = { COUNTY = scope:spn_wf_county CULPRIT = scope:witch KIND = witch SEVERITY = prowl }
+		}
+	}
+}
+# Don't kill her.
+spn_witch_fate_spare_effect = {
+	stress_and_fulfillment_impact = { 
+		supernatural_hunter = medium_stress_gain
+		trusting = minor_stress_impact_loss
+	}
+}
+# Learn witchcraft.
+spn_witch_fate_learn_effect = {
+	add_trait_force_tooltip = witch
+	
+	stress_and_fulfillment_impact = { 
+		zealous = medium_stress_gain
+		trusting = minor_stress_impact_loss
+	}
+}

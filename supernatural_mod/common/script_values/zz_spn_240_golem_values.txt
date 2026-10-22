@@ -1,0 +1,109 @@
+﻿# Supernatural 2.40 boot 2 (item g) -- the golem's own deeds: hidden chances, never shown to the player. Package Q7.
+# Read in spn_golem.0010 / .0011 (root: the master; scope:spn_golem, scope:spn_golem_target) and in Loom Over Them
+# (interaction scopes). A golem's trait gives it prowess 25 (00_traits_magic.txt), so against an ordinary person it
+# nearly always succeeds; a landed ruler has guards, a guarded ward has another golem at the door, a cracked golem is weaker.
+
+# Seize and Imprison
+spn_golem_seize_chance_value = {
+	value = 55
+	add = {
+		value = scope:spn_golem.prowess
+		subtract = scope:spn_golem_target.prowess
+		multiply = 2
+	}
+	if = {
+		limit = { scope:spn_golem_target = { is_landed = yes } }
+		subtract = 30
+	}
+	if = {
+		limit = { scope:spn_golem_target = { has_character_modifier = spn_golem_guarded_modifier } }
+		subtract = 40
+	}
+	if = {
+		limit = { scope:spn_golem = { has_character_modifier = spn_golem_cracked_modifier } }
+		subtract = 15
+	}
+	min = 10
+	max = 90
+}
+
+# Strike Them Down: the golem reaches them and lands its blows
+spn_golem_strike_chance_value = {
+	value = 60
+	add = {
+		value = scope:spn_golem.prowess
+		subtract = scope:spn_golem_target.prowess
+		multiply = 2
+	}
+	if = {
+		limit = { scope:spn_golem_target = { is_landed = yes } }
+		subtract = 20
+	}
+	if = {
+		limit = { scope:spn_golem_target = { has_character_modifier = spn_golem_guarded_modifier } }
+		subtract = 40
+	}
+	if = {
+		limit = { scope:spn_golem = { has_character_modifier = spn_golem_cracked_modifier } }
+		subtract = 15
+	}
+	min = 10
+	max = 90
+}
+
+# Strike Them Down: of the blows that land, how often an AI character dies of them (never a player: spn_golem.0011)
+spn_golem_strike_death_chance_value = {
+	value = 8
+	if = {
+		limit = { scope:spn_golem_target = { age >= 60 } }
+		add = 7
+	}
+	if = {
+		limit = { scope:spn_golem_target = { has_trait = wounded } }
+		add = 5
+	}
+}
+
+# Loom Over Them: they give in (a weak threat hook). Interaction scopes.
+spn_golem_loom_hook_chance_value = {
+	value = 30
+	if = {
+		limit = { scope:recipient = { has_trait = craven } }
+		add = 30
+	}
+	if = {
+		limit = { scope:recipient = { has_trait = paranoid } }
+		add = 15
+	}
+	if = {
+		limit = { scope:recipient = { has_trait = brave } }
+		subtract = 25
+	}
+	if = {
+		limit = { scope:recipient = { is_landed = yes } }
+		subtract = 10
+	}
+	min = 5
+	max = 75
+}
+
+# Boot 4 (Thomas's item 2, mystique): the victim does NOT learn who sent the puppet. Hidden, never shown. Read in
+# spn_golem.0010 (only when the victim got away) and spn_golem.0011 (every outcome). Root: the master;
+# scope:spn_golem_master (= root), scope:spn_golem (the puppet), scope:spn_golem_target. The master's intrigue counts
+# double (he chooses the hour and covers the tracks), the puppet's own intrigue once, the victim's against it. Someone at
+# the master's own court knows his servants by sight.
+spn_puppet_deed_unknown_chance_value = {
+	value = 20
+	add = {
+		value = scope:spn_golem_master.intrigue
+		multiply = 2
+	}
+	add = scope:spn_golem.intrigue
+	subtract = scope:spn_golem_target.intrigue
+	if = {
+		limit = { scope:spn_golem_target = { is_in_the_same_court_as = scope:spn_golem_master } }
+		subtract = 25
+	}
+	min = 5
+	max = 75
+}

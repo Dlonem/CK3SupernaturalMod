@@ -47,19 +47,24 @@ spn_hide_accepts_wolf_trigger = {
 spn_hide_leader_ok_trigger = {
 	trigger_if = {
 		limit = { scope:spn_fit_hide = flag:alpha }
-		OR = {
-			spn_is_alpha_trigger = yes
-			highest_held_title_tier >= tier_duchy
-			AND = {
-				has_game_rule = spn_packs_off
-				OR = {
-					has_trait = spn_true_werewolf
-					spn_hide_lyc_full_trigger = yes
-				}
+		spn_hide_is_leader_trigger = yes # 2.40 (WORK-ORDER-2.40 F2): the body below, so the household's hide decision can ask it too
+	}
+	trigger_else = { always = yes }
+}
+
+# 2.40 (WORK-ORDER-2.40 F2): a leader, as Alpha means it. Root = the candidate. No saved scope needed.
+spn_hide_is_leader_trigger = {
+	OR = {
+		spn_is_alpha_trigger = yes
+		highest_held_title_tier >= tier_duchy
+		AND = {
+			has_game_rule = spn_packs_off
+			OR = {
+				has_trait = spn_true_werewolf
+				spn_hide_lyc_full_trigger = yes
 			}
 		}
 	}
-	trigger_else = { always = yes }
 }
 
 # A mortal a hide may choose (§5.11): no creature trait, no hunter trait, not a witch, a valid target.
@@ -69,7 +74,7 @@ spn_is_hide_mortal_trigger = {
 	spn_has_supernatural_trait = no
 	spn_has_hunter_trait = no
 	is_witch_trigger = no
-	spn_is_valid_supernatural_target = yes
+	spn_can_become_creature_trigger = yes # 2.40 (WORK-ORDER-2.40 G8a): the species hook, and never a golem, demon-blooded or Yaga
 }
 
 spn_owns_hide_trigger = {
@@ -222,6 +227,9 @@ spn_hide_clash_foe_trigger = {
 	has_character_flag = spn_hide_wolf_runs
 	spn_can_be_battle_taken_trigger = yes
 	NOT = { is_target_in_variable_list = { name = spn_clash_done_with target = $CHAMP$ } }
+	# 2.40 (WORK-ORDER-2.40 F1): nor a pair that did not find each other in this battle, nor one already in a duel.
+	NOT = { is_target_in_variable_list = { name = spn_clash_missed_with target = $CHAMP$ } }
+	spn_hide_duel_busy_trigger = no
 }
 
 # ---- The ringing (§18) ----
@@ -229,7 +237,15 @@ spn_hide_clash_foe_trigger = {
 spn_senses_magic_trigger = {
 	OR = {
 		has_perk = magical_senses_perk
-		spn_is_champion_trigger = yes
+		# 2.40 (WORK-ORDER-2.40 B8): a champion, unless he chose not to hear this caster ("Let it ring for ... no more").
+		# Every walk in send_message_4_magic_sense_effect saves scope:magic_user before it asks.
+		AND = {
+			spn_is_champion_trigger = yes
+			trigger_if = {
+				limit = { exists = scope:magic_user }
+				NOT = { is_target_in_variable_list = { name = spn_ringing_silenced target = scope:magic_user } }
+			}
+		}
 	}
 }
 
@@ -405,13 +421,14 @@ spn_pack_challenge_shown_trigger = {
 		is_adult = yes
 		# 2.37e: only a wolf he knows is one. Its one caller is the Challenge interaction, so the challenger is
 		# scope:actor (never prev: the trigger is pasted text and prev would move inside it).
-		spn_host_knows_wolf_trigger = { HOST = scope:actor }
+		spn_host_knows_wolf_trigger = { HOST = $ACTOR$ } # 2.40 (WORK-ORDER-2.40 C6): was scope:actor; .0200 asks it too
 	}
 	OR = {
 		has_relation_rival = $TARGET$
 		has_relation_potential_rival = $TARGET$
 		has_perk = the_prowl_perk
 		has_perk = wolf_challenge_perk
+		has_opinion_modifier = { target = $TARGET$ modifier = spn_blood_debt_opinion } # 2.40 (WORK-ORDER-2.40 C2): a wolf's answer to a blood debt
 		AND = {
 			spn_pack_standing_value >= 25
 			trigger_if = {
@@ -432,7 +449,15 @@ spn_pack_challenge_shown_trigger = {
 spn_hide_lies_idle_trigger = {
 	NOT = { exists = var:spn_hide_shrine_county }
 	# Worn means a wolf is trying it on and the hide is deciding (the weekly check); a champion wears his own.
-	is_equipped = no
+	# 2.40 (WORK-ORDER-2.40 C1): or worn by a wolf it has refused, which nothing else ever moves on
+	OR = {
+		is_equipped = no
+		trigger_if = {
+			limit = { exists = artifact_owner }
+			spn_hide_refused_trigger = { WHO = artifact_owner }
+		}
+		trigger_else = { always = no }
+	}
 	artifact_owner ?= {
 		is_ai = yes
 		NOT = { has_trait = supernatural_hunter }
@@ -497,6 +522,9 @@ spn_hunter_means_it_trigger = {
 # Artifact scope: WHO does not know where this hide is now -- he never heard, or the holder or the shrine changed.
 # Two pointers of one type each (a holder; a county), so nothing compares a character with a title.
 spn_hide_fact_lacked_trigger = {
+	# 2.40 (WORK-ORDER-2.40 F5): never his own hide, nor one kept in a county of his
+	NOT = { artifact_owner ?= $WHO$ }
+	NOT = { var:spn_hide_shrine_county ?= { holder ?= $WHO$ } }
 	OR = {
 		AND = {
 			var:spn_hide = flag:silverback
@@ -824,6 +852,23 @@ spn_unification_partner_trigger = {
 			}
 		}
 		# A third wolf to stand as elder: the host, the partner and one more.
+		custom_tooltip = {
+			text = spn_unification_no_elder_tt
+			scope:activity = {
+				any_attending_character = {
+					count >= 3
+					spn_is_wolf_trigger = yes
+				}
+			}
+		}
+	}
+	# 2.40 (WORK-ORDER-2.40 C4): or she already runs in his pack: no pack moves, the same rite and elder
+	trigger_else_if = {
+		limit = { $HOST$ = { spn_is_alpha_trigger = yes } }
+		NOT = { this = $HOST$ }
+		var:spn_pack ?= $HOST$.var:spn_pack
+		is_spouse_of = $HOST$
+		NOT = { $HOST$.var:spn_pack = { exists = var:spn_pack_unified } }
 		custom_tooltip = {
 			text = spn_unification_no_elder_tt
 			scope:activity = {

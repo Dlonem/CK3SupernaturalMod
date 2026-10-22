@@ -1,0 +1,164 @@
+﻿# Supernatural 2.40 -- golems (WORK-ORDER-2.40 D1, D2, D3, G8). Package Q7.
+
+# 2.40 (WORK-ORDER-2.40 D2/G8a, F3 defect 2): can this character take a creature's blood or a hunter's training at all?
+# Character scope. One test, read at every door into the four creature traits (spn_initiate .0001/.1001/.2001/.3001,
+# wired by Q8), at the infection and blood starters, at the six offer and four ask interactions, at Compel Mortal's
+# neighbour lines and in spn_is_hide_mortal_trigger. Each trait below lists the creature traits as `opposites`
+# (common/traits/00_traits_magic.txt), and an opposite stops add_trait while the rest of a door still runs, which made
+# half-made creatures (and Thomas's werewolf golems, through the doors that had no golem test).
+#   golem  : a construct is never turned (Thomas, decision 17). Existing werewolf golems keep both traits.
+#   demon0 : Demonic Heritage opposes vampire, werewolf and hybrid. (It does not oppose supernatural_hunter; at the
+#            hunter door it is refused too, so a demon-blooded character is not trained by the mod's hunters.)
+#   yaga   : opposes all four, the hunter included.
+# Not inside spn_is_valid_supernatural_target (the AGOT species hook, also read by Command your minion and the spell
+# list) and not inside spn_has_supernatural_trait (that one means "is a creature").
+spn_can_become_creature_trigger = {
+	NOR = {
+		has_trait = golem
+		has_trait = demon0
+		has_trait = yaga
+	}
+	spn_is_valid_supernatural_target = yes
+}
+
+# 2.40 (WORK-ORDER-2.40 D3): a golem whose bond has ended. Character scope (the golem). The almanach golem
+# (spawn_almanach_effect, flag almanach_flag) has no master by Witchcraft's design and is never offered to anyone; a golem
+# whose new master let it go ("Let It Go", flag spn_golem_released) stays unbound until someone binds it by choice.
+spn_golem_masterless_trigger = {
+	is_alive = yes
+	is_ai = yes # RC1 (boot-3 review): a golem can be its maker's heir and be played; a player is never bound to another
+	has_trait = golem
+	NOT = { any_relation = { type = mmaster } }
+	NOT = { has_character_flag = almanach_flag }
+	NOT = { has_character_flag = spn_golem_released }
+}
+
+# Boot 3 (Thomas, item 5b): a golem no one commands, which a magic user may take up ("Bind the Masterless Golem").
+# Character scope (the golem). Open facts: the golem trait and the master relation are both shown on the character.
+# A golem let go by choice (spn_golem_released) is free for anyone to take; the almanach golem never.
+spn_golem_claimable_trigger = {
+	is_alive = yes
+	is_ai = yes # RC1 (boot-3 review): never a played golem (an open fact)
+	has_trait = golem
+	NOT = { any_relation = { type = mmaster } }
+	NOT = { has_character_flag = almanach_flag }
+}
+
+# 2.40 (WORK-ORDER-2.40 D1): may MASTER take this golem as his golem puppet now? Character scope (the golem).
+# The bond is the source of truth (the puppet type's is_valid reads it daily). One golem puppet per master: the engine
+# keeps one puppet per type (vanilla gates on `exists = puppet:<type>`, 00_puppet_interactions.txt). Players only: the
+# AI is never given a puppet whose orders it has no reason to use.
+spn_golem_puppet_open_trigger = {
+	is_alive = yes
+	is_ai = yes # RB1 (boot-2 review): a puppet is never another player
+	has_trait = golem
+	has_relation_mmaster = $MASTER$
+	NOT = { exists = puppeteer }
+	$MASTER$ = {
+		is_ai = no
+		is_adult = yes
+		NOT = { exists = puppet:spn_golem_puppet }
+	}
+}
+
+# ==================================================================================================
+# THE GOLEM'S OWN DEEDS (boot 2, item g). Character interactions listed as golem puppet actions
+# (common/puppets/actions/zz_spn_puppet_actions.txt). On the puppet path vanilla runs an interaction with
+# scope:actor = the PUPPETEER, scope:puppet_or_actor = the puppet, scope:is_puppet_action = yes
+# (van 00_character_interactions.txt ~1406, 00_interaction_effects.txt notify_puppeteer_of_outcome_effect).
+# Used directly by a player (no puppet), scope:puppet_or_actor is the actor himself, who is no golem bound to himself,
+# so these never show outside the golem's puppet menu.
+# ==================================================================================================
+
+# Shown: the acting puppet is a golem bound to the actor and is his golem puppet. Open facts only (B6).
+# Boot 3: the master himself may be the target (Thomas could not have his golem act on him). Vanilla allows a puppet
+# action against the puppeteer (gift_interaction's is_shown tests scope:recipient = scope:actor for a puppet; murder and
+# seduce toast the puppeteer only when he is not the target); the three hostile deeds exclude him in their own is_shown.
+spn_golem_order_shown_trigger = {
+	scope:puppet_or_actor ?= {
+		has_trait = golem
+		this != scope:actor
+		this != scope:recipient
+		has_relation_mmaster = scope:actor
+	}
+	scope:actor.puppet:spn_golem_puppet ?= scope:puppet_or_actor
+}
+
+# The golem is free to go: not in a cell, not out searching for the pages, not already on an errand.
+spn_golem_order_ready_trigger = {
+	scope:puppet_or_actor = {
+		is_imprisoned = no
+		custom_tooltip = {
+			text = spn_golem_busy_tt
+			NOR = {
+				has_character_flag = spn_golem_searching
+				has_character_flag = spn_golem_on_errand
+			}
+		}
+	}
+}
+
+# Reach: the golem can get to them. They stand where the golem stands, or they live in the actor's own realm (the same
+# top liege; vanilla's own test, 10_tgp_interactions.txt:57). A guest at the court stands where the golem stands.
+spn_golem_order_reach_trigger = {
+	custom_tooltip = {
+		text = spn_golem_reach_tt
+		OR = {
+			scope:recipient = { location = scope:puppet_or_actor.location }
+			AND = {
+				exists = scope:actor.top_liege
+				scope:recipient = { top_liege ?= scope:actor.top_liege }
+			}
+		}
+	}
+}
+
+# Multiplayer: the game rules that forbid murder and abduction schemes against players and their families (vanilla
+# start_abduct's own two NAND blocks, 00_scheme_interactions.txt:293) forbid the golem's seizing and striking too.
+spn_golem_order_mp_rules_trigger = {
+	NAND = {
+		has_game_rule = no_players_multiplayer_murder_schemes
+		scope:actor = { is_ai = no }
+		scope:recipient = { is_ai = no }
+	}
+	NAND = {
+		has_game_rule = no_player_families_multiplayer_murder_schemes
+		scope:actor = { is_ai = no }
+		scope:recipient = {
+			OR = {
+				is_ai = no
+				any_close_family_member = {
+					is_ai = no
+					this != scope:actor
+				}
+			}
+		}
+	}
+}
+
+# The errand still stands when the puppet arrives (spn_golem.0010 / .0011 re-check it in their own trigger). Root: the
+# master. scope:spn_golem (boot 4: any puppet), scope:spn_golem_target. Boot 4: the errand is the master's by its record
+# (var:spn_puppet_errand_for, spn_golem_errand_start_effect); an errand sent before boot 4 has no record and is read the
+# old way (a golem bound to root). A golem must still be bound to root (another mage's domination calls it off).
+spn_golem_errand_holds_trigger = {
+	is_alive = yes
+	exists = scope:spn_golem
+	exists = scope:spn_golem_target
+	scope:spn_golem = {
+		is_alive = yes
+		has_character_flag = spn_golem_on_errand
+		is_imprisoned = no
+		OR = {
+			var:spn_puppet_errand_for ?= root
+			has_trait = golem
+		}
+		trigger_if = {
+			limit = { has_trait = golem }
+			has_relation_mmaster = root
+		}
+	}
+	scope:spn_golem_target = {
+		is_alive = yes
+		is_imprisoned = no
+	}
+}

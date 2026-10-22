@@ -2,7 +2,8 @@
 # (WORK-ORDER-2.38 §9, §10).
 #
 # A relic carries var:spn_relic = flag:<key> (glove necrophone blade pendant powder mirror bell seal chains beetle);
-# never magic1 (T4). 2.39 added chains (zz_spn_chains_effects.txt) and beetle (zz_spn_beetle_effects.txt).
+# never magic1 (T4). 2.39 added chains (zz_spn_chains_effects.txt) and beetle (zz_spn_beetle_effects.txt); 2.40 added fors
+# (the Fors Factorum, zz_spn_240_unique_relic_effects.txt).
 # A pledged item carries var:spn_pledged_to (the chapter or coven story) and vanilla's artifact_prevent_transfer (C4).
 # A lent item carries var:spn_borrowed_from (the lender), spn_borrow_timer (3 years), and sits on the global list
 # spn_relic_loans while it is out (review D, B1: the one clock every loan runs on, whoever holds it).
@@ -75,35 +76,13 @@ spn_relic_seed_effect = {
 	if = {
 		limit = { NOT = { exists = global_var:spn_relics_seeded } }
 		set_global_variable = spn_relics_seeded
+		# 2.40 (WORK-ORDER-2.40 G9): one temple's part is its own effect (zz_spn_240_relic_effects.txt), run again for a
+		# temple founded later with an empty Reliquary. With the Order On this whole seed now waits for the temples
+		# (zz_spn_order_on_actions.txt); at game start no temple stood, so only the four court relics were ever made.
 		every_in_global_list = {
 			variable = spn_order_chapters
 			limit = { exists = var:spn_order_chapter }
-			save_scope_as = spn_rs_head
-			# One for the head, pledged.
-			spn_relic_make_random_effect = { OWNER = scope:spn_rs_head }
-			if = {
-				limit = { exists = scope:spn_new_relic }
-				spn_relic_pledge_effect = { ART = scope:spn_new_relic TO = scope:spn_rs_head.var:spn_order_chapter }
-				clear_saved_scope = spn_new_relic
-			}
-			# One to three more, spread over the members, pledged.
-			var:spn_order_chapter = {
-				random_list = {
-					40 = { set_variable = { name = spn_rs_more value = 1 } }
-					40 = { set_variable = { name = spn_rs_more value = 2 } }
-					20 = { set_variable = { name = spn_rs_more value = 3 } }
-				}
-			}
-			spn_relic_seed_member_effect = yes
-			if = {
-				limit = { var:spn_order_chapter.var:spn_rs_more >= 2 }
-				spn_relic_seed_member_effect = yes
-			}
-			if = {
-				limit = { var:spn_order_chapter.var:spn_rs_more >= 3 }
-				spn_relic_seed_member_effect = yes
-			}
-			var:spn_order_chapter = { remove_variable = spn_rs_more }
+			spn_relic_seed_chapter_effect = yes
 		}
 		# Four more to people of learning (one world walk, once). 2.38e (Thomas, 9 Oct: "making sure it can be given to
 		# courtiers as well. And landless adventurers, not just rulers"): two to AI rulers, a landless adventurer among
@@ -438,6 +417,34 @@ spn_relic_return_effect = {
 					}
 				}
 			}
+			# 2.40 (WORK-ORDER-2.40 B1): the lender is dead and his heir is of the same temple or coven: the item goes home
+			# to the heir still pledged, as a living lender's would (spn_relic_returning: the owner hook ends the loan).
+			else_if = {
+				limit = {
+					exists = scope:spn_rt_lender.primary_heir
+					spn_relic_pledge_stays_with_trigger = { WHO = scope:spn_rt_lender.primary_heir }
+				}
+				scope:spn_rt_lender.primary_heir = { save_scope_as = spn_rt_heir }
+				set_variable = { name = spn_relic_returning value = yes days = 1 }
+				if = {
+					limit = { NOT = { artifact_owner ?= scope:spn_rt_heir } }
+					set_owner = {
+						target = scope:spn_rt_heir
+						history = {
+							type = inherited
+							actor = scope:spn_rt_lender
+							recipient = scope:spn_rt_heir
+						}
+					}
+				}
+				# 2.40 review R1: the heir was the borrower. No change of owner, so the owner hook never runs: the loan
+				# ends here, the item still pledged in his hands.
+				else = {
+					remove_variable = spn_relic_returning
+					remove_variable = spn_borrowed_from
+					remove_variable = spn_borrow_timer
+				}
+			}
 			else = {
 				scope:spn_rt_lender.primary_heir ?= { save_scope_as = spn_rt_heir }
 				spn_relic_unpledge_effect = { ART = scope:spn_rt_art }
@@ -555,18 +562,30 @@ spn_relic_owner_changed_effect = {
 			has_variable = spn_pledged_to
 			NOT = { has_variable = spn_relic_returning }
 		}
-		scope:old_owner ?= {
-			if = {
-				limit = { is_ai = no }
-				send_interface_toast = {
-					type = event_toast_effect_bad
-					title = spn_relic_toast_unpledged
-					left_icon = this
-					right_icon = scope:spn_oc_art
+		# 2.40 (WORK-ORDER-2.40 B1; Thomas, 22 Oct, decision 8): a new holder of the same temple or coven keeps the pledge
+		# (an heir of the same temple, a Temple Magus taking the Beetle into custody). Before, every death emptied it a little.
+		if = {
+			limit = {
+				exists = scope:owner
+				spn_relic_pledge_stays_with_trigger = { WHO = scope:owner }
+			}
+			var:spn_pledged_to = { spn_reliquary_rebuild_effect = yes }
+			scope:owner = { spn_reliquary_apply_any_effect = yes }
+		}
+		else = {
+			scope:old_owner ?= {
+				if = {
+					limit = { is_ai = no }
+					send_interface_toast = {
+						type = event_toast_effect_bad
+						title = spn_relic_toast_unpledged
+						left_icon = this
+						right_icon = scope:spn_oc_art
+					}
 				}
 			}
+			spn_relic_unpledge_effect = { ART = scope:spn_oc_art }
 		}
-		spn_relic_unpledge_effect = { ART = scope:spn_oc_art }
 	}
 	else_if = {
 		limit = { has_variable = spn_relic_returning }
@@ -884,6 +903,9 @@ spn_seal_yearly_effect = {
 			exists = global_var:spn_seal_seeded
 			NOT = { exists = global_var:spn_seal }
 			NOT = { exists = global_var:spn_seal_lost_until }
+			# 2.40 (WORK-ORDER-2.40 G5 step 8): the shared existence check; no ring anywhere, not just a lost pointer
+			NOT = { exists = global_var:spn_seal_destroyed }
+			NOT = { spn_unique_relic_exists_trigger = { KEY = seal ART = global_var:spn_seal } }
 		}
 		set_global_variable = spn_seal_destroyed
 	}

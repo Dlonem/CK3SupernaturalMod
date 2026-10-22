@@ -1,0 +1,60 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40, package Q4): values for the Elemental Transference's paid townsfolk (G6).
+
+# PAYER scope. What one townsperson's family is paid for his part: vanilla's tiny_gold_value, 1.2 months of the payer's
+# income within vanilla's bounds (01_dynamic_values.txt:13), so the price follows the payer's means.
+spn_transference_fee_value = {
+	value = tiny_gold_value
+}
+
+# CASTER scope. Five fees: what a caster needs in hand to promise five townsfolk on his own purse.
+spn_transference_five_fees_value = {
+	value = tiny_gold_value
+	multiply = 5
+}
+
+# PAYER scope. An AI caster pays a family only from a purse three fees deep (G6 step 1, AI rule): never his last coin.
+spn_transference_ai_reserve_value = {
+	value = tiny_gold_value
+	multiply = 3
+}
+
+# The year the carriers' burden ends, five years on (the carrier variables and modifier run years = 5). Shown in the
+# Transference's Situation.
+spn_transference_until_value = {
+	value = current_year
+	add = 5
+}
+
+# 2.40 review (R2): what .0821 banks before any townsperson signs, so nobody is paid for a Working that cannot reach five.
+# CASTER scope. Places left for townsfolk after the members who signed.
+spn_transference_town_needed_value = {
+	value = 5
+	if = {
+		limit = { has_variable_list = spn_transference_volunteers }
+		every_in_list = {
+			variable = spn_transference_volunteers
+			add = -1
+		}
+	}
+	min = 0
+}
+
+# PAYER scope. How many fees he can pay, each at his own spn_transference_fee_value (spn_transference_town_one_effect
+# pays while gold >= one fee).
+spn_transference_fees_held_value = {
+	value = gold
+	divide = spn_transference_fee_value
+	floor = yes
+	min = 0
+}
+
+# CASTER scope. The fees he will pay: all of them for a player, all but the last two for an AI (he pays only while he holds
+# spn_transference_ai_reserve_value, three fees).
+spn_transference_caster_fees_value = {
+	value = spn_transference_fees_held_value
+	if = {
+		limit = { is_ai = yes }
+		subtract = 2
+	}
+	min = 0
+}

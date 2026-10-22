@@ -1,0 +1,144 @@
+﻿# Supernatural 2.40 -- "fixes and balance": the ONE shared set for a relic that exists once (WORK-ORDER-2.40 G5 step 8,
+# B12; Thomas, 22 Oct, decision 12). Package Q1. Loc: localization/english/zz_spn_240_q1_l_english.yml.
+#
+# 2.39 built the "one relic that must always exist" pattern twice: the Homunculus Beetle's seed, keeper and "the jar is
+# gone, surface again" (zz_spn_beetle_effects.txt) and the Seal of Solomon's seed and existence check
+# (zz_spn_relic_effects.txt). The Fors Factorum would have been the third copy. Instead:
+#   spn_unique_relic_pick_keeper_effect   the Beetle's keeper pick, moved here; spn_beetle_pick_keeper_effect calls it.
+#   spn_unique_relic_place_effect         make relic $KEY$ for the keeper, point global_var:spn_<key>_art at it, pledge it
+#                                         to the keeper's temple when he keeps it for the Order.
+#   spn_unique_relic_seed_effect          once (global_var:spn_<key>_seeded), when spn_unique_relic_seed_ready_trigger
+#                                         allows; the Beetle's seed calls it.
+#   spn_unique_relic_yearly_effect        the seed, then the backstop: when spn_unique_relic_exists_trigger fails, it is
+#                                         placed again through the keeper pick. The Fors Factorum's year.
+# Key-substituted globals are the Beetle's own names (spn_beetle_seeded, spn_beetle_art), so the Beetle in a running save
+# is not seeded twice. The Beetle keeps its plague states (jar/inside) and its own return; its yearly backstop reads the
+# shared existence trigger. The Seal keeps its holy-site and lost-until logic (different on purpose) and shares only the
+# existence trigger, in its yearly verdict that it was destroyed.
+#
+# State: global_var:spn_fors_seeded (once, ever), global_var:spn_fors_art (the artifact while it exists): relic state, no
+# expiry, as the Beetle's.
+
+# ==================================================================================================
+# RELIC ELEVEN: THE FORS FACTORUM (B12, G5 step 7). A sealed letter in the hand of the Order's founders: the working of
+# the Fors Factorum. Its holder, or a temple whose Reliquary keeps it, may teach the spell (Q4's gate). Never made at
+# random, never lent (spn_relic_lendable_trigger), never taken by Zecchia (spn_zecchia_takeable_trigger). Visual
+# pocket_map (vanilla 00_personal_misc.txt; no other relic uses it).
+# ==================================================================================================
+spn_relic_make_fors_effect = {
+	spn_relic_create_base_effect = { KEY = fors OWNER = $OWNER$ VISUAL = pocket_map MODIFIER = spn_relic_fors_modifier RARITY = famed }
+}
+
+# ==================================================================================================
+# THE KEEPER. The Keeper of the Reliquary if he is a member with a temple, else the most learned Temple Magus (Order On);
+# with the Order Off or no temple standing, the most learned AI ruler, as the pages go. Saves scope:spn_ur_keeper and, when
+# he keeps it for the Order, scope:spn_ur_pledge. Cleared first, so a second call in one effect never reads the first's.
+# ==================================================================================================
+spn_unique_relic_pick_keeper_effect = {
+	if = {
+		limit = { exists = scope:spn_ur_keeper }
+		clear_saved_scope = spn_ur_keeper
+	}
+	if = {
+		limit = { exists = scope:spn_ur_pledge }
+		clear_saved_scope = spn_ur_pledge
+	}
+	if = {
+		limit = {
+			spn_order_on_trigger = yes
+			global_var:current_loremaster_global ?= {
+				is_alive = yes
+				spn_is_order_member_trigger = yes
+				exists = var:spn_order_chapter
+			}
+		}
+		global_var:current_loremaster_global = { save_scope_as = spn_ur_keeper }
+	}
+	else_if = {
+		limit = {
+			spn_order_on_trigger = yes
+			any_in_global_list = {
+				variable = spn_order_chapters
+				is_alive = yes
+				exists = var:spn_order_chapter
+			}
+		}
+		ordered_in_global_list = {
+			variable = spn_order_chapters
+			limit = {
+				is_alive = yes
+				exists = var:spn_order_chapter
+			}
+			order_by = learning
+			save_scope_as = spn_ur_keeper
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_ur_keeper }
+		save_scope_value_as = { name = spn_ur_pledge value = yes }
+	}
+	else = {
+		ordered_ruler = {
+			limit = {
+				is_ai = yes
+				spn_vade_page_holder_ok_trigger = yes
+			}
+			order_by = learning
+			save_scope_as = spn_ur_keeper
+		}
+	}
+}
+
+# Relic $KEY$ made for the keeper, its pointer set, pledged when he keeps it for the Order. No root. Nothing happens when no
+# keeper exists (the yearly backstop tries again).
+spn_unique_relic_place_effect = {
+	spn_unique_relic_pick_keeper_effect = yes
+	if = {
+		limit = { exists = scope:spn_ur_keeper }
+		if = {
+			limit = { exists = scope:spn_new_relic }
+			clear_saved_scope = spn_new_relic
+		}
+		spn_relic_make_$KEY$_effect = { OWNER = scope:spn_ur_keeper }
+		if = {
+			limit = { exists = scope:spn_new_relic }
+			set_global_variable = { name = spn_$KEY$_art value = scope:spn_new_relic }
+			if = {
+				limit = {
+					exists = scope:spn_ur_pledge
+					scope:spn_ur_keeper = { exists = var:spn_order_chapter }
+				}
+				spn_relic_pledge_effect = { ART = scope:spn_new_relic TO = scope:spn_ur_keeper.var:spn_order_chapter }
+			}
+			clear_saved_scope = spn_new_relic
+		}
+	}
+}
+
+# Once, ever, when the world is ready for it. No root.
+spn_unique_relic_seed_effect = {
+	if = {
+		limit = {
+			NOT = { exists = global_var:spn_$KEY$_seeded }
+			spn_unique_relic_seed_ready_trigger = yes
+		}
+		set_global_variable = spn_$KEY$_seeded
+		spn_unique_relic_place_effect = { KEY = $KEY$ }
+	}
+}
+
+# The year (spn_order_yearly_older_save). No root. Seeded once; after that, if no relic $KEY$ exists anywhere (destroyed,
+# or lost with no owner), it surfaces again with the keeper. The world's artifacts are walked only when the pointer has no
+# owner. A running save gets the Fors Factorum on its first 1 January under 2.40.
+spn_unique_relic_yearly_effect = {
+	if = {
+		limit = { NOT = { exists = global_var:spn_$KEY$_seeded } }
+		spn_unique_relic_seed_effect = { KEY = $KEY$ }
+	}
+	else_if = {
+		limit = {
+			NOT = { spn_unique_relic_exists_trigger = { KEY = $KEY$ ART = global_var:spn_$KEY$_art } }
+		}
+		spn_unique_relic_place_effect = { KEY = $KEY$ }
+	}
+}

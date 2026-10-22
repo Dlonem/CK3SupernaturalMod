@@ -530,88 +530,7 @@ spn_hunters.0003 = { # Decide on the fate of the witch
 	option = { # Burn her
 		name = spn_hunters.0003.a
 		trigger = { scope:witch ?= { is_alive = yes } } # 2.39 (WORK-ORDER-2.39 B10): a player can leave the window open
-		# 2.39 (review L4): the 10-25 gold moved into the burn below, paid only when she is burned.
-
-		if = {
-			limit = {
-				has_trait = supernatural_hunter
-			}
-			add_trait_xp = {
-				trait = supernatural_hunter
-				track = witch_hunting
-				value = { 15 25 }
-			}
-		}
-
-		if = {
-			limit = {
-				NOT = {
-					has_trait = supernatural_hunter
-				}
-			}
-			add_character_flag = supernatural_embrace_hunter
-			trigger_event = {
-				id = spn_initiate.3001
-			}
-			add_trait_xp = {
-				trait = supernatural_hunter
-				track = witch_hunting
-				value = { 10 20 }
-			}
-		}
-		
-
-		
-		stress_and_fulfillment_impact = {
-			compassionate = medium_stress_impact_gain			
-			just = minor_stress_gain
-			supernatural_hunter = medium_stress_impact_loss
-		}
-
-		# 2.39 (WORK-ORDER-2.39 B10, decision D17 (b)): the burn, last in the option. A player's choice is unchanged. An AI
-		# burns only a witch in his power: his own prisoner, courtier or guest, as vanilla needs someone in your hands to
-		# execute them. Anyone else is exposed instead, or her county gets a trail, through the existing entry points
-		# (vanilla expose_secret; spn_mark_menace_effect). This ends player characters burned by a stranger with no warning.
-		if = {
-			limit = {
-				OR = {
-					is_ai = no
-					scope:witch = {
-						OR = {
-							is_imprisoned_by = root
-							is_courtier_of = root
-							is_foreign_court_or_pool_guest_of = root
-						}
-					}
-				}
-			}
-			add_gold = { # 2.39 (review L4): moved here from the top of the option; the reward is for the burning
-				value = { 10 25 }
-			}
-			scope:witch = {
-				death = { death_reason = death_burned }
-			}
-		}
-		else_if = {
-			limit = { scope:witch = { any_secret = { secret_type = secret_witch } } }
-			scope:witch = {
-				random_secret = {
-					limit = { secret_type = secret_witch }
-					expose_secret = root
-				}
-			}
-		}
-		else = {
-			scope:witch = {
-				location ?= {
-					county ?= { save_scope_as = spn_wf_county }
-				}
-			}
-			if = {
-				limit = { exists = scope:spn_wf_county }
-				spn_mark_menace_effect = { COUNTY = scope:spn_wf_county CULPRIT = scope:witch KIND = witch SEVERITY = prowl }
-			}
-		}
+		spn_witch_fate_burn_effect = yes # 2.40 (WORK-ORDER-2.40 D6): one body, shared with its hunt-window twin (spn_hunt.2005)
 		
 		ai_chance = {
 			base = 50
@@ -633,10 +552,7 @@ spn_hunters.0003 = { # Decide on the fate of the witch
 		# debug_log = "WAM_Debug: a ruler left a witch alive in spn_hunters.0001"
 		custom_tooltip = spn_hunters.0003.b.tt
 		
-		stress_and_fulfillment_impact = { 
-			supernatural_hunter = medium_stress_gain
-			trusting = minor_stress_impact_loss
-		}
+		spn_witch_fate_spare_effect = yes # 2.40 (WORK-ORDER-2.40 D6): one body, shared with its hunt-window twin
 		
 		ai_chance = {
 			base = 50
@@ -665,12 +581,7 @@ spn_hunters.0003 = { # Decide on the fate of the witch
 			}
 		}
 		
-		add_trait_force_tooltip = witch
-		
-		stress_and_fulfillment_impact = { 
-			zealous = medium_stress_gain
-			trusting = minor_stress_impact_loss
-		}
+		spn_witch_fate_learn_effect = yes # 2.40 (WORK-ORDER-2.40 D6): one body, shared with its hunt-window twin
 		
 		ai_chance = {
 			base = 30
@@ -1175,11 +1086,7 @@ spn_hunters.0013 = { # Hunter: Tavern Talk
 			trigger_event = spn_initiate.1001 #Initialize Werewolf
 			
 			hidden_effect = {
-				add_trait_xp = {
-					trait = supernatural_werewolf
-					track = lycanthropy
-					value = { 5 40 }
-				}
+				set_variable = { name = spn_initiate_xp value = { integer_range = { min = 5 max = 40 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): werewolf lycanthropy, applied by the door
 			}
 			save_scope_as = spn_new_created_werewolf 
 		}
@@ -1223,11 +1130,7 @@ spn_hunters.0013 = { # Hunter: Tavern Talk
 					trigger_event = {
 						id = spn_initiate.3001
 					}
-					add_trait_xp = {
-						trait = supernatural_hunter
-						track = monster_hunting
-						value = { 15 25 }
-					}
+					set_variable = { name = spn_initiate_xp value = { integer_range = { min = 15 max = 25 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hunter monster_hunting, applied by the door
 				}
 
 				spn_slew_creature_fulfillment_effect = { CREATURE = scope:spn_new_created_werewolf } # 2.36: his Rite weighs it
@@ -1476,11 +1379,7 @@ spn_hunters.0014 = { # Hunter: Tavern Talk
 			trigger_event = spn_initiate.1001 #Initialize Werewolf
 
 			hidden_effect = {
-				add_trait_xp = {
-					trait = supernatural_werewolf
-					track = lycanthropy
-					value = { 5 40 }
-				}
+				set_variable = { name = spn_initiate_xp value = { integer_range = { min = 5 max = 40 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): werewolf lycanthropy, applied by the door
 			}
 			save_scope_as = spn_new_created_werewolf 
 		}
@@ -1524,11 +1423,7 @@ spn_hunters.0014 = { # Hunter: Tavern Talk
 					trigger_event = {
 						id = spn_initiate.3001
 					}
-					add_trait_xp = {
-						trait = supernatural_hunter
-						track = monster_hunting
-						value = { 15 25 }
-					}
+					set_variable = { name = spn_initiate_xp value = { integer_range = { min = 15 max = 25 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hunter monster_hunting, applied by the door
 				}
 
 				spn_slew_creature_fulfillment_effect = { CREATURE = scope:spn_new_created_werewolf } # 2.36: his Rite weighs it

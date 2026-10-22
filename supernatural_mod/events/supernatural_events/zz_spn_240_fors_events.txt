@@ -1,0 +1,49 @@
+﻿namespace = spn_order
+
+# Supernatural 2.40 (WORK-ORDER-2.40 G5, package Q4): the Fors Factorum's watch. The price comes once (.0841); after it,
+# free casting lasts only while the cancer is in the body (spn_casts_without_price_trigger reads that at every cast).
+# This watch does the cleanup and the telling when the cancer is gone, whatever cured it.
+# Loc: localization/english/zz_spn_240_q4_l_english.yml.
+
+# .2200 -- (hidden) the watch, every 90 days while the spell is held and its price has been paid. A watch left over from
+# an earlier casting (the spell cast again, its price not yet come) stops by itself; .0841 starts the new one.
+spn_order.2200 = {
+	type = character_event
+	hidden = yes
+	trigger = {
+		is_alive = yes
+		has_character_modifier = spn_fors_factorum_modifier
+		has_variable = spn_fors_price_paid
+	}
+	immediate = {
+		if = {
+			limit = { NOT = { has_trait = cancer } }
+			spn_order_fors_end_effect = yes
+			if = {
+				limit = { is_ai = no }
+				trigger_event = spn_order.2201
+			}
+		}
+		else = {
+			trigger_event = { id = spn_order.2200 days = 90 }
+		}
+	}
+}
+
+# .2201 -- The Spell Is Broken. A player whose cancer left him, by any cure.
+spn_order.2201 = {
+	type = character_event
+	title = spn_order.2201.t
+	desc = spn_order.2201.desc
+	theme = healthcare
+	override_background = { reference = bedchamber }
+	left_portrait = { character = root animation = worry }
+	trigger = {
+		is_alive = yes
+		NOT = { has_character_modifier = spn_fors_factorum_modifier }
+	}
+	option = {
+		name = spn_order.2201.a
+		custom_tooltip = spn_order.2201.a.tt
+	}
+}

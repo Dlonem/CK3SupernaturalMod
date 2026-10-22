@@ -164,6 +164,35 @@ spn_order_yearly_older_save = {
 			}
 			spn_order_hall_seed_effect = yes
 		}
+		# 2.40 (WORK-ORDER-2.40 G9): the relics wait for the temples, as the halls above do (the Beetle's seed waits the same
+		# way). Before 2.40 they were seeded with the Order at game start, when no temple stood, and never again.
+		if = {
+			limit = {
+				spn_order_on_trigger = yes
+				exists = global_var:spn_order_seeded
+				NOT = { exists = global_var:spn_relics_seeded }
+				OR = {
+					any_in_global_list = {
+						variable = spn_order_chapters
+						count >= spn_order_chapters_start_value
+					}
+					years_from_game_start >= 10
+				}
+			}
+			spn_relic_seed_effect = yes
+		}
+		# 2.40 (WORK-ORDER-2.40 B1, G9): the Reliquary repair (once), then a temple not yet given relics gets them if its
+		# Reliquary is empty. The Fors Factorum relic: seeded once, and it surfaces again if it is ever lost (G5, B12).
+		spn_relic_chapters_yearly_effect = yes
+		if = {
+			limit = { spn_order_on_trigger = yes }
+			spn_unique_relic_yearly_effect = { KEY = fors }
+		}
+		# 2.40 (WORK-ORDER-2.40 G9): the relic count, in debug mode only (boot check 9; console: event spn_relic.2090).
+		if = {
+			limit = { debug_only = yes }
+			spn_relic_debug_count_effect = yes
+		}
 		if = {
 			limit = {
 				NOT = { exists = global_var:spn_relics_seeded }
@@ -232,6 +261,7 @@ spn_order_on_death = {
 						limit = {
 							is_ai = no
 							NOT = { this = scope:spn_dying }
+							NOT = { this = scope:killer } # 2.40 (WORK-ORDER-2.40 C2): he knows what he did
 						}
 						save_scope_as = spn_od_head
 						trigger_event = { id = spn_order.0829 days = 1 }

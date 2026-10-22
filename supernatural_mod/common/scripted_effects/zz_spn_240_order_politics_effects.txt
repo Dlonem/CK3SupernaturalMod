@@ -1,0 +1,401 @@
+﻿# Supernatural 2.40 -- the Order's politics and pacing (WORK-ORDER-2.40 A2, A3, A5, A11). Triggers:
+# zz_spn_240_order_politics_triggers.txt. Events: zz_spn_240_order_politics_events.txt (spn_order.2050) and the edited
+# spn_order.0108, .0150 and spn_conclave.0001. Loc: localization/english/zz_spn_240_q2_l_english.yml.
+
+# ==================================================================================================
+# THE BUSY RULE (A3)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 A3): an administrative prompt reached its player. The next one waits 30 days
+# (spn_order_business_ready_trigger). The flag expires by itself.
+spn_order_business_mark_effect = {
+	if = {
+		limit = { has_character_flag = spn_order_business_recent }
+		remove_character_flag = spn_order_business_recent
+	}
+	add_character_flag = { flag = spn_order_business_recent days = 30 }
+}
+
+# ==================================================================================================
+# PROMOTION PACING (A2)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 A2): story scope. Counts the temple's Magistrati (the head not counted) and writes its cap. Run by
+# spn_order_refresh_effect and once more before the Rite's candidates are chosen (step 6 of the chapter's year), so an
+# older save is counted before the cap is read.
+spn_order_count_magistrati_effect = {
+	save_scope_as = spn_cm_ch
+	set_variable = { name = spn_order_magistrati_size value = 0 }
+	every_in_list = {
+		variable = spn_order_members
+		limit = {
+			is_alive = yes
+			var:spn_order_rank ?= flag:magistratus
+			NOT = { this = scope:spn_cm_ch.story_owner }
+		}
+		scope:spn_cm_ch = { change_variable = { name = spn_order_magistrati_size add = 1 } }
+	}
+	set_variable = { name = spn_order_magistrati_cap value = spn_order_magistrati_cap_value }
+}
+
+# 2.40 (WORK-ORDER-2.40 A2, "the masks run the temple"): the Rite without its Temple Magus, for a player who left the
+# temple to the masks or was busy when the Rite came. The same candidates he would have been shown (step 6 of the
+# chapter's year: scope:spn_yr_to_medicum, scope:spn_yr_to_magistratus, scope:spn_yr_head), one of each rank a year as
+# for a player, and a toast for each name raised. Any scope.
+spn_order_masks_rite_effect = {
+	if = {
+		limit = {
+			scope:spn_yr_to_medicum ?= {
+				is_alive = yes
+				var:spn_order_rank ?= flag:acolyte
+			}
+		}
+		spn_order_promote_effect = { WHO = scope:spn_yr_to_medicum }
+		scope:spn_yr_head ?= {
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_order_toast_rite_auto
+					desc = spn_order_toast_rite_auto_medicum
+					left_icon = scope:spn_yr_to_medicum
+				}
+			}
+		}
+	}
+	if = {
+		limit = {
+			scope:spn_yr_to_magistratus ?= {
+				is_alive = yes
+				var:spn_order_rank ?= flag:medicum
+			}
+		}
+		spn_order_promote_effect = { WHO = scope:spn_yr_to_magistratus }
+		scope:spn_yr_head ?= {
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_order_toast_rite_auto
+					desc = spn_order_toast_rite_auto_magistratus
+					left_icon = scope:spn_yr_to_magistratus
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# A NAME FOR THE ROSE, BATCHED (A3)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 A3): story scope (the picking chapter, its owner a player Temple Magus who chooses). The Selection
+# collects his picks in one list and sends ONE "A Name for the Rose" a year, with up to three names. A fourth pick (the
+# prerogative More Hands) is held back: its marks are lifted, so it may be picked again next year.
+spn_order_rose_queue_effect = {
+	save_scope_as = spn_rq_ch
+	$PICK$ = { save_scope_as = spn_rq_pick }
+	# No question waiting: whatever is left in the list is stale (its event never came, e.g. a head who died).
+	if = {
+		limit = { NOT = { exists = var:spn_order_rose_queued } }
+		clear_variable_list = spn_order_rose_names
+	}
+	if = {
+		limit = {
+			has_variable_list = spn_order_rose_names
+			variable_list_size = {
+				name = spn_order_rose_names
+				value >= 3
+			}
+		}
+		scope:spn_rq_pick = {
+			if = {
+				limit = { has_character_flag = spn_order_picked }
+				remove_character_flag = spn_order_picked
+			}
+			if = {
+				limit = { has_variable = spn_order_picker }
+				remove_variable = spn_order_picker
+			}
+		}
+	}
+	else = {
+		if = {
+			limit = { NOT = { is_target_in_variable_list = { name = spn_order_rose_names target = scope:spn_rq_pick } } }
+			add_to_variable_list = { name = spn_order_rose_names target = scope:spn_rq_pick }
+		}
+		if = {
+			limit = { NOT = { exists = var:spn_order_rose_queued } }
+			set_variable = { name = spn_order_rose_queued value = yes years = 1 }
+			story_owner = { trigger_event = { id = spn_order.0108 days = { 90 120 } } } # still spaced from the Rite
+		}
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 A3): the note goes to this name for $CH$ (a chapter). The pick's marks last a year from this
+# answer (the 2.39 final-pass rule: the note comes 30-300 days from now).
+spn_order_rose_send_effect = {
+	if = {
+		limit = { has_character_flag = spn_order_picked }
+		remove_character_flag = spn_order_picked
+	}
+	add_character_flag = { flag = spn_order_picked years = 1 }
+	set_variable = { name = spn_order_picker value = $CH$ years = 1 }
+	spn_order_send_note_effect = yes
+}
+
+# 2.40 (WORK-ORDER-2.40 A3): a name the Temple Magus passed over this year. Not put forward again for a year.
+spn_order_rose_pass_effect = {
+	if = {
+		limit = { has_variable = spn_order_picker }
+		remove_variable = spn_order_picker
+	}
+	if = {
+		limit = { has_character_flag = spn_order_passed_over }
+		remove_character_flag = spn_order_passed_over
+	}
+	add_character_flag = { flag = spn_order_passed_over years = 1 }
+}
+
+# 2.40 (WORK-ORDER-2.40 A3): the Temple Magus's chapter forgets the question (the list and its one-year mark).
+spn_order_rose_clear_effect = {
+	var:spn_order_chapter ?= {
+		clear_variable_list = spn_order_rose_names
+		if = {
+			limit = { has_variable = spn_order_rose_queued }
+			remove_variable = spn_order_rose_queued
+		}
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 A3): Temple Magus scope. The masks' default when he is busy, or has left the temple to them:
+# every name still waiting gets its note, and one toast tells him.
+spn_order_rose_masks_effect = {
+	save_scope_as = spn_rm_head
+	var:spn_order_chapter ?= {
+		save_scope_as = spn_rm_ch
+		every_in_list = {
+			variable = spn_order_rose_names
+			limit = { spn_order_rose_valid_trigger = yes }
+			add_to_temporary_list = spn_rm_names
+		}
+	}
+	scope:spn_sel_pick ?= {
+		if = {
+			limit = {
+				spn_order_rose_valid_trigger = yes
+				NOT = { is_in_list = spn_rm_names }
+			}
+			add_to_temporary_list = spn_rm_names
+		}
+	}
+	if = {
+		limit = {
+			exists = scope:spn_rm_ch
+			any_in_list = {
+				list = spn_rm_names
+				always = yes
+			}
+		}
+		every_in_list = {
+			list = spn_rm_names
+			spn_order_rose_send_effect = { CH = scope:spn_rm_ch }
+		}
+		send_interface_toast = {
+			type = event_toast_text_neutral
+			title = spn_order_toast_rose_masks
+			desc = spn_order_toast_rose_masks_desc
+		}
+	}
+	spn_order_rose_clear_effect = yes
+}
+
+# ==================================================================================================
+# THE CONCLAVE: "LET ANOTHER TEMPLE CALL IT" (A5)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 A5): root passes the call on (option b of The Masks Must Meet, or the masks for a busy player).
+# The call and its names are banked, cleared from him, and the fallback runs again without him (spn_conclave_declined,
+# 2 years). An AI host then plans it himself (ai_attempt_to_host_activity, in spn_conclave_call_effect); a player host is
+# asked in 45-90 days. If nobody can take it, an Invocare motion lapses unheard (nobody pays); a chair or prerogative
+# call waits for its own deadline (the chair's three years, the prerogative's five).
+spn_conclave_pass_on_effect = {
+	save_scope_as = spn_cpo_who
+	add_character_flag = { flag = spn_conclave_declined years = 2 }
+	# Bank first: the reason as its literal, Invocare's two names, the chair kept behind it.
+	if = {
+		limit = { var:spn_conclave_reason ?= flag:chair }
+		save_scope_value_as = { name = spn_cpo_reason value = flag:chair }
+	}
+	else_if = {
+		limit = { var:spn_conclave_reason ?= flag:prerogative }
+		save_scope_value_as = { name = spn_cpo_reason value = flag:prerogative }
+	}
+	else_if = {
+		limit = { var:spn_conclave_reason ?= flag:invocare }
+		save_scope_value_as = { name = spn_cpo_reason value = flag:invocare }
+	}
+	if = {
+		limit = { exists = var:spn_conclave_iv_magus }
+		var:spn_conclave_iv_magus = { save_scope_as = spn_iv_magus }
+	}
+	if = {
+		limit = { exists = var:spn_conclave_iv_caller }
+		var:spn_conclave_iv_caller = { save_scope_as = spn_iv_caller }
+	}
+	if = {
+		limit = { has_variable = spn_conclave_chair_after }
+		save_scope_value_as = { name = spn_cpo_chair_after value = yes }
+	}
+	# Then clear him.
+	if = {
+		limit = { has_character_flag = spn_conclave_may_call }
+		remove_character_flag = spn_conclave_may_call
+	}
+	if = {
+		limit = { has_variable = spn_conclave_reason }
+		remove_variable = spn_conclave_reason
+	}
+	if = {
+		limit = { has_variable = spn_conclave_iv_magus }
+		remove_variable = spn_conclave_iv_magus
+	}
+	if = {
+		limit = { has_variable = spn_conclave_iv_caller }
+		remove_variable = spn_conclave_iv_caller
+	}
+	if = {
+		limit = { has_variable = spn_conclave_chair_after }
+		remove_variable = spn_conclave_chair_after
+	}
+	# The host saved by the first call travelled into The Masks Must Meet; forget it so "nobody" can be told apart.
+	if = { limit = { exists = scope:spn_cl_host } clear_saved_scope = spn_cl_host }
+	# Boot 2 fix (22 Oct): REASON must be a literal flag. Passing the saved scope made the call's save_scope_value_as read
+	# a flag as a value (2,700 "different types" lines in one session), so every test on the reason failed.
+	if = {
+		limit = { scope:spn_cpo_reason ?= flag:chair }
+		spn_conclave_call_effect = { REASON = flag:chair }
+	}
+	else_if = {
+		limit = { scope:spn_cpo_reason ?= flag:prerogative }
+		spn_conclave_call_effect = { REASON = flag:prerogative }
+	}
+	else_if = {
+		limit = { scope:spn_cpo_reason ?= flag:invocare }
+		spn_conclave_call_effect = { REASON = flag:invocare }
+	}
+	if = {
+		limit = { exists = scope:spn_cl_host }
+		scope:spn_cl_host = {
+			set_variable = { name = spn_conclave_passed value = yes years = 2 }
+			if = {
+				limit = { exists = scope:spn_cpo_chair_after }
+				set_variable = { name = spn_conclave_chair_after value = yes years = 2 }
+			}
+		}
+	}
+	else_if = {
+		limit = {
+			exists = scope:spn_cpo_reason
+			scope:spn_cpo_reason = flag:invocare
+		}
+		spn_invocare_clear_call_effect = yes
+	}
+}
+
+# ==================================================================================================
+# HAND ON YOUR TEMPLE (A11)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 A11): the Temple Magus hands his temple on and stays in it as a Magistratus. The succession is the
+# one a death runs (the named heir first, else the best member); spn_order_set_head_effect keeps him a Magistratus
+# member, gives a player successor his own way prompt, and the refresh makes him a mirror. His standing is kept. The
+# heir trigger (checked by the decision and the event) guarantees a Magistratus to take it, so the temple never dissolves.
+spn_order_step_down_effect = {
+	save_scope_as = spn_sd_who
+	add_character_flag = { flag = spn_order_stepped_down years = 10 }
+	if = {
+		limit = { spn_is_temple_magus_trigger = yes }
+		var:spn_order_chapter = { spn_order_succession_effect = yes }
+	}
+}
+
+# ==================================================================================================
+# ASK TO JOIN THEIR TEMPLE (boot 2, item e)
+# ==================================================================================================
+
+# 2.40 boot 2 (e): move $WHO$, a sworn member, to $CHAPTER$ (a temple's story), keeping his rank. The one move the Order
+# already makes for A Daughter Chapter (zz_spn_order_decisions.txt): his rank is read as a flag literal before he leaves,
+# the removal is flag:transfer (he keeps his standing, his years in rank, the Adepti, a council seat, and his pledges, which
+# spn_order_add_member_effect re-pledges to the new temple, Q1 B1), then he is added and his membership is confirmed (the
+# new Temple Magus learns his secret; the new temple's studies apply). A neophyte is never moved (he is mid-pledge).
+spn_order_move_member_effect = {
+	$WHO$ = { save_scope_as = spn_mv_who }
+	$CHAPTER$ = { save_scope_as = spn_mv_ch }
+	scope:spn_mv_who = {
+		if = {
+			limit = { var:spn_order_rank ?= flag:magistratus }
+			spn_order_remove_member_effect = { WHO = this REASON = flag:transfer }
+			spn_order_add_member_effect = { WHO = this CHAPTER = scope:spn_mv_ch RANK = flag:magistratus }
+		}
+		else_if = {
+			limit = { var:spn_order_rank ?= flag:medicum }
+			spn_order_remove_member_effect = { WHO = this REASON = flag:transfer }
+			spn_order_add_member_effect = { WHO = this CHAPTER = scope:spn_mv_ch RANK = flag:medicum }
+		}
+		else = {
+			spn_order_remove_member_effect = { WHO = this REASON = flag:transfer }
+			spn_order_add_member_effect = { WHO = this CHAPTER = scope:spn_mv_ch RANK = flag:acolyte }
+		}
+		spn_order_grant_membership_effect = yes
+	}
+	# Review RB2: the removal ended his mirror story, and the add's own refresh ran while he was not yet a member again
+	# (spn_order_sync_mirrors_effect skips non-members), so a player who moved had no chapter story (and an empty Order HUD
+	# focus) until the new temple's year. Refreshed once more now that he is a member: his mirror is made at once.
+	scope:spn_mv_ch = { spn_order_refresh_effect = yes }
+}
+
+# 2.40 boot 2 (e): Ask to Join Their Temple, accepted. scope:actor asked, scope:recipient leads the temple. Everything that
+# names the old temple is banked first; the move; then the five-year wait, the two heads' opinions and the old head's
+# toast (a player head learns that one of his members has gone; the member's new temple is Order business, so it is named).
+spn_order_join_temple_effect = {
+	scope:actor = { save_scope_as = spn_jt_who }
+	scope:recipient = { save_scope_as = spn_jt_head }
+	scope:spn_jt_head.var:spn_order_chapter = { save_scope_as = spn_jt_ch }
+	scope:spn_jt_who = {
+		var:spn_order_chapter ?= {
+			story_owner ?= {
+				if = {
+					limit = {
+						is_alive = yes
+						NOT = { this = scope:spn_jt_who }
+					}
+					save_scope_as = spn_jt_old_head
+				}
+			}
+		}
+	}
+	spn_order_move_member_effect = { WHO = scope:spn_jt_who CHAPTER = scope:spn_jt_ch }
+	scope:spn_jt_who = {
+		add_character_flag = { flag = spn_order_moved_temple years = 5 }
+	}
+	scope:spn_jt_head = {
+		add_opinion = { target = scope:spn_jt_who modifier = spn_order_joined_my_temple_opinion }
+	}
+	if = {
+		limit = { exists = scope:spn_jt_old_head }
+		scope:spn_jt_old_head = {
+			add_opinion = { target = scope:spn_jt_who modifier = spn_order_left_my_temple_opinion }
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_order_toast_left_temple
+					desc = spn_order_toast_left_temple_desc
+					left_icon = scope:spn_jt_who
+					right_icon = scope:spn_jt_head
+				}
+			}
+		}
+	}
+}

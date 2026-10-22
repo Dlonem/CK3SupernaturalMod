@@ -56,6 +56,17 @@ spn_order_invite_interaction = {
 			age >= 12
 			# Only what he knows: a member he knows of is not invited. Anything secret is decided in the effect (B6).
 			NOT = { scope:actor = { spn_order_knows_member_trigger = { WHO = scope:recipient } } }
+			# 2.40 (WORK-ORDER-2.40 A7): an open fact: a seat on the Order's council, or its chair. Seats are the Order's
+			# alone while the council is ours, and the council window shows who holds them.
+			NOT = {
+				AND = {
+					exists = global_var:spn_order_council_ours
+					OR = {
+						has_variable = mc_member_var
+						global_var:current_archmage_global ?= this
+					}
+				}
+			}
 		}
 	}
 	is_valid_showing_failures_only = {
@@ -84,7 +95,30 @@ spn_order_invite_interaction = {
 					}
 					add_character_flag = { flag = spn_order_picked years = 1 }
 					set_variable = { name = spn_order_picker value = scope:actor.var:spn_order_chapter years = 1 }
+					# 2.40 (WORK-ORDER-2.40 A7): he has just been named by a head, so the note itself comes (a player who
+					# never heard the rumour got the rumour instead, and the note was lost).
+					if = {
+						limit = { NOT = { has_character_flag = spn_order_whispered } }
+						add_character_flag = spn_order_whispered # identity state (the 2.38b rumour flag)
+					}
 					spn_order_send_note_effect = yes
+				}
+				# 2.40 (WORK-ORDER-2.40 A7): already a member (of another temple: his own he would know). Both learn it, as
+				# at A Familiar Mask (spn_conclave.0100), and a toast tells the one who asked. Then the entry hides itself.
+				else_if = {
+					limit = { spn_is_order_member_trigger = yes }
+					spn_order_reveal_membership_effect = { WHO = scope:recipient TO = scope:actor }
+					spn_order_reveal_membership_effect = { WHO = scope:actor TO = scope:recipient }
+					add_opinion = { target = scope:actor modifier = friendliness_opinion opinion = 15 }
+					reverse_add_opinion = { target = scope:actor modifier = friendliness_opinion opinion = 15 }
+					scope:actor = {
+						send_interface_toast = {
+							type = event_toast_text_neutral
+							title = spn_order_toast_invite_member
+							desc = spn_order_toast_invite_member_desc
+							left_icon = scope:recipient
+						}
+					}
 				}
 				# Otherwise nothing at all: no answer is exactly what a refusal of the Note looks like to him (B6).
 			}
@@ -162,7 +196,7 @@ spn_order_transference_interaction = {
 			spn_order_magistratus_plus_trigger = yes
 			has_trait = archmage
 		}
-		scope:recipient = { spn_order_deadly_disease_trigger = yes }
+		scope:recipient = { spn_transference_curable_trigger = yes } # 2.40 (WORK-ORDER-2.40 B7 step 3)
 	}
 	is_valid_showing_failures_only = {
 		scope:actor = {
@@ -209,6 +243,10 @@ spn_order_transference_interaction = {
 			factor = 0
 			scope:actor = { spn_transference_caster_trigger = no }
 		}
+		modifier = { # 2.40 (WORK-ORDER-2.40 B7 step 4): the deadly five first
+			factor = 0.2
+			scope:recipient = { spn_order_deadly_disease_trigger = no }
+		}
 		modifier = { # 2.39 (WORK-ORDER-2.39 F4): the Blue Fever alone passes by itself; the AI works it only on its carrier
 			factor = 0
 			scope:recipient = {
@@ -233,6 +271,7 @@ spn_order_demon_borrow_interaction = {
 	desc = spn_order_demon_borrow_interaction_desc
 	target_type = artifact
 	target_filter = recipient_artifacts
+	show_all_targets = no # 2.40 (WORK-ORDER-2.40 G7): refused items are hidden
 	use_diplomatic_range = yes
 	ai_targets = {
 		ai_recipients = scripted_relations
@@ -256,15 +295,18 @@ spn_order_demon_borrow_interaction = {
 		}
 		scope:actor = { spn_order_knows_member_trigger = { WHO = scope:recipient } }
 	}
-	can_be_picked_artifact = {
-		scope:target = {
-			artifact_owner ?= scope:recipient
-			exists = var:spn_pledged_to
-			NOT = { has_variable = spn_borrowed_from }
-			NOT = { has_variable = spn_relic_borrow_cd }
-			NOT = { var:spn_relic ?= flag:powder }
-			NOT = { var:spn_relic ?= flag:beetle } # 2.39 (WORK-ORDER-2.39 F4): the beetle is never lent
+	# 2.40 (WORK-ORDER-2.40 G7): one rule with readable lines, and the reason when nothing can be lent. A demon has no
+	# rank, so the Homunculus Beetle is never lent to one; the Fors Factorum never leaves its temple.
+	is_valid_showing_failures_only = {
+		custom_tooltip = {
+			text = spn_relic_borrow_nothing_tt
+			scope:recipient = {
+				any_character_artifact = { spn_relic_demon_borrowable_trigger = { ACTOR = scope:actor RECIPIENT = scope:recipient } }
+			}
 		}
+	}
+	can_be_picked_artifact = {
+		scope:target = { spn_relic_demon_borrowable_trigger = { ACTOR = scope:actor RECIPIENT = scope:recipient } }
 	}
 	on_accept = {
 		custom_tooltip = spn_order_demon_borrow_interaction_tt

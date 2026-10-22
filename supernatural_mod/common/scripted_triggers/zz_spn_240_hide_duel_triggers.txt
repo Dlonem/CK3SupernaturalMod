@@ -1,0 +1,183 @@
+﻿# Supernatural 2.40 -- the hide duel and the hide's lineage (WORK-ORDER-2.40 F1, F4, C10). Package Q6.
+# Never put a scripted trigger in common/on_action/ (2.35d: the parser stops at it).
+
+# ==================================================================================================
+# THE HIDE DUEL (F1)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 F1): is this champion already in a duel? Root = the champion. The mod's own duel opening (3 days,
+# refreshed at every step of the chain) or vanilla's single combat (configure_start_single_combat_effect sets the variable,
+# van/common/scripted_effects/00_single_combat_effects.txt:72-84).
+# AGOT: the compatibility patch overrides this trigger by name and adds AGOT's own tests (has_variable =
+# engaged_in_dragon_combat, has_character_flag = agot_in_dragon_duel_opening), so nothing AGOT-specific lives in the mod.
+spn_hide_duel_busy_trigger = {
+	OR = {
+		has_character_flag = spn_hide_duel_opening
+		has_variable = engaged_in_single_combat
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 F1): can the two still fight? Root = one duelist, OTHER = the other. Every event and every option of
+# the chain asks it again, so a duel never runs on a dead, captured or unbound champion.
+spn_hide_duel_live_trigger = {
+	is_alive = yes
+	is_imprisoned = no
+	spn_is_champion_trigger = yes
+	$OTHER$ = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_is_champion_trigger = yes
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 F1): an AI champion who is a landless knight of a player: the player is asked before his wolf goes
+# for another (AGOT's commander permission). Root = the champion.
+spn_hide_duel_asks_leave_trigger = {
+	is_ai = yes
+	is_landed = no
+	liege_or_court_owner ?= {
+		is_ai = no
+		is_at_war = yes
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 F1): is $FOE$ wearing the hide $WHO$ has reason to want? A claim on it, or the last champion of that
+# hide before $FOE$ was of $WHO$'s house (the hide his family lost). Words in the event and an AI weight; never a gate.
+spn_hide_duel_wanted_trigger = {
+	$FOE$ = {
+		any_character_artifact = {
+			exists = var:spn_hide
+			is_equipped = yes
+			OR = {
+				$WHO$ = { has_artifact_claim = prev }
+				spn_hide_duel_house_lost_trigger = { WHO = $WHO$ HIDE = silverback }
+				spn_hide_duel_house_lost_trigger = { WHO = $WHO$ HIDE = timber }
+				spn_hide_duel_house_lost_trigger = { WHO = $WHO$ HIDE = tundra }
+				spn_hide_duel_house_lost_trigger = { WHO = $WHO$ HIDE = graybeard }
+				spn_hide_duel_house_lost_trigger = { WHO = $WHO$ HIDE = midnight }
+				spn_hide_duel_house_lost_trigger = { WHO = $WHO$ HIDE = alpha }
+			}
+		}
+	}
+}
+
+# Artifact scope (the hide). Nested trigger_ifs: CK3 does not short-circuit, and a houseless WHO must not be read.
+spn_hide_duel_house_lost_trigger = {
+	var:spn_hide = flag:$HIDE$
+	trigger_if = {
+		limit = {
+			exists = $WHO$.house
+			exists = global_var:spn_hide_$HIDE$_last
+		}
+		global_var:spn_hide_$HIDE$_last = { house ?= $WHO$.house }
+	}
+	trigger_else = { always = no }
+}
+
+# ==================================================================================================
+# LINEAGE (F4)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 F4): does $WHO$ already KNOW that the hide scope:spn_fit_hide has been in his family? True when one of
+# its earlier champions is his parent, sibling or grandparent (the kin spn_hide_lineage_walk_value counts) and that champion is a
+# known wolf, or his creature secret is known to $WHO$. A player who did not know his father was a wolf learns nothing from it.
+spn_hide_kin_known_trigger = {
+	OR = {
+		AND = {
+			scope:spn_fit_hide = flag:silverback
+			has_global_variable_list = spn_hide_silverback_champions
+			any_in_global_list = {
+				variable = spn_hide_silverback_champions
+				spn_hide_kin_known_one_trigger = { WHO = $WHO$ }
+			}
+		}
+		AND = {
+			scope:spn_fit_hide = flag:timber
+			has_global_variable_list = spn_hide_timber_champions
+			any_in_global_list = {
+				variable = spn_hide_timber_champions
+				spn_hide_kin_known_one_trigger = { WHO = $WHO$ }
+			}
+		}
+		AND = {
+			scope:spn_fit_hide = flag:tundra
+			has_global_variable_list = spn_hide_tundra_champions
+			any_in_global_list = {
+				variable = spn_hide_tundra_champions
+				spn_hide_kin_known_one_trigger = { WHO = $WHO$ }
+			}
+		}
+		AND = {
+			scope:spn_fit_hide = flag:graybeard
+			has_global_variable_list = spn_hide_graybeard_champions
+			any_in_global_list = {
+				variable = spn_hide_graybeard_champions
+				spn_hide_kin_known_one_trigger = { WHO = $WHO$ }
+			}
+		}
+		AND = {
+			scope:spn_fit_hide = flag:midnight
+			has_global_variable_list = spn_hide_midnight_champions
+			any_in_global_list = {
+				variable = spn_hide_midnight_champions
+				spn_hide_kin_known_one_trigger = { WHO = $WHO$ }
+			}
+		}
+		AND = {
+			scope:spn_fit_hide = flag:alpha
+			has_global_variable_list = spn_hide_alpha_champions
+			any_in_global_list = {
+				variable = spn_hide_alpha_champions
+				spn_hide_kin_known_one_trigger = { WHO = $WHO$ }
+			}
+		}
+	}
+}
+
+# Past champion scope (an entry of a spn_hide_<hide>_champions list; he may be dead). WHO = the candidate.
+spn_hide_kin_known_one_trigger = {
+	NOT = { this = $WHO$ }
+	OR = {
+		is_parent_of = $WHO$
+		is_sibling_of = $WHO$
+		is_grandparent_of = $WHO$
+	}
+	OR = {
+		has_trait = spn_known_werewolf
+		has_trait = spn_known_hybrid
+		any_secret = {
+			OR = { # Boot 1 (22 Oct): secret_type is the trigger; inside OR, a bare `type` is not
+				secret_type = spn_secret_werewolf
+				secret_type = spn_secret_hybrid
+			}
+			is_known_by = $WHO$
+		}
+	}
+}
+
+# ==================================================================================================
+# THE HIDE SPEAKS (C10)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 C10): Silverback will not fight a weaker wolf of its own pack. Root = the champion asked
+# (spn_hide.2110); scope:spn_hs_other = the other wolf; scope:spn_hs_my_chance = root's chance in the Challenge (banked in the
+# event's immediate; "weaker" = the fight leans clearly toward root, the lean tooltip's own threshold). Open facts only.
+spn_hide_speaks_stand_down_trigger = {
+	has_trait = spn_champion_silverback
+	trigger_if = {
+		limit = {
+			exists = scope:spn_hs_my_chance
+			exists = scope:spn_hs_other
+		}
+		scope:spn_hs_my_chance >= 65
+		trigger_if = {
+			limit = {
+				exists = var:spn_pack
+				scope:spn_hs_other = { exists = var:spn_pack }
+			}
+			scope:spn_hs_other.var:spn_pack = root.var:spn_pack
+		}
+		trigger_else = { always = no }
+	}
+	trigger_else = { always = no }
+}

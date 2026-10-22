@@ -50,9 +50,14 @@ spn_hold_the_unification_intent = {
 	}
 	is_valid = {
 		spn_is_alpha_trigger = yes
+		# 2.40 (WORK-ORDER-2.40 C4): a spouse who leads another pack, or one who already runs in his
 		custom_tooltip = {
 			text = spn_hold_the_unification_spouse_tt
-			any_spouse = { spn_is_alpha_trigger = yes }
+			any_spouse = { spn_unification_spouse_ok_trigger = { HOST = root } }
+		}
+		custom_tooltip = {
+			text = spn_hold_the_unification_unified_tt
+			NOT = { var:spn_pack ?= { exists = var:spn_pack_unified } }
 		}
 	}
 	ai_will_do = {
@@ -60,7 +65,8 @@ spn_hold_the_unification_intent = {
 		if = {
 			limit = {
 				spn_is_alpha_trigger = yes
-				any_spouse = { spn_is_alpha_trigger = yes }
+				any_spouse = { spn_unification_spouse_ok_trigger = { HOST = root } } # 2.40 (WORK-ORDER-2.40 C4): 
+				NOT = { var:spn_pack ?= { exists = var:spn_pack_unified } }
 			}
 			add = 40
 			if = { limit = { has_trait = ambitious } add = 20 }
@@ -94,6 +100,7 @@ spn_challenge_the_alpha_intent = {
 	is_shown = {
 		spn_packs_on_trigger = yes
 		spn_is_wolf_trigger = yes # 2.37b: not the Fevered
+		spn_is_alpha_trigger = no # 2.40 (WORK-ORDER-2.40 C3): an alpha has no alpha here to challenge
 	}
 	is_valid = {
 		custom_tooltip = {
@@ -115,7 +122,10 @@ spn_challenge_the_alpha_intent = {
 			if = {
 				limit = { scope:activity = { exists = activity_host } }
 				if = {
-					limit = { scope:activity.activity_host = { spn_is_alpha_trigger = yes } }
+					limit = {
+						scope:activity.activity_host = { spn_is_alpha_trigger = yes }
+						NOT = { scope:activity.activity_host = root } # 2.40 (WORK-ORDER-2.40 C3): never at his own fire (is_shown may not be asked of the AI)
+					}
 					if = {
 						limit = {
 							scope:activity.activity_host.var:spn_pack = root.var:spn_pack

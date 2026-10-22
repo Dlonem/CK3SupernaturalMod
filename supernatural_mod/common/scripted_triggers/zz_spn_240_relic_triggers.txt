@@ -1,0 +1,231 @@
+﻿# Supernatural 2.40 -- "fixes and balance": the relics' pick lists, the lending rules, the pledge that stays inside a temple,
+# the unique relics and the Powder (WORK-ORDER-2.40 G7, B1, B2, G9, B9, G5, B12). Package Q1.
+# Loc: localization/english/zz_spn_240_q1_l_english.yml.
+#
+# Every pick list in the mod (Pledge, Take It Back, Ask to Borrow, the demon's Borrow from the Reliquary) now sets
+# show_all_targets = no, as every vanilla artifact interaction does: refused items are hidden, so the window no longer opens
+# on a hide or a page that cannot be picked. Each list's rule is ONE artifact-scope trigger below, called by its
+# can_be_picked_artifact and by its is_valid summary line, so a person with nothing pickable sees why. Each line is a custom
+# tooltip: the engine's own lines for a variable test read "Has Variable: VARIABLE" or "BUG: missing localization
+# artifact_var_equal_third" (B1, B2).
+
+# ==================================================================================================
+# THE PICK LISTS (G7). Artifact scope.
+# ==================================================================================================
+# Pledge to the Reliquary: $ACTOR$'s own item, of a kind a Reliquary keeps, not already pledged, not on loan.
+spn_relic_pledgeable_by_trigger = {
+	artifact_owner ?= $ACTOR$
+	spn_pledgeable_trigger = yes
+	custom_tooltip = {
+		text = spn_relic_pick_not_pledged_tt
+		NOT = { has_variable = spn_pledged_to }
+	}
+	custom_tooltip = {
+		text = spn_relic_pick_not_lent_tt
+		NOT = { has_variable = spn_borrowed_from }
+	}
+}
+
+# Take It Back: $ACTOR$'s own pledged item that is not on loan (also a pledge to a temple that is gone, 2.39 final pass).
+# Boot 2 (22 Oct, Thomas item d): never the Fors Factorum while it is pledged to his own temple. The seed puts it in the
+# hands of the Keeper of the Reliquary or the most learned Temple Magus, pledged; taken back, it would leave the Order with
+# his heir, which the B1 pledge rule exists to stop. A Fors pledged to a temple that is gone (or that he left) can be.
+spn_relic_take_back_pickable_trigger = {
+	artifact_owner ?= $ACTOR$
+	custom_tooltip = {
+		text = spn_relic_pick_is_pledged_tt
+		has_variable = spn_pledged_to
+	}
+	custom_tooltip = {
+		text = spn_relic_pick_not_lent_tt
+		NOT = { has_variable = spn_borrowed_from }
+	}
+	custom_tooltip = {
+		text = spn_relic_pick_fors_stays_tt
+		trigger_if = {
+			limit = {
+				var:spn_relic ?= flag:fors
+				$ACTOR$ = { exists = var:spn_order_chapter }
+			}
+			NOT = { var:spn_pledged_to ?= $ACTOR$.var:spn_order_chapter }
+		}
+	}
+}
+
+# The lending rules every loan shares (Ask to Borrow, the demon's Borrow from the Reliquary, the Conclave). Not on loan,
+# rested three years since its last loan, never the Powder (it is used up), never the Fors Factorum (the temple's, B12), and
+# the Homunculus Beetle only to a Magistratus or higher, a Temple Magus included (Thomas, 22 Oct, decision 9). A demon
+# has no rank, so the Beetle is never lent to one.
+spn_relic_lendable_trigger = {
+	custom_tooltip = {
+		text = spn_relic_pick_not_lent_tt
+		NOT = { has_variable = spn_borrowed_from }
+	}
+	custom_tooltip = {
+		text = spn_relic_pick_rested_tt
+		NOT = { has_variable = spn_relic_borrow_cd }
+	}
+	custom_tooltip = {
+		text = spn_relic_pick_not_powder_tt
+		NOT = { var:spn_relic ?= flag:powder }
+	}
+	custom_tooltip = {
+		text = spn_relic_pick_not_fors_tt
+		NOT = { var:spn_relic ?= flag:fors }
+	}
+	custom_tooltip = {
+		text = spn_relic_pick_beetle_rank_tt
+		trigger_if = {
+			limit = { var:spn_relic ?= flag:beetle }
+			$BORROWER$ = { spn_order_magistratus_plus_trigger = yes }
+		}
+	}
+}
+
+# Ask to Borrow: an item $RECIPIENT$ holds, pledged to his own temple's Reliquary, that may be lent to $ACTOR$.
+spn_relic_borrowable_trigger = {
+	artifact_owner ?= $RECIPIENT$
+	custom_tooltip = {
+		text = spn_relic_pick_pledged_here_tt
+		trigger_if = {
+			limit = { $RECIPIENT$ = { exists = var:spn_order_chapter } }
+			var:spn_pledged_to ?= $RECIPIENT$.var:spn_order_chapter
+		}
+		trigger_else = { always = no }
+	}
+	spn_relic_lendable_trigger = { BORROWER = $ACTOR$ }
+}
+
+# Borrow from the Reliquary (a demon with a Compact): an item $RECIPIENT$ holds pledged to a Reliquary, lendable to $ACTOR$.
+spn_relic_demon_borrowable_trigger = {
+	artifact_owner ?= $RECIPIENT$
+	custom_tooltip = {
+		text = spn_relic_pick_pledged_tt
+		exists = var:spn_pledged_to
+	}
+	spn_relic_lendable_trigger = { BORROWER = $ACTOR$ }
+}
+
+# ==================================================================================================
+# THE PLEDGE THAT STAYS (B1). Artifact scope: a pledged item whose new holder $WHO$ is a living member of the temple, or of
+# the coven, it is pledged to. Inheritance inside a temple no longer empties its Reliquary (Thomas, 22 Oct, decision 8).
+# ==================================================================================================
+spn_relic_pledge_stays_with_trigger = {
+	exists = var:spn_pledged_to
+	$WHO$ = { is_alive = yes }
+	OR = {
+		trigger_if = {
+			limit = {
+				$WHO$ = {
+					spn_is_order_member_trigger = yes
+					exists = var:spn_order_chapter
+				}
+			}
+			var:spn_pledged_to = $WHO$.var:spn_order_chapter
+		}
+		trigger_else = { always = no }
+		trigger_if = {
+			limit = { $WHO$ = { exists = var:spn_coven } }
+			var:spn_pledged_to = $WHO$.var:spn_coven
+		}
+		trigger_else = { always = no }
+	}
+}
+
+# Take the Beetle into Custody (B2, G7). Character scope: he holds the Homunculus Beetle pledged to $CHAPTER$, not on loan.
+spn_relic_beetle_in_custody_reach_trigger = {
+	any_character_artifact = {
+		var:spn_relic ?= flag:beetle
+		var:spn_pledged_to ?= $CHAPTER$
+		NOT = { has_variable = spn_borrowed_from }
+	}
+}
+
+# ==================================================================================================
+# THE RELIQUARY (G9). Story scope (a chapter): nothing is pledged to it. Read from the list every rebuild keeps; a temple
+# that never had one is empty.
+# ==================================================================================================
+spn_relic_reliquary_empty_trigger = {
+	NOT = {
+		any_in_list = {
+			variable = spn_order_reliquary
+			has_variable = spn_pledged_to
+		}
+	}
+}
+
+# ==================================================================================================
+# THE UNIQUE RELICS (G5 step 8, B12). The Homunculus Beetle, the Fors Factorum and the Seal of Solomon each exist once.
+# ==================================================================================================
+# Any scope. Relic $KEY$ exists somewhere. $ART$ is its global pointer (global_var:spn_<key>_art; the Seal's is
+# global_var:spn_seal). The pointer is read first; the world's artifacts are walked only when it has no owner.
+spn_unique_relic_exists_trigger = {
+	OR = {
+		$ART$ ?= { exists = artifact_owner }
+		any_artifact = { var:spn_relic ?= flag:$KEY$ }
+	}
+}
+
+# Any scope. A unique relic may be seeded: with the Order Off, at once; with it On, once the Order's own seeding has run
+# and a temple stands, or ten years on with none (2.39 review M1: a new game founds its temples one a year).
+spn_unique_relic_seed_ready_trigger = {
+	OR = {
+		NOT = { spn_order_on_trigger = yes }
+		AND = {
+			exists = global_var:spn_order_seeded
+			OR = {
+				any_in_global_list = {
+					variable = spn_order_chapters
+					is_alive = yes
+					exists = var:spn_order_chapter
+				}
+				years_from_game_start >= 10
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE POWDER (B9, G11, G1 step 2)
+# ==================================================================================================
+# Artifact scope: a Powder kept in a temple's Reliquary that the temple can spend (held by a living member, not on loan).
+spn_relic_reliquary_powder_trigger = {
+	var:spn_relic ?= flag:powder
+	NOT = { has_variable = spn_borrowed_from }
+	artifact_owner ?= { is_alive = yes }
+}
+
+# Character scope: there is a Powder he can spend, his own or one in his temple's Reliquary. spn_relic_powder_spend_effect
+# spends exactly the one this finds (his own first).
+spn_relic_can_spend_powder_trigger = {
+	OR = {
+		spn_order_holds_powder_trigger = yes
+		var:spn_order_chapter ?= {
+			any_in_list = {
+				variable = spn_order_reliquary
+				spn_relic_reliquary_powder_trigger = yes
+			}
+		}
+	}
+}
+
+# Character scope: a little power to spare (Witchcraft's spend_minor_ps_effect takes 5 power saturation; it ships no
+# trigger of its own, so this is can_spend_standard_ps_trigger's shape at the minor price).
+spn_relic_can_spend_minor_ps_trigger = {
+	custom_tooltip = {
+		text = spn_relic_minor_ps_tt
+		OR = {
+			spn_casts_without_price_trigger = yes
+			has_character_modifier = power_saturated1
+			has_character_modifier = power_saturated2
+			AND = {
+				has_trait = archmage
+				has_trait_xp = {
+					trait = archmage
+					track = power_saturation
+					value > 4
+				}
+			}
+		}
+	}
+}

@@ -1,0 +1,428 @@
+﻿namespace = spn_order
+
+# Supernatural 2.40 -- the Order's politics and pacing (WORK-ORDER-2.40 A11). Ids spn_order.2050-2099 are Q2's.
+# Loc: localization/english/zz_spn_240_q2_l_english.yml. Every event re-checks its situation in its own trigger.
+
+# .2050 -- The Mask Passes. A Temple Magus hands his temple on (Hand On Your Temple, spn_order_step_down_decision).
+spn_order.2050 = {
+	type = character_event
+	title = spn_order.2050.t
+	desc = {
+		desc = spn_order.2050.desc
+		triggered_desc = {
+			trigger = { exists = scope:spn_sd_next }
+			desc = spn_order.2050.desc_next
+		}
+	}
+	theme = learning
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = {
+		character = scope:spn_sd_next
+		trigger = { exists = scope:spn_sd_next }
+		animation = personality_bold
+	}
+	trigger = {
+		is_alive = yes
+		spn_order_on_trigger = yes
+		spn_is_temple_magus_trigger = yes
+		spn_order_step_down_heir_trigger = yes
+		NOT = { has_character_flag = spn_order_stepped_down }
+	}
+	immediate = {
+		# Who will lead it: the succession's own order (spn_order_succession_effect), read for the portrait only.
+		var:spn_order_chapter = {
+			if = {
+				limit = {
+					var:spn_order_heir ?= {
+						is_alive = yes
+						NOT = { this = root }
+						var:spn_order_chapter ?= root.var:spn_order_chapter
+						var:spn_order_rank ?= flag:magistratus
+					}
+				}
+				var:spn_order_heir = { save_scope_as = spn_sd_next }
+			}
+			else = {
+				ordered_in_list = {
+					variable = spn_order_members
+					limit = {
+						is_alive = yes
+						NOT = { this = root }
+						spn_is_order_member_trigger = yes
+					}
+					order_by = spn_order_succession_score_value
+					save_scope_as = spn_sd_next
+				}
+			}
+		}
+	}
+	# Stay as a Magistratus of the temple.
+	option = {
+		name = spn_order.2050.a
+		custom_tooltip = spn_order.2050.a.tt
+		spn_order_step_down_effect = yes
+		ai_chance = {
+			base = 70
+			modifier = {
+				add = 20
+				has_trait = gregarious
+			}
+		}
+	}
+	# Work outside the temple, with the Adepti.
+	option = {
+		name = spn_order.2050.b
+		custom_tooltip = spn_order.2050.b.tt
+		spn_order_step_down_effect = yes
+		set_variable = spn_order_adeptus # identity state (the Adepti, as spn_order.0850 sets it)
+		ai_chance = {
+			base = 30
+			modifier = {
+				add = 30
+				OR = {
+					has_trait = shy
+					has_trait = paranoid
+				}
+			}
+		}
+	}
+	# Not yet: nothing changes, and the decision stays open.
+	option = {
+		name = spn_order.2050.c
+		ai_chance = { base = 0 }
+	}
+}
+
+# .2051 -- The Temples of the Order (boot 2, item e). From The Temples of the Order decision. The four nearest temples
+# that could take him in (spn_order_join_temple_open_trigger), each with a letter that opens Ask to Join Their Temple, so
+# the Temple Magus answers through the interaction's own rules. A Temple Magus reading it is told to hand his own on first.
+spn_order.2051 = {
+	type = character_event
+	title = spn_order.2051.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { NOT = { exists = scope:spn_tj_1 } }
+				desc = spn_order.2051.desc_none
+			}
+			desc = spn_order.2051.desc
+		}
+		triggered_desc = {
+			trigger = { spn_is_temple_magus_trigger = yes }
+			desc = spn_order.2051.desc_head
+		}
+		triggered_desc = {
+			trigger = { has_character_flag = spn_order_moved_temple }
+			desc = spn_order.2051.desc_moved
+		}
+	}
+	theme = learning
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = {
+		character = scope:spn_tj_1
+		trigger = { exists = scope:spn_tj_1 }
+		animation = personality_rational
+	}
+	lower_left_portrait = {
+		character = scope:spn_tj_2
+		trigger = { exists = scope:spn_tj_2 }
+	}
+	lower_center_portrait = {
+		character = scope:spn_tj_3
+		trigger = { exists = scope:spn_tj_3 }
+	}
+	lower_right_portrait = {
+		character = scope:spn_tj_4
+		trigger = { exists = scope:spn_tj_4 }
+	}
+	trigger = {
+		is_alive = yes
+		spn_order_on_trigger = yes
+		spn_is_order_member_trigger = yes
+	}
+	immediate = {
+		location = { save_scope_as = spn_tj_here }
+		every_in_global_list = {
+			variable = spn_order_chapters
+			limit = { spn_order_join_temple_open_trigger = { WHO = root } }
+			add_to_temporary_list = spn_tj_open
+		}
+		ordered_in_list = {
+			list = spn_tj_open
+			position = 0
+			check_range_bounds = no
+			order_by = {
+				value = 0
+				subtract = "location.squared_distance(scope:spn_tj_here)"
+			}
+			save_scope_as = spn_tj_1
+		}
+		ordered_in_list = {
+			list = spn_tj_open
+			position = 1
+			check_range_bounds = no
+			order_by = {
+				value = 0
+				subtract = "location.squared_distance(scope:spn_tj_here)"
+			}
+			save_scope_as = spn_tj_2
+		}
+		ordered_in_list = {
+			list = spn_tj_open
+			position = 2
+			check_range_bounds = no
+			order_by = {
+				value = 0
+				subtract = "location.squared_distance(scope:spn_tj_here)"
+			}
+			save_scope_as = spn_tj_3
+		}
+		ordered_in_list = {
+			list = spn_tj_open
+			position = 3
+			check_range_bounds = no
+			order_by = {
+				value = 0
+				subtract = "location.squared_distance(scope:spn_tj_here)"
+			}
+			save_scope_as = spn_tj_4
+		}
+		# Review RB2 (B6): the letter is how the Order tells him who leads these temples, so Ask to Join Their Temple shows
+		# on each of them afterwards (its is_shown reads this list), for the letter's own write-to options too.
+		if = {
+			limit = { exists = scope:spn_tj_1 }
+			if = {
+				limit = { is_target_in_variable_list = { name = spn_order_temples_told target = scope:spn_tj_1 } }
+				remove_list_variable = { name = spn_order_temples_told target = scope:spn_tj_1 }
+			}
+			add_to_variable_list = { name = spn_order_temples_told target = scope:spn_tj_1 years = 5 }
+		}
+		if = {
+			limit = { exists = scope:spn_tj_2 }
+			if = {
+				limit = { is_target_in_variable_list = { name = spn_order_temples_told target = scope:spn_tj_2 } }
+				remove_list_variable = { name = spn_order_temples_told target = scope:spn_tj_2 }
+			}
+			add_to_variable_list = { name = spn_order_temples_told target = scope:spn_tj_2 years = 5 }
+		}
+		if = {
+			limit = { exists = scope:spn_tj_3 }
+			if = {
+				limit = { is_target_in_variable_list = { name = spn_order_temples_told target = scope:spn_tj_3 } }
+				remove_list_variable = { name = spn_order_temples_told target = scope:spn_tj_3 }
+			}
+			add_to_variable_list = { name = spn_order_temples_told target = scope:spn_tj_3 years = 5 }
+		}
+		if = {
+			limit = { exists = scope:spn_tj_4 }
+			if = {
+				limit = { is_target_in_variable_list = { name = spn_order_temples_told target = scope:spn_tj_4 } }
+				remove_list_variable = { name = spn_order_temples_told target = scope:spn_tj_4 }
+			}
+			add_to_variable_list = { name = spn_order_temples_told target = scope:spn_tj_4 years = 5 }
+		}
+	}
+	option = {
+		name = spn_order.2051.a
+		trigger = { exists = scope:spn_tj_1 }
+		custom_tooltip = spn_order.2051.write_tt
+		open_interaction_window = {
+			interaction = spn_order_ask_join_temple_interaction
+			actor = root
+			recipient = scope:spn_tj_1
+		}
+	}
+	option = {
+		name = spn_order.2051.b
+		trigger = { exists = scope:spn_tj_2 }
+		custom_tooltip = spn_order.2051.write_tt
+		open_interaction_window = {
+			interaction = spn_order_ask_join_temple_interaction
+			actor = root
+			recipient = scope:spn_tj_2
+		}
+	}
+	option = {
+		name = spn_order.2051.c
+		trigger = { exists = scope:spn_tj_3 }
+		custom_tooltip = spn_order.2051.write_tt
+		open_interaction_window = {
+			interaction = spn_order_ask_join_temple_interaction
+			actor = root
+			recipient = scope:spn_tj_3
+		}
+	}
+	option = {
+		name = spn_order.2051.d
+		trigger = { exists = scope:spn_tj_4 }
+		custom_tooltip = spn_order.2051.write_tt
+		open_interaction_window = {
+			interaction = spn_order_ask_join_temple_interaction
+			actor = root
+			recipient = scope:spn_tj_4
+		}
+	}
+	option = {
+		name = spn_order.2051.e
+	}
+}
+
+# .2052 -- What the Relic Wanted (boot 3). From The Relic That Would Not Sleep (spn_order.0161), the Listen option, 2-5 days
+# later. The relic it named wants to be carried and used, not shut in a chest: the listener learns from it, and if another
+# member of his own temple keeps it, he may ask him to lend it (Ask to Borrow, with its own rules). Scopes from .0161:
+# spn_hum_relic, spn_hum_keeper (either may be gone: the event re-checks and falls back to plain words).
+spn_order.2052 = {
+	type = character_event
+	title = spn_order.2052.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					exists = scope:spn_hum_relic
+					scope:spn_hum_keeper ?= root
+				}
+				desc = spn_order.2052.desc_mine
+			}
+			triggered_desc = {
+				trigger = {
+					exists = scope:spn_hum_relic
+					exists = scope:spn_hum_keeper
+				}
+				desc = spn_order.2052.desc_keeper
+			}
+			desc = spn_order.2052.desc
+		}
+	}
+	theme = learning
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = {
+		character = scope:spn_hum_keeper
+		trigger = {
+			exists = scope:spn_hum_keeper
+			NOT = { scope:spn_hum_keeper = root }
+		}
+		animation = personality_rational
+	}
+	trigger = {
+		is_alive = yes
+		spn_order_on_trigger = yes
+		spn_is_order_member_trigger = yes
+	}
+	immediate = {
+		# The keeper may have died or lost the item in the meantime: only a living keeper who still holds it is named.
+		if = {
+			limit = {
+				exists = scope:spn_hum_keeper
+				OR = {
+					NOT = { exists = scope:spn_hum_relic }
+					scope:spn_hum_keeper = { is_alive = no }
+					scope:spn_hum_relic ?= {
+						NOT = { artifact_owner ?= scope:spn_hum_keeper }
+					}
+				}
+			}
+			clear_saved_scope = spn_hum_keeper
+		}
+	}
+	# Ask the keeper to lend it: a living member of the same temple who is not root. The interaction checks rank and
+	# cooldown itself and shows why when it cannot be used.
+	option = {
+		name = spn_order.2052.a
+		trigger = {
+			exists = scope:spn_hum_keeper
+			NOT = { scope:spn_hum_keeper = root }
+			scope:spn_hum_keeper = {
+				is_alive = yes
+				spn_is_order_member_trigger = yes
+				var:spn_order_chapter ?= root.var:spn_order_chapter
+			}
+		}
+		add_learning_lifestyle_xp = minor_lifestyle_xp
+		custom_tooltip = spn_order.2052.a.tt
+		open_interaction_window = {
+			interaction = spn_relic_borrow_interaction
+			actor = root
+			recipient = scope:spn_hum_keeper
+		}
+	}
+	option = {
+		name = spn_order.2052.b
+		add_learning_lifestyle_xp = minor_lifestyle_xp
+	}
+}
+
+# .2053 -- The Hum, Weeks Later (boot 3). From spn_order.0161, Leave It Be, 20-45 days later. Hidden even split: the relic
+# went quiet by itself, or another member of the temple (a Medicum or higher, the Temple Magus likelier) quieted it and
+# earned the standing the reader passed up. Scopes from .0161: spn_hum_relic (may be gone).
+spn_order.2053 = {
+	type = character_event
+	title = spn_order.2053.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_hum_other }
+				desc = spn_order.2053.desc_other
+			}
+			desc = spn_order.2053.desc_quiet
+		}
+	}
+	theme = witchcraft
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = idle }
+	right_portrait = {
+		character = scope:spn_hum_other
+		trigger = { exists = scope:spn_hum_other }
+		animation = personality_bold
+	}
+	trigger = {
+		is_alive = yes
+		spn_order_on_trigger = yes
+		spn_is_order_member_trigger = yes
+	}
+	immediate = {
+		random = {
+			chance = 50
+			var:spn_order_chapter ?= {
+				random_in_list = {
+					variable = spn_order_members
+					limit = {
+						is_alive = yes
+						NOT = { this = root }
+						is_imprisoned = no
+						OR = {
+							spn_order_medicum_plus_trigger = yes
+							spn_is_temple_magus_trigger = yes
+						}
+					}
+					weight = {
+						base = 1
+						modifier = {
+							add = 2
+							spn_is_temple_magus_trigger = yes
+						}
+					}
+					save_scope_as = spn_hum_other
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_order.2053.a
+		trigger = { exists = scope:spn_hum_other }
+		custom_tooltip = spn_order.2053.a.tt
+		scope:spn_hum_other = {
+			if = {
+				limit = { is_alive = yes } # never a variable on a dead character
+				hidden_effect = { spn_order_add_standing_effect = { VALUE = 5 } }
+			}
+		}
+	}
+	option = {
+		name = spn_order.2053.b
+		trigger = { NOT = { exists = scope:spn_hum_other } }
+		custom_tooltip = spn_order.2053.b.tt
+	}
+}

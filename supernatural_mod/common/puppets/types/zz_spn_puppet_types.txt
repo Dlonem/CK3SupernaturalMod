@@ -1,0 +1,116 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 D1, G8d) -- the golem puppet. Package Q7.
+# Vanilla 1.20's puppet system (van/common/puppets/types/_puppet_types.info): a type is data, so the Intrigue window's
+# Puppets tab and the "interact as" menu show it with no gui edit. The bond is the source of truth: Witchcraft's
+# mminion/mmaster relation (01_magic_scripted_relations.txt). Anything that breaks the bond (the master's death, a failed
+# order, another mage's domination, a demon taking the body) fails is_valid and the engine removes the puppet next day.
+# One golem puppet per master (one puppet per type per puppeteer); other golems keep Command your minion.
+# The puppet is set by spn_golem_bond_transfer_effect at creation and on transfer, or by "Make Your Golem a Puppet".
+# Vanilla's own "Fire Puppet" (00_puppet_interactions.txt) sets it aside; the bond stays.
+spn_golem_puppet = {
+	color = { 0.55 0.45 0.35 1 }
+	interaction = spn_bind_golem_interaction
+
+	# Boot 2: logs2 shows "untyped trigger ... (no character)" on this line 15 times, and the same error on all three
+	# vanilla types' can_have lines (pam_puppet_types.txt 7, 119, 249) at the same moments: the engine evaluates every
+	# can_have with no character, and the error is raised on the block line before any trigger inside runs. Vanilla's
+	# own; no script guard can stop it. Recorded, not patched (HANDOFF-BOOT2.md).
+	# Boot 4 (Thomas's item 9: a plain King of France saw an empty "Golem" slot): only someone a golem concerns. A Mage or
+	# Archmage (the magic that makes and binds golems: Witchcraft's Artificial Human and Bind the Masterless Golem, trait
+	# witch; the Order's Clay Working, archmage), anyone who holds a golem's bond now (Witchcraft's mminion relation, the
+	# bond the type reads daily), anyone offered a golem by Last Instructions or Take Up the Golem's Instructions (flag
+	# spn_golem_offered, set by spn_golem.0001/.0002, ten years), and anyone who already holds a golem puppet (never drops
+	# a held one). Own traits, relations and flags only (B6; and can_have is shown to the player himself alone).
+	can_have = {
+		is_adult = yes
+		is_ai = no
+		OR = {
+			exists = puppet:spn_golem_puppet
+			has_trait = witch
+			has_trait = archmage
+			any_relation = {
+				type = mminion
+				has_trait = golem
+			}
+			has_character_flag = spn_golem_offered
+		}
+	}
+
+	is_valid = {
+		scope:puppet = {
+			is_alive = yes
+			is_ai = yes # RB1 (boot-2 review): a puppet is never another player
+			has_trait = golem
+			has_relation_mmaster = root
+		}
+	}
+
+	priority = {
+		value = 20
+	}
+
+	actions = {
+		# Boot 2 (item g): the golem's own deeds against others, character interactions it carries out itself
+		# (common/character_interactions/zz_spn_240_golem_interactions.txt). They put the golem in the right-click
+		# "interact as" menu. Boot 2 removed vanilla's imprison, torture and trial by combat: each needs the PUPPET to hold
+		# rights (a prison, the target as its own vassal or guest), which a landless golem never has. Boot 4 lists imprison
+		# and torture again, with release and pardon, for a golem that HOLDS LAND (Thomas's item 3, below); for a landless
+		# golem vanilla's own gates keep them unavailable. Seize and Imprison stays the landless golem's way. The murder and
+		# abduct spike is dropped: Seize and Imprison and Strike Them Down replace it with the golem's own deeds.
+		# Keys: the golem's own are puppet_action_spn_golem_* and used by this type only.
+		# Boot 4: Seize, Strike and Loom are shared with the Sire Bond (keys renamed puppet_action_spn_puppet_*); the
+		# mystique roll (whether the victim learns who sent it) is in their result events.
+		puppet_action_spn_puppet_seize
+		puppet_action_spn_puppet_strike
+		puppet_action_spn_puppet_loom
+		puppet_action_spn_golem_guard # boot 3: also on the master himself (right-click yourself)
+		puppet_action_spn_puppet_send_gold # boot 4 (Thomas: "if my golem has money ... send it to me"); shared, QS
+		# Boot 4 (Thomas's item 3: "if I make my golem ... count or a king, then I can have them release somebody from
+		# prison, attempt to imprison somebody, pardon them"). Vanilla's ruler puppet actions (external_ruler_puppet's
+		# list, pam_puppet_types.txt; keys in puppet_actions.txt). Their own interactions keep them to a puppet who holds
+		# the rights (a prison, vassals, a ransom to pay); torture's vanilla is_enabled also needs a torturer or sadistic
+		# puppet. Not listed: declare war (a golem's or a bound lover's own war, by its own claims and casus belli, is a
+		# step beyond a servant's deeds; vanilla keeps it to the external ruler puppet, a realm bent to another's will).
+		puppet_action_imprison
+		puppet_action_release_from_prison
+		puppet_action_pardon
+		puppet_action_torture
+		puppet_action_pay_ransom
+		puppet_action_give_vassal_directive
+		# Boot 3 (Thomas: "more puppet verbs"). Vanilla's own, with no gate a golem fails (puppet_actions.txt; each reads
+		# scope:puppet_or_actor): a gift from what it carries, telling someone the secrets it knows, exposing one.
+		# Befriend and Learn Language: Thomas's call (boot 3: "There should be a romance one, a learn language one";
+		# Witchcraft's golem is shaped as a man or a woman and passes for one). Vanilla's, no gate (puppet_actions.txt);
+		# their schemes' allow blocks hold nothing a golem fails (befriend_scheme.txt, learn_language_scheme.txt).
+		# Not given: sway and study faith (not asked), blood (a golem has none).
+		puppet_action_give_gift
+		puppet_action_share_known_secrets
+		puppet_action_expose_secret
+		puppet_action_command_befriend
+		puppet_action_command_learn_language
+		# Boot 3: shared with the Sire Bond (QS, zz_spn_240_sire_puppet_actions.txt; vanilla lists one key in several types
+		# the same way, puppet_action_give_gift in all three of pam_puppet_types.txt)
+		puppet_action_spn_puppet_murder
+		puppet_action_spn_puppet_give_artifact
+		puppet_action_spn_puppet_seduce # Thomas's call: Seduce and Romance (own doors into vanilla's schemes, QS)
+		puppet_action_spn_puppet_court
+		puppet_action_spn_puppet_befriend # vanilla's befriend scheme needs the puppet to hold the Befriend perk
+		# The golem's own orders (puppet decisions, common/decisions/zz_spn_240_golem_decisions.txt)
+		puppet_action_spn_golem_guard_me
+		puppet_action_spn_golem_return_to_clay
+		puppet_action_spn_golem_hand_over
+		puppet_action_spn_golem_come_home
+		puppet_action_spn_golem_what_you_saw
+		puppet_action_spn_golem_search
+	}
+
+	asset = {
+		icon = "gfx/interface/icons/traits/golem.dds"
+		# Boot 2: Thomas disliked the army picture. Vanilla's spymaster council scene (window_intrigue.gui:923), the
+		# Intrigue window's own art, for a servant that works in the dark for its master.
+		background = "gfx/interface/skinned/illustrations/council/bg_council_spymaster.dds"
+	}
+
+	animation = {
+		reference = "chancellor"
+	}
+}

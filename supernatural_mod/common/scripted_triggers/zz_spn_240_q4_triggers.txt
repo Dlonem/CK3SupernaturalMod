@@ -1,0 +1,201 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40, package Q4): the Fors Factorum, the Elemental Transference, the Vade Maecum's page
+# hunt, the Ringing. Triggers only. Cross-scope variable reads are guarded (?= or trigger_if), the house rule.
+
+# ==================================================================================================
+# G5 THE FORS FACTORUM
+# ==================================================================================================
+# CHARACTER scope. The Fors Factorum letter is his, or kept in his temple's Reliquary (WORK-ORDER-2.40 G5 step 7, decision
+# 12). The relic is Q1's (var:spn_relic = flag:fors). The Reliquary list is the temple's own record (B1 keeps it whole).
+spn_order_fors_relic_trigger = {
+	custom_tooltip = {
+		text = spn_order_fors_relic_tt
+		OR = {
+			any_character_artifact = { var:spn_relic ?= flag:fors }
+			var:spn_order_chapter ?= {
+				any_in_list = {
+					variable = spn_order_reliquary
+					var:spn_relic ?= flag:fors
+				}
+			}
+		}
+	}
+}
+
+# CHARACTER scope. Everything but his rank (spn_order_fors_eligible_trigger) that the casting needs, as readable lines:
+# the letter, no cancer in him already, and five years since he last cast it (G5 step 5).
+spn_order_fors_castable_trigger = {
+	spn_order_fors_relic_trigger = yes
+	custom_tooltip = {
+		text = spn_order_fors_no_cancer_tt
+		NOT = { has_trait = cancer }
+	}
+	custom_tooltip = {
+		text = spn_order_fors_recast_cd_tt
+		NOT = { has_character_flag = spn_fors_cast_cd }
+	}
+}
+
+# CHARACTER scope. Witchcraft's metamagic research may lead a Magistratus of the Order to it (G5, B6 step 8): he is of
+# rank to learn it, may cast it now, and does not hold it.
+spn_order_fors_research_offer_trigger = {
+	spn_order_on_trigger = yes
+	spn_order_fors_eligible_trigger = yes
+	spn_order_fors_castable_trigger = yes
+	NOT = { has_character_modifier = spn_fors_factorum_modifier }
+	# The AI by the decision's own rule (ai_potential): a grown man, neither craven nor content.
+	trigger_if = {
+		limit = { is_ai = yes }
+		age >= 30
+		NOR = {
+			has_trait = craven
+			has_trait = content
+		}
+	}
+}
+
+# ==================================================================================================
+# B7 + G6 THE ELEMENTAL TRANSFERENCE
+# ==================================================================================================
+# CHARACTER scope. What the Working can draw out (WORK-ORDER-2.40 B7 step 3): the five deadly illnesses (the AI's urgency,
+# spn_order_deadly_disease_trigger) and nine more.
+spn_transference_curable_trigger = {
+	OR = {
+		spn_order_deadly_disease_trigger = yes
+		has_trait = infirm
+		has_trait = fragile_bones
+		has_trait = typhus
+		has_trait = bubonic_plague
+		has_trait = smallpox
+		has_trait = pneumonic
+		has_trait = dysentery
+		has_trait = measles
+		has_trait = ill
+	}
+}
+
+# CHARACTER scope. A townsperson who may carry a fifth (B7 step 2): spn_transference_volunteer_ok_trigger without the
+# membership line, and lowborn, adult, landless.
+spn_transference_townsfolk_ok_trigger = {
+	is_alive = yes
+	is_adult = yes
+	is_lowborn = yes
+	is_ruler = no
+	is_imprisoned = no
+	NOT = { exists = var:spn_transference_carrier_of }
+	NOT = { exists = var:spn_transference_disease }
+	NOT = { exists = var:spn_transference_patient }
+}
+
+# CHARACTER scope (the caster). Enough coin to pay the families of five townsfolk at his own rate (G6 step 1). An AI
+# caster never pays below three fees (spn_transference_ai_reserve_value), so he needs seven to pay five (review R2).
+spn_transference_can_pay_five_trigger = {
+	trigger_if = {
+		limit = { is_ai = yes }
+		gold >= { value = spn_transference_five_fees_value add = { value = spn_transference_fee_value multiply = 2 } }
+	}
+	trigger_else = {
+		gold >= spn_transference_five_fees_value
+	}
+}
+
+# ==================================================================================================
+# B3 + G10 THE PAGE HUNT
+# ==================================================================================================
+# ALPHA scope. His pack and $WHO$'s pack swore the Blood Pact (G10 step 1). Landless pacts carry the hidden relation; a
+# landed pact sworn before 2.40 carries only the opinion (both alphas get spn_blood_pact_opinion, 20 years).
+spn_pack_pact_bound_trigger = {
+	OR = {
+		has_relation_spn_blood_pact = $WHO$
+		has_opinion_modifier = {
+			target = $WHO$
+			modifier = spn_blood_pact_opinion
+		}
+	}
+}
+
+# HOLDER scope. The hide leaves this holder's page alone for $HEARER$ (G10 step 2, Thomas's option a): he runs in the
+# hearer's own pack, or he is a champion whose pack is pact-bound to the hearer's.
+spn_vade_page_spared_trigger = {
+	OR = {
+		AND = {
+			exists = var:spn_pack
+			exists = $HEARER$.var:spn_pack
+			var:spn_pack = $HEARER$.var:spn_pack
+		}
+		AND = {
+			spn_is_champion_trigger = yes
+			exists = var:spn_pack.story_owner
+			exists = $HEARER$.var:spn_pack.story_owner
+			var:spn_pack.story_owner = {
+				spn_pack_pact_bound_trigger = { WHO = $HEARER$.var:spn_pack.story_owner }
+			}
+		}
+	}
+}
+
+# CHARACTER scope. He holds a page of the Vade Maecum or the book.
+spn_vade_holds_part_trigger = {
+	any_character_artifact = {
+		OR = {
+			has_variable = spn_vade_page
+			has_variable = spn_vade_book
+		}
+	}
+}
+
+# ==================================================================================================
+# B8 THE RINGING
+# ==================================================================================================
+# CHARACTER scope (the champion who hears). He already knows who scope:magic_user is, so offering to silence that source
+# tells him nothing new (B6 rule): he followed the ringing to them before, the caster is openly a Mage, or he knows the
+# caster's witch secret. spn_ringing_traced and spn_ringing_silenced are identity state (what he knows, what he chose), with
+# no expiry; an entry goes with the character it names, and "Listen Again" clears the silenced list.
+spn_ringing_knows_source_trigger = {
+	exists = scope:magic_user
+	OR = {
+		is_target_in_variable_list = { name = spn_ringing_traced target = scope:magic_user }
+		scope:magic_user = { has_trait = archmage }
+		scope:magic_user = {
+			any_secret = {
+				type = secret_witch
+				is_known_by = root
+			}
+		}
+	}
+}
+
+# Boot 2 (22 Oct, Thomas item a): the open conditions of the Ringing's three champion options. Each option is written six
+# times in events/ev1.txt, once per champion trait, and its trigger starts with that trait (the reason the option shows);
+# the rest of the test is one trigger here. Root: the champion who hears it; scope:magic_user: the caster.
+# Follow the ringing (magic_ev.4): a caster who is none of his own (never his liege, spouse, close family, friend, lover or
+# courtier, no strong hook on him), once a year. The 2.37 test, unchanged.
+spn_ringing_follow_open_trigger = {
+	NOT = { has_character_flag = spn_hide_chased_ringing }
+	exists = scope:magic_user
+	NOT = { scope:magic_user = ROOT }
+	NOT = { liege ?= scope:magic_user }
+	scope:magic_user = {
+		NOT = { has_strong_hook = ROOT }
+		NOR = {
+			is_spouse_of = ROOT
+			is_close_family_of = ROOT
+			has_relation_friend = ROOT
+			has_relation_lover = ROOT
+			is_courtier_of = ROOT
+		}
+	}
+}
+
+# Let it ring for [name] no more (magic_ev.4): a source he knows (B8), not already silenced. A champion who also has
+# Magical Senses still hears a silenced caster through the perk, so the option must not come back for the same caster.
+spn_ringing_silence_open_trigger = {
+	spn_ringing_knows_source_trigger = yes
+	NOT = { scope:magic_user = ROOT }
+	NOT = { is_target_in_variable_list = { name = spn_ringing_silenced target = scope:magic_user } }
+}
+
+# Go after them (magic_ev.44): the 2.37 test, unchanged.
+spn_ringing_go_open_trigger = {
+	exists = scope:magic_user
+	NOT = { scope:magic_user = ROOT }
+}

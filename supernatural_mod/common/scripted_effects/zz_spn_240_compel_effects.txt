@@ -1,0 +1,207 @@
+﻿# Supernatural 2.40 boot 4 -- THE COMPELLED. Package QC (agent COMPEL).
+#
+# STATE (all on the compelled; the vampire carries nothing new):
+#   var:spn_compelled_by   = the vampire, 30 days. The puppet type's is_valid reads it daily, so an unused compulsion fades
+#                            after a month and the engine removes the puppet (vanilla, _puppet_types.info).
+#   var:spn_compel_unspent = the vampire, 60 days. Cleared when the command is given; read by the fade check
+#                            (spn_compel.0002, day 31), which tells the vampire it faded and starts the aftermath.
+#   flag spn_compel_recent = 60 days, set by every compulsion (player and AI). Blocks another compulsion until the
+#                            aftermath has made them Wary.
+#   spn_compel_wary_modifier = 3 years, the aftermath (spn_compel.0001). Blocks being compelled while it lasts.
+# Old saves: none of this exists on anyone, so everyone starts open; the old command flags are untouched.
+
+# Root: the vampire. Pays the compulsion: 25 Vampirism, 15 with True Vampire. Prints its own trait-XP line.
+spn_compel_pay_effect = {
+	if = {
+		limit = { spn_compel_capstone_trigger = yes }
+		spn_compel_pay_amount_effect = { AMOUNT = 15 }
+	}
+	else = {
+		spn_compel_pay_amount_effect = { AMOUNT = 25 }
+	}
+}
+
+# Root: the vampire. AMOUNT Vampirism off the track he has (the shape every compel command used, 10_spn_interactions.txt).
+spn_compel_pay_amount_effect = {
+	if = {
+		limit = { has_trait = supernatural_vampire }
+		add_trait_xp = { trait = supernatural_vampire track = vampirism value = -$AMOUNT$ }
+	}
+	else_if = {
+		limit = { has_trait = supernatural_hybrid }
+		add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = -$AMOUNT$ }
+	}
+}
+
+# Interaction scope: Compel Mortal's on_accept, inside its toast. Root/this = scope:actor (a free player vampire);
+# scope:recipient = the compelled (adult, AI, no puppeteer, mind open: Compel Mortal's is_valid). The cost shows; the
+# rest is hidden (the send window previews on_accept, and a preview writes no state).
+spn_compel_take_hold_effect = {
+	spn_compel_pay_effect = yes
+	custom_tooltip = spn_compel_take_hold_tt
+	hidden_effect = {
+		scope:recipient = {
+			set_variable = { name = spn_compelled_by value = scope:actor days = 30 }
+			set_variable = { name = spn_compel_unspent value = scope:actor days = 60 }
+			add_character_flag = { flag = spn_compel_recent days = 60 }
+			trigger_event = { id = spn_compel.0002 days = 31 }
+		}
+		set_puppet = {
+			target = scope:recipient
+			type = spn_compel_puppet
+		}
+	}
+}
+
+# THE ONE COMMAND IS GIVEN. Called last by every Compelled verb (own interactions and decisions, and the shared puppet
+# verbs through spn_puppet_shared_verb_done_effect, QS). MASTER = the vampire, PUPPET = the compelled.
+# Scopes are banked first because clear_puppet_status severs the puppeteer link (vanilla, pam_effects.txt:13645), and
+# the status is cleared LAST. Someone close to them speaks up some days later (spn_compel.0001).
+spn_compel_command_given_effect = {
+	custom_tooltip = spn_compel_spent_tt
+	hidden_effect = {
+		$MASTER$ = { save_scope_as = spn_compel_master }
+		$PUPPET$ = {
+			save_scope_as = spn_compel_victim
+			if = {
+				limit = { has_variable = spn_compelled_by }
+				remove_variable = spn_compelled_by
+			}
+			if = {
+				limit = { has_variable = spn_compel_unspent }
+				remove_variable = spn_compel_unspent
+			}
+			# A deed that sends them out (Seize, Strike: the shared errand, flag spn_golem_on_errand, 7 to 21 days, QS/Q7)
+			# is done before anyone remarks on it; anything else, some days from now.
+			if = {
+				limit = { has_character_flag = spn_golem_on_errand }
+				trigger_event = { id = spn_compel.0001 days = { 25 35 } }
+			}
+			else = {
+				trigger_event = { id = spn_compel.0001 days = { 5 12 } }
+			}
+		}
+		scope:spn_compel_victim = {
+			if = {
+				limit = { scope:spn_compel_master.puppet:spn_compel_puppet ?= this }
+				clear_puppet_status = yes
+			}
+		}
+	}
+}
+
+# Interaction scope: the AI's compulsion (it still sends one of the old commands). Its victim is told and grows Wary
+# exactly as a player's puppet is. Not for End Your Life or Release Me (Compel Mortal's on_accept gates the call).
+spn_compel_ai_aftermath_effect = {
+	scope:actor = { save_scope_as = spn_compel_master }
+	scope:recipient = {
+		add_character_flag = { flag = spn_compel_recent days = 60 }
+		trigger_event = { id = spn_compel.0001 days = { 5 12 } }
+	}
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# THE COMMANDS. One effect each, shared by the Compelled verbs and (lover, court) the AI's old send options, so the two
+# paths cannot drift apart. MASTER = the vampire.
+# ---------------------------------------------------------------------------------------------------------------------
+
+# Become My Lover. 2.39 F14 (red team M14): a compelled lover is no romance; both carry the 3-day flag BEFORE the
+# relation is set, so the Order's romance hook (on_set_relation_lover, zz_spn_flavor_on_actions.txt) passes it by.
+spn_compel_become_lover_effect = {
+	$LOVER$ = {
+		if = { limit = { has_relation_lover = $MASTER$ } remove_relation_lover = $MASTER$ }
+		if = { limit = { has_relation_soulmate = $MASTER$ } remove_relation_soulmate = $MASTER$ }
+		hidden_effect = { add_character_flag = { flag = spn_compelled_lover days = 3 } }
+		$MASTER$ = { hidden_effect = { add_character_flag = { flag = spn_compelled_lover days = 3 } } }
+		set_relation_lover = $MASTER$
+	}
+}
+
+# Join My Court. Vanilla invite_to_court_interaction's own shape (00_courtier_and_guest_interactions.txt): the joiner
+# and the family travelling with them.
+spn_compel_join_court_effect = {
+	$JOINER$ = {
+		every_traveling_family_member = {
+			$MASTER$ = { add_courtier = prev }
+			hidden_effect = { return_to_court = yes }
+		}
+	}
+}
+
+# Join My War. Every war MASTER leads, on his side (vanilla 10_tgp_interactions.txt:6706-6722: add_attacker/add_defender
+# in the war scope, is_leader_in_war, is_attacker/is_defender). The verb's is_valid has made sure the joiner is at no war
+# and has no liege or vassal fighting MASTER.
+spn_compel_join_war_effect = {
+	$MASTER$ = {
+		every_character_war = {
+			limit = {
+				$MASTER$ = { is_leader_in_war = prev }
+				is_attacker = $MASTER$
+			}
+			add_attacker = $JOINER$
+		}
+		every_character_war = {
+			limit = {
+				$MASTER$ = { is_leader_in_war = prev }
+				is_defender = $MASTER$
+			}
+			add_defender = $JOINER$
+		}
+	}
+}
+
+# Tell Me Your Secrets. Their own secrets and every secret they know about others, except MASTER's own (2.39's option
+# gave their own only). Inside every_secret / every_known_secret, `this` is the secret and reveal_to is a secret effect
+# (the mod's 2.35g note, 10_spn_interactions.txt; vanilla 00_character_interactions.txt:1723). The result is a hidden
+# toast, so neither the menu nor the send preview says whether they had anything (B6).
+spn_compel_tell_secrets_effect = {
+	custom_tooltip = spn_compel_secrets_tt
+	hidden_effect = {
+		if = {
+			limit = {
+				$TELLER$ = {
+					OR = {
+						any_secret = { NOT = { is_known_by = $MASTER$ } }
+						any_known_secret = {
+							NOT = { secret_owner = $MASTER$ }
+							NOT = { is_known_by = $MASTER$ }
+						}
+					}
+				}
+			}
+			$MASTER$ = {
+				send_interface_toast = {
+					type = event_toast_effect_good
+					title = spn_compel_secrets_interaction
+					left_icon = $MASTER$
+					right_icon = $TELLER$
+					custom_tooltip = spn_compel_secrets_told_tt
+				}
+			}
+			$TELLER$ = {
+				every_secret = {
+					limit = { NOT = { is_known_by = $MASTER$ } }
+					reveal_to = $MASTER$
+				}
+				every_known_secret = {
+					limit = {
+						NOT = { secret_owner = $MASTER$ }
+						NOT = { is_known_by = $MASTER$ }
+					}
+					reveal_to = $MASTER$
+				}
+			}
+		}
+		else = {
+			$MASTER$ = {
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_compel_secrets_interaction
+					left_icon = $MASTER$
+					right_icon = $TELLER$
+					custom_tooltip = spn_compel_secrets_none_tt
+				}
+			}
+		}
+	}
+}

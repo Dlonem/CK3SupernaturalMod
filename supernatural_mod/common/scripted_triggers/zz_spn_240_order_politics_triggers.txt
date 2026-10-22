@@ -1,0 +1,154 @@
+﻿# Supernatural 2.40 -- the Order's politics and pacing (WORK-ORDER-2.40 A2, A3, A5, A6, A11). Effects:
+# zz_spn_240_order_politics_effects.txt. Loc: localization/english/zz_spn_240_q2_l_english.yml.
+
+# ==================================================================================================
+# THE BUSY RULE (A3)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 A3): a player is free for the Order's paperwork: not at war, not in an activity, not in a cell.
+# Every administrative prompt checks it in its own trigger; a busy player gets the masks' default and a toast instead,
+# so nothing waits in his queue behind a war. Shared with Q3 and Q4 (brief, cross-package symbols).
+spn_order_player_free_trigger = {
+	is_at_war = no
+	NOT = { exists = involved_activity }
+	is_imprisoned = no
+}
+
+# 2.40 (WORK-ORDER-2.40 A3): Order business is spaced 30 days apart. Each administrative prompt marks the flag
+# (spn_order_business_mark_effect, 30 days); a second prompt that arrives inside the 30 days waits and asks again.
+spn_order_business_ready_trigger = {
+	NOT = { has_character_flag = spn_order_business_recent }
+}
+
+# ==================================================================================================
+# PROMOTION PACING (A2)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 A2): three years in a rank before the next. A member from before 2.40 has no date and counts as
+# seasoned (save compatibility).
+spn_order_rank_seasoned_trigger = {
+	trigger_if = {
+		limit = { exists = var:spn_order_rank_since }
+		var:spn_order_rank_since <= spn_order_three_years_ago_value
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 A2): story scope (a chapter). Room for another Magistratus under the temple's cap
+# (spn_order_count_magistrati_effect keeps both numbers). A chapter not yet counted has room.
+spn_order_magistrati_room_trigger = {
+	trigger_if = {
+		limit = {
+			exists = var:spn_order_magistrati_size
+			exists = var:spn_order_magistrati_cap
+		}
+		var:spn_order_magistrati_size < var:spn_order_magistrati_cap
+	}
+}
+
+# ==================================================================================================
+# A NAME FOR THE ROSE, BATCHED (A3)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 A3): a name the masks brought can still be called (the old .0108 trigger, per name).
+spn_order_rose_valid_trigger = {
+	is_alive = yes
+	NOT = { exists = var:spn_order_chapter }
+}
+
+# 2.40 (WORK-ORDER-2.40 A3): the Temple Magus has at least one name waiting: in his chapter's list, or the one name a
+# caller from before 2.40 passed as scope:spn_sel_pick.
+spn_order_rose_waiting_trigger = {
+	OR = {
+		var:spn_order_chapter ?= {
+			any_in_list = {
+				variable = spn_order_rose_names
+				spn_order_rose_valid_trigger = yes
+			}
+		}
+		scope:spn_sel_pick ?= { spn_order_rose_valid_trigger = yes }
+	}
+}
+
+# ==================================================================================================
+# THE CONCLAVE (A5, A6)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 A6): somewhere to hold a Conclave: land, or a camp or an estate (a landless adventurer or an
+# administrative family head). An AI Mage who is only a courtier has neither, and the call still falls to a Temple Magus.
+spn_conclave_can_host_trigger = {
+	OR = {
+		is_landed = yes
+		exists = domicile
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 A5): the fallback host for a call. Not one who passed this call on (2 years), and not a player
+# who is busy or has left his temple to the masks.
+spn_conclave_fallback_host_trigger = {
+	spn_conclave_can_host_trigger = yes
+	NOT = { has_character_flag = spn_conclave_declined }
+	trigger_if = {
+		limit = { is_ai = no }
+		spn_order_player_free_trigger = yes
+		NOT = { has_character_flag = spn_order_auto_picks }
+	}
+}
+
+# ==================================================================================================
+# HAND ON YOUR TEMPLE (A11)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 A11): Temple Magus scope. Another Magistratus of his temple is free to lead it, so the succession
+# always finds a head and never dissolves the temple.
+spn_order_step_down_heir_trigger = {
+	save_temporary_scope_as = spn_sd_head
+	var:spn_order_chapter ?= {
+		any_in_list = {
+			variable = spn_order_members
+			is_alive = yes
+			NOT = { this = scope:spn_sd_head }
+			spn_is_order_member_trigger = yes
+			var:spn_order_rank ?= flag:magistratus
+			is_imprisoned = no
+		}
+	}
+}
+
+# ==================================================================================================
+# ASK TO JOIN THEIR TEMPLE (boot 2, item e)
+# ==================================================================================================
+
+# 2.40 boot 2 (e): member scope. He is far from the head of his own temple (further than the spacing two temples keep,
+# spn_order_chapter_spacing_value), the plain reason a member asks another temple to take him in. False for a member
+# with no temple, or whose head is gone.
+spn_order_far_from_temple_trigger = {
+	exists = location
+	save_temporary_scope_as = spn_far_who
+	var:spn_order_chapter ?= {
+		story_owner ?= {
+			is_alive = yes
+			NOT = { this = scope:spn_far_who }
+			exists = location
+			location = {
+				squared_distance = {
+					target = scope:spn_far_who.location
+					value > spn_order_chapter_spacing_value
+				}
+			}
+		}
+	}
+}
+
+# 2.40 boot 2 (e): character scope. A Temple Magus whose temple could take $WHO$ in: alive, at the head of a temple that
+# is not $WHO$'s own, with a place in his temple's room count. Read by the temples list (spn_order.2051).
+spn_order_join_temple_open_trigger = {
+	is_alive = yes
+	NOT = { this = $WHO$ }
+	exists = location
+	spn_is_temple_magus_trigger = yes
+	trigger_if = {
+		limit = { $WHO$ = { exists = var:spn_order_chapter } }
+		NOT = { var:spn_order_chapter = $WHO$.var:spn_order_chapter }
+	}
+	var:spn_order_chapter = { spn_order_has_room_trigger = yes }
+}

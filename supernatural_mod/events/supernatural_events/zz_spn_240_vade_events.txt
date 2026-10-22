@@ -1,0 +1,248 @@
+﻿namespace = spn_vade
+
+# Supernatural 2.40 (WORK-ORDER-2.40 B3, B6 step 8, package Q4): the page hunt's follow-up and the research that finds
+# the book. Every delayed event re-checks the world in its trigger. Loc: localization/english/zz_spn_240_q4_l_english.yml.
+
+# .2000 -- A Name in Your Notes. Witchcraft's research into other worlds or into necromancy (registered in
+# apply_upstream_edits.py) reaches the Vade Maecum: he learns what it is, and who holds part of it, if anyone does.
+spn_vade.2000 = {
+	type = character_event
+	title = spn_vade.2000.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_named_holder }
+				desc = spn_vade.2000.desc
+			}
+			desc = spn_vade.2000.desc_none
+		}
+	}
+	theme = witchcraft
+	override_background = { reference = study }
+	left_portrait = { character = root animation = reading }
+	right_portrait = {
+		character = scope:spn_named_holder
+		trigger = { exists = scope:spn_named_holder }
+		animation = idle
+	}
+	trigger = {
+		is_alive = yes
+		NOT = { has_game_rule = spn_vade_off }
+		NOT = { exists = global_var:spn_vade_destroyed }
+	}
+	immediate = {
+		add_character_flag = spn_vade_lore # identity: what he knows (The Hide Remembers sets the same flag, for good)
+		spn_vade_name_a_holder_effect = yes
+	}
+	option = {
+		name = spn_vade.2000.a
+		trigger = { exists = scope:spn_named_holder }
+		custom_tooltip = spn_vade.2000.a.tt
+	}
+	option = {
+		name = spn_vade.2000.b
+		trigger = { NOT = { exists = scope:spn_named_holder } }
+	}
+}
+
+# .2001 -- The Trail Ends at [holder]'s Door. A champion who chose "Find it" in The Hide Finds a Page (.0100), 30 to 120
+# days later; scope:spn_vade_heard_holder. The holder must still be alive, still hold part of the book, and still not be
+# spared by the hide (G10: his own pack, or a pact-bound champion).
+spn_vade.2001 = {
+	type = character_event
+	title = spn_vade.2001.t
+	desc = spn_vade.2001.desc
+	theme = hunting
+	override_background = { reference = wilderness_forest }
+	left_portrait = { character = root animation = interested }
+	right_portrait = { character = scope:spn_vade_heard_holder animation = idle }
+	artifact = {
+		target = scope:spn_vt_page
+		position = lower_right_portrait
+		trigger = { exists = scope:spn_vt_page }
+	}
+	trigger = {
+		is_alive = yes
+		spn_is_champion_trigger = yes
+		NOT = { has_game_rule = spn_vade_off }
+		NOT = { exists = global_var:spn_vade_destroyed }
+		scope:spn_vade_heard_holder ?= {
+			is_alive = yes
+			NOT = { this = root }
+			spn_vade_holds_part_trigger = yes
+			NOT = { spn_vade_page_spared_trigger = { HEARER = root } }
+		}
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes # the 60-day flavor gate (F14)
+		# The page first; the book only if he holds no page.
+		scope:spn_vade_heard_holder = {
+			random_character_artifact = {
+				limit = { has_variable = spn_vade_page }
+				save_scope_as = spn_vt_page
+			}
+			if = {
+				limit = { NOT = { exists = scope:spn_vt_page } }
+				random_character_artifact = {
+					limit = { has_variable = spn_vade_book }
+					save_scope_as = spn_vt_page
+				}
+			}
+			location.county ?= { save_scope_as = spn_vt_county }
+		}
+		# The wolf who would go in his place, for an alpha.
+		if = {
+			limit = { spn_is_alpha_trigger = yes }
+			var:spn_pack = {
+				random_in_list = {
+					variable = spn_pack_members
+					limit = {
+						is_alive = yes
+						is_adult = yes
+						is_imprisoned = no
+						NOT = { this = root }
+					}
+					save_scope_as = spn_vt_wolf
+				}
+			}
+		}
+	}
+	# a: watch it. The claim is already his (The Hide Finds a Page gave it).
+	option = {
+		name = spn_vade.2001.a
+		custom_tooltip = spn_vade.2001.a.tt
+		ai_chance = {
+			base = 50
+			modifier = { add = 30 has_trait = patient }
+			modifier = { add = 20 has_trait = craven }
+		}
+	}
+	# b: take it tonight. A werewolf who knows the Prowl, or a hybrid who knows the Master Hunt.
+	option = {
+		name = spn_vade.2001.b
+		trigger = {
+			OR = {
+				AND = {
+					has_trait = supernatural_werewolf
+					has_perk = the_prowl_perk
+				}
+				AND = {
+					has_trait = supernatural_hybrid
+					has_perk = master_hunt_perk
+				}
+			}
+			scope:spn_vt_page ?= { spn_relic_can_move_trigger = yes }
+		}
+		custom_tooltip = spn_vade.2001.b.tt
+		duel = {
+			skill = prowess
+			value = 25
+			50 = {
+				desc = spn_vade.2001.b.success
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 3.5
+					min = -45
+				}
+				scope:spn_vt_page = {
+					set_owner = {
+						target = root
+						history = {
+							type = stolen
+							actor = scope:spn_vade_heard_holder
+							recipient = root
+						}
+					}
+				}
+			}
+			50 = {
+				desc = spn_vade.2001.b.failure
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -3.5
+					min = -45
+				}
+				scope:spn_vade_heard_holder = { add_opinion = { target = root modifier = spn_shrine_thief_opinion } }
+				if = {
+					limit = { exists = scope:spn_vt_county }
+					spn_mark_menace_effect = { COUNTY = scope:spn_vt_county CULPRIT = root KIND = werewolf SEVERITY = prowl }
+				}
+			}
+		}
+		ai_chance = {
+			base = 30
+			modifier = { add = 30 has_trait = brave }
+			modifier = { add = 20 has_trait = ambitious }
+			modifier = { add = -30 has_trait = craven }
+		}
+	}
+	# c: send the pack. Its alpha, with a wolf to send; the wolf bears the risk.
+	option = {
+		name = spn_vade.2001.c
+		trigger = {
+			spn_is_alpha_trigger = yes
+			exists = scope:spn_vt_wolf
+			scope:spn_vt_page ?= { spn_relic_can_move_trigger = yes }
+		}
+		custom_tooltip = spn_vade.2001.c.tt
+		duel = {
+			skill = prowess
+			value = 25
+			50 = {
+				desc = spn_vade.2001.c.success
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 3.5
+					min = -45
+				}
+				scope:spn_vt_page = {
+					set_owner = {
+						target = root
+						history = {
+							type = stolen
+							actor = scope:spn_vade_heard_holder
+							recipient = root
+						}
+					}
+				}
+			}
+			50 = {
+				desc = spn_vade.2001.c.failure
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -3.5
+					min = -45
+				}
+				scope:spn_vt_wolf = { increase_wounds_no_death_effect = { REASON = fight } }
+			}
+		}
+		ai_chance = {
+			base = 30
+			modifier = { add = 20 has_trait = ambitious }
+			modifier = { add = -20 has_trait = compassionate }
+		}
+	}
+	# d: tell the temple. A member whose Temple Magus is someone else: the temple learns who holds it, and remembers who told.
+	option = {
+		name = spn_vade.2001.d
+		trigger = {
+			spn_order_on_trigger = yes
+			spn_is_order_member_trigger = yes
+			var:spn_order_chapter ?= {
+				story_owner = {
+					is_alive = yes
+					NOT = { this = root }
+				}
+			}
+		}
+		spn_order_deed_effect = { PREROGATIVE = flag:book AMOUNT = 10 TOAST = yes }
+		var:spn_order_chapter.story_owner = {
+			spn_vade_learn_holder_effect = { HOLDER = scope:spn_vade_heard_holder }
+		}
+		custom_tooltip = spn_vade.2001.d.tt
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = honest }
+		}
+	}
+}

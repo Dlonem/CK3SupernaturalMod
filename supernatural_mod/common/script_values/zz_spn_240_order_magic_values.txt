@@ -1,0 +1,73 @@
+﻿# Supernatural 2.40 -- the Order's magic and people: values (WORK-ORDER-2.40 G1, G4).
+
+# 2.40 (WORK-ORDER-2.40 G4): a tutor rests this many years after each Mage he makes.
+spn_order_tutor_rest_years_value = 5
+
+# 2.40 (WORK-ORDER-2.40 G4): the Mages a temple may make of AI acolytes in ten years. Two, one more while its Collegium
+# stands, one more under the way of Observance. Chapter (story) scope.
+spn_order_mage_cap_value = {
+	value = 2
+	if = {
+		limit = { spn_order_hall_stands_trigger = yes }
+		add = 1
+	}
+	if = {
+		limit = { var:spn_order_way ?= flag:observance }
+		add = 1
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 G1): who pays a share of Respondeo first: AI members before players (a player is asked and may
+# say no), then whoever thinks best of the caller (scope:spn_rs_caller). Payer scope.
+spn_order_respondeo_payer_order_value = {
+	value = 0
+	if = {
+		limit = { is_ai = yes }
+		add = 1000
+	}
+	add = {
+		value = "opinion(scope:spn_rs_caller)"
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 G1): how likely an AI Temple Magus is to send someone when a member is exposed. It depends on his
+# nature and on the temple's way; a player head who is busy is always answered for (100). Head scope.
+spn_order_respondeo_send_chance_value = {
+	value = 50
+	if = {
+		limit = { is_ai = no }
+		value = 100
+	}
+	else = {
+		if = {
+			limit = { has_trait = paranoid }
+			add = 25
+		}
+		if = {
+			limit = { has_trait = diligent }
+			add = 15
+		}
+		if = {
+			limit = { has_trait = deceitful }
+			add = 10
+		}
+		if = {
+			limit = { spn_order_prerogative_is_trigger = { P = flag:silence } }
+			add = 20
+		}
+		if = {
+			limit = { has_trait = lazy }
+			add = -25
+		}
+		if = {
+			limit = { has_trait = trusting }
+			add = -15
+		}
+		if = {
+			limit = { has_trait = arrogant }
+			add = -10
+		}
+	}
+	min = 0
+	max = 100
+}

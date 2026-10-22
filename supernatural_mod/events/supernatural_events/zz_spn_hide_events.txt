@@ -67,6 +67,15 @@ spn_hide.0001 = {
 				}
 			}
 		}
+		# 2.40 (WORK-ORDER-2.40 C8): Let It Take Me lasts until its battle or the end of his war. Once the war is
+		# over the wolf never got out, so no stress. (The weekly chain runs for every champion.)
+		if = {
+			limit = {
+				has_character_modifier = spn_let_it_take_me_modifier
+				spn_hide_lets_it_take_at_war_trigger = no
+			}
+			remove_character_modifier = spn_let_it_take_me_modifier
+		}
 		every_character_artifact = {
 			limit = { has_variable = spn_hide }
 			save_scope_as = spn_wk_hide
@@ -260,6 +269,8 @@ spn_hide.0009 = {
 				OR = {
 					scope:spn_offered_hide = { is_equipped = yes }
 					has_character_flag = spn_hide_fever_bonus
+					# 2.40 (WORK-ORDER-2.40 C1): the offer itself is the attempt (vanilla's AI equip logic takes it off again)
+					has_character_flag = spn_hide_takes_hold_pending
 				}
 			}
 			spn_hide_save_flag_effect = { NAME = spn_fit_hide FROM = scope:spn_offered_hide.var:spn_hide }
@@ -270,7 +281,14 @@ spn_hide.0009 = {
 			else = {
 				# Recorded here, where it decides: the button on It Will Not Have You does it too, but a window closed
 				# any other way must not leave the hide trying him again next week (3 Oct save: no flag after a refusal).
-				spn_hide_mark_refused_effect = { FROM = scope:spn_offered_hide.var:spn_hide YEARS = 5 }
+				# 2.40 (WORK-ORDER-2.40 C1): an AI it refused is never tried again; a player waits 5 years
+				if = {
+					limit = { is_ai = yes }
+					spn_hide_mark_refused_effect = { FROM = scope:spn_offered_hide.var:spn_hide YEARS = 100 }
+				}
+				else = {
+					spn_hide_mark_refused_effect = { FROM = scope:spn_offered_hide.var:spn_hide YEARS = 5 }
+				}
 				trigger_event = spn_hide.0011
 			}
 		}
@@ -319,6 +337,14 @@ spn_hide.0010 = {
 			}
 			desc = spn_hide.0010.desc_silverback
 		}
+		# 2.40 (WORK-ORDER-2.40 F4): only if he already knows the hide has been in his family.
+		triggered_desc = {
+			trigger = {
+				exists = scope:spn_fit_hide
+				spn_hide_kin_known_trigger = { WHO = root }
+			}
+			desc = spn_hide.0010.kin
+		}
 	}
 	theme = dread
 	override_background = { reference = wilderness_forest }
@@ -334,9 +360,26 @@ spn_hide.0010 = {
 		scope:spn_offered_hide = { artifact_owner ?= root }
 		spn_is_champion_trigger = no
 	}
+	# 2.40 (WORK-ORDER-2.40 C10): how many wore it before him (scope:spn_fit_hide is saved by .0009, which sent this).
+	immediate = {
+		save_scope_value_as = { name = spn_lin_count_mode value = yes }
+		save_scope_value_as = { name = spn_hide_past_n value = spn_hide_lineage_walk_value }
+		clear_saved_scope = spn_lin_count_mode
+	}
 	option = {
 		name = spn_hide.0010.a
 		custom_tooltip = spn_hide.0010.a.tt
+		if = {
+			limit = { scope:spn_hide_past_n > 0 }
+			custom_tooltip = spn_hide.0010.a.strength_tt
+		}
+		if = {
+			limit = {
+				scope:spn_hide_past_n >= spn_hide_strength_passed_perk_count_value
+				NOT = { has_character_flag = spn_hide_gift_lineage }
+			}
+			custom_tooltip = spn_hide.0010.a.strength_perk_tt
+		}
 		spn_hide_make_champion_dispatch_effect = { ARTIFACT = scope:spn_offered_hide }
 	}
 }
@@ -448,7 +491,14 @@ spn_hide.0011 = {
 				unequip_artifact_from_owner = yes
 			}
 		}
-		spn_hide_mark_refused_effect = { FROM = scope:spn_offered_hide.var:spn_hide YEARS = 5 }
+		# 2.40 (WORK-ORDER-2.40 C1): the same length .0009 recorded
+		if = {
+			limit = { is_ai = yes }
+			spn_hide_mark_refused_effect = { FROM = scope:spn_offered_hide.var:spn_hide YEARS = 100 }
+		}
+		else = {
+			spn_hide_mark_refused_effect = { FROM = scope:spn_offered_hide.var:spn_hide YEARS = 5 }
+		}
 		stress_and_fulfillment_impact = {
 			base = minor_stress_impact_gain
 		}
@@ -840,7 +890,7 @@ spn_hide.0100 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = impatient
+				has_trait = just
 			}
 			modifier = {
 				add = 20
@@ -850,7 +900,7 @@ spn_hide.0100 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = sadistic
+				has_trait = loyal
 			}
 			modifier = {
 				add = 20
@@ -927,17 +977,22 @@ spn_hide.0100 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = calm
+				has_trait = craven
 			}
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = patient
+				has_trait = deceitful
 			}
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = compassionate
+				has_trait = sadistic
+			}
+			modifier = { # 2.40 (WORK-ORDER-2.40 C10): noble fury
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = disloyal
 			}
 			modifier = {
 				add = 20
@@ -1161,7 +1216,7 @@ spn_hide.0101 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = impatient
+				has_trait = just
 			}
 			modifier = {
 				add = 20
@@ -1171,7 +1226,7 @@ spn_hide.0101 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = sadistic
+				has_trait = loyal
 			}
 			modifier = {
 				add = 20
@@ -1248,17 +1303,22 @@ spn_hide.0101 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = calm
+				has_trait = craven
 			}
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = patient
+				has_trait = deceitful
 			}
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = compassionate
+				has_trait = sadistic
+			}
+			modifier = { # 2.40 (WORK-ORDER-2.40 C10): noble fury
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = disloyal
 			}
 			modifier = {
 				add = 20
@@ -1419,7 +1479,7 @@ spn_hide.0102 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = impatient
+				has_trait = just
 			}
 			modifier = {
 				add = 20
@@ -1429,7 +1489,7 @@ spn_hide.0102 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = sadistic
+				has_trait = loyal
 			}
 			modifier = {
 				add = 20
@@ -1506,17 +1566,22 @@ spn_hide.0102 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = calm
+				has_trait = craven
 			}
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = patient
+				has_trait = deceitful
 			}
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = compassionate
+				has_trait = sadistic
+			}
+			modifier = { # 2.40 (WORK-ORDER-2.40 C10): noble fury
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = disloyal
 			}
 			modifier = {
 				add = 20
@@ -1686,7 +1751,7 @@ spn_hide.0103 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = impatient
+				has_trait = just
 			}
 			modifier = {
 				add = 20
@@ -1696,7 +1761,7 @@ spn_hide.0103 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = sadistic
+				has_trait = loyal
 			}
 			modifier = {
 				add = 20
@@ -1774,17 +1839,22 @@ spn_hide.0103 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = calm
+				has_trait = craven
 			}
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = patient
+				has_trait = deceitful
 			}
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = compassionate
+				has_trait = sadistic
+			}
+			modifier = { # 2.40 (WORK-ORDER-2.40 C10): noble fury
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = disloyal
 			}
 			modifier = {
 				add = 20
@@ -2035,7 +2105,7 @@ spn_hide.0104 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = impatient
+				has_trait = just
 			}
 			modifier = {
 				add = 20
@@ -2045,7 +2115,7 @@ spn_hide.0104 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = sadistic
+				has_trait = loyal
 			}
 			modifier = {
 				add = 20
@@ -2122,17 +2192,22 @@ spn_hide.0104 = {
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = calm
+				has_trait = craven
 			}
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = patient
+				has_trait = deceitful
 			}
 			modifier = {
 				add = 20
 				has_trait = spn_champion_midnight
-				has_trait = compassionate
+				has_trait = sadistic
+			}
+			modifier = { # 2.40 (WORK-ORDER-2.40 C10): noble fury
+				add = 20
+				has_trait = spn_champion_midnight
+				has_trait = disloyal
 			}
 			modifier = {
 				add = 20
@@ -2318,20 +2393,102 @@ spn_hide.0201 = {
 	}
 }
 
-# .0202 -- Two Wolves on One Field (§12.4). To a player champion who met another on the field.
+# .0202 -- Two Wolves on One Field (§12.4). 2.40 (WORK-ORDER-2.40 F1): the hide duel's result, to each player of the two
+# (spn_hide_duel_after_effect, spn_hide_duel_escaped_effect, .2102's Let It Go). The winner celebrates; the loser is
+# in pain, or dead. scope:spn_hduel_runner is saved only when one of them got away.
 spn_hide.0202 = {
 	type = character_event
+	window = duel_event
 	title = spn_hide.0202.t
-	desc = spn_hide.0202.desc
+	desc = {
+		desc = spn_hide.0202.desc
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_hduel_runner ?= root }
+				desc = spn_hide.0202.you_escaped
+			}
+			triggered_desc = {
+				trigger = { exists = scope:spn_hduel_runner }
+				desc = spn_hide.0202.they_escaped
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_clash_winner ?= root
+					exists = scope:spn_hduel_dies
+				}
+				desc = spn_hide.0202.won_kill
+			}
+			triggered_desc = {
+				trigger = { scope:spn_clash_winner ?= root }
+				desc = spn_hide.0202.won
+			}
+			desc = spn_hide.0202.lost
+		}
+	}
 	theme = battle
 	override_background = { reference = battlefield }
-	left_portrait = { character = root animation = rage }
-	right_portrait = { character = scope:spn_field_foe animation = anger }
+	left_portrait = {
+		character = root
+		triggered_animation = {
+			trigger = { exists = scope:spn_hduel_runner }
+			scripted_animation = duel_wield_weapon
+		}
+		triggered_animation = {
+			trigger = { scope:spn_clash_winner ?= root }
+			scripted_animation = duel_celebrate
+		}
+		animation = pain
+	}
+	right_portrait = {
+		character = scope:spn_hduel_other
+		animate_if_dead = yes
+		triggered_animation = {
+			trigger = { exists = scope:spn_hduel_runner }
+			scripted_animation = duel_wield_weapon
+		}
+		triggered_animation = {
+			trigger = { is_alive = no }
+			animation = dead
+		}
+		triggered_animation = {
+			trigger = { scope:spn_clash_winner ?= this }
+			scripted_animation = duel_celebrate
+		}
+		animation = pain
+	}
 	trigger = {
 		is_alive = yes
+		exists = scope:spn_hduel_a
+		exists = scope:spn_hduel_b
+	}
+	immediate = {
+		if = {
+			limit = { exists = scope:spn_hduel_other }
+			clear_saved_scope = spn_hduel_other
+		}
+		if = {
+			limit = { scope:spn_hduel_a = root }
+			scope:spn_hduel_b = { save_scope_as = spn_hduel_other }
+		}
+		else = {
+			scope:spn_hduel_a = { save_scope_as = spn_hduel_other }
+		}
 	}
 	option = {
 		name = spn_hide.0202.a
+	}
+	# The winner of a fight to the ground whose foe lived may let him go home.
+	option = {
+		name = spn_hide.0202.b
+		trigger = {
+			scope:spn_clash_winner ?= root
+			NOT = { exists = scope:spn_hduel_runner }
+			NOT = { exists = scope:spn_hduel_throat }
+			NOT = { exists = scope:spn_hduel_dies }
+			spn_is_champion_trigger = yes
+		}
+		custom_tooltip = spn_hide.0202.b.tt
+		spn_hide_add_bond_effect = { VALUE = 2 }
 	}
 }
 
@@ -2830,30 +2987,8 @@ spn_hide.0360 = {
 				}
 				# 2.37e: the shrine's holder is the one robbed (an enshrined hide has no character owner).
 				scope:spn_pilgrim_county.holder ?= { save_scope_as = spn_pilgrim_keeper }
-				scope:spn_pilgrim_hide = {
-					if = {
-						limit = { exists = scope:spn_pilgrim_keeper }
-						set_owner = {
-							target = root
-							history = {
-								type = stolen
-								actor = scope:spn_pilgrim_keeper
-								recipient = root
-							}
-						}
-					}
-					else = {
-						set_owner = {
-							target = root
-							history = {
-								type = stolen
-								recipient = root
-							}
-						}
-					}
-					spn_hide_shrine_left_effect = yes
-				}
-				spn_hide_start_check_effect = yes
+				# 2.40 (WORK-ORDER-2.40 B5): the shared shrine-take effect (the duplication pass)
+				spn_hide_shrine_take_effect = { HIDE = scope:spn_pilgrim_hide KEEPER = scope:spn_pilgrim_keeper HOW = stolen }
 			}
 			50 = {
 				desc = spn_hide.0360.a.failure
@@ -2936,9 +3071,20 @@ spn_hide.0370 = {
 spn_hide.0380 = {
 	type = character_event
 	title = spn_hide.0380.t
-	desc = spn_hide.0380.desc
+	desc = {
+		desc = spn_hide.0380.desc
+		triggered_desc = { # 2.40 (WORK-ORDER-2.40 B5): who goes
+			trigger = { exists = scope:spn_errand_agent }
+			desc = spn_hide.0380.desc_agent
+		}
+	}
 	theme = intrigue
 	left_portrait = { character = root animation = scheme }
+	right_portrait = {
+		character = scope:spn_errand_agent
+		trigger = { exists = scope:spn_errand_agent }
+		animation = scheme
+	}
 	trigger = {
 		is_alive = yes
 		NOT = { has_character_flag = spn_hide_errand_out }
@@ -2951,6 +3097,28 @@ spn_hide.0380 = {
 		var:spn_knows_shrine_graybeard ?= { save_scope_as = spn_sf_county_graybeard }
 		var:spn_knows_shrine_midnight ?= { save_scope_as = spn_sf_county_midnight }
 		var:spn_knows_shrine_alpha ?= { save_scope_as = spn_sf_county_alpha }
+		# 2.40 (WORK-ORDER-2.40 B5): the man who goes: the spymaster, else the free courtier with the best intrigue.
+		# Saved on the errand by spn_hide_errand_send_effect when a hide is chosen.
+		if = {
+			limit = { exists = cp:councillor_spymaster }
+			cp:councillor_spymaster = {
+				if = {
+					limit = { spn_hide_errand_agent_ok_trigger = yes }
+					save_scope_as = spn_errand_agent
+				}
+			}
+		}
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_errand_agent }
+				any_courtier = { spn_hide_errand_agent_ok_trigger = yes }
+			}
+			ordered_courtier = {
+				limit = { spn_hide_errand_agent_ok_trigger = yes }
+				order_by = intrigue
+				save_scope_as = spn_errand_agent
+			}
+		}
 	}
 	option = {
 		name = spn_hide.0380.silverback
@@ -2967,7 +3135,13 @@ spn_hide.0380 = {
 			}
 		}
 		remove_short_term_gold = medium_gold_value
-		custom_tooltip = spn_hide.0380.go_tt
+		if = { # 2.40 (WORK-ORDER-2.40 B5): names the man
+			limit = { exists = scope:spn_errand_agent }
+			custom_tooltip = spn_hide.0380.go_agent_tt
+		}
+		else = {
+			custom_tooltip = spn_hide.0380.go_tt
+		}
 		hidden_effect = {
 			set_variable = { name = spn_hide_errand_hide value = flag:silverback years = 3 }
 			set_variable = { name = spn_hide_errand_county value = var:spn_knows_shrine_silverback years = 3 }
@@ -2994,7 +3168,13 @@ spn_hide.0380 = {
 			}
 		}
 		remove_short_term_gold = medium_gold_value
-		custom_tooltip = spn_hide.0380.go_tt
+		if = { # 2.40 (WORK-ORDER-2.40 B5): names the man
+			limit = { exists = scope:spn_errand_agent }
+			custom_tooltip = spn_hide.0380.go_agent_tt
+		}
+		else = {
+			custom_tooltip = spn_hide.0380.go_tt
+		}
 		hidden_effect = {
 			set_variable = { name = spn_hide_errand_hide value = flag:timber years = 3 }
 			set_variable = { name = spn_hide_errand_county value = var:spn_knows_shrine_timber years = 3 }
@@ -3021,7 +3201,13 @@ spn_hide.0380 = {
 			}
 		}
 		remove_short_term_gold = medium_gold_value
-		custom_tooltip = spn_hide.0380.go_tt
+		if = { # 2.40 (WORK-ORDER-2.40 B5): names the man
+			limit = { exists = scope:spn_errand_agent }
+			custom_tooltip = spn_hide.0380.go_agent_tt
+		}
+		else = {
+			custom_tooltip = spn_hide.0380.go_tt
+		}
 		hidden_effect = {
 			set_variable = { name = spn_hide_errand_hide value = flag:tundra years = 3 }
 			set_variable = { name = spn_hide_errand_county value = var:spn_knows_shrine_tundra years = 3 }
@@ -3048,7 +3234,13 @@ spn_hide.0380 = {
 			}
 		}
 		remove_short_term_gold = medium_gold_value
-		custom_tooltip = spn_hide.0380.go_tt
+		if = { # 2.40 (WORK-ORDER-2.40 B5): names the man
+			limit = { exists = scope:spn_errand_agent }
+			custom_tooltip = spn_hide.0380.go_agent_tt
+		}
+		else = {
+			custom_tooltip = spn_hide.0380.go_tt
+		}
 		hidden_effect = {
 			set_variable = { name = spn_hide_errand_hide value = flag:graybeard years = 3 }
 			set_variable = { name = spn_hide_errand_county value = var:spn_knows_shrine_graybeard years = 3 }
@@ -3075,7 +3267,13 @@ spn_hide.0380 = {
 			}
 		}
 		remove_short_term_gold = medium_gold_value
-		custom_tooltip = spn_hide.0380.go_tt
+		if = { # 2.40 (WORK-ORDER-2.40 B5): names the man
+			limit = { exists = scope:spn_errand_agent }
+			custom_tooltip = spn_hide.0380.go_agent_tt
+		}
+		else = {
+			custom_tooltip = spn_hide.0380.go_tt
+		}
 		hidden_effect = {
 			set_variable = { name = spn_hide_errand_hide value = flag:midnight years = 3 }
 			set_variable = { name = spn_hide_errand_county value = var:spn_knows_shrine_midnight years = 3 }
@@ -3102,7 +3300,13 @@ spn_hide.0380 = {
 			}
 		}
 		remove_short_term_gold = medium_gold_value
-		custom_tooltip = spn_hide.0380.go_tt
+		if = { # 2.40 (WORK-ORDER-2.40 B5): names the man
+			limit = { exists = scope:spn_errand_agent }
+			custom_tooltip = spn_hide.0380.go_agent_tt
+		}
+		else = {
+			custom_tooltip = spn_hide.0380.go_tt
+		}
 		hidden_effect = {
 			set_variable = { name = spn_hide_errand_hide value = flag:alpha years = 3 }
 			set_variable = { name = spn_hide_errand_county value = var:spn_knows_shrine_alpha years = 3 }
@@ -3125,15 +3329,32 @@ spn_hide.0381 = {
 	title = spn_hide.0381.t
 	desc = {
 		first_valid = {
+			# 2.40 (WORK-ORDER-2.40 B5): the man he sent is named; an errand sent before 2.40 has none ("your man")
+			triggered_desc = {
+				trigger = {
+					exists = scope:spn_errand_hide
+					exists = scope:spn_errand_agent
+				}
+				desc = spn_hide.0381.found_agent
+			}
 			triggered_desc = {
 				trigger = { exists = scope:spn_errand_hide }
 				desc = spn_hide.0381.found
 			}
-			desc = spn_hide.0381.gone
+			triggered_desc = {
+				trigger = { exists = scope:spn_errand_agent }
+				desc = spn_hide.0381.gone_agent
+			}
+			desc = spn_hide.0381.gone_named
 		}
 	}
 	theme = intrigue
 	left_portrait = { character = root animation = scheme }
+	right_portrait = { # 2.40 (WORK-ORDER-2.40 B5): the man he sent
+		character = scope:spn_errand_agent
+		trigger = { exists = scope:spn_errand_agent }
+		animation = scheme
+	}
 	artifact = {
 		target = scope:spn_errand_hide
 		position = lower_right_portrait
@@ -3166,57 +3387,121 @@ spn_hide.0381 = {
 				}
 			}
 		}
+		# 2.40 (WORK-ORDER-2.40 B5): the man who went, if he is still free to act; the hide's name for the text
+		# (read before the variable goes); the strongest wolf an alpha could send instead (G11).
+		if = {
+			limit = {
+				var:spn_hide_errand_agent ?= {
+					is_alive = yes
+					is_imprisoned = no
+				}
+			}
+			var:spn_hide_errand_agent = { save_scope_as = spn_errand_agent }
+		}
+		save_scope_value_as = { name = spn_errand_hide_flag value = var:spn_hide_errand_hide }
+		if = {
+			limit = {
+				spn_packs_on_trigger = yes
+				spn_is_alpha_trigger = yes
+				var:spn_pack = {
+					any_in_list = {
+						variable = spn_pack_members
+						spn_hide_errand_pack_wolf_trigger = yes
+					}
+				}
+			}
+			var:spn_pack = {
+				ordered_in_list = {
+					variable = spn_pack_members
+					limit = { spn_hide_errand_pack_wolf_trigger = yes }
+					order_by = prowess
+					save_scope_as = spn_errand_wolf
+				}
+			}
+		}
 		remove_variable = spn_hide_errand_county
 		remove_variable = spn_hide_errand_hide
 		remove_character_flag = spn_hide_errand_out
+		if = {
+			limit = { has_variable = spn_hide_errand_agent }
+			remove_variable = spn_hide_errand_agent
+		}
 	}
+	# 2.40 (WORK-ORDER-2.40 B5, G11): the roads at the shrine. Each is rolled hidden and says how it looks in words;
+	# a toast tells what happened. "Let your hide guide him" (B5) is dropped (G11: it is his own hide).
 	option = {
 		name = spn_hide.0381.a
-		trigger = { exists = scope:spn_errand_hide }
-		duel = {
-			skill = intrigue
-			value = 25
-			50 = {
-				desc = spn_hide.0381.a.success
-				compare_modifier = {
-					value = scope:duel_value
-					multiplier = 3.5
-					min = -45
-				}
-				scope:spn_errand_hide = {
-					if = {
-						limit = { exists = scope:spn_errand_keeper }
-						set_owner = {
-							target = root
-							history = {
-								type = stolen
-								actor = scope:spn_errand_keeper
-								recipient = root
-							}
-						}
-					}
-					else = {
-						set_owner = {
-							target = root
-							history = {
-								type = stolen
-								recipient = root
-							}
-						}
-					}
-					spn_hide_shrine_left_effect = yes
-				}
-				spn_hide_start_check_effect = yes
+		trigger = {
+			exists = scope:spn_errand_hide
+		}
+		spn_hide_errand_lean_tooltip_effect = { CHANCE = spn_hide_errand_steal_chance_value }
+		if = {
+			limit = { exists = scope:spn_errand_agent }
+			custom_tooltip = spn_hide.0381.a.agent_tt
+		}
+		else = {
+			custom_tooltip = spn_hide.0381.a.tt
+		}
+		hidden_effect = {
+			if = {
+				limit = { exists = scope:spn_errand_won }
+				clear_saved_scope = spn_errand_won
 			}
-			50 = {
-				desc = spn_hide.0381.a.failure
-				compare_modifier = {
-					value = scope:duel_value
-					multiplier = -3.5
-					min = -45
+			random = {
+				chance = spn_hide_errand_steal_chance_value
+				save_scope_value_as = { name = spn_errand_won value = yes }
+			}
+			if = {
+				limit = { exists = scope:spn_errand_won }
+				spn_hide_shrine_take_effect = { HIDE = scope:spn_errand_hide KEEPER = scope:spn_errand_keeper HOW = stolen }
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_hide.0381.won_t
+					desc = spn_hide.0381.a.success
+					left_icon = root
 				}
+			}
+			else = {
 				add_character_flag = { flag = spn_hide_shrine_thief years = 5 }
 				scope:spn_errand_keeper ?= { add_opinion = { target = root modifier = spn_shrine_thief_opinion } }
+				# B5: the man who was caught is held at the keeper's court (a keeper who is someone else, and alive).
+				if = {
+					limit = {
+						exists = scope:spn_errand_agent
+						scope:spn_errand_agent = {
+							is_alive = yes
+							is_imprisoned = no
+						}
+						scope:spn_errand_keeper ?= {
+							is_alive = yes
+							NOT = { this = root }
+							NOT = { this = scope:spn_errand_agent }
+						}
+					}
+					scope:spn_errand_keeper = {
+						imprison = {
+							target = scope:spn_errand_agent
+							type = dungeon
+						}
+					}
+				}
+				if = {
+					limit = { exists = scope:spn_errand_agent }
+					send_interface_toast = {
+						type = event_toast_text_bad
+						title = spn_hide.0381.lost_t
+						desc = spn_hide.0381.a.failure_agent
+						left_icon = root
+					}
+				}
+				else = {
+					send_interface_toast = {
+						type = event_toast_text_bad
+						title = spn_hide.0381.lost_t
+						desc = spn_hide.0381.a.failure
+						left_icon = root
+					}
+				}
 			}
 		}
 		ai_chance = {
@@ -3226,8 +3511,196 @@ spn_hide.0381 = {
 		}
 	}
 	option = {
+		name = spn_hide.0381.powder
+		trigger = {
+			exists = scope:spn_errand_hide
+			spn_order_holds_powder_trigger = yes
+		}
+		spn_hide_errand_lean_tooltip_effect = { CHANCE = spn_hide_errand_powder_chance_value }
+		custom_tooltip = spn_hide.0381.powder.tt
+		hidden_effect = {
+			if = {
+				limit = { exists = scope:spn_errand_won }
+				clear_saved_scope = spn_errand_won
+			}
+			random = {
+				chance = spn_hide_errand_powder_chance_value
+				save_scope_value_as = { name = spn_errand_won value = yes }
+			}
+			if = {
+				limit = { exists = scope:spn_errand_won }
+				spn_hide_shrine_take_effect = { HIDE = scope:spn_errand_hide KEEPER = scope:spn_errand_keeper HOW = stolen }
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_hide.0381.won_t
+					desc = spn_hide.0381.powder.success
+					left_icon = root
+				}
+			}
+			else = {
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_hide.0381.lost_t
+					desc = spn_hide.0381.powder.failure
+					left_icon = root
+				}
+			}
+			# The Powder is spent either way, after the outcome is acted on (Q1's shared effect also rebuilds the
+			# Reliquary it was pledged to).
+			spn_relic_powder_spend_effect = { WHO = root }
+		}
+		ai_chance = {
+			base = 30
+			modifier = { add = 20 has_trait = deceitful }
+			modifier = { add = 15 has_trait = ambitious }
+			modifier = { add = -20 has_trait = honest }
+		}
+	}
+	option = {
+		name = spn_hide.0381.wolf
+		trigger = {
+			exists = scope:spn_errand_hide
+			is_adult = yes
+			spn_hide_errand_by_night_trigger = yes
+		}
+		spn_hide_errand_lean_tooltip_effect = { CHANCE = spn_hide_errand_night_chance_value }
+		custom_tooltip = spn_hide.0381.wolf.tt
+		hidden_effect = {
+			if = {
+				limit = { exists = scope:spn_errand_won }
+				clear_saved_scope = spn_errand_won
+			}
+			random = {
+				chance = spn_hide_errand_night_chance_value
+				save_scope_value_as = { name = spn_errand_won value = yes }
+			}
+			if = {
+				limit = { exists = scope:spn_errand_won }
+				spn_hide_shrine_take_effect = { HIDE = scope:spn_errand_hide KEEPER = scope:spn_errand_keeper HOW = stolen }
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_hide.0381.won_t
+					desc = spn_hide.0381.wolf.success
+					left_icon = root
+				}
+			}
+			else = {
+				increase_wounds_no_death_effect = { REASON = fight }
+				spn_mark_menace_effect = { COUNTY = scope:spn_errand_county CULPRIT = root KIND = werewolf SEVERITY = prowl }
+				send_interface_toast = {
+					type = event_toast_text_bad
+					title = spn_hide.0381.lost_t
+					desc = spn_hide.0381.wolf.failure
+					left_icon = root
+				}
+			}
+		}
+		ai_chance = {
+			base = 25
+			modifier = { add = 30 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { factor = 0 has_trait = craven }
+		}
+	}
+	option = {
+		name = spn_hide.0381.pack
+		trigger = {
+			exists = scope:spn_errand_hide
+			exists = scope:spn_errand_wolf
+			spn_is_alpha_trigger = yes
+		}
+		spn_hide_errand_lean_tooltip_effect = { CHANCE = spn_hide_errand_pack_chance_value }
+		custom_tooltip = spn_hide.0381.pack.tt
+		hidden_effect = {
+			if = {
+				limit = { exists = scope:spn_errand_won }
+				clear_saved_scope = spn_errand_won
+			}
+			random = {
+				chance = spn_hide_errand_pack_chance_value
+				save_scope_value_as = { name = spn_errand_won value = yes }
+			}
+			if = {
+				limit = { exists = scope:spn_errand_won }
+				spn_hide_shrine_take_effect = { HIDE = scope:spn_errand_hide KEEPER = scope:spn_errand_keeper HOW = stolen }
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_hide.0381.won_t
+					desc = spn_hide.0381.pack.success
+					left_icon = root
+				}
+			}
+			else = {
+				scope:spn_errand_wolf = { increase_wounds_no_death_effect = { REASON = fight } }
+				spn_mark_menace_effect = { COUNTY = scope:spn_errand_county CULPRIT = scope:spn_errand_wolf KIND = werewolf SEVERITY = prowl }
+				send_interface_toast = {
+					type = event_toast_text_bad
+					title = spn_hide.0381.lost_t
+					desc = spn_hide.0381.pack.failure
+					left_icon = root
+				}
+			}
+		}
+		ai_chance = {
+			base = 20
+			modifier = { add = 20 has_trait = arrogant }
+			modifier = { add = 15 has_trait = callous }
+			modifier = { add = -20 has_trait = compassionate }
+		}
+	}
+	option = {
+		name = spn_hide.0381.compel
+		trigger = {
+			exists = scope:spn_errand_hide
+			is_adult = yes
+			spn_hide_errand_compel_trigger = yes
+		}
+		spn_hide_errand_lean_tooltip_effect = { CHANCE = spn_hide_errand_compel_chance_value }
+		custom_tooltip = spn_hide.0381.compel.tt
+		hidden_effect = {
+			if = {
+				limit = { exists = scope:spn_errand_won }
+				clear_saved_scope = spn_errand_won
+			}
+			random = {
+				chance = spn_hide_errand_compel_chance_value
+				save_scope_value_as = { name = spn_errand_won value = yes }
+			}
+			if = {
+				limit = { exists = scope:spn_errand_won }
+				spn_hide_shrine_take_effect = { HIDE = scope:spn_errand_hide KEEPER = scope:spn_errand_keeper HOW = given }
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_hide.0381.won_t
+					desc = spn_hide.0381.compel.success
+					left_icon = root
+				}
+			}
+			else = {
+				scope:spn_errand_keeper ?= { add_opinion = { target = root modifier = spn_shrine_thief_opinion } }
+				spn_mark_menace_effect = { COUNTY = scope:spn_errand_county CULPRIT = root KIND = vampire SEVERITY = prowl }
+				send_interface_toast = {
+					type = event_toast_text_bad
+					title = spn_hide.0381.lost_t
+					desc = spn_hide.0381.compel.failure
+					left_icon = root
+				}
+			}
+		}
+		ai_chance = {
+			base = 25
+			modifier = { add = 20 has_trait = arrogant }
+			modifier = { add = 15 has_trait = deceitful }
+			modifier = { add = -20 has_trait = honest }
+		}
+	}
+	option = {
 		name = spn_hide.0381.b
 		trigger = { exists = scope:spn_errand_hide }
+		if = { # 2.40 (WORK-ORDER-2.40 B5): "call him back" now means he is safe
+			limit = { exists = scope:spn_errand_agent }
+			custom_tooltip = spn_hide.0381.b.agent_tt
+		}
 		ai_chance = {
 			base = 20
 			modifier = { add = 30 has_trait = honest }

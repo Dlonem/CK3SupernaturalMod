@@ -13,7 +13,12 @@ spn_conclave_call_effect = {
 	save_scope_value_as = { name = spn_cl_reason value = $REASON$ } # 2.39 (WORK-ORDER-2.39 F1): banked for the tests below
 	if = {
 		limit = {
-			scope:spn_cl_asked = { is_landed = yes }
+			scope:spn_cl_asked = { spn_conclave_can_host_trigger = yes } # 2.40 (WORK-ORDER-2.40 A6): land, a camp or an estate
+			# 2.40 (WORK-ORDER-2.40 A5): not one who passed this call on (a Grand Magus calling at will is always himself).
+			trigger_if = {
+				limit = { NOT = { scope:spn_cl_reason = flag:will } }
+				scope:spn_cl_asked = { NOT = { has_character_flag = spn_conclave_declined } }
+			}
 			# 2.39 (WORK-ORDER-2.39 F1, review M-1): an Invocare host is not still on the Conclave's cooldown.
 			trigger_if = {
 				limit = { scope:spn_cl_reason = flag:invocare }
@@ -27,7 +32,7 @@ spn_conclave_call_effect = {
 			variable = spn_order_chapters
 			limit = {
 				is_alive = yes
-				is_landed = yes
+				spn_conclave_fallback_host_trigger = yes # 2.40 (WORK-ORDER-2.40 A5, A6): was is_landed = yes
 				is_imprisoned = no
 				exists = var:spn_order_chapter
 				# 2.39 (WORK-ORDER-2.39 F1): Invocare is never hosted by the Grand Magus it judges, nor by one still on the
@@ -215,6 +220,34 @@ spn_conclave_anointing_effect = {
 # One member makes an entrance (Make an Entrance). Root: the member. The proof is marked so it counts once.
 spn_conclave_entrance_effect = {
 	save_scope_as = spn_cv_entrant
+	# 2.40 (WORK-ORDER-2.40 A4): a witness for An Entrance's right portrait, never the entrant himself (the Grand Magus
+	# came in with the proof and stood on both sides). The Grand Magus, else the host, else another member who came.
+	if = { limit = { exists = scope:spn_cv_witness } clear_saved_scope = spn_cv_witness }
+	if = {
+		limit = {
+			exists = global_var:current_archmage_global
+			NOT = { global_var:current_archmage_global = scope:spn_cv_entrant }
+		}
+		global_var:current_archmage_global = { save_scope_as = spn_cv_witness }
+	}
+	else_if = {
+		limit = {
+			exists = scope:host
+			NOT = { scope:host = scope:spn_cv_entrant }
+		}
+		scope:host = { save_scope_as = spn_cv_witness }
+	}
+	else = {
+		scope:activity = {
+			random_attending_character = {
+				limit = {
+					NOT = { this = scope:spn_cv_entrant }
+					spn_is_order_member_trigger = yes
+				}
+				save_scope_as = spn_cv_witness
+			}
+		}
+	}
 	clear_saved_scope = spn_cv_proof_art
 	if = {
 		limit = { has_character_flag = spn_order_proof_kill }
@@ -489,14 +522,14 @@ spn_conclave_borrow_effect = {
 				spn_is_order_member_trigger = yes
 				NOT = { this = scope:spn_cvb_borrower }
 				NOT = { var:spn_order_chapter ?= scope:spn_cvb_borrower.var:spn_order_chapter }
-				any_character_artifact = { spn_conclave_lendable_trigger = yes }
+				any_character_artifact = { spn_conclave_lendable_trigger = { BORROWER = scope:spn_cvb_borrower } } # 2.40 (WORK-ORDER-2.40 G7)
 			}
 			save_scope_as = spn_cvb_lender
 		}
 	}
 	scope:spn_cvb_lender ?= {
 		random_character_artifact = {
-			limit = { spn_conclave_lendable_trigger = yes }
+			limit = { spn_conclave_lendable_trigger = { BORROWER = scope:spn_cvb_borrower } } # 2.40 (WORK-ORDER-2.40 G7)
 			save_scope_as = spn_cvb_art
 		}
 	}

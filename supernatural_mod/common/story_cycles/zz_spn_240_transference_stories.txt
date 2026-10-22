@@ -1,0 +1,86 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 B7 step 1, package Q4): the Elemental Transference's tracker. The shape of
+# zz_spn_order_stories.txt: vanilla draws a story with `visible = yes` in the Situations window, to its owner only, so a
+# player caster who is not the patient owns a mirror. Every visualised variable is always set or a list.
+# Variables (set by spn_transference_story_start_effect): spn_tr_caster_shown / spn_tr_patient_shown (character),
+# spn_tr_carriers (list), spn_tr_disease (flag), spn_tr_until (the year the risk ends).
+
+# Owner: the patient. Ends when the Working's record leaves him (5 years on, or the Working unravelled), or with him.
+story_spn_transference = {
+	visible = yes
+
+	icon = {
+		reference = "gfx/interface/icons/story_cycles/spn_order_chapter.dds"
+	}
+	background = {
+		reference = "gfx/interface/illustrations/event_scenes/study.dds"
+	}
+
+	visualization = {
+		custom_string_key = spn_transference_string
+		character = {
+			variable_name = spn_tr_caster_shown
+			label = SPN_TR_CASTER
+		}
+		character_list = {
+			variable_name = spn_tr_carriers
+			label = SPN_TR_CARRIERS
+		}
+	}
+
+	on_owner_death = {
+		end_story = yes
+	}
+
+	effect_group = {
+		days = 30
+		triggered_effect = {
+			trigger = {
+				story_owner = { NOT = { exists = var:spn_transference_disease } }
+			}
+			effect = { end_story = yes }
+		}
+	}
+}
+
+# Owner: a player caster. Ends when the patient's record ends, or with the patient.
+story_spn_transference_mirror = {
+	visible = yes
+
+	icon = {
+		reference = "gfx/interface/icons/story_cycles/spn_order_chapter.dds"
+	}
+	background = {
+		reference = "gfx/interface/illustrations/event_scenes/study.dds"
+	}
+
+	visualization = {
+		custom_string_key = spn_transference_mirror_string
+		character = {
+			variable_name = spn_tr_patient_shown
+			label = SPN_TR_PATIENT
+		}
+		character_list = {
+			variable_name = spn_tr_carriers
+			label = SPN_TR_CARRIERS
+		}
+	}
+
+	on_owner_death = {
+		end_story = yes
+	}
+
+	effect_group = {
+		days = 30
+		triggered_effect = {
+			trigger = {
+				NOT = {
+					var:spn_tr_patient_shown ?= {
+						is_alive = yes
+						exists = var:spn_transference_disease
+					}
+				}
+			}
+			effect = { end_story = yes }
+		}
+	}
+}

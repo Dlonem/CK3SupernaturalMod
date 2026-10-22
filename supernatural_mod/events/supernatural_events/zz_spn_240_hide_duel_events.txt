@@ -1,0 +1,909 @@
+﻿# Supernatural 2.40 -- the hide duel and The Hide Speaks (WORK-ORDER-2.40 F1, C10). Package Q6, events spn_hide.2100-.2199.
+# AGOT's dragon duel (sighting .0001, ambush .0002, pursuit .0003, permission .1010) gave the shape; nothing is copied.
+# The window is vanilla's duel_event (generic portraits, van/gui/event_windows/duel_event.gui:262-330), both fighters in
+# vanilla's duel_wield_weapon stance. The roll is hidden; options say which way the fight leans in words, never in numbers.
+# Every event re-checks that both are alive, free and still champions, and every option asks again before it acts.
+# The result (spn_hide.0202, "Two Wolves on One Field") stays in zz_spn_hide_events.txt.
+
+namespace = spn_hide
+
+# ==================================================================================================
+# .2100 -- Across the Field. To the champion who sees the other first (scope:spn_hduel_a).
+# ==================================================================================================
+spn_hide.2100 = {
+	type = character_event
+	window = duel_event
+	title = spn_hide.2100.t
+	desc = {
+		desc = spn_hide.2100.desc
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_hduel_other = { has_trait = spn_champion_silverback } }
+				desc = spn_hide_duel_sees_silverback
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_other = { has_trait = spn_champion_timber } }
+				desc = spn_hide_duel_sees_timber
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_other = { has_trait = spn_champion_tundra } }
+				desc = spn_hide_duel_sees_tundra
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_other = { has_trait = spn_champion_graybeard } }
+				desc = spn_hide_duel_sees_graybeard
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_other = { has_trait = spn_champion_midnight } }
+				desc = spn_hide_duel_sees_midnight
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_other = { has_trait = spn_champion_alpha } }
+				desc = spn_hide_duel_sees_alpha
+			}
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_hduel_my_chance >= 65 }
+				desc = spn_hide_duel_lean_strong
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_my_chance <= 35 }
+				desc = spn_hide_duel_lean_weak
+			}
+			desc = spn_hide_duel_lean_even
+		}
+		triggered_desc = {
+			trigger = { spn_hide_duel_wanted_trigger = { WHO = root FOE = scope:spn_hduel_other } }
+			desc = spn_hide_duel_wanted
+		}
+	}
+	theme = battle
+	override_background = { reference = battlefield }
+	left_portrait = {
+		character = root
+		# A wolf in his own shape shows the claws; the werewolf skin, when it exists, swaps this one line.
+		triggered_animation = {
+			trigger = { is_shapeshifted_trigger = yes }
+			animation = aggressive_unarmed
+		}
+		scripted_animation = duel_wield_weapon
+	}
+	right_portrait = {
+		character = scope:spn_hduel_other
+		# A wolf in his own shape shows the claws; the werewolf skin, when it exists, swaps this one line.
+		triggered_animation = {
+			trigger = { is_shapeshifted_trigger = yes }
+			animation = aggressive_unarmed
+		}
+		scripted_animation = duel_wield_weapon
+	}
+	trigger = {
+		exists = scope:spn_hduel_a
+		exists = scope:spn_hduel_b
+		OR = {
+			scope:spn_hduel_a = root
+			scope:spn_hduel_b = root
+		}
+		scope:spn_hduel_a = { spn_hide_duel_live_trigger = { OTHER = scope:spn_hduel_b } }
+	}
+	immediate = {
+		spn_hide_duel_other_effect = yes
+		scope:spn_hduel_a = { spn_hide_duel_guard_effect = yes }
+		scope:spn_hduel_b = { spn_hide_duel_guard_effect = yes }
+	}
+	option = {
+		name = spn_hide.2100.a
+		spn_clash_lean_tooltip_effect = { A = root B = scope:spn_hduel_other FORM = no }
+		custom_tooltip = spn_hide_duel_throat_tt
+		if = {
+			limit = { spn_hide_duel_live_trigger = { OTHER = scope:spn_hduel_other } }
+			spn_hide_duel_style_effect = { STYLE = throat }
+			hidden_effect = {
+				spn_hide_duel_guard_effect = yes
+				scope:spn_hduel_other = {
+					spn_hide_duel_guard_effect = yes
+					trigger_event = spn_hide.2101
+				}
+			}
+		}
+		else = {
+			spn_hide_duel_lapse_effect = yes
+		}
+		ai_chance = {
+			base = 40
+			modifier = {
+				add = 30
+				scope:spn_hduel_my_chance >= 65
+			}
+			modifier = {
+				add = 20
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = wrathful
+			}
+			modifier = {
+				add = 25
+				has_trait = spn_champion_midnight
+			}
+		}
+	}
+	option = {
+		name = spn_hide.2100.b
+		spn_clash_lean_tooltip_effect = { A = root B = scope:spn_hduel_other FORM = no }
+		custom_tooltip = spn_hide_duel_wear_tt
+		if = {
+			limit = { spn_hide_duel_live_trigger = { OTHER = scope:spn_hduel_other } }
+			spn_hide_duel_style_effect = { STYLE = wear }
+			hidden_effect = {
+				spn_hide_duel_guard_effect = yes
+				scope:spn_hduel_other = {
+					spn_hide_duel_guard_effect = yes
+					trigger_event = spn_hide.2101
+				}
+			}
+		}
+		else = {
+			spn_hide_duel_lapse_effect = yes
+		}
+		ai_chance = {
+			base = 40
+			modifier = {
+				add = 15
+				has_trait = spn_champion_silverback
+			}
+		}
+	}
+	option = {
+		name = spn_hide.2100.c
+		custom_tooltip = spn_hide_duel_slip_tt
+		if = {
+			limit = {
+				scope:spn_hduel_other = {
+					OR = {
+						has_trait = spn_champion_midnight
+						has_character_modifier = spn_let_it_take_me_modifier
+					}
+				}
+			}
+			custom_tooltip = spn_hide_duel_midnight_tt
+		}
+		if = {
+			limit = { has_trait = spn_champion_timber }
+			custom_tooltip = spn_hide_duel_timber_tt
+		}
+		if = {
+			limit = { spn_hide_duel_live_trigger = { OTHER = scope:spn_hduel_other } }
+			hidden_effect = {
+				random_list = {
+					# It saw you go: it may run you down.
+					50 = {
+						modifier = {
+							add = 25
+							scope:spn_hduel_other = {
+								OR = {
+									has_trait = spn_champion_midnight
+									has_character_modifier = spn_let_it_take_me_modifier
+								}
+							}
+						}
+						modifier = {
+							add = 15
+							scope:spn_hduel_other.prowess > root.prowess
+						}
+						spn_hide_duel_guard_effect = yes
+						scope:spn_hduel_other = {
+							spn_hide_duel_guard_effect = yes
+							trigger_event = spn_hide.2102
+						}
+					}
+					# Lost in the fighting. The other never knew where you went.
+					50 = {
+						modifier = {
+							add = 25
+							has_trait = spn_champion_timber
+						}
+						modifier = {
+							add = 15
+							prowess > scope:spn_hduel_other.prowess
+						}
+						send_interface_toast = {
+							type = event_toast_effect_neutral
+							title = spn_hide_duel_slipped_t
+							left_icon = root
+							custom_tooltip = spn_hide_duel_slipped_tt
+						}
+						spn_hide_duel_missed_effect = { A = scope:spn_hduel_a B = scope:spn_hduel_b }
+						scope:spn_hduel_a = { spn_hide_duel_clean_effect = yes }
+						scope:spn_hduel_b = { spn_hide_duel_clean_effect = yes }
+					}
+				}
+			}
+		}
+		else = {
+			spn_hide_duel_lapse_effect = yes
+		}
+		ai_chance = {
+			base = 20
+			modifier = {
+				add = 40
+				scope:spn_hduel_my_chance <= 35
+			}
+			modifier = {
+				add = 30
+				has_trait = craven
+			}
+			# Graybeard does not step back.
+			modifier = {
+				factor = 0.5
+				has_trait = spn_champion_graybeard
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# .2101 -- It Comes for You. To the one the other went for (it chose its style in .2100).
+# ==================================================================================================
+spn_hide.2101 = {
+	type = character_event
+	window = duel_event
+	title = spn_hide.2101.t
+	desc = {
+		desc = spn_hide.2101.desc
+		triggered_desc = {
+			trigger = { scope:spn_hduel_other = { var:spn_hduel_style ?= flag:throat } }
+			desc = spn_hide.2101.throat
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_hduel_other = { has_trait = spn_champion_silverback } }
+				desc = spn_hide_duel_sees_silverback
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_other = { has_trait = spn_champion_timber } }
+				desc = spn_hide_duel_sees_timber
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_other = { has_trait = spn_champion_tundra } }
+				desc = spn_hide_duel_sees_tundra
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_other = { has_trait = spn_champion_graybeard } }
+				desc = spn_hide_duel_sees_graybeard
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_other = { has_trait = spn_champion_midnight } }
+				desc = spn_hide_duel_sees_midnight
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_other = { has_trait = spn_champion_alpha } }
+				desc = spn_hide_duel_sees_alpha
+			}
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_hduel_my_chance >= 65 }
+				desc = spn_hide_duel_lean_strong
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_my_chance <= 35 }
+				desc = spn_hide_duel_lean_weak
+			}
+			desc = spn_hide_duel_lean_even
+		}
+		triggered_desc = {
+			trigger = { spn_hide_duel_wanted_trigger = { WHO = root FOE = scope:spn_hduel_other } }
+			desc = spn_hide_duel_wanted
+		}
+	}
+	theme = battle
+	override_background = { reference = battlefield }
+	left_portrait = {
+		character = root
+		# A wolf in his own shape shows the claws; the werewolf skin, when it exists, swaps this one line.
+		triggered_animation = {
+			trigger = { is_shapeshifted_trigger = yes }
+			animation = aggressive_unarmed
+		}
+		scripted_animation = duel_wield_weapon
+	}
+	right_portrait = {
+		character = scope:spn_hduel_other
+		# A wolf in his own shape shows the claws; the werewolf skin, when it exists, swaps this one line.
+		triggered_animation = {
+			trigger = { is_shapeshifted_trigger = yes }
+			animation = aggressive_unarmed
+		}
+		scripted_animation = duel_wield_weapon
+	}
+	trigger = {
+		exists = scope:spn_hduel_a
+		exists = scope:spn_hduel_b
+		OR = {
+			scope:spn_hduel_a = root
+			scope:spn_hduel_b = root
+		}
+		scope:spn_hduel_a = { spn_hide_duel_live_trigger = { OTHER = scope:spn_hduel_b } }
+	}
+	immediate = {
+		spn_hide_duel_other_effect = yes
+		scope:spn_hduel_a = { spn_hide_duel_guard_effect = yes }
+		scope:spn_hduel_b = { spn_hide_duel_guard_effect = yes }
+	}
+	option = {
+		name = spn_hide.2101.a
+		spn_clash_lean_tooltip_effect = { A = root B = scope:spn_hduel_other FORM = no }
+		custom_tooltip = spn_hide_duel_throat_tt
+		if = {
+			limit = { spn_hide_duel_live_trigger = { OTHER = scope:spn_hduel_other } }
+			spn_hide_duel_style_effect = { STYLE = throat }
+			hidden_effect = { spn_hide_duel_resolve_effect = yes }
+		}
+		else = {
+			spn_hide_duel_lapse_effect = yes
+		}
+		ai_chance = {
+			base = 40
+			modifier = {
+				add = 30
+				scope:spn_hduel_my_chance >= 65
+			}
+			modifier = {
+				add = 20
+				has_trait = brave
+			}
+			modifier = {
+				add = 20
+				has_trait = wrathful
+			}
+			modifier = {
+				add = 25
+				has_trait = spn_champion_midnight
+			}
+		}
+	}
+	option = {
+		name = spn_hide.2101.b
+		spn_clash_lean_tooltip_effect = { A = root B = scope:spn_hduel_other FORM = no }
+		if = {
+			limit = { scope:spn_hduel_other = { var:spn_hduel_style ?= flag:throat } }
+			custom_tooltip = spn_hide_duel_wear_vs_throat_tt
+		}
+		else = {
+			custom_tooltip = spn_hide_duel_wear_tt
+		}
+		if = {
+			limit = { spn_hide_duel_live_trigger = { OTHER = scope:spn_hduel_other } }
+			spn_hide_duel_style_effect = { STYLE = wear }
+			hidden_effect = { spn_hide_duel_resolve_effect = yes }
+		}
+		else = {
+			spn_hide_duel_lapse_effect = yes
+		}
+		ai_chance = {
+			base = 40
+			modifier = {
+				add = 15
+				has_trait = spn_champion_silverback
+			}
+		}
+	}
+	option = {
+		name = spn_hide.2101.c
+		custom_tooltip = spn_hide_duel_break_tt
+		if = {
+			limit = {
+				scope:spn_hduel_other = {
+					OR = {
+						has_trait = spn_champion_midnight
+						has_character_modifier = spn_let_it_take_me_modifier
+					}
+				}
+			}
+			custom_tooltip = spn_hide_duel_midnight_tt
+		}
+		if = {
+			limit = { has_trait = spn_champion_timber }
+			custom_tooltip = spn_hide_duel_timber_tt
+		}
+		if = {
+			limit = { spn_hide_duel_live_trigger = { OTHER = scope:spn_hduel_other } }
+			hidden_effect = {
+				random_list = {
+					# Caught turning: he fights to the ground, at a disadvantage.
+					60 = {
+						modifier = {
+							add = 25
+							scope:spn_hduel_other = {
+								OR = {
+									has_trait = spn_champion_midnight
+									has_character_modifier = spn_let_it_take_me_modifier
+								}
+							}
+						}
+						modifier = {
+							add = 15
+							scope:spn_hduel_other.prowess > root.prowess
+						}
+						spn_hide_duel_style_effect = { STYLE = wear }
+						add_character_flag = { flag = spn_hduel_caught days = 10 }
+						spn_hide_duel_resolve_effect = yes
+					}
+					# Away into the battle.
+					40 = {
+						modifier = {
+							add = 25
+							has_trait = spn_champion_timber
+						}
+						modifier = {
+							add = 15
+							prowess > scope:spn_hduel_other.prowess
+						}
+						spn_hide_duel_escaped_effect = { RUNNER = root }
+					}
+				}
+			}
+		}
+		else = {
+			spn_hide_duel_lapse_effect = yes
+		}
+		ai_chance = {
+			base = 20
+			modifier = {
+				add = 40
+				scope:spn_hduel_my_chance <= 35
+			}
+			modifier = {
+				add = 30
+				has_trait = craven
+			}
+			# Graybeard does not step back.
+			modifier = {
+				factor = 0.5
+				has_trait = spn_champion_graybeard
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# .2102 -- It Is Running. To the one the other slipped away from, if he saw it go.
+# ==================================================================================================
+spn_hide.2102 = {
+	type = character_event
+	window = duel_event
+	title = spn_hide.2102.t
+	desc = {
+		desc = spn_hide.2102.desc
+		triggered_desc = {
+			trigger = { scope:spn_hduel_other = { has_trait = wounded } }
+			desc = spn_hide.2102.hurt
+		}
+		triggered_desc = {
+			trigger = { spn_hide_duel_wanted_trigger = { WHO = root FOE = scope:spn_hduel_other } }
+			desc = spn_hide_duel_wanted
+		}
+	}
+	theme = battle
+	override_background = { reference = battlefield }
+	left_portrait = {
+		character = root
+		# A wolf in his own shape shows the claws; the werewolf skin, when it exists, swaps this one line.
+		triggered_animation = {
+			trigger = { is_shapeshifted_trigger = yes }
+			animation = aggressive_unarmed
+		}
+		scripted_animation = duel_wield_weapon
+	}
+	right_portrait = {
+		character = scope:spn_hduel_other
+		# A wolf in his own shape shows the claws; the werewolf skin, when it exists, swaps this one line.
+		triggered_animation = {
+			trigger = { is_shapeshifted_trigger = yes }
+			animation = aggressive_unarmed
+		}
+		scripted_animation = duel_wield_weapon
+	}
+	trigger = {
+		exists = scope:spn_hduel_a
+		exists = scope:spn_hduel_b
+		OR = {
+			scope:spn_hduel_a = root
+			scope:spn_hduel_b = root
+		}
+		scope:spn_hduel_a = { spn_hide_duel_live_trigger = { OTHER = scope:spn_hduel_b } }
+	}
+	immediate = {
+		spn_hide_duel_other_effect = yes
+		scope:spn_hduel_a = { spn_hide_duel_guard_effect = yes }
+		scope:spn_hduel_b = { spn_hide_duel_guard_effect = yes }
+	}
+	option = {
+		name = spn_hide.2102.a
+		spn_clash_lean_tooltip_effect = { A = root B = scope:spn_hduel_other FORM = no }
+		custom_tooltip = spn_hide_duel_throat_tt
+		custom_tooltip = spn_hide_duel_chase_tt
+		if = {
+			limit = { has_trait = spn_champion_midnight }
+			custom_tooltip = spn_hide_duel_midnight_tt
+		}
+		if = {
+			limit = { scope:spn_hduel_other = { has_trait = wounded } }
+			custom_tooltip = spn_hide_duel_runner_wounded_tt
+		}
+		if = {
+			limit = { scope:spn_hduel_other = { has_trait = spn_champion_timber } }
+			custom_tooltip = spn_hide_duel_timber_tt
+		}
+		if = {
+			limit = { spn_hide_duel_live_trigger = { OTHER = scope:spn_hduel_other } }
+			hidden_effect = {
+				random_list = {
+					# Run down: the runner fights to the ground, caught turning.
+					35 = {
+						modifier = {
+							add = 25
+							has_trait = spn_champion_midnight
+						}
+						modifier = {
+							add = 20
+							scope:spn_hduel_other = { has_trait = wounded }
+						}
+						modifier = {
+							add = 15
+							prowess > scope:spn_hduel_other.prowess
+						}
+						spn_hide_duel_style_effect = { STYLE = throat }
+						scope:spn_hduel_other = {
+							spn_hide_duel_style_effect = { STYLE = wear }
+							add_character_flag = { flag = spn_hduel_caught days = 10 }
+						}
+						spn_hide_duel_resolve_effect = yes
+					}
+					# It got away.
+					65 = {
+						modifier = {
+							add = 25
+							scope:spn_hduel_other = { has_trait = spn_champion_timber }
+						}
+						spn_hide_duel_escaped_effect = { RUNNER = scope:spn_hduel_other }
+					}
+				}
+			}
+		}
+		else = {
+			spn_hide_duel_lapse_effect = yes
+		}
+		ai_chance = {
+			base = 40
+			modifier = {
+				add = 30
+				scope:spn_hduel_my_chance >= 65
+			}
+			modifier = {
+				add = 25
+				has_trait = spn_champion_midnight
+			}
+			modifier = {
+				add = 20
+				spn_hide_duel_wanted_trigger = { WHO = root FOE = scope:spn_hduel_other }
+			}
+			modifier = {
+				add = -30
+				has_trait = wounded
+			}
+		}
+	}
+	option = {
+		name = spn_hide.2102.b
+		custom_tooltip = spn_hide_duel_let_go_tt
+		hidden_effect = {
+			scope:spn_hduel_other = { save_scope_as = spn_hduel_runner }
+			spn_hide_duel_missed_effect = { A = scope:spn_hduel_a B = scope:spn_hduel_b }
+			scope:spn_hduel_a ?= { spn_hide_duel_clean_effect = yes }
+			scope:spn_hduel_b ?= { spn_hide_duel_clean_effect = yes }
+			# The one who ran hears he got away; the one who let him go chose it and needs no word.
+			scope:spn_hduel_other = {
+				if = {
+					limit = {
+						is_alive = yes
+						is_ai = no
+					}
+					trigger_event = spn_hide.0202
+				}
+			}
+		}
+		ai_chance = {
+			base = 40
+		}
+	}
+}
+
+# ==================================================================================================
+# .2103 -- Your Wolf Has Seen Another. To a player whose AI champion knight (scope:spn_hduel_a) found another champion on the
+# field (AGOT's commander permission). The pair is already written as missed for this battle; this decides whether they fight.
+# ==================================================================================================
+spn_hide.2103 = {
+	type = character_event
+	window = duel_event
+	title = spn_hide.2103.t
+	desc = {
+		desc = spn_hide.2103.desc
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_hduel_b = { has_trait = spn_champion_silverback } }
+				desc = spn_hide_duel_sees_silverback
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_b = { has_trait = spn_champion_timber } }
+				desc = spn_hide_duel_sees_timber
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_b = { has_trait = spn_champion_tundra } }
+				desc = spn_hide_duel_sees_tundra
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_b = { has_trait = spn_champion_graybeard } }
+				desc = spn_hide_duel_sees_graybeard
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_b = { has_trait = spn_champion_midnight } }
+				desc = spn_hide_duel_sees_midnight
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_b = { has_trait = spn_champion_alpha } }
+				desc = spn_hide_duel_sees_alpha
+			}
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_hduel_my_chance >= 65 }
+				desc = spn_hide_duel_knight_lean_strong
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hduel_my_chance <= 35 }
+				desc = spn_hide_duel_knight_lean_weak
+			}
+			desc = spn_hide_duel_knight_lean_even
+		}
+	}
+	theme = battle
+	override_background = { reference = battlefield }
+	left_portrait = {
+		character = scope:spn_hduel_a
+		# A wolf in his own shape shows the claws; the werewolf skin, when it exists, swaps this one line.
+		triggered_animation = {
+			trigger = { is_shapeshifted_trigger = yes }
+			animation = aggressive_unarmed
+		}
+		scripted_animation = duel_wield_weapon
+	}
+	right_portrait = {
+		character = scope:spn_hduel_b
+		# A wolf in his own shape shows the claws; the werewolf skin, when it exists, swaps this one line.
+		triggered_animation = {
+			trigger = { is_shapeshifted_trigger = yes }
+			animation = aggressive_unarmed
+		}
+		scripted_animation = duel_wield_weapon
+	}
+	trigger = {
+		is_ai = no
+		exists = scope:spn_hduel_a
+		exists = scope:spn_hduel_b
+		scope:spn_hduel_a = {
+			liege_or_court_owner ?= root
+			spn_hide_duel_live_trigger = { OTHER = scope:spn_hduel_b }
+		}
+	}
+	immediate = {
+		# His chance, in words only (the knight's lean lines).
+		hidden_effect = {
+			spn_clash_lean_tooltip_effect = { A = scope:spn_hduel_a B = scope:spn_hduel_b FORM = no }
+		}
+		save_scope_value_as = { name = spn_hduel_my_chance value = spn_clash_chance_a_value }
+	}
+	option = {
+		name = spn_hide.2103.a
+		spn_clash_lean_tooltip_effect = { A = scope:spn_hduel_a B = scope:spn_hduel_b FORM = no }
+		custom_tooltip = spn_hide.2103.a.tt
+		if = {
+			limit = { scope:spn_hduel_a = { spn_hide_duel_live_trigger = { OTHER = scope:spn_hduel_b } } }
+			hidden_effect = {
+				# The AI's own way: the weaker may still break off; otherwise they fight to the ground.
+				spn_hide_duel_breakoff_roll_effect = { A = scope:spn_hduel_a B = scope:spn_hduel_b }
+				if = {
+					limit = { exists = scope:spn_hduel_broke }
+					scope:spn_hduel_a = { spn_hide_duel_clean_effect = yes }
+					scope:spn_hduel_b = { spn_hide_duel_clean_effect = yes }
+					send_interface_toast = {
+						type = event_toast_effect_neutral
+						title = spn_hide_duel_leave_broke_t
+						left_icon = scope:spn_hduel_a
+						custom_tooltip = spn_hide_duel_leave_broke_tt
+					}
+				}
+				else = {
+					spn_hide_duel_resolve_effect = yes
+					# Read from what the fight banked, not from is_alive: the death has only just been done.
+					if = {
+						limit = {
+							scope:spn_clash_winner = scope:spn_hduel_a
+							exists = scope:spn_hduel_dies
+						}
+						send_interface_toast = {
+							type = event_toast_effect_good
+							title = spn_hide_duel_leave_won_t
+							left_icon = scope:spn_hduel_a
+							custom_tooltip = spn_hide_duel_leave_won_kill_tt
+						}
+					}
+					else_if = {
+						limit = { scope:spn_clash_winner = scope:spn_hduel_a }
+						send_interface_toast = {
+							type = event_toast_effect_good
+							title = spn_hide_duel_leave_won_t
+							left_icon = scope:spn_hduel_a
+							custom_tooltip = spn_hide_duel_leave_won_tt
+						}
+					}
+					else_if = {
+						limit = { exists = scope:spn_hduel_dies }
+						send_interface_toast = {
+							type = event_toast_effect_bad
+							title = spn_hide_duel_leave_dead_t
+							left_icon = scope:spn_hduel_a
+							custom_tooltip = spn_hide_duel_leave_dead_tt
+						}
+					}
+					else = {
+						send_interface_toast = {
+							type = event_toast_effect_bad
+							title = spn_hide_duel_leave_lost_t
+							left_icon = scope:spn_hduel_a
+							custom_tooltip = spn_hide_duel_leave_lost_tt
+						}
+					}
+				}
+			}
+		}
+		else = {
+			spn_hide_duel_lapse_effect = yes
+		}
+	}
+	option = {
+		name = spn_hide.2103.b
+		custom_tooltip = spn_hide.2103.b.tt
+		hidden_effect = {
+			scope:spn_hduel_a ?= { spn_hide_duel_clean_effect = yes }
+			scope:spn_hduel_b ?= { spn_hide_duel_clean_effect = yes }
+		}
+	}
+}
+
+# ==================================================================================================
+# .2110 -- The Hide Speaks (C10). Before a Challenge, to each player champion in it (the challenger first). Root = the one
+# asked; scope:spn_hs_actor / scope:spn_hs_recipient = the challenger and the challenged. The fight is the Challenge as it has
+# always been (spn_pack_challenge_effect), run by spn_hide_speaks_next_effect once every player champion has answered.
+# ==================================================================================================
+spn_hide.2110 = {
+	type = character_event
+	title = spn_hide.2110.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_silverback }
+				desc = spn_hide.2110.desc_silverback
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_timber }
+				desc = spn_hide.2110.desc_timber
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_tundra }
+				desc = spn_hide.2110.desc_tundra
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_graybeard }
+				desc = spn_hide.2110.desc_graybeard
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_midnight }
+				desc = spn_hide.2110.desc_midnight
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_alpha }
+				desc = spn_hide.2110.desc_alpha
+			}
+			desc = spn_hide.2110.desc_silverback
+		}
+		triggered_desc = {
+			trigger = { spn_hide_speaks_stand_down_trigger = yes }
+			desc = spn_hide.2110.weaker
+		}
+	}
+	theme = dread
+	override_background = { reference = wilderness_forest }
+	left_portrait = {
+		character = root
+		animation = anger
+	}
+	right_portrait = {
+		character = scope:spn_hs_other
+		animation = anger
+	}
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_is_champion_trigger = yes
+		exists = scope:spn_hs_actor
+		exists = scope:spn_hs_recipient
+		scope:spn_hs_actor = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+		scope:spn_hs_recipient = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+	}
+	immediate = {
+		if = {
+			limit = { exists = scope:spn_hs_other }
+			clear_saved_scope = spn_hs_other
+		}
+		if = {
+			limit = { scope:spn_hs_actor = root }
+			scope:spn_hs_recipient = { save_scope_as = spn_hs_other }
+		}
+		else = {
+			scope:spn_hs_actor = { save_scope_as = spn_hs_other }
+		}
+		# As the Challenge will fight it (FORM = yes: a brawl, no swords). Words only.
+		hidden_effect = {
+			spn_clash_lean_tooltip_effect = { A = root B = scope:spn_hs_other FORM = yes }
+		}
+		save_scope_value_as = { name = spn_hs_my_chance value = spn_clash_chance_a_value }
+	}
+	option = {
+		name = spn_hide.2110.a
+		spn_clash_lean_tooltip_effect = { A = root B = scope:spn_hs_other FORM = yes }
+		custom_tooltip = spn_hide.2110.a.tt
+		spn_hide_add_bond_effect = { VALUE = 2 }
+		hidden_effect = { spn_hide_speaks_next_effect = yes }
+	}
+	option = {
+		name = spn_hide.2110.b
+		custom_tooltip = spn_hide.2110.b.tt
+		hidden_effect = {
+			add_character_flag = { flag = spn_hs_held days = 5 }
+			spn_hide_speaks_next_effect = yes
+		}
+	}
+	option = {
+		name = spn_hide.2110.c
+		trigger = { spn_hide_speaks_stand_down_trigger = yes }
+		custom_tooltip = spn_hide.2110.c.tt
+		spn_pack_add_standing_effect = { VALUE = -10 }
+		spn_hide_add_bond_effect = { VALUE = 5 }
+		hidden_effect = {
+			save_scope_as = spn_hs_stood
+			scope:spn_hs_other = {
+				if = {
+					limit = { is_ai = no }
+					send_interface_toast = {
+						type = event_toast_effect_neutral
+						title = spn_hide_speaks_stood_t
+						left_icon = scope:spn_hs_stood
+						custom_tooltip = spn_hide_speaks_stood_tt
+					}
+				}
+			}
+			scope:spn_hs_actor = { spn_hide_speaks_clean_effect = yes }
+			scope:spn_hs_recipient = { spn_hide_speaks_clean_effect = yes }
+		}
+	}
+}

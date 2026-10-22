@@ -1,0 +1,264 @@
+﻿# Supernatural 2.40 -- the Order's magic and people: decisions (WORK-ORDER-2.40 G2, G4).
+# Loc: localization/english/zz_spn_240_q3_l_english.yml.
+
+# ==================================================================================================
+# TEACHING (G4)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 G4): I Will Not Take Acolytes. Any Medicum or higher. The flag is identity state (his own
+# standing choice, no duration); the next chapter year gives his acolytes to another tutor (step 4).
+spn_order_no_acolytes_decision = {
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_order_no_acolytes_decision_desc
+	selection_tooltip = spn_order_no_acolytes_decision_tooltip
+	confirm_text = spn_order_no_acolytes_decision_confirm
+	ai_check_interval = 120
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_order_medicum_plus_trigger = yes
+		NOT = { has_character_flag = spn_order_no_acolytes }
+	}
+	effect = {
+		custom_tooltip = spn_order_no_acolytes_decision_effect_tt
+		add_character_flag = spn_order_no_acolytes
+	}
+	ai_potential = {
+		spn_order_medicum_plus_trigger = yes
+		NOT = { has_character_flag = spn_order_no_acolytes }
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 10
+			has_trait = lazy
+		}
+		modifier = {
+			add = 10
+			has_trait = shy
+		}
+		# A Temple Magus does not leave his temple without teachers.
+		modifier = {
+			factor = 0
+			spn_is_temple_magus_trigger = yes
+			var:spn_order_chapter ?= {
+				NOT = {
+					any_in_list = {
+						variable = spn_order_members
+						count >= 2
+						is_alive = yes
+						NOT = { this = root }
+						spn_order_medicum_plus_trigger = yes
+						NOT = { has_character_flag = spn_order_no_acolytes }
+					}
+				}
+			}
+		}
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 G4): Take Acolytes Again.
+spn_order_take_acolytes_decision = {
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_order_take_acolytes_decision_desc
+	selection_tooltip = spn_order_take_acolytes_decision_tooltip
+	confirm_text = spn_order_take_acolytes_decision_confirm
+	ai_check_interval = 120
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_order_medicum_plus_trigger = yes
+		has_character_flag = spn_order_no_acolytes
+	}
+	effect = {
+		custom_tooltip = spn_order_take_acolytes_decision_effect_tt
+		remove_character_flag = spn_order_no_acolytes
+	}
+	ai_potential = {
+		has_character_flag = spn_order_no_acolytes
+	}
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 10
+			has_trait = diligent
+		}
+		modifier = {
+			add = 10
+			has_trait = gregarious
+		}
+		modifier = {
+			factor = 0
+			has_trait = lazy
+		}
+	}
+}
+
+# ==================================================================================================
+# THE GNOSTIC COUNCIL (G2)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 G2; boot 4, COUNCIL 1): Draw on the Council's Treasury. Thomas: "a joint bank". Every seat of the
+# Gnostic Council (spn_council_seat_trigger), not only the Grand Magus, may take 100, 500 or 1,000 gold from the common
+# treasury: spn_order.2130 asks how much and offers only what the treasury covers. Each other seat takes a small offence
+# (spn_council_drew_funds_opinion, -5, 3 years), which Invocare's vote weights read through plain opinion; under the Imperium
+# the purse is the Grand Magus's by vote, so his own draw offends nobody. Once in two years: flag spn_council_drew_funds,
+# set only when gold is taken, so closing the ledger costs nothing (the old 5-year decision cooldown is gone). Other player
+# seats get a toast. AI: only in need (spn_council_draw_funds_need_trigger), greedy and ambitious lean in.
+spn_council_draw_funds_decision = {
+	decision_group_type = mc_decisions
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_council_draw_funds_decision_desc
+	selection_tooltip = spn_council_draw_funds_decision_tooltip
+	confirm_text = spn_council_draw_funds_decision_confirm
+	ai_check_interval = 36
+	is_shown = {
+		mc_gold_global_exists_trigger = yes
+		spn_council_seat_trigger = yes
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_council_draw_funds_has_gold_tt
+			mc_gold_global_avaiable_trigger = yes
+		}
+		custom_tooltip = {
+			text = spn_council_draw_funds_recent_tt
+			NOT = { has_character_flag = spn_council_drew_funds }
+		}
+		is_imprisoned = no
+	}
+	effect = {
+		custom_tooltip = spn_council_draw_funds_decision_effect_tt
+		if = {
+			limit = { spn_imperium_holds_trigger = no }
+			custom_tooltip = spn_council_draw_funds_offence_tt
+		}
+		trigger_event = spn_order.2130
+	}
+	ai_potential = {
+		spn_council_seat_trigger = yes
+		spn_council_draw_funds_need_trigger = yes
+	}
+	ai_will_do = {
+		base = 10
+		modifier = {
+			add = 25
+			has_trait = greedy
+		}
+		modifier = {
+			add = 15
+			has_trait = ambitious
+		}
+		modifier = {
+			add = 15
+			gold < 0
+		}
+		modifier = {
+			factor = 0.5
+			OR = {
+				has_trait = content
+				has_trait = generous
+				has_trait = just
+			}
+		}
+		modifier = { # only in need (ai_potential says so too; kept here so a changed potential cannot open it)
+			factor = 0
+			spn_council_draw_funds_need_trigger = no
+		}
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 G2): Reveal the Gnostic Council. The Grand Magus's call alone: the Chancellor only recommends it
+# (magic_ev10.90, registered upstream entry), and the Grand Magus's answer there no longer reveals it. The body is the old
+# approving option's (magic_ev10.91): dread for the four seats, then Witchcraft's own mc_revealing_effect. An Order's
+# council (spn_order_council_ours) never chooses to be seen.
+spn_council_reveal_decision = {
+	decision_group_type = mc_decisions
+	picture = { reference = "gfx/interface/illustrations/activity_header_backgrounds/mages_summit.dds" }
+	desc = spn_council_reveal_decision_desc
+	selection_tooltip = spn_council_reveal_decision_tooltip
+	confirm_text = spn_council_reveal_decision_confirm
+	ai_check_interval = 120
+	is_shown = {
+		exists = global_var:current_archmage_global
+		global_var:current_archmage_global = root
+		NOT = { exists = global_var:mc_revealed }
+	}
+	is_valid = {
+		is_imprisoned = no
+	}
+	effect = {
+		if = {
+			limit = { exists = global_var:spn_council_reveal_recommended }
+			global_var:spn_council_reveal_recommended = { save_scope_as = spn_crv_by }
+			custom_tooltip = spn_council_reveal_recommended_tt
+		}
+		custom_tooltip = spn_council_reveal_decision_effect_tt
+		if = {
+			limit = { spn_order_on_trigger = yes }
+			custom_tooltip = spn_council_reveal_break_tt
+		}
+		save_scope_as = amage
+		add_dread = major_dread_gain
+		global_var:current_loremaster_global ?= {
+			if = {
+				limit = {
+					is_alive = yes
+					NOT = { this = root }
+				}
+				add_dread = major_dread_gain
+			}
+		}
+		global_var:current_black_mage_global ?= {
+			if = {
+				limit = {
+					is_alive = yes
+					NOT = { this = root }
+				}
+				add_dread = major_dread_gain
+			}
+		}
+		global_var:current_admin_global ?= {
+			if = {
+				limit = {
+					is_alive = yes
+					NOT = { this = root }
+				}
+				add_dread = major_dread_gain
+			}
+		}
+		mc_revealing_effect = yes
+		if = {
+			limit = { exists = global_var:spn_council_reveal_recommended }
+			remove_global_variable = spn_council_reveal_recommended
+		}
+	}
+	ai_potential = {
+		global_var:current_archmage_global ?= root
+		NOT = { exists = global_var:spn_order_council_ours }
+		exists = global_var:spn_council_reveal_recommended
+	}
+	ai_will_do = {
+		base = 10
+		modifier = {
+			add = 10
+			OR = {
+				has_trait = just
+				has_trait = brave
+				has_trait = diplomat
+				has_trait = arrogant
+			}
+		}
+		modifier = {
+			add = -10
+			OR = {
+				has_trait = deceitful
+				has_trait = schemer
+			}
+		}
+		modifier = {
+			factor = 0
+			exists = global_var:spn_order_council_ours
+		}
+	}
+}

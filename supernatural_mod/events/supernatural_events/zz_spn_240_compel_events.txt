@@ -1,0 +1,222 @@
+﻿namespace = spn_compel
+
+# Supernatural 2.40 boot 4 -- THE COMPELLED: the aftermath. Package QC (agent COMPEL). New namespace.
+
+# .0001 -- NOT YOURSELF. Root: the compelled, some days after the compulsion ended (the command given, let go, or faded).
+# scope:spn_compel_master: the vampire (saved by whoever fired this). Someone close to them says they were not acting
+# like themselves: the spouse, else a best friend or friend, else close family, else the court physician; if there is
+# nobody, they notice it alone. They grow Wary for three years (no compulsion takes while it lasts).
+# The vampire is named ONLY if the compelled already knows what he is (the open trait, or the secret: B6, the mod's own
+# knowledge triggers); if his nature is public (the Known trait) they also think worse of him (review RD1, B6). Otherwise nobody is named and no opinion moves.
+# The AI takes the same event and gets the same effect (everything is in immediate; one option).
+# Re-checks in its own trigger: alive, not already Wary (a second aftermath adds nothing).
+spn_compel.0001 = {
+	type = character_event
+	title = spn_compel.0001.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { exists = scope:spn_compel_teller }
+				desc = spn_compel.0001.desc_told
+			}
+			desc = spn_compel.0001.desc_alone
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = { has_character_flag = spn_compel_named }
+				desc = spn_compel.0001.desc_named
+			}
+			desc = spn_compel.0001.desc_unnamed
+		}
+	}
+	theme = intrigue
+	left_portrait = {
+		character = root
+		animation = worry
+	}
+	right_portrait = {
+		trigger = { exists = scope:spn_compel_teller }
+		character = scope:spn_compel_teller
+		animation = worry
+	}
+
+	trigger = {
+		is_alive = yes
+		NOT = { has_character_modifier = spn_compel_wary_modifier }
+	}
+
+	immediate = {
+		# Who notices. Never the vampire himself.
+		if = {
+			limit = {
+				exists = primary_spouse
+				primary_spouse = {
+					is_alive = yes
+					NOT = { this = scope:spn_compel_master }
+				}
+			}
+			primary_spouse = { save_scope_as = spn_compel_teller }
+		}
+		else_if = {
+			limit = {
+				any_relation = {
+					type = best_friend
+					is_alive = yes
+					NOT = { this = scope:spn_compel_master }
+				}
+			}
+			random_relation = {
+				type = best_friend
+				limit = {
+					is_alive = yes
+					NOT = { this = scope:spn_compel_master }
+				}
+				save_scope_as = spn_compel_teller
+			}
+		}
+		else_if = {
+			limit = {
+				any_relation = {
+					type = friend
+					is_alive = yes
+					NOT = { this = scope:spn_compel_master }
+				}
+			}
+			random_relation = {
+				type = friend
+				limit = {
+					is_alive = yes
+					NOT = { this = scope:spn_compel_master }
+				}
+				save_scope_as = spn_compel_teller
+			}
+		}
+		else_if = {
+			limit = {
+				any_close_family_member = {
+					is_alive = yes
+					is_adult = yes
+					NOT = { this = scope:spn_compel_master }
+				}
+			}
+			random_close_family_member = {
+				limit = {
+					is_alive = yes
+					is_adult = yes
+					NOT = { this = scope:spn_compel_master }
+				}
+				save_scope_as = spn_compel_teller
+			}
+		}
+		else_if = {
+			limit = {
+				is_ruler = yes
+				exists = court_position:court_physician_court_position
+				court_position:court_physician_court_position = {
+					NOT = { this = root }
+					NOT = { this = scope:spn_compel_master }
+				}
+			}
+			court_position:court_physician_court_position = { save_scope_as = spn_compel_teller }
+		}
+		else_if = {
+			limit = {
+				is_ruler = no
+				exists = liege.court_position:court_physician_court_position
+				liege.court_position:court_physician_court_position = {
+					NOT = { this = root }
+					NOT = { this = scope:spn_compel_master }
+				}
+			}
+			liege.court_position:court_physician_court_position = { save_scope_as = spn_compel_teller }
+		}
+
+		add_character_modifier = {
+			modifier = spn_compel_wary_modifier
+			years = 3
+		}
+
+		# Named only on what they already knew
+		if = {
+			limit = {
+				exists = scope:spn_compel_master
+				scope:spn_compel_master = { is_alive = yes }
+				spn_compel_knows_master_trigger = { MASTER = scope:spn_compel_master }
+			}
+			hidden_effect = { add_character_flag = { flag = spn_compel_named days = 3 } }
+			# Review RD1 (B6): an opinion line is read by every player who opens this character's opinions, and "Compelled
+			# Me" names a vampire. So the opinion only where his nature is already public (the Known trait); a secret the
+			# compelled holds stays in this event's text, which only the compelled sees.
+			if = {
+				limit = {
+					scope:spn_compel_master = {
+						OR = {
+							has_trait = spn_known_vampire
+							has_trait = spn_known_hybrid
+						}
+					}
+				}
+				add_opinion = {
+					target = scope:spn_compel_master
+					modifier = spn_compel_used_me_opinion
+				}
+			}
+		}
+	}
+
+	option = {
+		name = spn_compel.0001.a
+	}
+
+	after = {
+		if = {
+			limit = { has_character_flag = spn_compel_named }
+			remove_character_flag = spn_compel_named
+		}
+	}
+}
+
+# .0002 -- THE COMPULSION FADES. Hidden. Root: the compelled, 31 days after a player's compulsion took hold
+# (spn_compel_take_hold_effect). By then var:spn_compelled_by has expired and the engine has removed the puppet. If no
+# command was given (var:spn_compel_unspent still names the vampire), the vampire is told it faded and the aftermath runs.
+# A command given in time removed var:spn_compel_unspent, so this does nothing.
+spn_compel.0002 = {
+	type = character_event
+	hidden = yes
+
+	trigger = {
+		is_alive = yes
+		exists = var:spn_compel_unspent
+	}
+
+	immediate = {
+		var:spn_compel_unspent = { save_scope_as = spn_compel_master }
+		remove_variable = spn_compel_unspent
+		# Belt and braces: if the puppet is somehow still held, release it (vanilla clear_puppet_status).
+		if = {
+			limit = {
+				scope:spn_compel_master = { is_alive = yes }
+				scope:spn_compel_master.puppet:spn_compel_puppet ?= root
+			}
+			clear_puppet_status = yes
+		}
+		if = {
+			limit = {
+				scope:spn_compel_master = {
+					is_alive = yes
+					is_ai = no
+				}
+			}
+			scope:spn_compel_master = {
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_compel.0002.t
+					left_icon = scope:spn_compel_master
+					right_icon = root
+					custom_tooltip = spn_compel.0002.tt
+				}
+			}
+		}
+		trigger_event = { id = spn_compel.0001 days = { 2 7 } }
+	}
+}

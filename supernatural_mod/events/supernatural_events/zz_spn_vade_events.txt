@@ -46,7 +46,9 @@ spn_vade.0099 = {
 	}
 }
 
-# .0100 -- It Wants to Be Whole. A champion; scope:spn_vade_heard_holder.
+# .0100 -- The Hide Finds a Page (was It Wants to Be Whole). A champion; scope:spn_vade_heard_holder.
+# 2.40 (WORK-ORDER-2.40 B3): the hide keeps the old wolves' oath that the book is never used again, so it hunts the page.
+# Finding it is the hide's duty (+5 bond), letting it lie breaks the oath (-5), as The Page Calls (.0110) pays.
 spn_vade.0100 = {
 	type = character_event
 	title = spn_vade.0100.t
@@ -55,6 +57,30 @@ spn_vade.0100 = {
 		triggered_desc = {
 			trigger = { has_variable = spn_vade_heard_many }
 			desc = spn_vade.0100.desc_many
+		}
+		desc = spn_vade.0100.desc_oath # 2.40 (WORK-ORDER-2.40 B3)
+		first_valid = { # 2.40 (WORK-ORDER-2.40 B3): why this hide cares
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_silverback }
+				desc = spn_vade.0100.desc_silverback
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_timber }
+				desc = spn_vade.0100.desc_timber
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_tundra }
+				desc = spn_vade.0100.desc_tundra
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_graybeard }
+				desc = spn_vade.0100.desc_graybeard
+			}
+			triggered_desc = {
+				trigger = { has_trait = spn_champion_midnight }
+				desc = spn_vade.0100.desc_midnight
+			}
+			desc = spn_vade.0100.desc_alpha
 		}
 	}
 	theme = hunting
@@ -74,6 +100,7 @@ spn_vade.0100 = {
 					has_variable = spn_vade_book
 				}
 			}
+			NOT = { spn_vade_page_spared_trigger = { HEARER = root } } # 2.40 (WORK-ORDER-2.40 G10): a pact sworn since
 		}
 	}
 	after = {
@@ -84,9 +111,10 @@ spn_vade.0100 = {
 	}
 	option = {
 		name = spn_vade.0100.a
-		spn_hide_add_bond_effect = { VALUE = -5 }
-		set_variable = { name = spn_knows_page_holder value = scope:spn_vade_heard_holder years = 10 }
-		spn_order_deed_heard_effect = yes
+		spn_hide_add_bond_effect = { VALUE = 5 } # 2.40 (WORK-ORDER-2.40 B3): the hide's duty (was -5)
+		spn_vade_learn_holder_effect = { HOLDER = scope:spn_vade_heard_holder }
+		custom_tooltip = spn_vade.0100.a.tt
+		trigger_event = { id = spn_vade.2001 days = { 30 120 } } # The Trail Ends at the holder's door
 		ai_chance = {
 			base = 50
 			modifier = { add = 30 has_trait = ambitious }
@@ -94,6 +122,7 @@ spn_vade.0100 = {
 	}
 	option = {
 		name = spn_vade.0100.b
+		spn_hide_add_bond_effect = { VALUE = -5 } # 2.40 (WORK-ORDER-2.40 B3): the oath ignored (was nothing)
 		ai_chance = {
 			base = 50
 			modifier = { add = 30 has_trait = content }
@@ -242,6 +271,10 @@ spn_vade.0130 = {
 			}
 			else = {
 				spn_vade_draw_page_effect = { HIDE_ART = scope:spn_th_hide TO = scope:spn_th_caster }
+				if = { # 2.40 (WORK-ORDER-2.40 B4): the champion may chase his own page (before any death below)
+					limit = { exists = scope:spn_new_page }
+					add_personal_artifact_claim = scope:spn_new_page
+				}
 				scope:spn_th_caster = {
 					if = {
 						limit = { is_ai = no }
@@ -317,6 +350,7 @@ spn_vade.0210 = {
 	trigger = {
 		is_alive = yes
 		scope:spn_golem ?= { is_alive = yes }
+		scope:spn_golem ?= { has_character_flag = spn_golem_searching } # 2.40 (WORK-ORDER-2.40 G8d): not called home
 	}
 	on_trigger_fail = {
 		scope:spn_golem ?= {
@@ -340,7 +374,7 @@ spn_vade.0210 = {
 		random_list = {
 			60 = { trigger_event = spn_vade.0211 }
 			40 = {
-				scope:spn_golem = { increase_wounds_no_death_effect = { REASON = fight } }
+				scope:spn_golem = { add_character_modifier = { modifier = spn_golem_cracked_modifier years = 2 } } # 2.40 (WORK-ORDER-2.40 G8c): was a healing wound
 				trigger_event = spn_vade.0212
 			}
 		}
@@ -392,6 +426,7 @@ spn_vade.0212 = {
 	}
 	option = {
 		name = spn_vade.0212.a
+		scope:spn_golem = { show_as_tooltip = { add_character_modifier = { modifier = spn_golem_cracked_modifier years = 2 } } } # 2.40 (WORK-ORDER-2.40 G8c)
 	}
 }
 
@@ -903,6 +938,15 @@ spn_vade.0512 = {
 				limit = { any_character_artifact = { has_variable = spn_relic } }
 				save_scope_as = spn_vw_relic
 			}
+			scope:spn_vw_relic ?= { # 2.40 (WORK-ORDER-2.40 E): the thing it can tell you about
+				random_character_artifact = {
+					limit = {
+						has_variable = spn_relic
+						spn_relic_can_move_trigger = yes
+					}
+					save_scope_as = spn_vw_relic_art
+				}
+			}
 		}
 	}
 	option = {
@@ -916,15 +960,17 @@ spn_vade.0512 = {
 		}
 		if = {
 			limit = { exists = scope:spn_vw_holder }
-			set_variable = { name = spn_knows_page_holder value = scope:spn_vw_holder years = 10 }
-			spn_order_deed_heard_effect = yes
+			spn_vade_learn_holder_effect = { HOLDER = scope:spn_vw_holder } # 2.40 (WORK-ORDER-2.40 B3)
+			custom_tooltip = spn_vade_claim_given_tt
 		}
 		else_if = {
 			limit = { exists = scope:spn_vw_seal }
 			spn_seal_learn_effect = yes
 		}
-		else = {
-			set_variable = { name = spn_knows_relic_holder value = scope:spn_vw_relic years = 10 }
+		else_if = { # 2.40 (WORK-ORDER-2.40 E): a claim on the relic, not a record nothing read
+			limit = { exists = scope:spn_vw_relic_art }
+			hidden_effect = { add_personal_artifact_claim = scope:spn_vw_relic_art }
+			custom_tooltip = spn_vade.0512.relic_claim_tt
 		}
 		spn_vade_listened_effect = yes
 		ai_chance = {
@@ -1017,7 +1063,6 @@ spn_vade.0514 = {
 	}
 	option = {
 		name = spn_vade.0514.a
-		add_character_flag = spn_vade_promised
 		if = {
 			limit = { NOT = { is_target_in_global_variable_list = { name = spn_vade_promisers target = root } } }
 			add_to_global_variable_list = { name = spn_vade_promisers target = root }

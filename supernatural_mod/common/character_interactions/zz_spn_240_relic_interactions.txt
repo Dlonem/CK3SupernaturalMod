@@ -1,0 +1,81 @@
+﻿# Supernatural 2.40 -- "fixes and balance": Take the Beetle into Custody (WORK-ORDER-2.40 G7, B2 option a). Package Q1.
+# Loc: localization/english/zz_spn_240_q1_l_english.yml.
+#
+# A Temple Magus takes the Homunculus Beetle from a member of his own temple who keeps it pledged there. It stays pledged,
+# in his own hands (spn_relic_beetle_custody_effect). The AI Temple Magus's way to move a dangerous jar out of a junior
+# member's keeping; an AI member always hands it over, as he lends to an order from his Temple Magus. The jar in someone's
+# inventory is an open fact; membership is known to the Temple Magus himself (B6).
+
+spn_relic_beetle_custody_interaction = {
+	category = interaction_category_favorites # the Supernatural menu, with every other relic use
+	icon = artifact
+	desc = spn_relic_beetle_custody_interaction_desc
+	use_diplomatic_range = yes
+	ai_targets = {
+		ai_recipients = courtiers
+		ai_recipients = vassals
+		ai_recipients = liege
+		ai_recipients = peer_vassals
+		max = 10
+	}
+	ai_frequency = 60
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			spn_order_on_trigger = yes
+			spn_is_temple_magus_trigger = yes
+		}
+		scope:recipient = {
+			spn_is_order_member_trigger = yes
+			var:spn_order_chapter ?= scope:actor.var:spn_order_chapter
+			spn_beetle_holds_trigger = yes
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_relic_custody_pledged_tt
+				spn_relic_beetle_in_custody_reach_trigger = { CHAPTER = scope:actor.var:spn_order_chapter }
+			}
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_relic_beetle_custody_interaction_tt
+		spn_relic_beetle_custody_effect = { FROM = scope:recipient TO = scope:actor }
+	}
+	ai_accept = {
+		base = 0
+		# His Temple Magus orders it.
+		modifier = {
+			add = 1000
+			desc = spn_ai_accept_temple_magus
+			scope:actor = { spn_is_temple_magus_trigger = yes }
+			scope:recipient.var:spn_order_chapter = scope:actor.var:spn_order_chapter
+		}
+	}
+	ai_will_do = {
+		base = 0
+		# A jar in the hands of a member who may not even borrow it is the reason.
+		modifier = {
+			add = 30
+			scope:recipient = { spn_order_magistratus_plus_trigger = no }
+		}
+		modifier = {
+			add = 20
+			scope:actor = { has_trait = paranoid }
+		}
+		modifier = {
+			add = 10
+			scope:actor = { has_trait = diligent }
+		}
+		modifier = {
+			add = -20
+			scope:actor = { has_trait = trusting }
+		}
+		# A Magistratus holding it is trusted with it already.
+		modifier = {
+			factor = 0
+			scope:recipient = { spn_order_magistratus_plus_trigger = yes }
+		}
+	}
+}

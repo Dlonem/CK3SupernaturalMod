@@ -1,0 +1,108 @@
+﻿# Supernatural 2.40 boot 2 (Thomas's report item h) -- THE SIRE BOND, a third puppet type. Package QS.
+#
+# A vampire or hybrid who turned someone (the mod's maker bond: the sire holds pprogeny on them, they hold mmaker on
+# the sire, 01_supernatural_scripted_relations.txt, set by spn_bind_blood_donor_as_maker_effect and the confer and
+# embrace paths) and who is that person's lover or soulmate holds them through the Sire Bond.
+# Boot 3 (Thomas's calls, 22 Oct): the bond FORMS BY ITSELF (zz_spn_240_sire_on_actions.txt, spn_sire.0002: "Vampire's
+# Kiss and Deadly Seduction, it happened automatically in the TV show") and is INDEFINITE ("she forever did whatever he
+# told her to do"): it ends on death, when either stops being a vampire, or when the sire releases it.
+# Boot 4 (Thomas's calls): a hybrid sire needs no perk, a vampire sire needs Vampire's Kiss; no favour wears on the bound
+# one (no strain); the bound one also does the golem's deeds, sends gold, and acts as a ruler when landed.
+#
+# Vanilla 1.20 puppet system (van/common/puppets/types/_puppet_types.info): the type is data; set_puppet runs in
+# spn_sire_bond_form_effect. is_valid is checked daily and an invalid puppet is removed. Players only (an AI sire uses
+# Invoke the Bond, and a callous, sadistic or arrogant one a rare deed against a rival: zz_spn_240_puppet_ai_on_actions.txt);
+# the puppet is never a player.
+spn_sire_puppet = {
+	color = { 0.55 0.08 0.12 1 }
+	interaction = spn_sire_bond_interaction
+
+	# The engine also evaluates this with no character at load and logs "untyped trigger" for every type, vanilla's
+	# three included (agent GOLEM's boot-2 finding, Q7 HANDOFF-BOOT2.md): engine behaviour, not a script error here.
+	# Boot 4 (Thomas's items 5 and 9): shown only to a hybrid, or a vampire with Vampire's Kiss (spn_sire_bond_holder_trigger),
+	# and always while he already holds a Sire Bond puppet, so a running bond is never dropped by the new perk gate.
+	can_have = {
+		is_ai = no
+		OR = {
+			exists = puppet:spn_sire_puppet
+			spn_sire_bond_holder_trigger = yes
+		}
+	}
+
+	is_valid = {
+		scope:puppet = { spn_sire_bond_pair_trigger = { SIRE = root } }
+		OR = {
+			has_trait = supernatural_vampire
+			has_trait = supernatural_hybrid
+		}
+	}
+
+	priority = {
+		value = 18
+	}
+
+	actions = {
+		# Vanilla actions of a lay ruler puppet (external_ruler_puppet's list, pam_puppet_types.txt; every one reads
+		# scope:puppet_or_actor and works through a non-clergy puppet). Only those a lover who wants to please the sire
+		# would do; each keeps its own vanilla requirements and costs. Not war, not religious grants (torture: boot 4, below).
+		puppet_action_give_gift
+		puppet_action_command_befriend
+		puppet_action_command_sway
+		puppet_action_command_learn_language # boot 3: Thomas named it; vanilla's, no gate (puppet_actions.txt)
+		puppet_action_expose_secret
+		puppet_action_share_known_secrets
+		puppet_action_host_honored_guest
+		puppet_action_invite_to_activity
+		puppet_action_pardon
+		puppet_action_release_from_prison
+		puppet_action_imprison # boot 4 (Thomas's item 3): a landed bound one imprisons, releases and pardons for the sire
+		puppet_action_torture # vanilla's is_enabled: a torturer or sadistic puppet only (puppet_actions.txt)
+		puppet_action_pay_ransom
+		puppet_action_demand_payment
+		puppet_action_fabricate_hook # RC1 (boot-3 review): vanilla's is_enabled opens these two only for a schemer puppet
+		puppet_action_blackmail      # (or an external ruler puppet), puppet_actions.txt; kept for a lover who is a schemer
+		puppet_action_demand_artifact
+		puppet_action_negotiate_alliance
+		puppet_action_purchase_truce
+		puppet_action_give_vassal_directive
+		# Leaving their own spouse for the sire (the three vanilla routes, by the faith's and house's divorce rules)
+		puppet_action_divorce_character
+		puppet_action_divorce_character_house_head
+		puppet_action_divorce_character_rel_head
+		# The bond's own favours (common/puppets/actions/zz_spn_240_sire_puppet_actions.txt)
+		puppet_action_spn_sire_speak
+		puppet_action_spn_sire_secrets
+		puppet_action_spn_sire_cover
+		puppet_action_spn_sire_blood # boot 3: give vampire blood; the lover becomes the maker
+		# Boot 3: shared with the golem puppet
+		puppet_action_spn_puppet_murder # vanilla's command_murder opens only for a schemer puppet
+		puppet_action_spn_puppet_seduce # vanilla's command_seduce/_court open only for a lustful or seducer puppet
+		puppet_action_spn_puppet_court
+		puppet_action_spn_puppet_befriend # vanilla's befriend scheme needs the puppet to hold the Befriend perk
+		puppet_action_spn_puppet_give_artifact
+		# Boot 4 (Thomas's item 4): the golem's deeds, done by the bound one for the sire; and gold sent to the sire
+		puppet_action_spn_puppet_seize
+		puppet_action_spn_puppet_strike
+		puppet_action_spn_puppet_loom
+		puppet_action_spn_puppet_send_gold
+		# Boot 3: aimed at the sire himself (puppet decisions)
+		puppet_action_spn_sire_seduce_me
+		puppet_action_spn_sire_release
+	}
+
+	# Existing mod art only: the Invoke the Bond icon and the vampire feeding header (/home/claude/w/gfx_list.txt).
+	asset = {
+		icon = "gfx/interface/icons/character_interactions/vampire_bond.dds"
+		background = "gfx/interface/illustrations/activity_header_backgrounds/vampire_feeding.dds"
+	}
+
+	# Vanilla portrait animations (both used as event animations in vanilla, e.g. romance events). Documented puppet form.
+	animation = {
+		trigger = { scope:puppet = { has_relation_soulmate = root } }
+		reference = "love"
+	}
+
+	animation = {
+		reference = "flirtation"
+	}
+}

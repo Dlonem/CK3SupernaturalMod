@@ -1,0 +1,1084 @@
+﻿# Supernatural 2.40 boot 2 (Thomas's report item h) -- THE SIRE BOND: its set-up interaction and its favours.
+# Package QS. The type is common/puppets/types/zz_spn_240_sire_puppet_types.txt.
+# Boot 3 (Thomas's calls, 22 Oct): the bond forms by itself (zz_spn_240_sire_on_actions.txt, spn_sire.0002) and lasts;
+# "Claim the Sire Bond" is now "Sense the Sire Bond", free, for the picker and for taking a bound lover up again. New
+# favours: Give Them Your Blood; and verbs shared with the golem puppet: Seduce, Romance, Order a Murder, Hand It Over.
+#
+# B6: every is_shown here reads only the sire's own facts (his lover, his progeny, his traits, his own puppet) and open
+# facts about the target (adult, court, family, place, the county he holds). Nothing shows or hides on another's secret.
+# AI: never (no ai_frequency: boot 3, logs3 error.log lines 4-13 "'ai_frequency' ... but no 'ai_targets', won't be
+# used"; players only). Children: never the puppet, never the target.
+
+# ======================================================================================================================
+# SENSE THE SIRE BOND -- the type's `interaction`. "The game does not set the puppet up automatically, you need to run
+# set_puppet yourself in the interaction" and "set up ai_targets in the interaction to be able to select the puppet from
+# a list in the UI" (_puppet_types.info). ai_recipients = scripted_relations ("Any character you have a scripted
+# relation with", _character_interactions.info) lists every lover, soulmate and progeny, wherever they live; is_shown
+# keeps only the ones the bond fits. Vanilla's make_external_ruler_puppet_interaction lists scripted_relations too.
+# Boot 3: no cost and no perk. Shown for someone he turned who loves him or whose bond is recorded. A deliberate choice,
+# so it also takes back someone he once released. A second one replaces the first as his puppet; the first stays bound
+# (the record stays), and can be sensed again.
+# ======================================================================================================================
+spn_sire_bond_interaction = {
+	category = interaction_category_friendly
+	icon = vampire_bond
+	desc = spn_sire_bond_interaction_desc
+	interface_priority = 60
+	auto_accept = yes
+	use_diplomatic_range = no
+
+	is_available = {
+		is_ai = no
+	}
+
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			is_ai = no
+			has_relation_pprogeny = scope:recipient
+			spn_sire_bond_holder_trigger = yes
+		}
+		scope:recipient = {
+			has_relation_mmaker = scope:actor
+			OR = {
+				var:spn_sire_bond_of ?= scope:actor
+				has_relation_lover = scope:actor
+				has_relation_soulmate = scope:actor
+			}
+			NOT = { scope:actor.puppet:spn_sire_puppet ?= this }
+		}
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			is_imprisoned = no
+		}
+		scope:recipient = {
+			is_adult = yes
+			custom_tooltip = {
+				text = spn_sire_bond_player_tt
+				is_ai = yes
+			}
+			custom_tooltip = {
+				text = pam_recipient_already_puppet_tt
+				NOT = { exists = puppeteer }
+			}
+			custom_tooltip = {
+				text = spn_sire_bond_still_vampire_tt
+				OR = {
+					has_trait = supernatural_vampire
+					has_trait = supernatural_hybrid
+				}
+			}
+		}
+	}
+
+	on_accept = {
+		scope:actor = {
+			if = {
+				limit = { exists = puppet:spn_sire_puppet }
+				custom_tooltip = spn_sire_bond_replaces_tt
+				hidden_effect = {
+					puppet:spn_sire_puppet = { clear_puppet_status = yes }
+				}
+			}
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_sire_bond_interaction
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				custom_tooltip = spn_sire_bond_interaction_tt
+				hidden_effect = {
+					spn_sire_bond_form_effect = { SIRE = scope:actor PUPPET = scope:recipient }
+				}
+			}
+		}
+	}
+
+	ai_targets = {
+		ai_recipients = scripted_relations
+	}
+	ai_target_quick_trigger = {
+		adult = yes
+	}
+	ai_frequency = 0
+	ai_will_do = {
+		base = 0
+	}
+}
+
+# ======================================================================================================================
+# SPEAK FOR ME -- the puppet speaks well of the sire to someone close to them. No roll: a good word is given.
+# ======================================================================================================================
+spn_sire_bond_speak_interaction = {
+	category = interaction_category_friendly
+	icon = vampire_bond
+	desc = spn_sire_bond_speak_interaction_desc
+	interface_priority = 59
+	auto_accept = yes
+	use_diplomatic_range = no
+
+	is_shown = {
+		spn_sire_bond_action_shown_trigger = yes
+		NOT = { scope:recipient = scope:actor } # boot 3: the sire may be the target of other favours, not of this one
+		scope:recipient = { spn_sire_bond_reach_trigger = { PUPPET = scope:puppet_or_actor } }
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_sire_bond_cooldown_tt
+				NOT = { has_character_flag = spn_sire_bond_speak_cd }
+			}
+		}
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_sire_bond_speak_already_tt
+				NOT = {
+					has_opinion_modifier = {
+						target = scope:actor
+						modifier = spn_sire_bond_good_word_opinion
+					}
+				}
+			}
+		}
+		scope:puppet_or_actor = {
+			is_imprisoned = no
+		}
+	}
+
+	on_accept = {
+		scope:puppet_or_actor = { save_scope_as = spn_sire_bond_puppet }
+		scope:actor = {
+			add_character_flag = { flag = spn_sire_bond_speak_cd days = 180 }
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_sire_bond_speak_interaction
+				left_icon = scope:puppet_or_actor
+				right_icon = scope:recipient
+				custom_tooltip = spn_sire_bond_speak_done_tt
+				scope:recipient = {
+					add_opinion = {
+						target = scope:actor
+						modifier = spn_sire_bond_good_word_opinion
+					}
+				}
+			}
+		}
+		spn_sire_bond_careless_effect = yes
+	}
+
+	ai_will_do = {
+		base = 0
+	}
+}
+
+# ======================================================================================================================
+# DRAW OUT THEIR SECRETS -- someone who trusts the puppet tells them something, and the puppet tells the sire. A hidden
+# roll (no odds shown): the puppet's intrigue and how much the target likes them. A miss costs the puppet that trust.
+# The target having no secret is never shown on the menu: the result says so instead (B6).
+# ======================================================================================================================
+spn_sire_bond_secrets_interaction = {
+	category = interaction_category_friendly
+	icon = vampire_bond
+	desc = spn_sire_bond_secrets_interaction_desc
+	interface_priority = 58
+	auto_accept = yes
+	use_diplomatic_range = no
+
+	is_shown = {
+		spn_sire_bond_action_shown_trigger = yes
+		NOT = { scope:recipient = scope:actor } # boot 3: the sire may be the target of other favours, not of this one
+		scope:recipient = { spn_sire_bond_reach_trigger = { PUPPET = scope:puppet_or_actor } }
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_sire_bond_cooldown_tt
+				NOT = { has_character_flag = spn_sire_bond_secrets_cd }
+			}
+		}
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_sire_bond_trust_tt
+				spn_sire_bond_trusts_trigger = { PUPPET = scope:puppet_or_actor }
+			}
+		}
+		scope:puppet_or_actor = {
+			is_imprisoned = no
+		}
+	}
+
+	on_accept = {
+		scope:puppet_or_actor = { save_scope_as = spn_sire_bond_puppet }
+		scope:actor = {
+			add_character_flag = { flag = spn_sire_bond_secrets_cd years = 1 }
+		}
+		custom_tooltip = spn_sire_bond_secrets_effect_tt
+		hidden_effect = {
+			random = {
+				chance = {
+					value = 35
+					scope:puppet_or_actor = {
+						add = {
+							value = intrigue
+							multiply = 2
+						}
+					}
+					scope:recipient = {
+						add = {
+							value = "opinion(scope:puppet_or_actor)"
+							multiply = 0.25
+						}
+					}
+					min = 10
+					max = 85
+				}
+				save_scope_value_as = { name = spn_sire_bond_won value = yes }
+			}
+			if = {
+				limit = { scope:spn_sire_bond_won ?= yes }
+				scope:recipient = {
+					random_secret = {
+						limit = { NOT = { is_known_by = scope:actor } }
+						save_scope_as = spn_sire_bond_secret
+					}
+				}
+				if = {
+					limit = { exists = scope:spn_sire_bond_secret }
+					scope:actor = {
+						send_interface_toast = {
+							type = event_toast_effect_good
+							title = spn_sire_bond_secrets_interaction
+							left_icon = scope:puppet_or_actor
+							right_icon = scope:recipient
+							custom_tooltip = spn_sire_bond_secrets_found_tt
+							scope:spn_sire_bond_secret = { reveal_to = scope:actor }
+						}
+					}
+				}
+				else = {
+					scope:actor = {
+						send_interface_toast = {
+							type = event_toast_effect_neutral
+							title = spn_sire_bond_secrets_interaction
+							left_icon = scope:puppet_or_actor
+							right_icon = scope:recipient
+							custom_tooltip = spn_sire_bond_secrets_none_tt
+						}
+					}
+				}
+			}
+			else = {
+				scope:actor = {
+					send_interface_toast = {
+						type = event_toast_effect_bad
+						title = spn_sire_bond_secrets_interaction
+						left_icon = scope:puppet_or_actor
+						right_icon = scope:recipient
+						custom_tooltip = spn_sire_bond_secrets_failed_tt
+						scope:recipient = {
+							add_opinion = {
+								target = scope:puppet_or_actor
+								modifier = suspicion_opinion
+								opinion = -15
+							}
+						}
+					}
+				}
+			}
+		}
+		spn_sire_bond_careless_effect = yes
+	}
+
+	ai_will_do = {
+		base = 0
+	}
+}
+
+# ======================================================================================================================
+# COVER MY TRACKS -- the puppet talks the lord of the county they stand in out of one mark of the sire's trail there.
+# Shown on that lord only (an open fact: he holds the county the puppet is in). Usable where the county carries a trail
+# at all (the trail modifier is visible to everyone); whether the trail is the sire's is told in the result, never
+# shown or hidden on the menu (B6). Only the sire's own trail moves (var:spn_menace_culprit), as the compulsion's own
+# cleaning (spn_compel_leaves_a_trace_effect). The last mark goes through spn_menace_clear_county_effect, the one
+# county clear (Q9 hangs the trails map sync on it). A player lord decides for himself: AI lords only.
+# ======================================================================================================================
+spn_sire_bond_cover_interaction = {
+	category = interaction_category_friendly
+	icon = vampire_bond
+	desc = spn_sire_bond_cover_interaction_desc
+	interface_priority = 57
+	auto_accept = yes
+	use_diplomatic_range = no
+
+	is_shown = {
+		spn_sire_bond_action_shown_trigger = yes
+		NOT = { scope:recipient = scope:actor } # boot 3: not the sire's own county
+		scope:puppet_or_actor.location ?= {
+			county ?= { holder ?= scope:recipient }
+		}
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_sire_bond_cooldown_tt
+				NOT = { has_character_flag = spn_sire_bond_cover_cd }
+			}
+		}
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_sire_bond_cover_player_tt
+				is_ai = yes
+			}
+		}
+		custom_tooltip = {
+			text = spn_sire_bond_cover_no_trail_tt
+			scope:puppet_or_actor.location ?= {
+				county ?= { has_county_modifier = spn_menace_modifier }
+			}
+		}
+		scope:puppet_or_actor = {
+			is_imprisoned = no
+		}
+	}
+
+	on_accept = {
+		scope:puppet_or_actor = { save_scope_as = spn_sire_bond_puppet }
+		# Bank the county before anything changes it.
+		scope:puppet_or_actor.location ?= {
+			county ?= { save_scope_as = spn_sire_bond_county }
+		}
+		scope:actor = {
+			add_character_flag = { flag = spn_sire_bond_cover_cd years = 2 }
+		}
+		custom_tooltip = spn_sire_bond_cover_effect_tt
+		hidden_effect = {
+			if = {
+				limit = {
+					exists = scope:spn_sire_bond_county
+					scope:spn_sire_bond_county = {
+						has_county_modifier = spn_menace_modifier
+						var:spn_menace_culprit ?= scope:actor
+					}
+				}
+				random = {
+					chance = {
+						value = 40
+						scope:puppet_or_actor = {
+							add = {
+								value = diplomacy
+								multiply = 2
+							}
+						}
+						scope:recipient = {
+							add = {
+								value = "opinion(scope:puppet_or_actor)"
+								multiply = 0.25
+							}
+						}
+						min = 15
+						max = 85
+					}
+					save_scope_value_as = { name = spn_sire_bond_won value = yes }
+				}
+				if = {
+					limit = { scope:spn_sire_bond_won ?= yes }
+					scope:actor = {
+						send_interface_toast = {
+							type = event_toast_effect_good
+							title = spn_sire_bond_cover_interaction
+							left_icon = scope:puppet_or_actor
+							right_icon = scope:recipient
+							custom_tooltip = spn_sire_bond_cover_done_tt
+						}
+					}
+					scope:spn_sire_bond_county = {
+						if = {
+							limit = {
+								exists = var:spn_menace_count
+								var:spn_menace_count > 1
+							}
+							spn_menace_clear_one_effect = yes
+						}
+						else = {
+							spn_menace_clear_county_effect = yes
+						}
+					}
+				}
+				else = {
+					scope:actor = {
+						send_interface_toast = {
+							type = event_toast_effect_bad
+							title = spn_sire_bond_cover_interaction
+							left_icon = scope:puppet_or_actor
+							right_icon = scope:recipient
+							custom_tooltip = spn_sire_bond_cover_failed_tt
+							scope:recipient = {
+								add_opinion = {
+									target = scope:puppet_or_actor
+									modifier = suspicion_opinion
+									opinion = -15
+								}
+							}
+						}
+					}
+				}
+			}
+			else = {
+				scope:actor = {
+					send_interface_toast = {
+						type = event_toast_effect_neutral
+						title = spn_sire_bond_cover_interaction
+						left_icon = scope:puppet_or_actor
+						right_icon = scope:recipient
+						custom_tooltip = spn_sire_bond_cover_not_yours_tt
+					}
+				}
+			}
+		}
+		spn_sire_bond_careless_effect = yes
+	}
+
+	ai_will_do = {
+		base = 0
+	}
+}
+
+# ======================================================================================================================
+# SEDUCE and ROMANCE (boot 3, Thomas: "seduce / romance", "make my sire-bound individual seduce me"; and, Thomas's call,
+# for the golem too: "I think it needs way more interactions. Such as being able to seduce", "There should be a romance
+# one": Witchcraft's golem is shaped as a man or a woman and passes for one). Shared by both puppet types.
+# The puppet starts vanilla's own seduce or courting scheme against the target, as vanilla's seduce_interaction and
+# court_interaction do for a puppet (00_scheme_interactions.txt: begin_scheme_basic_effect on scope:puppet_or_actor, which
+# tags the scheme with its commanding puppeteer so vanilla tells him how it ends, 00_scheme_scripted_effects.txt
+# notify_puppeteer_of_scheme_outcome_effect). Vanilla's own puppet_action_command_seduce / _court open only for a lustful
+# or seducer puppet or an external ruler puppet (puppet_actions.txt); the bond is reason enough, so these are the bonds'
+# own doors into the same schemes. Both schemes' allow blocks (seduce_scheme.txt, court_scheme.txt) test adulthood,
+# travel, attraction and cooldowns only: nothing about faith or soul, so a golem can run them (golems are made
+# heterosexual, set_sexuality in magic_ev7.119). The target may be the puppeteer himself (right-click yourself); no
+# careless trace then (boot 4: no strain at all). No `scheme =` key: vanilla gives each scheme type one interaction.
+# ======================================================================================================================
+spn_puppet_seduce_interaction = {
+	category = interaction_category_friendly
+	icon = icon_scheme_seduce
+	desc = spn_puppet_seduce_interaction_desc
+	interface_priority = 56
+	auto_accept = yes
+	use_diplomatic_range = no
+	ignores_pending_interaction_block = yes
+
+	is_shown = {
+		spn_puppet_verb_shown_trigger = yes
+		scope:puppet_or_actor ?= { is_adult = yes }
+		scope:recipient = { is_adult = yes }
+	}
+
+	is_valid_showing_failures_only = {
+		scope:puppet_or_actor = {
+			is_imprisoned = no
+			NOT = { is_at_war_with = scope:recipient }
+			can_start_scheme = {
+				type = seduce
+				target_character = scope:recipient
+			}
+			custom_tooltip = {
+				text = clerical_chastity_vow_blocks_scheme_tt
+				NOT = { has_character_modifier = clerical_chastity_vow_modifier }
+			}
+		}
+		trigger_if = {
+			limit = {
+				scope:recipient = { exists = primary_spouse }
+			}
+			scope:recipient = { primary_spouse = { NOT = { has_strong_hook = scope:puppet_or_actor } } }
+		}
+		trigger_if = {
+			limit = { scope:puppet_or_actor = { has_trait = golem } }
+			spn_golem_order_ready_trigger = yes
+		}
+	}
+
+	on_accept = {
+		scope:puppet_or_actor = {
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = seduce_interaction_notification
+				left_icon = scope:puppet_or_actor
+				right_icon = scope:recipient
+				begin_scheme_basic_effect = {
+					SCHEME_TYPE = seduce
+					TARGET_TYPE = target_character
+					TARGET_SCOPE = scope:recipient
+				}
+				seduce_interaction_stress_effect = yes
+			}
+		}
+		if = {
+			limit = { scope:actor != scope:recipient }
+			scope:actor = {
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = seduce_interaction_notification_puppeteer
+					left_icon = scope:puppet_or_actor
+					right_icon = scope:recipient
+				}
+			}
+			if = {
+				limit = { scope:actor.puppet:spn_sire_puppet ?= scope:puppet_or_actor }
+				spn_sire_bond_careless_effect = yes
+			}
+		}
+		spn_puppet_shared_verb_done_effect = yes # boot 4: last line (shared contract, zz_spn_240_puppet_verb_effects.txt)
+	}
+
+	ai_will_do = {
+		base = 0
+	}
+}
+
+spn_puppet_court_interaction = {
+	category = interaction_category_friendly
+	icon = icon_scheme_romance
+	desc = spn_puppet_court_interaction_desc
+	interface_priority = 55
+	auto_accept = yes
+	use_diplomatic_range = no
+	ignores_pending_interaction_block = yes
+
+	is_shown = {
+		spn_puppet_verb_shown_trigger = yes
+		scope:puppet_or_actor ?= { is_adult = yes }
+		scope:recipient = { is_adult = yes }
+	}
+
+	is_valid_showing_failures_only = {
+		scope:puppet_or_actor = {
+			is_imprisoned = no
+			NOT = { is_at_war_with = scope:recipient }
+			can_start_scheme = {
+				type = courting
+				target_character = scope:recipient
+			}
+			custom_tooltip = {
+				text = clerical_chastity_vow_blocks_scheme_tt
+				NOT = { has_character_modifier = clerical_chastity_vow_modifier }
+			}
+		}
+		scope:recipient = {
+			is_attracted_to_gender_of = scope:puppet_or_actor # vanilla court_interaction's is_shown line, as a failure
+		}
+		trigger_if = {
+			limit = { scope:puppet_or_actor = { has_trait = golem } }
+			spn_golem_order_ready_trigger = yes
+		}
+	}
+
+	on_accept = {
+		scope:puppet_or_actor = {
+			# If you already have a soulmate, they get very mad (vanilla court_interaction)
+			every_relation = {
+				type = soulmate
+				limit = {
+					soulmate_relation_is_exclusive_trigger = yes
+					NOT = { this = scope:actor } # RC1 (boot-3 review): the sire gave the order himself
+				}
+				add_opinion = {
+					modifier = betrayed_our_promise
+					target = scope:puppet_or_actor
+				}
+			}
+		}
+		scope:puppet_or_actor = {
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = court_interaction_notification
+				left_icon = scope:puppet_or_actor
+				right_icon = scope:recipient
+				begin_scheme_basic_effect = {
+					SCHEME_TYPE = courting
+					TARGET_TYPE = target_character
+					TARGET_SCOPE = scope:recipient
+				}
+			}
+		}
+		if = {
+			limit = { scope:actor != scope:recipient }
+			scope:actor = {
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = court_interaction_notification_puppeteer
+					left_icon = scope:puppet_or_actor
+					right_icon = scope:recipient
+				}
+			}
+			if = {
+				limit = { scope:actor.puppet:spn_sire_puppet ?= scope:puppet_or_actor }
+				spn_sire_bond_careless_effect = yes
+			}
+		}
+		spn_puppet_shared_verb_done_effect = yes # boot 4: last line (shared contract, zz_spn_240_puppet_verb_effects.txt)
+	}
+
+	ai_will_do = {
+		base = 0
+	}
+}
+
+# ======================================================================================================================
+# GIVE THEM YOUR BLOOD (boot 3, Thomas: "give their blood to someone (turn them into a vampire: the sire-bound puppet is
+# a vampire)"). The sire-bound lover gives the target vampire blood: the mod's own first step of a turning, the same
+# body as Offer Vampire Blood (spn_give_vampire_blood_effect). Healing now; if the target dies with it in them, or asks to
+# be turned, they rise a vampire, and the LOVER is their maker (spn_bind_blood_donor_as_maker_effect reads the donor).
+# The same gates as Offer Vampire Blood (adult; blood that will take: never a golem, a demon-blooded or Baba Yaga, a
+# creature or a hunter), read in is_valid so the menu never shows or hides on what someone secretly is (B6). The target
+# must trust the lover; it is a gift (boot 4: no strain; the careless trace stays).
+# ======================================================================================================================
+spn_sire_blood_interaction = {
+	category = interaction_category_friendly
+	icon = vampire_blood
+	desc = spn_sire_blood_interaction_desc
+	interface_priority = 55
+	auto_accept = yes
+	use_diplomatic_range = no
+
+	is_shown = {
+		spn_sire_bond_action_shown_trigger = yes
+		NOT = { scope:recipient = scope:actor }
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_sire_bond_cooldown_tt
+				NOT = { has_character_flag = spn_sire_bond_blood_cd }
+			}
+		}
+		scope:puppet_or_actor = {
+			is_imprisoned = no
+		}
+		scope:recipient = {
+			# RC1 (boot-3 review): auto-accepted, so never on another player: Offer Vampire Blood asks a player, this would
+			# not, and blood in the system turns them at their next death (spn_vampire_blood_second_chance, 10_death.txt)
+			custom_tooltip = {
+				text = spn_sire_bond_player_tt
+				is_ai = yes
+			}
+			custom_tooltip = {
+				text = spn_sire_bond_reach_tt
+				spn_sire_bond_reach_trigger = { PUPPET = scope:puppet_or_actor }
+			}
+			custom_tooltip = {
+				text = spn_sire_bond_trust_tt
+				spn_sire_bond_trusts_trigger = { PUPPET = scope:puppet_or_actor }
+			}
+			custom_tooltip = {
+				text = spn_sire_blood_has_some_tt
+				NOT = { has_character_flag = vampire_blood_in_system }
+			}
+			custom_tooltip = {
+				text = spn_sire_blood_will_not_take_tt
+				spn_can_become_creature_trigger = yes
+				NOR = {
+					has_trait = supernatural_vampire
+					has_trait = supernatural_hybrid
+					has_trait = supernatural_hunter
+					is_a_demon_trigger = yes
+				}
+			}
+		}
+	}
+
+	on_accept = {
+		scope:puppet_or_actor = { save_scope_as = spn_sire_bond_puppet }
+		scope:actor = {
+			add_character_flag = { flag = spn_sire_bond_blood_cd years = 1 }
+		}
+		scope:recipient = {
+			show_as_tooltip = {
+				custom_tooltip = spn_msg_tooltip_confer_blood_vampirism_desc
+			}
+			hidden_effect = {
+				spn_give_vampire_blood_effect = { DONOR = scope:puppet_or_actor }
+			}
+		}
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_sire_blood_interaction
+				left_icon = scope:puppet_or_actor
+				right_icon = scope:recipient
+				custom_tooltip = spn_sire_blood_done_tt
+			}
+		}
+		spn_sire_bond_careless_effect = yes
+	}
+
+	ai_will_do = {
+		base = 0
+	}
+}
+
+# ======================================================================================================================
+# THE VERBS BOTH PUPPETS SHARE (boot 3: "one agent owns both so the two puppet types share one verb set"). Shown when the
+# actor acts through his golem puppet or his Sire Bond puppet (spn_puppet_verb_shown_trigger). Their action keys are
+# listed in both types, as vanilla lists puppet_action_give_gift in all three of its own (pam_puppet_types.txt).
+# ======================================================================================================================
+
+# ORDER A MURDER (Thomas named "murder (the scheme)"). The puppet starts vanilla's murder scheme against the target, with
+# vanilla's balanced agent slots (start_murder_interaction's default branch), as vanilla's own murder interaction does for
+# a puppet (begin_scheme_with_agents_effect tags the commanding puppeteer). Vanilla's puppet_action_command_murder opens
+# only for a schemer or an external ruler puppet; a golem or a bound lover never qualifies, so this is their door into the
+# same scheme. Vanilla's game rules on murder schemes against players and their families apply, verbatim. Adults only.
+# A golem: the plot is slow and its own; Strike Them Down stays the golem's open, direct blow.
+spn_puppet_murder_interaction = {
+	category = interaction_category_hostile
+	icon = icon_scheme_murder
+	desc = spn_puppet_murder_interaction_desc
+	interface_priority = 54
+	auto_accept = yes
+	ignores_pending_interaction_block = yes
+
+	is_shown = {
+		spn_puppet_verb_shown_trigger = yes
+		NOT = { scope:recipient = scope:actor }
+		scope:recipient = { is_adult = yes }
+		NAND = { # Game Rules! (vanilla start_murder_interaction)
+			has_game_rule = no_players_multiplayer_murder_schemes
+			scope:actor = {
+				is_ai = no
+			}
+			scope:recipient = {
+				is_ai = no
+			}
+		}
+		NAND = {
+			has_game_rule = no_player_families_multiplayer_murder_schemes
+			scope:actor = {
+				is_ai = no
+			}
+			scope:recipient = {
+				OR = {
+					is_ai = no
+					any_close_family_member = {
+						AND = {
+							is_ai = no
+							this != scope:actor
+						}
+					}
+				}
+			}
+		}
+	}
+
+	is_valid_showing_failures_only = {
+		scope:puppet_or_actor = {
+			is_imprisoned = no
+			can_start_scheme = {
+				type = murder
+				target_character = scope:recipient
+			}
+		}
+		scope:recipient = { NOT = { has_strong_hook = scope:puppet_or_actor } }
+		trigger_if = {
+			limit = { scope:puppet_or_actor = { has_trait = golem } }
+			spn_golem_order_ready_trigger = yes
+		}
+	}
+
+	on_accept = {
+		scope:puppet_or_actor = {
+			stress_and_fulfillment_impact = {
+				compassionate = major_stress_impact_gain
+				honest = medium_stress_impact_gain
+				just = medium_stress_impact_gain
+			}
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = start_murder_interaction_notification
+				left_icon = scope:puppet_or_actor
+				right_icon = scope:recipient
+				begin_scheme_with_agents_effect = {
+					SCHEME_TYPE = murder
+					TARGET_TYPE = target_character
+					TARGET_SCOPE = scope:recipient
+					# Success.
+					AGENT_1 = agent_assassin
+					AGENT_2 = agent_assassin
+					# Speed.
+					AGENT_3 = agent_infiltrator
+					AGENT_4 = agent_footpad
+					# Secrecy.
+					AGENT_5 = agent_alibi
+				}
+			}
+		}
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = start_murder_interaction_notification_puppeteer
+				left_icon = scope:puppet_or_actor
+				right_icon = scope:recipient
+			}
+		}
+		if = {
+			limit = { scope:actor.puppet:spn_sire_puppet ?= scope:puppet_or_actor }
+			spn_sire_bond_careless_effect = yes
+		}
+		spn_puppet_shared_verb_done_effect = yes # boot 4: last line (shared contract, zz_spn_240_puppet_verb_effects.txt)
+	}
+
+	ai_will_do = {
+		base = 0
+	}
+}
+
+# HAND IT OVER (Thomas: "give an artifact they hold"). The puppet gives one of the items it carries to the target, who
+# may be the actor himself. Which item: an event lists up to three of the puppet's giftable items, finest first
+# (spn_puppet.0001), the same tests vanilla's gift_artifact_interaction uses (not equipped, artifact_can_be_gift_to_trigger,
+# not locked by artifact_prevent_transfer). The item passes with set_owner, so relics, pages and hides go through the
+# mod's own owner hooks, as any gift does. Vanilla's gift_artifact_interaction is not used: its item list
+# (target_filter = actor_artifacts) is the puppeteer's, not the puppet's.
+spn_puppet_give_artifact_interaction = {
+	category = interaction_category_friendly
+	icon = artisan_inspiration
+	desc = spn_puppet_give_artifact_interaction_desc
+	interface_priority = 53
+	auto_accept = yes
+
+	is_shown = {
+		spn_puppet_verb_shown_trigger = yes
+	}
+
+	is_valid_showing_failures_only = {
+		scope:puppet_or_actor = {
+			is_imprisoned = no
+			custom_tooltip = {
+				text = spn_puppet_carries_nothing_tt
+				any_character_artifact = {
+					is_equipped = no
+					NOT = { has_variable = artifact_prevent_transfer }
+					artifact_can_be_gift_to_trigger = { RECIPIENT = scope:recipient }
+				}
+			}
+		}
+		trigger_if = {
+			limit = { scope:recipient = scope:actor }
+			always = yes
+		}
+		trigger_else_if = {
+			limit = { scope:puppet_or_actor = { has_trait = golem } }
+			spn_golem_order_reach_trigger = yes
+		}
+		trigger_else = {
+			scope:recipient = {
+				custom_tooltip = {
+					text = spn_sire_bond_reach_tt
+					spn_sire_bond_reach_trigger = { PUPPET = scope:puppet_or_actor }
+				}
+			}
+		}
+	}
+
+	on_accept = {
+		custom_tooltip = spn_puppet_give_artifact_tt
+		scope:puppet_or_actor = { save_scope_as = spn_pa_puppet }
+		scope:recipient = { save_scope_as = spn_pa_target }
+		scope:actor = {
+			trigger_event = spn_puppet.0001
+		}
+		spn_puppet_shared_verb_done_effect = yes # boot 4: last line (shared contract, zz_spn_240_puppet_verb_effects.txt)
+	}
+
+	ai_will_do = {
+		base = 0
+	}
+}
+
+# KEEP THEM COMPANY (boot 3, Thomas's call: befriending for the golem as well as the bound lover). Vanilla's
+# puppet_action_command_befriend is listed in both types, but its scheme needs the PUPPET to hold the Befriend perk or one
+# of its few substitutes (befriend_scheme.txt allow -> can_use_befriend_scheme_trigger, 00_scheme_triggers.txt:430), which
+# a golem or a bound lover rarely has: greyed for ever. This is the thin version that always works: the puppet spends time
+# with the target, through vanilla's own progress_towards_friend_effect (00_relation_effects.txt: the first time a
+# potential friend and an opinion, the next time a friend). Adults, within the puppet's reach, every two years per target.
+spn_puppet_befriend_interaction = {
+	category = interaction_category_friendly
+	icon = icon_scheme_befriend
+	desc = spn_puppet_befriend_interaction_desc
+	interface_priority = 52
+	auto_accept = yes
+	use_diplomatic_range = no
+	cooldown_against_recipient = { years = 2 }
+
+	is_shown = {
+		spn_puppet_verb_shown_trigger = yes
+		NOT = { scope:recipient = scope:actor }
+		scope:puppet_or_actor ?= { is_adult = yes }
+		scope:recipient = { is_adult = yes }
+	}
+
+	is_valid_showing_failures_only = {
+		scope:puppet_or_actor = {
+			is_imprisoned = no
+			custom_tooltip = {
+				text = spn_puppet_befriend_already_tt
+				NOT = { has_relation_friend = scope:recipient }
+			}
+		}
+		scope:recipient = {
+			is_imprisoned = no
+			custom_tooltip = { # RC1 (boot-3 review): auto-accepted; a player chooses his own friends
+				text = spn_sire_bond_player_tt
+				is_ai = yes
+			}
+		}
+		trigger_if = {
+			limit = { scope:puppet_or_actor = { has_trait = golem } }
+			spn_golem_order_ready_trigger = yes
+			spn_golem_order_reach_trigger = yes
+		}
+		trigger_else = {
+			scope:recipient = {
+				custom_tooltip = {
+					text = spn_sire_bond_reach_tt
+					spn_sire_bond_reach_trigger = { PUPPET = scope:puppet_or_actor }
+				}
+			}
+		}
+	}
+
+	on_accept = {
+		scope:puppet_or_actor = {
+			progress_towards_friend_effect = {
+				REASON = spn_friend_puppet_company
+				CHARACTER = scope:recipient
+				OPINION = default_friend_opinion
+			}
+		}
+		if = {
+			limit = { scope:actor.puppet:spn_sire_puppet ?= scope:puppet_or_actor }
+			spn_sire_bond_careless_effect = yes
+		}
+		spn_puppet_shared_verb_done_effect = yes # boot 4: last line (shared contract, zz_spn_240_puppet_verb_effects.txt)
+	}
+
+	ai_will_do = {
+		base = 0
+	}
+}
+
+# SEND ME YOUR GOLD (boot 4, Thomas: "if my golem has money, I should be able to have them send it to me"). Vanilla's
+# Gift does not reach the puppeteer himself unless the puppet is a ruler (gift_interaction's is_shown, 00_gift.txt:66),
+# and a golem's purse (its own gold, or the treasury of a golem that holds land) had no way home but the golem's all-or-
+# nothing "Hand Over What You Carry". Shared by every puppet type through the contract trigger. Aimed at the puppeteer
+# himself: right-click yourself and act as your puppet (vanilla allows the puppeteer as the target of a puppet action,
+# gift_interaction tests scope:recipient = scope:actor). The amount is a send option (vanilla's exclusive options,
+# 00_debug_interactions.txt; the "must select" line as 00_diarch_interactions.txt:2796); an amount shows only when the
+# purse covers it. The puppet pays from its own gold with pay_short_term_gold (vanilla `gold = gold`,
+# 07_ep3_wars.txt:5079). No cooldown and no strain (Thomas); nothing is seen, so no careless trace. Players only (no AI).
+spn_puppet_send_gold_interaction = {
+	category = interaction_category_friendly
+	icon = icon_gold
+	desc = spn_puppet_send_gold_interaction_desc
+	interface_priority = 51
+	auto_accept = yes
+	use_diplomatic_range = no
+	ignores_pending_interaction_block = yes
+
+	is_shown = {
+		spn_puppet_verb_shown_trigger = yes
+		scope:recipient = scope:actor
+	}
+
+	is_valid_showing_failures_only = {
+		scope:puppet_or_actor = {
+			custom_tooltip = {
+				text = spn_puppet_no_gold_tt
+				gold >= 1
+			}
+		}
+		trigger_if = {
+			limit = { scope:actor = { is_ai = no } }
+			custom_tooltip = {
+				text = interactions_general.tt.must_select_one_option
+				OR = {
+					scope:spn_send_gold_100 ?= yes
+					scope:spn_send_gold_500 ?= yes
+					scope:spn_send_gold_1000 ?= yes
+					scope:spn_send_gold_all ?= yes
+				}
+			}
+		}
+	}
+
+	send_option = {
+		is_shown = { scope:puppet_or_actor.gold >= 100 }
+		flag = spn_send_gold_100
+		localization = spn_puppet_send_gold_100
+	}
+	send_option = {
+		is_shown = { scope:puppet_or_actor.gold >= 500 }
+		flag = spn_send_gold_500
+		localization = spn_puppet_send_gold_500
+	}
+	send_option = {
+		is_shown = { scope:puppet_or_actor.gold >= 1000 }
+		flag = spn_send_gold_1000
+		localization = spn_puppet_send_gold_1000
+	}
+	send_option = {
+		flag = spn_send_gold_all
+		localization = spn_puppet_send_gold_all
+		starts_enabled = { always = yes }
+	}
+	send_options_exclusive = yes
+
+	on_accept = {
+		scope:puppet_or_actor = {
+			if = {
+				limit = {
+					scope:spn_send_gold_100 ?= yes
+					gold >= 100
+				}
+				pay_short_term_gold = {
+					gold = 100
+					target = scope:actor
+				}
+			}
+			else_if = {
+				limit = {
+					scope:spn_send_gold_500 ?= yes
+					gold >= 500
+				}
+				pay_short_term_gold = {
+					gold = 500
+					target = scope:actor
+				}
+			}
+			else_if = {
+				limit = {
+					scope:spn_send_gold_1000 ?= yes
+					gold >= 1000
+				}
+				pay_short_term_gold = {
+					gold = 1000
+					target = scope:actor
+				}
+			}
+			else_if = {
+				limit = { gold >= 1 }
+				pay_short_term_gold = {
+					gold = gold
+					target = scope:actor
+				}
+			}
+		}
+		spn_puppet_shared_verb_done_effect = yes # boot 4: last line (shared contract, zz_spn_240_puppet_verb_effects.txt)
+	}
+
+	ai_will_do = {
+		base = 0
+	}
+}

@@ -1,0 +1,601 @@
+﻿namespace = spn_golem
+
+# Supernatural 2.40 (WORK-ORDER-2.40 D3, G8b, §4 repair 3) -- a golem outlives its master. Package Q7.
+# Loc: localization/english/zz_spn_240_q7_l_english.yml. Every delayed event re-checks the golem in its trigger.
+
+# .0001 -- Last Instructions. Root: the dead master's heir (spn_golem_on_master_death, one day later). scope:spn_golem,
+# scope:spn_golem_old_master (dead by now; read for names only). The bond goes through the one shared effect.
+spn_golem.0001 = {
+	type = character_event
+	title = spn_golem.0001.t
+	desc = spn_golem.0001.desc
+	theme = witchcraft
+	override_background = { reference = study }
+	left_portrait = { character = root animation = worry }
+	right_portrait = { character = scope:spn_golem animation = idle }
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_golem
+		NOT = { this = scope:spn_golem }
+		scope:spn_golem = { spn_golem_masterless_trigger = yes }
+	}
+	immediate = {
+		# Boot 4 (Thomas's item 9): the Golem puppet slot shows to someone offered a golem (the type's can_have). Ten years.
+		add_character_flag = { flag = spn_golem_offered years = 10 }
+	}
+	option = {
+		name = spn_golem.0001.a
+		custom_tooltip = spn_golem.0001.a.tt
+		hidden_effect = {
+			spn_golem_bond_transfer_effect = { GOLEM = scope:spn_golem NEW = root }
+		}
+		ai_chance = {
+			base = 50
+			modifier = { add = 30 has_trait = ambitious }
+			modifier = { add = 30 has_trait = greedy }
+			modifier = { add = 40 is_witch_trigger = yes }
+			modifier = { add = 40 has_trait = archmage }
+			modifier = { add = -30 has_trait = zealous }
+		}
+	}
+	option = {
+		name = spn_golem.0001.b
+		custom_tooltip = spn_golem.0001.b.tt
+		# Identity state, no expiry: he chose to let it go. Only a new bond (Witchcraft's domination) clears it.
+		scope:spn_golem = { add_character_flag = spn_golem_released }
+		ai_chance = {
+			base = 5
+			modifier = { add = 40 has_trait = zealous }
+			modifier = { add = 25 has_trait = compassionate }
+			modifier = { add = 15 has_trait = humble }
+			modifier = { add = 15 has_trait = craven }
+		}
+	}
+}
+
+# .0002 -- Take Up the Golem's Instructions. The once-only repair (spn_golem_repair_effect): a golem in a player's
+# court (a courtier or a guest), among his vassals (boot 3: Count Titan holds a county) or of his house, that lost its
+# bond before 2.40. Root: the player. scope:spn_golem.
+spn_golem.0002 = {
+	type = character_event
+	title = spn_golem.0002.t
+	desc = spn_golem.0002.desc
+	theme = witchcraft
+	override_background = { reference = study }
+	left_portrait = { character = root animation = interested }
+	right_portrait = { character = scope:spn_golem animation = idle }
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_golem
+		scope:spn_golem = {
+			spn_golem_masterless_trigger = yes
+			OR = {
+				is_courtier_of = root
+				host ?= root
+				is_vassal_of = root # boot 3
+				house ?= root.house # boot 3: a golem is made into its maker's house
+			}
+		}
+	}
+	immediate = {
+		# Boot 4 (Thomas's item 9): the Golem puppet slot shows to someone offered a golem (the type's can_have). Ten years.
+		add_character_flag = { flag = spn_golem_offered years = 10 }
+	}
+	option = {
+		name = spn_golem.0002.a
+		custom_tooltip = spn_golem.0002.a.tt
+		hidden_effect = {
+			spn_golem_bond_transfer_effect = { GOLEM = scope:spn_golem NEW = root }
+		}
+		ai_chance = {
+			base = 50
+			modifier = { add = 30 has_trait = ambitious }
+			modifier = { add = -30 has_trait = zealous }
+		}
+	}
+	option = {
+		name = spn_golem.0002.b
+		custom_tooltip = spn_golem.0001.b.tt
+		# Identity state, no expiry, as .0001 option b.
+		scope:spn_golem = { add_character_flag = spn_golem_released }
+		ai_chance = {
+			base = 5
+			modifier = { add = 40 has_trait = zealous }
+			modifier = { add = 25 has_trait = compassionate }
+		}
+	}
+}
+
+# ==================================================================================================
+# THE PUPPET'S ERRANDS (boot 2, item g; boot 4: any puppet, and the mystique). Root: the master who sent it
+# (spn_golem_errand_start_effect, 7 to 21 days later). scope:spn_golem (the puppet: a golem, a sire-bound lover, any type
+# in the shared contract, or an AI master's servant), scope:spn_golem_target, scope:spn_golem_master (= root). Each
+# re-checks the errand in its own trigger (spn_golem_errand_holds_trigger). Every roll is hidden and made in immediate;
+# the one option that matches the result is the only one shown, and it does what its text says.
+# Boot 4 MYSTIQUE (Thomas's item 2): a second hidden roll, spn_puppet_deed_unknown_chance_value (the master's intrigue and
+# the puppet's own; the victim's intrigue against it), decides whether the victim learns WHO SENT the puppet. Known: as
+# before, the grudge, the dread and a death's murder opinions fall on the master. Unknown: the master gains no dread and
+# takes no grudge; the victim holds it against the one he saw, the puppet itself, and the text says a golem with no
+# master's mark (or the bound one, whose master he could not name) did it. Seize and Imprison: a victim who ends in the
+# master's own prison knows whose prison it is, so the roll matters only when he gets away.
+# ==================================================================================================
+
+# .0010 -- Seize and Imprison
+spn_golem.0010 = {
+	type = character_event
+	title = { # RD2 (boot-4 review): "The Golem Returns" only when it is a golem
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_golem = { has_trait = golem } }
+				desc = spn_golem.0010.t
+			}
+			desc = spn_puppet.0010.t
+		}
+	}
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					scope:spn_golem_result ?= flag:success
+					scope:spn_golem = { has_trait = golem }
+				}
+				desc = spn_golem.0010.desc_success
+			}
+			triggered_desc = {
+				trigger = { scope:spn_golem_result ?= flag:success }
+				desc = spn_puppet.0010.desc_success
+			}
+			triggered_desc = {
+				trigger = { exists = scope:spn_puppet_deed_unknown }
+				desc = spn_puppet.0010.desc_failure_unknown
+			}
+			triggered_desc = {
+				trigger = { scope:spn_golem = { has_trait = golem } }
+				desc = spn_golem.0010.desc_failure
+			}
+			desc = spn_puppet.0010.desc_failure
+		}
+	}
+	theme = dread
+	override_background = { reference = dungeon }
+	left_portrait = { character = scope:spn_golem animation = idle }
+	right_portrait = {
+		character = scope:spn_golem_target
+		triggered_animation = {
+			trigger = { scope:spn_golem_result ?= flag:success }
+			animation = fear
+		}
+		animation = anger
+	}
+	trigger = {
+		spn_golem_errand_holds_trigger = yes
+		is_landed_or_landless_administrative = yes # still has a prison to put them in
+	}
+	on_trigger_fail = {
+		scope:spn_golem ?= {
+			if = {
+				limit = {
+					is_alive = yes
+					has_character_flag = spn_golem_on_errand
+				}
+				remove_character_flag = spn_golem_on_errand
+			}
+			if = {
+				limit = {
+					is_alive = yes
+					has_variable = spn_puppet_errand_for
+				}
+				remove_variable = spn_puppet_errand_for
+			}
+		}
+	}
+	immediate = {
+		save_scope_as = spn_golem_master
+		scope:spn_golem = {
+			remove_character_flag = spn_golem_on_errand
+			if = {
+				limit = { has_variable = spn_puppet_errand_for }
+				remove_variable = spn_puppet_errand_for
+			}
+		}
+		hidden_effect = {
+			random = {
+				chance = spn_golem_seize_chance_value
+				save_scope_value_as = { name = spn_golem_result value = flag:success }
+			}
+			if = {
+				limit = { NOT = { exists = scope:spn_golem_result } }
+				save_scope_value_as = { name = spn_golem_result value = flag:failure }
+				random = { # boot 4: the mystique (only for a victim who got away)
+					chance = spn_puppet_deed_unknown_chance_value
+					save_scope_value_as = { name = spn_puppet_deed_unknown value = yes }
+				}
+			}
+		}
+	}
+	option = { # it brought them
+		name = spn_golem.0010.a
+		trigger = { scope:spn_golem_result = flag:success }
+		add_dread = minor_dread_gain
+		abduct_opinion_effect = { VICTIM = scope:spn_golem_target ABDUCTER = root }
+		hidden_effect = {
+			scope:spn_golem_target = {
+				send_interface_message = {
+					type = event_generic_bad
+					title = spn_golem_seized_msg
+					left_icon = scope:spn_golem
+					right_icon = root
+					custom_tooltip = spn_golem_seized_msg_tt
+				}
+			}
+		}
+		hard_imprison_character_effect = {
+			TARGET = scope:spn_golem_target
+			IMPRISONER = root
+		}
+	}
+	option = { # they got away, and know who sent it
+		name = spn_golem.0010.b
+		trigger = {
+			scope:spn_golem_result = flag:failure
+			NOT = { exists = scope:spn_puppet_deed_unknown }
+		}
+		scope:spn_golem_target = {
+			add_opinion = {
+				target = root
+				modifier = attempted_abduction_opinion
+			}
+			hidden_effect = {
+				send_interface_message = {
+					type = event_generic_neutral
+					title = spn_golem_seize_failed_msg
+					left_icon = scope:spn_golem
+					right_icon = root
+					custom_tooltip = spn_golem_seize_failed_msg_tt
+				}
+			}
+		}
+	}
+	option = { # boot 4: they got away, and never learned who sent it
+		name = spn_golem.0010.b
+		trigger = {
+			scope:spn_golem_result = flag:failure
+			exists = scope:spn_puppet_deed_unknown
+		}
+		custom_tooltip = spn_puppet_deed_unknown_tt
+		scope:spn_golem_target = {
+			add_opinion = {
+				target = scope:spn_golem
+				modifier = attempted_abduction_opinion
+			}
+			hidden_effect = {
+				send_interface_message = {
+					type = event_generic_neutral
+					title = spn_golem_seize_failed_msg
+					left_icon = scope:spn_golem
+					if = { # RD2 (boot-4 review): a golem bears no master's mark; a person simply never said
+						limit = { scope:spn_golem = { has_trait = golem } }
+						custom_tooltip = spn_puppet_seize_failed_unknown_msg_tt
+					}
+					else = {
+						custom_tooltip = spn_puppet_seize_failed_unknown_person_msg_tt
+					}
+				}
+			}
+		}
+	}
+}
+
+# .0011 -- Strike Them Down. Results: flag:failure (it never landed a blow), flag:wound, flag:death (an AI character
+# only, rare). Death last: every other effect of the option first, then the death.
+spn_golem.0011 = {
+	type = character_event
+	title = { # RD2 (boot-4 review): "The Golem Returns" only when it is a golem
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_golem = { has_trait = golem } }
+				desc = spn_golem.0011.t
+			}
+			desc = spn_puppet.0011.t
+		}
+	}
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					scope:spn_golem_result ?= flag:death
+					exists = scope:spn_puppet_deed_unknown
+				}
+				desc = spn_puppet.0011.desc_death_unknown
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_golem_result ?= flag:death
+					scope:spn_golem = { has_trait = golem }
+				}
+				desc = spn_golem.0011.desc_death
+			}
+			triggered_desc = {
+				trigger = { scope:spn_golem_result ?= flag:death }
+				desc = spn_puppet.0011.desc_death
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_golem_result ?= flag:wound
+					exists = scope:spn_puppet_deed_unknown
+				}
+				desc = spn_puppet.0011.desc_wound_unknown
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_golem_result ?= flag:wound
+					scope:spn_golem = { has_trait = golem }
+				}
+				desc = spn_golem.0011.desc_wound
+			}
+			triggered_desc = {
+				trigger = { scope:spn_golem_result ?= flag:wound }
+				desc = spn_puppet.0011.desc_wound
+			}
+			triggered_desc = {
+				trigger = { exists = scope:spn_puppet_deed_unknown }
+				desc = spn_puppet.0011.desc_failure_unknown
+			}
+			triggered_desc = {
+				trigger = { scope:spn_golem = { has_trait = golem } }
+				desc = spn_golem.0011.desc_failure
+			}
+			desc = spn_puppet.0011.desc_failure
+		}
+	}
+	theme = dread
+	override_background = { reference = alley_night }
+	left_portrait = { character = scope:spn_golem animation = idle }
+	right_portrait = {
+		character = scope:spn_golem_target
+		triggered_animation = {
+			trigger = { scope:spn_golem_result ?= flag:wound }
+			animation = pain
+		}
+		animation = anger
+	}
+	trigger = {
+		spn_golem_errand_holds_trigger = yes
+	}
+	on_trigger_fail = {
+		scope:spn_golem ?= {
+			if = {
+				limit = {
+					is_alive = yes
+					has_character_flag = spn_golem_on_errand
+				}
+				remove_character_flag = spn_golem_on_errand
+			}
+			if = {
+				limit = {
+					is_alive = yes
+					has_variable = spn_puppet_errand_for
+				}
+				remove_variable = spn_puppet_errand_for
+			}
+		}
+	}
+	immediate = {
+		save_scope_as = spn_golem_master
+		scope:spn_golem = {
+			remove_character_flag = spn_golem_on_errand
+			if = {
+				limit = { has_variable = spn_puppet_errand_for }
+				remove_variable = spn_puppet_errand_for
+			}
+		}
+		hidden_effect = {
+			random = {
+				chance = spn_golem_strike_chance_value
+				save_scope_value_as = { name = spn_golem_hit value = yes }
+			}
+			if = {
+				limit = { exists = scope:spn_golem_hit }
+				random = {
+					chance = spn_golem_strike_death_chance_value
+					save_scope_value_as = { name = spn_golem_kill value = yes }
+				}
+			}
+			if = {
+				limit = { NOT = { exists = scope:spn_golem_hit } }
+				save_scope_value_as = { name = spn_golem_result value = flag:failure }
+			}
+			else_if = {
+				limit = {
+					exists = scope:spn_golem_kill
+					scope:spn_golem_target = { is_ai = yes }
+				}
+				save_scope_value_as = { name = spn_golem_result value = flag:death }
+			}
+			else = {
+				save_scope_value_as = { name = spn_golem_result value = flag:wound }
+			}
+			random = { # boot 4: the mystique, every outcome
+				chance = spn_puppet_deed_unknown_chance_value
+				save_scope_value_as = { name = spn_puppet_deed_unknown value = yes }
+			}
+		}
+	}
+	option = { # it beat them, and they know who sent it
+		name = spn_golem.0011.a
+		trigger = {
+			scope:spn_golem_result = flag:wound
+			NOT = { exists = scope:spn_puppet_deed_unknown }
+		}
+		add_dread = medium_dread_gain
+		scope:spn_golem_target = {
+			if = {
+				limit = { scope:spn_golem = { has_trait = golem } }
+				add_opinion = {
+					target = root
+					modifier = spn_golem_attacked_me_opinion
+				}
+			}
+			else = { # boot 4: a sire-bound lover, or another puppet
+				add_opinion = {
+					target = root
+					modifier = spn_puppet_sent_against_me_opinion
+				}
+			}
+			increase_wounds_no_death_effect = { REASON = fight }
+			hidden_effect = {
+				if = {
+					limit = { scope:spn_golem = { has_trait = golem } }
+					send_interface_message = {
+						type = event_generic_bad
+						title = spn_golem_struck_msg
+						left_icon = scope:spn_golem
+						right_icon = root
+						custom_tooltip = spn_golem_struck_msg_tt
+					}
+				}
+				else = {
+					send_interface_message = {
+						type = event_generic_bad
+						title = spn_puppet_struck_msg
+						left_icon = scope:spn_golem
+						right_icon = root
+						custom_tooltip = spn_puppet_struck_msg_tt
+					}
+				}
+			}
+		}
+	}
+	option = { # boot 4: it beat them, and they never learned who sent it
+		name = spn_golem.0011.a
+		trigger = {
+			scope:spn_golem_result = flag:wound
+			exists = scope:spn_puppet_deed_unknown
+		}
+		custom_tooltip = spn_puppet_deed_unknown_tt
+		scope:spn_golem_target = {
+			add_opinion = {
+				target = scope:spn_golem
+				modifier = spn_puppet_struck_me_opinion
+			}
+			increase_wounds_no_death_effect = { REASON = fight }
+			hidden_effect = {
+				send_interface_message = {
+					type = event_generic_bad
+					title = spn_puppet_struck_msg
+					left_icon = scope:spn_golem
+					if = { # RD2 (boot-4 review): a golem bears no master's mark; a person simply never said
+						limit = { scope:spn_golem = { has_trait = golem } }
+						custom_tooltip = spn_puppet_struck_unknown_msg_tt
+					}
+					else = {
+						custom_tooltip = spn_puppet_struck_unknown_person_msg_tt
+					}
+				}
+			}
+		}
+	}
+	option = { # it killed them, and it is known who sent it
+		name = spn_golem.0011.b
+		trigger = {
+			scope:spn_golem_result = flag:death
+			NOT = { exists = scope:spn_puppet_deed_unknown }
+		}
+		add_dread = major_dread_gain
+		# RB1 (boot-2 review): the victim's family, spouses, friends and lovers hold it against the master (vanilla's own
+		# murder_opinion_effect, 00_murder_effects.txt), read while the victim still lives.
+		murder_opinion_effect = { VICTIM = scope:spn_golem_target MURDERER = root }
+		# Death last: the dread and the grudges are banked first; the killer is the master who sent the puppet.
+		scope:spn_golem_target = {
+			if = {
+				limit = { scope:spn_golem = { has_trait = golem } }
+				death = {
+					death_reason = spn_death_golem_struck
+					killer = root
+				}
+			}
+			else = {
+				death = {
+					death_reason = spn_death_puppet_struck_ordered
+					killer = root
+				}
+			}
+		}
+	}
+	option = { # boot 4: it killed them, and no one knows who sent it
+		name = spn_golem.0011.b
+		trigger = {
+			scope:spn_golem_result = flag:death
+			exists = scope:spn_puppet_deed_unknown
+		}
+		custom_tooltip = spn_puppet_deed_unknown_tt
+		# The grudges fall on the one who was seen, the puppet (vanilla murder_opinion_effect), read while the victim lives.
+		murder_opinion_effect = { VICTIM = scope:spn_golem_target MURDERER = scope:spn_golem }
+		# Death last.
+		scope:spn_golem_target = {
+			death = {
+				death_reason = spn_death_puppet_struck
+				killer = scope:spn_golem
+			}
+		}
+	}
+	option = { # it failed, and they know who sent it
+		name = spn_golem.0011.c
+		trigger = {
+			scope:spn_golem_result = flag:failure
+			NOT = { exists = scope:spn_puppet_deed_unknown }
+		}
+		scope:spn_golem_target = {
+			if = {
+				limit = { scope:spn_golem = { has_trait = golem } }
+				add_opinion = {
+					target = root
+					modifier = spn_golem_attacked_me_opinion
+				}
+			}
+			else = { # boot 4: a sire-bound lover, or another puppet
+				add_opinion = {
+					target = root
+					modifier = spn_puppet_sent_against_me_opinion
+				}
+			}
+			hidden_effect = {
+				send_interface_message = {
+					type = event_generic_neutral
+					title = spn_golem_strike_failed_msg
+					left_icon = scope:spn_golem
+					right_icon = root
+					custom_tooltip = spn_golem_strike_failed_msg_tt
+				}
+			}
+		}
+	}
+	option = { # boot 4: it failed, and they never learned who sent it
+		name = spn_golem.0011.c
+		trigger = {
+			scope:spn_golem_result = flag:failure
+			exists = scope:spn_puppet_deed_unknown
+		}
+		custom_tooltip = spn_puppet_deed_unknown_tt
+		scope:spn_golem_target = {
+			add_opinion = {
+				target = scope:spn_golem
+				modifier = spn_puppet_struck_me_opinion
+			}
+			hidden_effect = {
+				send_interface_message = {
+					type = event_generic_neutral
+					title = spn_golem_strike_failed_msg
+					left_icon = scope:spn_golem
+					if = { # RD2 (boot-4 review): a golem bears no master's mark; a person simply never said
+						limit = { scope:spn_golem = { has_trait = golem } }
+						custom_tooltip = spn_puppet_strike_failed_unknown_msg_tt
+					}
+					else = {
+						custom_tooltip = spn_puppet_strike_failed_unknown_person_msg_tt
+					}
+				}
+			}
+		}
+	}
+}

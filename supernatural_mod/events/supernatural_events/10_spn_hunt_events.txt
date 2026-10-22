@@ -511,7 +511,7 @@ spn_hunt.0100 = {
 			desc = spn_hunt.0100.desc
 		}
 	}
-	theme = hunting
+	theme = hunt_activity # 2.40 (WORK-ORDER-2.40 D6): was the deprecated hunting
 	override_background = { reference = bp1_crossroads_inn } # 2.35a art pass -- was tavern. The Trail: you have just ridden into the county. Not the same tavern as every other scene.
 	left_portrait = { character = root animation = marshal }
 
@@ -741,7 +741,7 @@ spn_hunt.0104 = {
 	type = activity_event
 	title = spn_hunt.0104.t
 	desc = spn_hunt.0104.desc
-	theme = hunting
+	theme = hunt_activity # 2.40 (WORK-ORDER-2.40 D6): was the deprecated hunting
 	override_background = { reference = ep3_campfire } # 2.35a art pass -- was ep2_hunt_foggy_forest. Lessons in the Dark: teaching an apprentice at night, at camp.
 	left_portrait = { character = root animation = marshal }
 	right_portrait = { character = scope:spn_apprentice animation = interested }
@@ -784,7 +784,7 @@ spn_hunt.0105 = {
 	type = activity_event
 	title = spn_hunt.0105.t
 	desc = spn_hunt.0105.desc
-	theme = hunting
+	theme = hunt_activity # 2.40 (WORK-ORDER-2.40 D6): was the deprecated hunting
 	override_background = { reference = tavern }
 	left_portrait = { character = root animation = happiness }
 	right_portrait = { character = scope:spn_fellow animation = drink }
@@ -1054,7 +1054,7 @@ spn_hunt.0113 = {
 	type = activity_event
 	title = spn_hunt.0113.t
 	desc = spn_hunt.0113.desc
-	theme = hunting
+	theme = hunt_activity # 2.40 (WORK-ORDER-2.40 D6): was the deprecated hunting
 	override_background = { reference = ep2_hunt_poachers_camp } # 2.35a art pass -- was tavern. Another Man's Trail: another hunter camped on the same county.
 	left_portrait = { character = root animation = thinking }
 	right_portrait = { character = scope:spn_hunt_rival animation = personality_bold }
@@ -1311,7 +1311,7 @@ spn_hunt.0110 = {
 			desc = spn_hunt.0110.desc
 		}
 	}
-	theme = hunting
+	theme = hunt_activity # 2.40 (WORK-ORDER-2.40 D6): was the deprecated hunting
 	override_background = { reference = alley_night }
 	left_portrait = { character = root animation = aggressive_sword }
 	# 2.35a -- THE CULPRIT WAS NEVER ON SCREEN. Thomas, after his first hunt: "towards the end, it mentioned
@@ -1476,7 +1476,7 @@ spn_hunt.0221 = {
 	option = {
 		name = spn_hunt.0221.a
 		custom_tooltip = spn_hunt.0221.a.tt
-		spn_hunt_fight_effect = { DEFENDER = scope:spn_proxy }
+		spn_hunt_not_the_man_fight_effect = yes # 2.40 (WORK-ORDER-2.40 D6): one body, shared with its hunt-window twin
 	}
 	# Stand aside. I came for the one who made you.
 	#
@@ -1486,11 +1486,7 @@ spn_hunt.0221 = {
 	option = {
 		name = spn_hunt.0221.b
 		custom_tooltip = spn_hunt.0221.b.tt
-		scope:spn_hunt_activity = { set_variable = { name = spn_hunt_proxy_refused value = yes } }
-		if = {
-			limit = { exists = scope:spn_culprit  scope:spn_culprit = { is_alive = yes } }
-			scope:spn_culprit = { trigger_event = spn_hunt.0200 }
-		}
+		spn_hunt_not_the_man_stand_aside_effect = yes # 2.40 (WORK-ORDER-2.40 D6): one body, shared with its hunt-window twin
 	}
 }
 
@@ -1515,7 +1511,7 @@ spn_hunt.0111 = {
 			desc = spn_hunt.0111.desc
 		}
 	}
-	theme = hunting
+	theme = hunt_activity # 2.40 (WORK-ORDER-2.40 D6): was the deprecated hunting
 	override_background = { reference = ep2_hunt_foggy_forest }
 	left_portrait = { character = root animation = boredom }
 
@@ -1567,6 +1563,11 @@ spn_hunt.0200 = {
 		# 2.35g -- banked for the redirect (option f) and for the event it sends. Comparing "not me" from
 		# inside a neighbouring county's culprit variable is four scopes deep; a saved scope is not.
 		save_scope_as = spn_cornered
+		# 2.40 (WORK-ORDER-2.40 D8): a player has not answered yet; the hunt waits 7 more days for him, once (spn_hunt.2020)
+		if = {
+			limit = { is_ai = no }
+			scope:spn_hunt_activity ?= { set_variable = { name = spn_hunt_answer_pending value = yes days = 60 } }
+		}
 		# A proxy, if there is one to send (D6): progeny for a vampire or hybrid, clawed kin for a wolf.
 		if = {
 			limit = { scope:spn_hunt_activity = { NOT = { has_variable = spn_hunt_proxy_refused } } }
@@ -1633,7 +1634,7 @@ spn_hunt.0200 = {
 				# 2.35g -- and the news travels. You got away; the people you made, or the one who made you,
 				# have not heard yet (spn_hunt.0030).
 				spn_kin_warning_check_effect = yes
-				scope:spn_hunter = { trigger_event = spn_hunt.0211 }
+				spn_hunt_send_beat_effect = { EVENT = 0211 TWIN = 2001 } # 2.40 (WORK-ORDER-2.40 D6): Gone, in the hunt window while he is there
 			}
 			50 = {
 				desc = spn_hunt.0200.b.found_tt
@@ -1685,7 +1686,7 @@ spn_hunt.0200 = {
 				spn_hunt_set_outcome_effect = { OUTCOME = fled }
 				spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 5 AMOUNT_MAX = 12 }
 				spn_redirect_effect = yes
-				scope:spn_hunter = { trigger_event = spn_hunt.0211 }
+				spn_hunt_send_beat_effect = { EVENT = 0211 TWIN = 2001 } # 2.40 (WORK-ORDER-2.40 D6): Gone, in the hunt window while he is there
 			}
 			50 = {
 				desc = spn_hunt.0200.g.refused_tt
@@ -1780,7 +1781,7 @@ spn_hunt.0200 = {
 		spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 8 AMOUNT_MAX = 15 }
 		spn_write_confrontation_memory_effect = { TYPE = spn_compelled_the_hunter_memory }
 		spn_hunt_set_outcome_effect = { OUTCOME = compelled }
-		scope:spn_hunter = { trigger_event = spn_hunt.0212 }
+		spn_hunt_send_beat_effect = { EVENT = 0212 TWIN = 2002 } # 2.40 (WORK-ORDER-2.40 D6): Turned Back, in the hunt window while he is there
 		ai_chance = {
 			base = 50
 			modifier = { add = 30 has_trait = arrogant }
@@ -1915,10 +1916,8 @@ spn_hunt.0200 = {
 		if = {
 			limit = { scope:spn_proxy = { is_ai = yes } }
 			scope:spn_proxy = { save_scope_as = spn_defender }
-			scope:spn_hunter = {
-				spn_hunt_compute_fight_bonus_effect = yes
-				trigger_event = spn_hunt.0221
-			}
+			scope:spn_hunter = { spn_hunt_compute_fight_bonus_effect = yes }
+			spn_hunt_send_beat_effect = { EVENT = 0221 TWIN = 2003 } # 2.40 (WORK-ORDER-2.40 D6): This Is Not the Man, in the hunt window while he is there
 		}
 		else = {
 			scope:spn_proxy = { trigger_event = spn_hunt.0220 }
@@ -1940,7 +1939,7 @@ spn_hunt.0200 = {
 			gold >= 100
 		}
 		custom_tooltip = spn_hunt.0200.e.tt
-		scope:spn_hunter = { trigger_event = spn_hunt.0240 }
+		spn_hunt_send_beat_effect = { EVENT = 0240 TWIN = 2004 } # 2.40 (WORK-ORDER-2.40 D6): The Price of Silence, in the hunt window while he is there
 		ai_chance = {
 			base = 20
 			modifier = { add = 25 has_trait = greedy }
@@ -1971,6 +1970,15 @@ spn_hunt.0200 = {
 			base = 50
 		}
 	}
+	# 2.40 (WORK-ORDER-2.40 D8): answered
+	after = {
+		scope:spn_hunt_activity ?= {
+			if = {
+				limit = { has_variable = spn_hunt_answer_pending }
+				remove_variable = spn_hunt_answer_pending
+			}
+		}
+	}
 }
 
 # Overmatched -- the hunter is losing. Fall back, or press on and risk everything.
@@ -1993,9 +2001,7 @@ spn_hunt.0210 = {
 	option = {
 		name = spn_hunt.0210.a
 		custom_tooltip = spn_hunt.0210.a.tt
-		increase_wounds_no_death_effect = { REASON = fight }
-		add_character_modifier = { modifier = spn_hunter_recovering_modifier years = 1 }
-		add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 10 } }
+		spn_hunt_overmatched_fall_back_effect = yes # 2.40 (WORK-ORDER-2.40 D6): one body, shared with its hunt-window twin
 		ai_chance = {
 			base = 60
 			modifier = { add = 30 has_trait = craven }
@@ -2007,11 +2013,7 @@ spn_hunt.0210 = {
 	option = {
 		name = spn_hunt.0210.b
 		custom_tooltip = spn_hunt.0210.b.tt
-		scope:spn_hunt_activity = {
-			set_variable = { name = spn_hunt_final_stand value = yes }
-			change_variable = { name = spn_hunt_fight_bonus subtract = 20 }
-		}
-		spn_hunt_fight_effect = { DEFENDER = scope:spn_defender }
+		spn_hunt_overmatched_press_on_effect = yes # 2.40 (WORK-ORDER-2.40 D6): one body, shared with its hunt-window twin
 		ai_chance = {
 			base = 20
 			modifier = { add = 30 has_trait = brave }
@@ -2028,7 +2030,7 @@ spn_hunt.0211 = {
 	type = character_event
 	title = spn_hunt.0211.t
 	desc = spn_hunt.0211.desc
-	theme = hunting
+	theme = hunt_activity # 2.40 (WORK-ORDER-2.40 D6): was the deprecated hunting
 	override_background = { reference = ep2_hunt_foggy_forest } # 2.35a art pass -- was corridor_night. Gone: it is out there somewhere and you are not going to find it.
 	left_portrait = { character = root animation = disbelief }
 
@@ -2079,10 +2081,8 @@ spn_hunt.0220 = {
 		save_scope_as = spn_defender
 		# 2.35h -- routed through the hunter's own beat, exactly as the AI path is, so the pacing does not
 		# depend on which side of this is a player.
-		scope:spn_hunter = {
-			spn_hunt_compute_fight_bonus_effect = yes
-			trigger_event = spn_hunt.0221
-		}
+		scope:spn_hunter = { spn_hunt_compute_fight_bonus_effect = yes }
+		spn_hunt_send_beat_effect = { EVENT = 0221 TWIN = 2003 } # 2.40 (WORK-ORDER-2.40 D6): This Is Not the Man, in the hunt window while he is there
 	}
 	# Refuse. Your maker is not pleased, and must answer the hunter himself.
 	option = {
@@ -2345,14 +2345,7 @@ spn_hunt.0240 = {
 	option = {
 		name = spn_hunt.0240.a
 		custom_tooltip = spn_hunt.0240.a.tt
-		add_gold = 50
-		scope:spn_culprit = {
-			remove_short_term_gold = 50
-			add_hook = { type = strong_favor_hook target = root years = 5 }
-		}
-		add_character_modifier = { modifier = spn_on_the_payroll_modifier years = 5 }
-		spn_write_took_the_coin_memory_effect = { CREATURE = scope:spn_culprit }
-		spn_hunt_set_outcome_effect = { OUTCOME = bought }
+		spn_hunt_price_take_effect = yes # 2.40 (WORK-ORDER-2.40 D6): one body, shared with its hunt-window twin
 		ai_chance = {
 			base = 20
 			modifier = { add = 30 has_trait = greedy }
@@ -2366,9 +2359,7 @@ spn_hunt.0240 = {
 	option = {
 		name = spn_hunt.0240.b
 		custom_tooltip = spn_hunt.0240.b.tt
-		add_prestige = 25
-		scope:spn_hunt_activity = { change_variable = { name = spn_hunt_fight_bonus add = 5 } }
-		spn_hunt_fight_effect = { DEFENDER = scope:spn_culprit }
+		spn_hunt_price_refuse_effect = yes # 2.40 (WORK-ORDER-2.40 D6): one body, shared with its hunt-window twin
 		ai_chance = {
 			base = 40
 			modifier = { add = 40 has_trait = just }
@@ -2416,6 +2407,7 @@ spn_hunt.0300 = {
 			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:compelled } } desc = spn_hunt.0300.desc_compelled }
 			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:bought } } desc = spn_hunt.0300.desc_bought }
 			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:hunter_beaten } } desc = spn_hunt.0300.desc_hunter_beaten }
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:witch  has_variable = spn_hunt_ev_0121 } } desc = spn_hunt.0300.desc_witch_found } # 2.40 (WORK-ORDER-2.40 D6): the list led to a real woman
 			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:witch } } desc = spn_hunt.0300.desc_witch }
 			# 2.35a -- THE THREE PART-TWO OUTCOMES HAD NO LINE HERE. exorcised, withdrew and bargained all
 			# fell through to desc_cold, so a hunter who had just sent a Prince of Hell home read "the trail
@@ -2426,7 +2418,7 @@ spn_hunt.0300 = {
 			desc = spn_hunt.0300.desc_cold
 		}
 	}
-	theme = hunting
+	theme = hunt_activity # 2.40 (WORK-ORDER-2.40 D6): was the deprecated hunting
 	override_background = { reference = tavern }
 	left_portrait = { character = root animation = marshal }
 	# 2.35a -- the second face, missing here as it was in Cornered.
@@ -2434,6 +2426,16 @@ spn_hunt.0300 = {
 
 	immediate = {
 		spn_hunt_conclude_effect = yes
+		# 2.40 (WORK-ORDER-2.40 D6): each player who rode as a guest gets the ending too (spn_hunt.2010 Riding Home)
+		scope:spn_hunt_activity ?= {
+			every_attending_character = {
+				limit = {
+					is_ai = no
+					NOT = { this = scope:spn_hunter }
+				}
+				trigger_event = spn_hunt.2010
+			}
+		}
 	}
 
 	option = {
@@ -2494,7 +2496,7 @@ spn_hunt.0205 = {
 			desc = spn_hunt.0205.desc
 		}
 	}
-	theme = hunting
+	theme = hunt_activity # 2.40 (WORK-ORDER-2.40 D6): was the deprecated hunting
 	override_background = { reference = alley_night }
 	left_portrait = { character = root animation = marshal }
 	right_portrait = { character = scope:spn_defender animation = fear }

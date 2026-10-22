@@ -1,0 +1,109 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 G12): THE TRAILS MAP.
+#
+# Thomas asked for a "Supernatural" map filter showing marked counties as a heat map. The bottom-right map filters are
+# engine map modes and cannot be added from script, so this is the vanilla way to colour counties from script: a unique
+# Situation whose sub-regions start empty and are filled and emptied at runtime, the earthquake's method
+# (tgp_natural_disaster.txt: disaster_area has only an icon and a colour; 10_dlc_tgp_natural_disaster_scripted_effects.txt
+# adds counties with add_dejure_title_to_sub_region; dynastic_cycle_on_actions.txt removes them with
+# remove_dejure_title_from_sub_region). map_mode = sub_regions colours each band on the map.
+#
+# OPEN TRAILS ONLY (B6). A county is on the map while its trail is open: it carries spn_menace_modifier ("Something Stalks
+# Here"), a county modifier every player can already see on the county. A whisper (the first incident on clean ground,
+# var:spn_menace_whisper) is not a trail and is not shown. Boot-2 fix: the map used to wait for the lord's letter (third
+# incident) as well, which in Thomas's ten-year boot 2 never came, so the map was empty (zz_spn_240_trails_triggers.txt).
+#
+# The three bands (spn_trails_band_*_trigger, zz_spn_240_trails_triggers.txt). Sub-regions cannot overlap, so a county is
+# in one band at a time:
+#   spn_trail_faint   Rumoured   one or two incidents on record, no death on record
+#   spn_trail_strong  Troubled   three or more incidents on record (the lord is sent word at the third), no death on record
+#   spn_trail_blood   Bloodied   a kill on the open trail (var:spn_trail_blood, written by spn_menace_after_mark_effect)
+# Each band is also a game concept of the same key (zz_spn_240_trails_game_concepts.txt), so the situation's text can link
+# [spn_trail_faint|E] and a player can hover the word for its meaning.
+#
+# Who writes the bands: spn_trails_map_sync_effect, one county at a time, from three places:
+#   1. the end of spn_mark_menace_effect (spn_menace_after_mark_effect) and spn_menace_clear_county_effect: immediate;
+#   2. on_start below: every trail the world lists (global spn_menace_counties) is synced once. On an older save this is
+#      the one-time sync of the trails already on the map (WORK-ORDER-2.40 §4 item 7);
+#   3. on_monthly below: the same pass, which also catches what the mark/clear hooks cannot see: a modifier that
+#      expired on its own, and the writers that remove a trail directly (exorcism, the hunt's end, the body consequence)
+#      or change its count. No world walk anywhere: the global list and the three bands only.
+#
+# Started by spn_trails_start (zz_spn_240_trails_on_actions.txt): at game start and, for an older save, on the first
+# 1 January under 2.40. is_unique, so situation:spn_trails is the handle and its existence is the "started" flag.
+spn_trails = {
+	is_unique = yes
+	situation_group_type = minor
+	map_mode = sub_regions
+	illustration = "gfx/interface/illustrations/activity_header_backgrounds/supernatural_hunt.dds"
+	icon = {
+		reference = "gfx/interface/icons/court_position_task_types/spn_trailsman_task_follow_the_trail.dds"
+	}
+
+	##################################################
+	# Regions: empty at start, filled at runtime
+	##################################################
+	sub_regions = {
+		spn_trail_faint = {
+			icon = "gfx/interface/icons/court_position_task_types/spn_trailsman_task_follow_the_trail.dds"
+			map_color = { 1 0.85 0.4 }
+		}
+		spn_trail_strong = {
+			icon = "gfx/interface/icons/court_position_task_types/spn_trailsman_task_follow_the_trail.dds"
+			map_color = { 1 0.5 0.1 }
+		}
+		spn_trail_blood = {
+			icon = "gfx/interface/icons/court_position_task_types/spn_trailsman_task_follow_the_trail.dds"
+			map_color = { 0.75 0.05 0.05 }
+		}
+	}
+
+	##################################################
+	# On Actions
+	##################################################
+	on_start = {
+		spn_trails_map_reconcile_effect = yes
+	}
+
+	on_monthly = {
+		spn_trails_map_reconcile_effect = yes
+	}
+
+	##################################################
+	# Groups: nobody takes part. The map is the point; the situation has no modifiers and no participants.
+	# Boot 2 (TRAILS): Thomas asked that the trails show only for creatures, Mages and hunters. Vanilla never hides a
+	# situation: window_situation_list.gui shows a situation under "Your" when the player is a participant and under
+	# "Other" otherwise (SituationItem.IsParticipant). Making the watchers participants was considered and REFUSED: the
+	# situation window lists every participant by group, so a vampire count shown under "Watchers" would be exposed to
+	# every player (B6). The HUD button is gated instead (spn_trails_watcher_trigger); the situation itself stays under
+	# "Other" for everyone, which reveals nothing: each county on it shows the same modifier in its own county view.
+	# Review RB2: the mod's own window_situation_list.gui (Q2) now lists it only for watchers (and observers), keyed on
+	# var:spn_trails_map, which spn_trails_map_reconcile_effect sets on this situation.
+	# Boot 3 (TRAILS): Thomas found the panel empty of anything useful ("Participants in Region: 0", a phase with no end
+	# date, Future "-"): a situation's panel is built for participants and phases, and this one has neither by design.
+	# The call: the situation STAYS, as the engine-side record of the three bands (a running save already holds it;
+	# nothing to end, nothing renamed), but players no longer see its panel. The Trails button opens the Supernatural
+	# Trails window (gui/zz_spn_240_trails_window.gui), a list of every open trail; spn_trails_hud_gui now answers "no"
+	# to Q2's Situations list, so the panel is listed only for an observer (no player), who still gets the coloured map.
+	##################################################
+	participant_groups = {
+		spn_trail_watchers = {
+			auto_add_rulers = no
+			auto_add_landless_rulers = no
+			require_realm_in_sub_region = no
+			is_character_valid = {
+				always = no
+			}
+		}
+	}
+
+	##################################################
+	# Phases: one, forever
+	##################################################
+	start_phase = spn_trails_watch
+
+	phases = {
+		spn_trails_watch = {
+			icon = "gfx/interface/icons/activity_phases/spn_tracking_phase.dds"
+		}
+	}
+}

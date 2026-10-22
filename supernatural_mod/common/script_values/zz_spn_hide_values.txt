@@ -118,8 +118,37 @@ spn_creature_clash_weight_value = {
 		limit = { spn_is_alpha_trigger = yes }
 		add = 10
 	}
-	multiply = spn_hide_strength_value
+	# 2.40 (WORK-ORDER-2.40 F1): the duel's style: going for the throat counts +15 (before the hide's strength, so it scales
+	# with it). Read only while the duel's own clash rolls (scope:spn_hduel_fight).
+	if = {
+		limit = {
+			exists = scope:spn_hduel_fight
+			var:spn_hduel_style ?= flag:throat
+		}
+		add = 15
+	}
+	# 2.40 (WORK-ORDER-2.40 C10): "Hold it back" before a Challenge (spn_hide.2110): he fights as a wolf, but the hide's
+	# strength stays out of it. Read only while that Challenge rolls (scope:spn_hs_fight).
+	if = {
+		limit = {
+			NOT = {
+				AND = {
+					exists = scope:spn_hs_fight
+					has_character_flag = spn_hs_held
+				}
+			}
+		}
+		multiply = spn_hide_strength_value
+	}
 	multiply = spn_clash_kind_factor_value
+	# 2.40 (WORK-ORDER-2.40 F1): caught turning away (Break Away, or run down): x0.85.
+	if = {
+		limit = {
+			exists = scope:spn_hduel_fight
+			has_character_flag = spn_hduel_caught
+		}
+		multiply = 0.85
+	}
 	min = 1
 }
 
@@ -190,13 +219,15 @@ spn_hide_fit_value = {
 	}
 	else_if = {
 		limit = { scope:spn_fit_hide = flag:midnight }
-		if = { limit = { has_trait = wrathful } add = 15 }
-		if = { limit = { has_trait = impatient } add = 15 }
+		# 2.40 (WORK-ORDER-2.40 C10): a noble fury: brave, just, loyal, wrathful; turns from craven, deceitful, sadistic, disloyal.
 		if = { limit = { has_trait = brave } add = 15 }
-		if = { limit = { has_trait = sadistic } add = 15 }
-		if = { limit = { has_trait = calm } add = -20 }
-		if = { limit = { has_trait = patient } add = -20 }
-		if = { limit = { has_trait = compassionate } add = -20 }
+		if = { limit = { has_trait = just } add = 15 }
+		if = { limit = { has_trait = loyal } add = 15 }
+		if = { limit = { has_trait = wrathful } add = 15 }
+		if = { limit = { has_trait = craven } add = -20 }
+		if = { limit = { has_trait = deceitful } add = -20 }
+		if = { limit = { has_trait = sadistic } add = -20 }
+		if = { limit = { has_trait = disloyal } add = -20 }
 	}
 	else_if = {
 		limit = { scope:spn_fit_hide = flag:alpha }
@@ -221,6 +252,9 @@ spn_hide_fit_value = {
 		add = prowess
 		add = martial
 	}
+	# 2.40 (WORK-ORDER-2.40 F4): a hide leans toward the kin of its past champions (at most +30;
+	# zz_spn_240_hide_lineage_values.txt). One term here reaches every way a hide chooses.
+	add = spn_hide_lineage_fit_value
 	# The fever that a hide pulled him through (§10).
 	if = {
 		limit = { has_character_flag = spn_hide_fever_bonus }
@@ -285,10 +319,10 @@ spn_hide_liked_count_value = {
 	}
 	else_if = {
 		limit = { scope:spn_fit_hide = flag:midnight }
+		if = { limit = { has_trait = brave } add = 1 } # 2.40 (WORK-ORDER-2.40 C10): noble fury
+		if = { limit = { has_trait = just } add = 1 }
+		if = { limit = { has_trait = loyal } add = 1 }
 		if = { limit = { has_trait = wrathful } add = 1 }
-		if = { limit = { has_trait = impatient } add = 1 }
-		if = { limit = { has_trait = brave } add = 1 }
-		if = { limit = { has_trait = sadistic } add = 1 }
 	}
 	else_if = {
 		limit = { scope:spn_fit_hide = flag:alpha }
@@ -324,9 +358,10 @@ spn_hide_hated_count_value = {
 	}
 	else_if = {
 		limit = { scope:spn_fit_hide = flag:midnight }
-		if = { limit = { has_trait = calm } add = 1 }
-		if = { limit = { has_trait = patient } add = 1 }
-		if = { limit = { has_trait = compassionate } add = 1 }
+		if = { limit = { has_trait = craven } add = 1 } # 2.40 (WORK-ORDER-2.40 C10): noble fury
+		if = { limit = { has_trait = deceitful } add = 1 }
+		if = { limit = { has_trait = sadistic } add = 1 }
+		if = { limit = { has_trait = disloyal } add = 1 }
 	}
 	else_if = {
 		limit = { scope:spn_fit_hide = flag:alpha }

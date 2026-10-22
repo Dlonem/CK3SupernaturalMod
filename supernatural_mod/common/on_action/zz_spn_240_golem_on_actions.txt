@@ -1,0 +1,184 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 D3, G8b, §4 repair 3) -- a golem outlives its master. Package Q7.
+# Each hook is an APPEND through `on_actions = { }`, which merges across files (zz_spn_hide_on_actions.txt's idiom), so no
+# vanilla on_action is copied or shadowed. No scripted trigger lives in this folder; they are in
+# common/scripted_triggers/zz_spn_240_golem_triggers.txt.
+
+# ==================================================================================================
+# LAST INSTRUCTIONS (D3). The engine fires on_death_relation_<relation> "when the owner of the relation is about to
+# die" (van/common/scripted_relations/_scripted_relations.info): root = the dying master (the owner of mminion; the golem
+# holds the corresponding mmaster), scope:target = the golem. The relation and the hook end with him and nothing remade
+# them, so the heir inherited the golem as a stranger (Thomas's Schwab). Root is still alive here: the heir and the last
+# master are banked now, and the heir is asked the next day (spn_golem.0001), when the court has passed to him.
+# Only golems: a dominated mortal was bound by the caster's own magic and stays free.
+# ==================================================================================================
+on_death_relation_mminion = {
+	on_actions = {
+		spn_golem_on_master_death
+	}
+}
+
+spn_golem_on_master_death = {
+	trigger = {
+		scope:target = {
+			is_alive = yes
+			has_trait = golem
+		}
+	}
+	effect = {
+		save_scope_as = spn_golem_old_master
+		scope:target = {
+			save_scope_as = spn_golem
+			# Identity state, no expiry: a golem bound before 2.40 never had it written.
+			set_variable = { name = spn_golem_last_master value = root }
+			# Boot 3: a search the dying master sent it on can never report back (spn_vade.0210 fires on him): the golem
+			# comes home from it now, instead of staying away for ever (Thomas's Count Titan).
+			if = {
+				limit = { has_character_flag = spn_golem_searching }
+				remove_character_flag = spn_golem_searching
+				if = {
+					limit = { has_character_modifier = spn_golem_away_modifier }
+					remove_character_modifier = spn_golem_away_modifier
+				}
+			}
+		}
+		if = {
+			limit = { exists = player_heir }
+			player_heir = { save_scope_as = spn_golem_heir }
+		}
+		else_if = {
+			limit = { exists = primary_heir }
+			primary_heir = { save_scope_as = spn_golem_heir }
+		}
+		scope:spn_golem_heir ?= {
+			if = {
+				limit = { NOT = { this = scope:spn_golem } } # a golem is made into its maker's house: it can be his heir
+				trigger_event = { id = spn_golem.0001 days = 1 }
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE YEARLY SAFETY LINE (G8b). A golem whose recorded master is dead, which nobody bound and nobody let go
+# (spn_golem.0001 missed: an heir who was not yet the player, a court that changed hands another way), is bound to the
+# player who holds it. Boot 3: not only courtiers. A golem can be a guest, or hold land and be the player's vassal
+# (Thomas's Count Titan holds a county under him). Only player rulers, only their own court, guests and direct vassals:
+# no world walk.
+# ==================================================================================================
+yearly_playable_pulse = {
+	on_actions = {
+		spn_golem_yearly_rebind
+	}
+}
+
+spn_golem_yearly_rebind = {
+	trigger = {
+		is_ai = no
+		OR = {
+			any_courtier_or_guest = { has_trait = golem }
+			any_vassal = { has_trait = golem }
+		}
+	}
+	effect = {
+		save_scope_as = spn_golem_court_owner
+		every_courtier_or_guest = {
+			limit = {
+				spn_golem_masterless_trigger = yes
+				exists = var:spn_golem_last_master
+				var:spn_golem_last_master = { is_alive = no }
+			}
+			add_to_temporary_list = spn_golem_rebind_list
+		}
+		every_vassal = {
+			limit = {
+				spn_golem_masterless_trigger = yes
+				exists = var:spn_golem_last_master
+				var:spn_golem_last_master = { is_alive = no }
+			}
+			add_to_temporary_list = spn_golem_rebind_list
+		}
+		every_in_list = {
+			list = spn_golem_rebind_list
+			save_scope_as = spn_golem
+			spn_golem_bond_transfer_effect = { GOLEM = scope:spn_golem NEW = scope:spn_golem_court_owner }
+			scope:spn_golem_court_owner = {
+				send_interface_toast = {
+					type = event_toast_effect_good
+					title = spn_golem_rebound_toast
+					left_icon = scope:spn_golem
+					custom_tooltip = spn_golem_rebound_toast_tt
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# REPAIR FOR THE RUNNING SAVE (§4 item 3; boot 3 rebuilt), once, behind a global flag.
+# Boot 3 finding (Thomas's autosave of 22 Oct, read-only): the 2.40 repair never ran. Its global
+# spn_240_golem_repair_done is absent, and so are the globals of every other 2.40 repair hung on
+# on_game_start_after_lobby (spn_household_checked, spn_pack_rest_list_240, spn_vade_240_claims_repaired), while the
+# yearly version_2_40 is set: on_game_start_after_lobby fires when a game leaves the lobby (vanilla game_start.txt:
+# "called once the host ... exits the lobby"), not when a single-player save is loaded. So the repair now also runs
+# from the first quarterly pulse of a player (quarterly_playable_pulse, root = a playable character), once.
+# And it missed Count Titan in any case: it looked only at courtiers and guests, and Titan holds a county as Thomas's
+# vassal. It now looks at each player's court, guests, direct vassals and house.
+# What it does, once:
+#  1. Every golem loses Witchcraft's "Soul Forfeit" (no_soul_modifier): see spn_golem_bond_transfer_effect. A one-time
+#     walk of the living, behind the flag (no yearly walk).
+#  2. Every masterless golem (spn_golem_masterless_trigger) in a player's court, guests, direct vassals or house is
+#     offered to that player: "Take Up the Golem's Instructions" (spn_golem.0002). Its master is gone, so the player who
+#     holds it (or whose house made it) is its master's heir in all but name. A golem whose search can never report
+#     back comes home first.
+# ==================================================================================================
+on_game_start_after_lobby = {
+	on_actions = {
+		spn_golem_repair_instructions
+	}
+}
+
+quarterly_playable_pulse = {
+	on_actions = {
+		spn_golem_repair_instructions_pulse
+	}
+}
+
+spn_golem_repair_instructions = {
+	trigger = {
+		NOT = { has_global_variable = spn_240_golem_repair_2_done }
+	}
+	effect = {
+		spn_golem_repair_effect = yes
+	}
+}
+
+spn_golem_repair_instructions_pulse = {
+	trigger = {
+		is_ai = no
+		NOT = { has_global_variable = spn_240_golem_repair_2_done }
+	}
+	effect = {
+		spn_golem_repair_effect = yes
+	}
+}
+
+# ==================================================================================================
+# A GOLEM'S GUARD ENDS WITH IT (boot 2, item g). The golem holds mmaster on its master, so on_death_relation_mmaster
+# fires for the golem "when the owner of the relation is about to die" (root: the golem, still alive here; scope:target:
+# the master). A dominated mortal also holds mmaster: the trigger keeps this to a golem with a ward.
+# ==================================================================================================
+on_death_relation_mmaster = {
+	on_actions = {
+		spn_golem_on_own_death
+	}
+}
+
+spn_golem_on_own_death = {
+	trigger = {
+		has_trait = golem
+		exists = var:spn_golem_guarding
+	}
+	effect = {
+		spn_golem_end_guard_effect = { GOLEM = root }
+	}
+}

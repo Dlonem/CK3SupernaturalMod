@@ -1,0 +1,189 @@
+﻿namespace = spn_order
+
+# Supernatural 2.40 (WORK-ORDER-2.40 D4) -- the Clay Working shapes its golem the way Witchcraft's Artificial Human does.
+# Package Q7, spn_order range 2300-2319. Loc: localization/english/zz_spn_240_q7_l_english.yml; the option text is
+# Witchcraft's own (ev7.118.*, ev7.120.*, ev7.133.*), and so is the work, through shared effects that magic_ev7.120 and
+# magic_ev7.133 call too (common/scripted_effects/zz_spn_240_golem_effects.txt). The Order keeps its material choice
+# (.0860) and its success roll (.0861). Witchcraft's events are activity_events inside Magical Research, so they cannot be
+# fired from a decision; these are their character_event doors.
+# Chain: Make a Golem -> .2300 (the shape, which has to be known before create_character) -> .0860 (material)
+#        -> .0861 (it wakes) -> .2301 (its name and its upgrade) -> .2302 (Final Calibration).
+
+# .2300 -- The Golem's Shape. Root: the Magistratus who leads the Working (the decision). Read by
+# spn_order_make_golem_effect through var:spn_cw_shape, as magic_ev7.119 reads me_golem_male / me_golem_female.
+spn_order.2300 = {
+	type = character_event
+	title = spn_order.2300.t
+	desc = spn_order.2300.desc
+	theme = witchcraft
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = personality_rational }
+	trigger = { is_alive = yes }
+	option = {
+		name = ev7.118.a
+		custom_tooltip = spn_order.2300.a.tt
+		set_variable = { name = spn_cw_shape value = flag:man years = 1 }
+		trigger_event = spn_order.0860
+		ai_chance = {
+			base = 30
+			modifier = { add = 20 is_female = yes has_trait = lustful }
+		}
+	}
+	option = {
+		name = ev7.118.b
+		custom_tooltip = spn_order.2300.b.tt
+		set_variable = { name = spn_cw_shape value = flag:woman years = 1 }
+		trigger_event = spn_order.0860
+		ai_chance = {
+			base = 30
+			modifier = { add = 20 is_male = yes has_trait = lustful }
+		}
+	}
+	option = {
+		name = ev7.118.c
+		custom_tooltip = spn_order.2300.c.tt
+		set_variable = { name = spn_cw_shape value = flag:image years = 1 }
+		trigger_event = spn_order.0860
+		ai_chance = {
+			base = 30
+			modifier = { add = 40 has_trait = arrogant }
+			modifier = { add = 20 has_trait = ambitious }
+			modifier = { add = -20 has_trait = humble }
+		}
+	}
+}
+
+# .2301 -- Finishing the Golem: Witchcraft's name widget (magic_ev7.119's own set-up) and its upgrade (magic_ev7.120).
+# Root: the maker. scope:spn_cw_golem (from .0861); saved again as scope:golem, the name Witchcraft's option text reads.
+spn_order.2301 = {
+	type = character_event
+	title = spn_order.2301.t
+	desc = spn_order.2301.desc
+	theme = witchcraft
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = interested }
+	right_portrait = {
+		character = scope:spn_cw_golem
+		animation = idle
+	}
+	widgets = {
+		widget = {
+			gui = "event_window_widget_name_child"
+			container = "custom_widgets_container"
+			controller = name_character
+			setup_scope = { scope:spn_cw_golem = { save_scope_as = name_character_target } }
+		}
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_cw_golem
+		scope:spn_cw_golem = {
+			is_alive = yes
+			has_trait = golem
+		}
+	}
+	immediate = {
+		scope:spn_cw_golem = { save_scope_as = golem }
+	}
+	option = {
+		name = ev7.120.a
+		scope:spn_cw_golem = { spn_golem_upgrade_mind_effect = yes }
+		ai_chance = {
+			base = 30
+			modifier = { add = 20 learning >= 15 }
+		}
+	}
+	option = {
+		name = ev7.120.b
+		scope:spn_cw_golem = { spn_golem_upgrade_combat_effect = yes }
+		ai_chance = {
+			base = 30
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = 20 is_at_war = yes }
+		}
+	}
+	option = {
+		name = ev7.120.c
+		scope:spn_cw_golem = { spn_golem_upgrade_source_effect = yes }
+		ai_chance = {
+			base = 20
+			modifier = { add = 20 has_trait = archmage }
+		}
+	}
+	option = {
+		name = ev7.120.d
+		trigger = {
+			has_trait = intellect_good_3
+		}
+		trait = intellect_good_3
+		scope:spn_cw_golem = { spn_golem_upgrade_all_effect = yes }
+		ai_chance = {
+			base = 100
+		}
+	}
+	after = {
+		trigger_event = { id = spn_order.2302 days = 7 }
+	}
+}
+
+# .2302 -- Final Calibration (magic_ev7.133). Root: the maker; the golem gains 20 in one skill, the maker a perk point in it.
+spn_order.2302 = {
+	type = character_event
+	title = ev7.133.title
+	desc = ev7.133.desc
+	theme = witchcraft
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = personality_rational }
+	right_portrait = {
+		character = scope:spn_cw_golem
+		animation = idle
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_cw_golem
+		scope:spn_cw_golem = {
+			is_alive = yes
+			has_trait = golem
+		}
+	}
+	option = {
+		name = ev7.133.a
+		spn_golem_calibrate_effect = { GOLEM = scope:spn_cw_golem SKILL = diplomacy }
+		ai_chance = {
+			base = 20
+			modifier = { add = 20 has_trait = gregarious }
+		}
+	}
+	option = {
+		name = ev7.133.b
+		spn_golem_calibrate_effect = { GOLEM = scope:spn_cw_golem SKILL = martial }
+		ai_chance = {
+			base = 20
+			modifier = { add = 20 is_at_war = yes }
+		}
+	}
+	option = {
+		name = ev7.133.c
+		spn_golem_calibrate_effect = { GOLEM = scope:spn_cw_golem SKILL = stewardship }
+		ai_chance = {
+			base = 20
+			modifier = { add = 20 has_trait = greedy }
+		}
+	}
+	option = {
+		name = ev7.133.d
+		spn_golem_calibrate_effect = { GOLEM = scope:spn_cw_golem SKILL = learning }
+		ai_chance = {
+			base = 20
+			modifier = { add = 20 learning >= 15 }
+		}
+	}
+	option = {
+		name = ev7.133.e
+		spn_golem_calibrate_effect = { GOLEM = scope:spn_cw_golem SKILL = intrigue }
+		ai_chance = {
+			base = 20
+			modifier = { add = 20 has_trait = deceitful }
+		}
+	}
+}

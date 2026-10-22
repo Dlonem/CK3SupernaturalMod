@@ -54,6 +54,12 @@ spn_order_add_member_effect = {
 	scope:spn_add_who = {
 		set_variable = { name = spn_order_chapter value = scope:spn_add_ch }
 		set_variable = { name = spn_order_rank value = $RANK$ }
+		# 2.40 (WORK-ORDER-2.40 A2): the year he took his rank (identity state, removed with his membership). A transfer
+		# keeps the date it already has.
+		if = {
+			limit = { NOT = { exists = var:spn_order_rank_since } }
+			set_variable = { name = spn_order_rank_since value = current_year }
+		}
 		if = {
 			# 2.38a2: ?= (a tooltip builds this without the variable set: 7,275 errors while A Note and a Blue Rose was open)
 			limit = { var:spn_order_rank ?= flag:neophyte }
@@ -67,11 +73,18 @@ spn_order_add_member_effect = {
 		}
 		spn_order_refresh_effect = yes
 	}
+	# 2.40 (WORK-ORDER-2.40 B1): a member who moved temples brings his pledges (banked by the transfer's removal).
+	spn_relic_repledge_moved_effect = yes
 }
 
 # Set $WHO$'s rank ($RANK$, a flag literal) and refresh his chapter.
 spn_order_set_rank_effect = {
 	$WHO$ = {
+		# 2.40 (WORK-ORDER-2.40 A2): a new rank starts its three years (identity state, removed with his membership).
+		if = {
+			limit = { NOT = { var:spn_order_rank ?= $RANK$ } }
+			set_variable = { name = spn_order_rank_since value = current_year }
+		}
 		set_variable = { name = spn_order_rank value = $RANK$ }
 		var:spn_order_chapter ?= { spn_order_refresh_effect = yes }
 	}
@@ -168,6 +181,7 @@ spn_order_remove_member_effect = {
 			limit = { NOT = { scope:spn_rem_reason = flag:transfer } }
 			remove_variable = spn_order_standing
 			remove_variable = spn_order_adeptus
+			remove_variable = spn_order_rank_since # 2.40 (WORK-ORDER-2.40 A2)
 			if = {
 				limit = { has_character_flag = spn_order_aspires_chair }
 				remove_character_flag = spn_order_aspires_chair
@@ -207,15 +221,60 @@ spn_order_remove_member_effect = {
 			}
 		}
 		# His pledges to that chapter, and any loan he holds.
+		# 2.40 (WORK-ORDER-2.40 B1): not at his death: his pledged items pass with his things and stay pledged when his heir
+		# is of the same temple (the owner hook, spn_relic_owner_changed_effect, decides). A transfer banks them on him, and
+		# spn_order_add_member_effect pledges them to his new temple (spn_relic_repledge_moved_effect).
 		if = {
-			limit = { exists = scope:spn_rem_ch }
+			limit = {
+				exists = scope:spn_rem_ch
+				NOT = { scope:spn_rem_reason = flag:death }
+			}
 			every_character_artifact = {
 				limit = { var:spn_pledged_to ?= scope:spn_rem_ch }
 				add_to_temporary_list = spn_rem_pledges
 			}
+			# 2.40 final audit (FA2 F3): the Fors Factorum never leaves its temple. On a transfer it passes to the temple's
+			# head, still pledged (the owner hook keeps a pledge for a holder of the same temple). Only when the temple has no
+			# other living head does it travel with him, as every other pledge does.
+			if = { limit = { exists = scope:spn_rem_fors_keeper } clear_saved_scope = spn_rem_fors_keeper }
+			if = {
+				limit = { scope:spn_rem_reason = flag:transfer }
+				scope:spn_rem_ch = {
+					story_owner ?= {
+						if = {
+							limit = {
+								is_alive = yes
+								NOT = { this = scope:spn_rem_who }
+							}
+							save_scope_as = spn_rem_fors_keeper
+						}
+					}
+				}
+			}
 			every_in_list = {
 				list = spn_rem_pledges
-				spn_relic_unpledge_effect = { ART = this }
+				if = {
+					limit = {
+						var:spn_relic ?= flag:fors
+						exists = scope:spn_rem_fors_keeper
+					}
+					set_owner = {
+						target = scope:spn_rem_fors_keeper
+						history = {
+							type = given
+							actor = scope:spn_rem_who
+							recipient = scope:spn_rem_fors_keeper
+						}
+					}
+				}
+				else = {
+					spn_relic_unpledge_effect = { ART = this }
+					if = {
+						limit = { scope:spn_rem_reason = flag:transfer }
+						save_scope_as = spn_rem_art
+						scope:spn_rem_who = { add_to_variable_list = { name = spn_order_moved_pledges target = scope:spn_rem_art } }
+					}
+				}
 			}
 		}
 		spn_relic_return_loans_of_effect = { WHO = scope:spn_rem_who }
@@ -364,6 +423,7 @@ spn_order_refresh_effect = {
 			}
 		}
 	}
+	spn_order_count_magistrati_effect = yes # 2.40 (WORK-ORDER-2.40 A2): the Magistrati and their cap
 	spn_order_sync_mirrors_effect = yes
 }
 
@@ -476,6 +536,8 @@ spn_order_assign_tutor_effect = {
 				NOT = { this = scope:spn_tut_who }
 				spn_order_medicum_plus_trigger = yes
 				is_imprisoned = no
+				NOT = { has_character_flag = spn_order_no_acolytes } # 2.40 (WORK-ORDER-2.40 G4): I Will Not Take Acolytes
+				NOT = { has_character_flag = spn_order_tutor_rests } # 2.40 (WORK-ORDER-2.40 G4): resting after a Mage
 			}
 			order_by = spn_order_tutor_pick_value
 			save_scope_as = spn_tut_tutor
@@ -530,7 +592,16 @@ spn_order_assign_tutor_effect = {
 			scope:spn_tut_who = { trigger_event = { id = spn_order.0320 days = { 7 30 } } }
 		}
 		else_if = {
-			limit = { scope:spn_tut_tutor = { is_ai = no } }
+			limit = {
+				scope:spn_tut_tutor = {
+					is_ai = no
+					# 2.40 (WORK-ORDER-2.40 A9): only a tutor who has not chosen how he teaches (.0141 or an earlier .0320)
+					NOR = {
+						has_character_flag = spn_order_tutor_strict
+						has_character_flag = spn_order_tutor_patient
+					}
+				}
+			}
 			scope:spn_tut_tutor = { trigger_event = { id = spn_order.0320 days = { 7 30 } } }
 		}
 	}
@@ -881,6 +952,11 @@ spn_order_chapter_year_effect = {
 			is_alive = yes
 			var:spn_order_rank ?= flag:acolyte
 		}
+		# 2.40 (WORK-ORDER-2.40 G4): a tutor who will not take acolytes gives his up; the lines below find another.
+		if = {
+			limit = { var:spn_order_tutor ?= { has_character_flag = spn_order_no_acolytes } }
+			spn_order_tutor_release_effect = yes
+		}
 		if = {
 			limit = {
 				NOT = { var:spn_order_tutor ?= { is_alive = yes } }
@@ -928,6 +1004,9 @@ spn_order_chapter_year_effect = {
 		}
 	}
 	# 5. Teaching (T10): an acolyte who is not a Mage counts the years; at the value, The First True Working.
+	# 2.40 (WORK-ORDER-2.40 G4): the year still counts, but an acolyte finishes only when his tutor is not resting and,
+	# for an AI acolyte, while the temple is under its cap of Mages for ten years.
+	save_scope_value_as = { name = spn_yr_mage_cap value = spn_order_mage_cap_value }
 	every_in_list = {
 		variable = spn_order_members
 		limit = {
@@ -943,13 +1022,21 @@ spn_order_chapter_year_effect = {
 		change_variable = { name = spn_order_taught_years add = 1 }
 		if = {
 			limit = { var:spn_order_taught_years >= spn_order_teach_years_value }
-			trigger_event = { id = spn_order.0140 days = { 1 60 } }
+			if = {
+				limit = { spn_order_acolyte_may_finish_trigger = { CAP = scope:spn_yr_mage_cap } } # 2.40 (G4)
+				if = {
+					limit = { is_ai = yes }
+					add_character_flag = { flag = spn_order_finishing days = 90 } # counted by the cap until he is made
+				}
+				trigger_event = { id = spn_order.0140 days = { 1 60 } }
+			}
 		}
 		# 2.38b: the study cycle (DESIGN-2.38b §6): two lessons on the way, for a player.
 		else_if = {
 			limit = {
 				is_ai = no
 				var:spn_order_taught_years = 1
+				NOT = { has_character_flag = start_sorcery_training } # 2.40 (WORK-ORDER-2.40 A10): on Witchcraft's Arcane Training, not both
 			}
 			trigger_event = { id = spn_order.0310 days = { 30 200 } }
 		}
@@ -957,6 +1044,7 @@ spn_order_chapter_year_effect = {
 			limit = {
 				is_ai = no
 				var:spn_order_taught_years = 3
+				NOT = { has_character_flag = start_sorcery_training } # 2.40 (WORK-ORDER-2.40 A10): on Witchcraft's Arcane Training, not both
 			}
 			trigger_event = { id = spn_order.0311 days = { 30 200 } }
 		}
@@ -974,6 +1062,8 @@ spn_order_chapter_year_effect = {
 		}
 		spn_order_tutor_year_effect = yes
 	}
+	# 2.40 (WORK-ORDER-2.40 A2): counted before the candidates are chosen.
+	spn_order_count_magistrati_effect = yes
 	# 6. Promotions: one candidate per rank per year for a player head, who is asked; an AI head raises up to two (2.38h).
 	# 2.38f: an AI head passes over the ones he dislikes and takes the next (reverse_opinion: the head's opinion of the
 	# member). Before, the one with the most standing was the only one asked, so a head who disliked him promoted nobody,
@@ -985,6 +1075,7 @@ spn_order_chapter_year_effect = {
 			var:spn_order_rank ?= flag:acolyte
 			spn_order_taught_trigger = yes # 2.38e: a Warlock or a True Witch who finished (.0140) too
 			var:spn_order_standing >= spn_order_promote_medicum_value
+			spn_order_rank_seasoned_trigger = yes # 2.40 (WORK-ORDER-2.40 A2): three years in the rank
 			OR = { # 2.38f
 				scope:spn_yr_head = { is_ai = no }
 				reverse_opinion = {
@@ -1002,6 +1093,12 @@ spn_order_chapter_year_effect = {
 			is_alive = yes
 			var:spn_order_rank ?= flag:medicum
 			var:spn_order_standing >= spn_order_promote_magistratus_value
+			spn_order_rank_seasoned_trigger = yes # 2.40 (WORK-ORDER-2.40 A2): three years in the rank
+			# 2.40 (WORK-ORDER-2.40 A2): the temple's Magistrati cap holds back AI candidates only; a player is never locked.
+			OR = {
+				is_ai = no
+				scope:spn_yr_ch = { spn_order_magistrati_room_trigger = yes }
+			}
 			NOT = { this = scope:spn_yr_head }
 			OR = { # 2.38f
 				scope:spn_yr_head = { is_ai = no }
@@ -1016,13 +1113,22 @@ spn_order_chapter_year_effect = {
 	}
 	if = {
 		limit = {
-			scope:spn_yr_head = { is_ai = no }
+			scope:spn_yr_head = {
+				is_ai = no
+				NOT = { has_character_flag = spn_order_auto_picks } # 2.40 (WORK-ORDER-2.40 A2): the masks run the temple
+			}
 			OR = {
 				exists = scope:spn_yr_to_medicum
 				exists = scope:spn_yr_to_magistratus
 			}
 		}
 		scope:spn_yr_head = { trigger_event = { id = spn_order.0150 days = { 20 60 } } } # 2.38c: not on the same day as the rest
+	}
+	# 2.40 (WORK-ORDER-2.40 A2): a player who left his temple to the masks: they raise the same names he would have been
+	# shown, one of each rank, and a toast tells him each one.
+	else_if = {
+		limit = { scope:spn_yr_head = { is_ai = no } }
+		spn_order_masks_rite_effect = yes
 	}
 	else = {
 		if = {
@@ -1049,6 +1155,7 @@ spn_order_chapter_year_effect = {
 				var:spn_order_rank ?= flag:acolyte
 				spn_order_taught_trigger = yes
 				var:spn_order_standing >= spn_order_promote_medicum_value
+				spn_order_rank_seasoned_trigger = yes # 2.40 (WORK-ORDER-2.40 A2): three years in the rank
 				reverse_opinion = {
 					target = scope:spn_yr_head
 					value >= 0
@@ -1064,6 +1171,12 @@ spn_order_chapter_year_effect = {
 				is_alive = yes
 				var:spn_order_rank ?= flag:medicum
 				var:spn_order_standing >= spn_order_promote_magistratus_value
+				spn_order_rank_seasoned_trigger = yes # 2.40 (WORK-ORDER-2.40 A2): three years in the rank
+				# 2.40 (WORK-ORDER-2.40 A2): the cap, re-read after the first raise (the refresh recounts).
+				OR = {
+					is_ai = no
+					scope:spn_yr_ch = { spn_order_magistrati_room_trigger = yes }
+				}
 				NOT = { this = scope:spn_yr_head }
 				NOT = { scope:spn_yr_to_medicum ?= this }
 				NOT = { scope:spn_yr_to_medicum2 ?= this }
@@ -1462,7 +1575,9 @@ spn_order_seed_ai_effect = {
 		clear_saved_scope = spn_sd_ch
 	}
 	# Step 4: the relics, so the reliquaries are not empty (§9.6).
-	spn_relic_seed_effect = yes
+	# 2.40 (WORK-ORDER-2.40 G9): not here. A new game's start seeding founds no temple, so the relics were seeded into an
+	# empty world and never again. They now wait on the yearly pulse for the temples, as the halls do
+	# (zz_spn_order_on_actions.txt); a temple founded later gets its own (spn_relic_chapters_yearly_effect).
 	every_in_global_list = {
 		variable = spn_order_chapters
 		var:spn_order_chapter ?= {
@@ -1671,24 +1786,9 @@ spn_order_pick_one_effect = {
 						NOT = { has_character_flag = spn_order_auto_picks }
 					}
 				}
-				# 2.39 (WORK-ORDER-2.39 F14 V3): staggered by the pick counter (counted just above), so the three or four Names
-				# for the Rose come about 70 days apart instead of all inside 60 days. The pick's own flag and variable last a
-				# year (above), so the fourth is still valid. 2.38c: still spaced from the Rite and the Conclave.
-				if = {
-					limit = { var:spn_order_picks <= 1 }
-					scope:spn_sel_head = { trigger_event = { id = spn_order.0108 days = { 90 120 } } }
-				}
-				else_if = {
-					limit = { var:spn_order_picks = 2 }
-					scope:spn_sel_head = { trigger_event = { id = spn_order.0108 days = { 160 190 } } }
-				}
-				else_if = {
-					limit = { var:spn_order_picks = 3 }
-					scope:spn_sel_head = { trigger_event = { id = spn_order.0108 days = { 230 260 } } }
-				}
-				else = {
-					scope:spn_sel_head = { trigger_event = { id = spn_order.0108 days = { 300 330 } } }
-				}
+				# 2.40 (WORK-ORDER-2.40 A3): one A Name for the Rose a year with up to three names, instead of the 2.39 stagger
+				# of three or four. The pick's own flag and variable still last a year (above).
+				spn_order_rose_queue_effect = { PICK = scope:spn_sel_pick }
 			}
 			# 2.38b: a player who has not heard of the Order hears the rumour first (DESIGN-2.38b §8), once.
 			else_if = {
@@ -1702,6 +1802,23 @@ spn_order_pick_one_effect = {
 			}
 			else = {
 				scope:spn_sel_pick = { spn_order_send_note_effect = yes }
+			}
+			# 2.40 (WORK-ORDER-2.40 A2/A3): the masks run a player's temple: they tell him whom they called.
+			if = {
+				limit = {
+					scope:spn_sel_head = {
+						is_ai = no
+						has_character_flag = spn_order_auto_picks
+					}
+				}
+				scope:spn_sel_head = {
+					send_interface_toast = {
+						type = event_toast_text_neutral
+						title = spn_order_toast_rose_auto
+						desc = spn_order_toast_rose_auto_desc
+						left_icon = scope:spn_sel_pick
+					}
+				}
 			}
 			clear_saved_scope = spn_sel_pick
 		}
@@ -1853,7 +1970,11 @@ spn_order_pulveris_effect = {
 		limit = { NOT = { exists = scope:spn_pm_resisted } }
 		add_character_flag = { flag = spn_order_wiped years = 30 }
 	}
-	trigger_event = spn_order.0190    # 2.39 (F17): "There was a night you cannot remember" has a guarded text (red team M2)
+	# 2.40 (WORK-ORDER-2.40 pop-ups): players only.
+	if = {
+		limit = { is_ai = no }
+		trigger_event = spn_order.0190    # 2.39 (F17): "There was a night you cannot remember" has a guarded text (red team M2)
+	}
 }
 
 # C9: no effect makes one person forget a secret. So $WHO$'s Blue Rose secret is removed and re-added, then revealed again
@@ -1940,10 +2061,7 @@ spn_order_strip_magic_effect = {
 		limit = { has_character_modifier = power_saturated2 }
 		remove_character_modifier = power_saturated2
 	}
-	if = {
-		limit = { has_character_modifier = spn_fors_factorum_modifier }
-		remove_character_modifier = spn_fors_factorum_modifier
-	}
+	spn_order_fors_end_effect = yes # 2.40 (WORK-ORDER-2.40 G5): the spell and its record
 	if = {
 		limit = { has_trait = true_witch }
 		remove_trait = true_witch
@@ -1985,6 +2103,19 @@ spn_order_exposed_effect = {
 		}
 		scope:secret_exposer = { spn_order_broke_rules_effect = yes }
 	}
+	# 2.40 (WORK-ORDER-2.40 G1): the exposure is kept on the temple for two years, so Respondeo spoken in that county
+	# answers it (spn_order_respondeo_effect), wherever the caster comes from.
+	if = {
+		limit = {
+			exists = scope:spn_ex_county
+			NOT = { exists = global_var:spn_order_breaking }
+		}
+		var:spn_order_chapter ?= {
+			set_variable = { name = spn_order_exposed_member value = scope:spn_ex_who years = 2 }
+			set_variable = { name = spn_order_exposed_county value = scope:spn_ex_county years = 2 }
+		}
+	}
+	scope:spn_ex_who = { save_scope_as = spn_rs_exposed }
 	var:spn_order_chapter ?= {
 		story_owner = {
 			if = {
@@ -1992,8 +2123,22 @@ spn_order_exposed_effect = {
 					is_ai = no
 					NOT = { this = scope:spn_ex_who }
 					NOT = { exists = global_var:spn_order_breaking } # 2.39 (WORK-ORDER-2.39 F2): the Break tells its own
+					spn_order_player_free_trigger = yes # 2.40 (WORK-ORDER-2.40 G1): a busy head is answered for, below
 				}
 				trigger_event = spn_order.0170
+			}
+			# 2.40 (WORK-ORDER-2.40 G1, B9 item 2): an AI temple sends someone itself, by its head's nature; a busy player
+			# head's temple does, and tells him. Never for a player about himself (he has the decision).
+			else_if = {
+				limit = {
+					exists = scope:spn_ex_county
+					NOT = { exists = global_var:spn_order_breaking }
+					OR = {
+						is_ai = yes
+						NOT = { this = scope:spn_ex_who }
+					}
+				}
+				spn_order_respondeo_send_agent_effect = { COUNTY = scope:spn_ex_county }
 			}
 		}
 	}
@@ -2016,12 +2161,15 @@ spn_order_broke_rules_effect = {
 # ==================================================================================================
 # RESPONDEO AND THE POWDER (§5.12, §5.13)
 # ==================================================================================================
-# Respondeo's working (the decision's event). Root: the caster. Paid already by the event's option.
+# Respondeo's working. Root: the caster, already paid by the option he chose. $COUNTY$: where it is spoken (the decision
+# passes the county he stands in; a member sent by his commander passes the county where a member was exposed).
+# 2.40 (WORK-ORDER-2.40 G1, B9): it also answers the exposure there (the Blue Rose secret is re-issued to the temple
+# alone), and its price is lower: no wound, medium stress (none in the temple's own Collegium county).
 spn_order_respondeo_effect = {
 	save_scope_as = spn_rs_actor
+	$COUNTY$ = { save_scope_as = spn_body_county }
 	if = {
-		limit = { exists = location.county }
-		location.county = { save_scope_as = spn_body_county }
+		limit = { exists = scope:spn_body_county }
 		scope:spn_body_county = { spn_menace_clear_county_effect = yes }
 		# The members whose bodies are in that county: their witch secret is re-told only to their chapter (C9).
 		var:spn_order_chapter ?= {
@@ -2035,8 +2183,30 @@ spn_order_respondeo_effect = {
 				spn_order_forget_witch_secret_effect = yes
 			}
 		}
+		# 2.40 (WORK-ORDER-2.40 G1): an exposure there, in any temple, is answered: the member's Blue Rose secret is issued
+		# again and told only to his temple (spn_order_forget_secret_effect, the Great Respondeo's own), and the record goes.
+		every_in_global_list = {
+			variable = spn_order_chapters
+			limit = { var:spn_order_chapter ?= { var:spn_order_exposed_county ?= scope:spn_body_county } }
+			var:spn_order_chapter = {
+				if = {
+					limit = {
+						var:spn_order_exposed_member ?= {
+							is_alive = yes
+							spn_is_order_member_trigger = yes
+						}
+					}
+					var:spn_order_exposed_member = { save_scope_as = spn_rs_rehide }
+					custom_tooltip = spn_order_respondeo_rehide_tt
+					spn_order_forget_secret_effect = { WHO = scope:spn_rs_rehide }
+				}
+				remove_variable = spn_order_exposed_member
+				remove_variable = spn_order_exposed_county
+			}
+		}
 	}
-	# 2.39 (WORK-ORDER-2.39 F15): cast in the county of his temple's own Collegium, Respondeo costs no wound.
+	# 2.39 (WORK-ORDER-2.39 F15), 2.40 (WORK-ORDER-2.40 B9): no wound anywhere now; in the county of his temple's own
+	# Collegium it costs no stress either.
 	if = {
 		limit = {
 			exists = scope:spn_body_county
@@ -2048,9 +2218,8 @@ spn_order_respondeo_effect = {
 		custom_tooltip = spn_order_respondeo_no_wound_tt
 	}
 	else = {
-		increase_wounds_no_death_effect = { REASON = fight }
+		add_stress = medium_stress_impact_gain
 	}
-	add_stress = major_stress_impact_gain
 	add_character_modifier = { modifier = spn_order_respondeo_modifier years = 1 }
 	# 2.39 (WORK-ORDER-2.39 B9): the spn_order_respondeo_cd flag is gone. It was set here and read nowhere.
 	spn_order_deed_effect = { PREROGATIVE = flag:silence AMOUNT = 15 TOAST = yes }
@@ -2696,6 +2865,10 @@ spn_transference_begin_effect = {
 				spn_transference_volunteer_ok_trigger = yes
 				NOT = { this = scope:spn_tb_caster }
 				NOT = { this = scope:spn_tb_patient }
+				OR = { # 2.40 (WORK-ORDER-2.40 B7 step 2): asked once, then only if he said "whenever"
+					NOT = { has_character_flag = spn_transference_asked }
+					has_character_flag = spn_transference_volunteers_willingly
+				}
 			}
 			trigger_event = { id = spn_order.0820 days = 1 }
 		}
@@ -2721,7 +2894,7 @@ spn_transference_pick_one_effect = {
 					NOT = { this = root }
 					NOT = { this = root.var:spn_transference_patient }
 					NOT = { root = { is_target_in_variable_list = { name = spn_transference_volunteers target = prev } } }
-					spn_transference_volunteer_value >= 20
+					spn_transference_volunteer_value >= 60 # 2.40 (WORK-ORDER-2.40 B7 step 2): truly willing (was 20)
 				}
 				order_by = spn_transference_volunteer_value
 				save_scope_as = spn_tp_one
@@ -2742,6 +2915,14 @@ spn_transference_succeed_effect = {
 			limit = { has_trait = cancer }
 			set_variable = { name = spn_transference_disease value = flag:cancer years = 5 }
 			remove_trait = cancer
+			# 2.40 (WORK-ORDER-2.40 G5 step 4): the cancer was the Fors Factorum's price; the spell goes with it. What a
+			# later unravelling brings back is only the illness (.0828 says so).
+			if = {
+				limit = { has_variable = spn_fors_price_paid }
+				spn_order_fors_end_effect = yes
+				set_variable = { name = spn_fors_lost_to_cure value = yes years = 5 }
+				save_scope_value_as = { name = spn_tw_fors_broken value = yes }
+			}
 		}
 		else_if = {
 			limit = { has_trait = consumption }
@@ -2765,6 +2946,51 @@ spn_transference_succeed_effect = {
 			remove_trait = spn_blue_fever
 			spn_beetle_drawn_out_effect = { CASTER = root }
 		}
+		else_if = { # 2.40 (WORK-ORDER-2.40 B7 step 3): nine more the Working can draw out
+			limit = { has_trait = infirm }
+			set_variable = { name = spn_transference_disease value = flag:infirm years = 5 }
+			remove_trait = infirm
+		}
+		else_if = {
+			limit = { has_trait = fragile_bones }
+			set_variable = { name = spn_transference_disease value = flag:fragile_bones years = 5 }
+			remove_trait = fragile_bones
+		}
+		else_if = {
+			limit = { has_trait = typhus }
+			set_variable = { name = spn_transference_disease value = flag:typhus years = 5 }
+			remove_trait = typhus
+		}
+		else_if = {
+			limit = { has_trait = bubonic_plague }
+			set_variable = { name = spn_transference_disease value = flag:bubonic_plague years = 5 }
+			remove_trait = bubonic_plague
+		}
+		else_if = {
+			limit = { has_trait = smallpox }
+			set_variable = { name = spn_transference_disease value = flag:smallpox years = 5 }
+			remove_trait = smallpox
+		}
+		else_if = {
+			limit = { has_trait = pneumonic }
+			set_variable = { name = spn_transference_disease value = flag:pneumonic years = 5 }
+			remove_trait = pneumonic
+		}
+		else_if = {
+			limit = { has_trait = dysentery }
+			set_variable = { name = spn_transference_disease value = flag:dysentery years = 5 }
+			remove_trait = dysentery
+		}
+		else_if = {
+			limit = { has_trait = measles }
+			set_variable = { name = spn_transference_disease value = flag:measles years = 5 }
+			remove_trait = measles
+		}
+		else_if = {
+			limit = { has_trait = ill }
+			set_variable = { name = spn_transference_disease value = flag:ill years = 5 }
+			remove_trait = ill
+		}
 		set_variable = { name = spn_transference_cast_by value = root years = 5 }
 		clear_variable_list = spn_transference_carriers
 	}
@@ -2774,7 +3000,10 @@ spn_transference_succeed_effect = {
 		scope:spn_tw_patient = { add_to_variable_list = { name = spn_transference_carriers target = prev } }
 		set_variable = { name = spn_transference_carrier_of value = scope:spn_tw_patient years = 5 }
 		add_character_modifier = { modifier = spn_transference_carrier_modifier years = 5 }
-		spn_order_add_standing_effect = { VALUE = 15 }
+		if = { # 2.40 (WORK-ORDER-2.40 B7): members only; townsfolk are paid instead
+			limit = { spn_is_order_member_trigger = yes }
+			spn_order_add_standing_effect = { VALUE = 15 }
+		}
 		if = {
 			limit = { scope:spn_tw_patient = { spn_is_order_member_trigger = yes } }
 			scope:spn_tw_patient = { add_opinion = { target = prev modifier = spn_gave_blood_opinion } }
@@ -2789,6 +3018,7 @@ spn_transference_succeed_effect = {
 			}
 		}
 	}
+	spn_transference_story_start_effect = yes # 2.40 (WORK-ORDER-2.40 B7 step 1): the tracker
 }
 
 # The Working is over (reversed, or the patient died): every carrier on the patient's list is freed. Patient scope.
@@ -2829,6 +3059,43 @@ spn_transference_revert_effect = {
 		add_trait = spn_blue_fever
 		trigger_event = { id = spn_relic.0720 days = { 45 120 } }
 	}
+	else_if = { # 2.40 (WORK-ORDER-2.40 B7 step 3); infirm and fragile_bones come back at their base rank
+		limit = { var:spn_transference_disease ?= flag:infirm }
+		add_trait = infirm
+	}
+	else_if = {
+		limit = { var:spn_transference_disease ?= flag:fragile_bones }
+		add_trait = fragile_bones
+	}
+	else_if = {
+		limit = { var:spn_transference_disease ?= flag:typhus }
+		add_trait = typhus
+	}
+	else_if = {
+		limit = { var:spn_transference_disease ?= flag:bubonic_plague }
+		add_trait = bubonic_plague
+	}
+	else_if = {
+		limit = { var:spn_transference_disease ?= flag:smallpox }
+		add_trait = smallpox
+	}
+	else_if = {
+		limit = { var:spn_transference_disease ?= flag:pneumonic }
+		add_trait = pneumonic
+	}
+	else_if = {
+		limit = { var:spn_transference_disease ?= flag:dysentery }
+		add_trait = dysentery
+	}
+	else_if = {
+		limit = { var:spn_transference_disease ?= flag:measles }
+		add_trait = measles
+	}
+	else_if = {
+		limit = { var:spn_transference_disease ?= flag:ill }
+		add_trait = ill
+	}
+	spn_transference_story_end_effect = yes # 2.40 (WORK-ORDER-2.40 B7 step 1)
 	remove_variable = spn_transference_disease
 	spn_transference_free_carriers_effect = yes
 }
@@ -3111,15 +3378,19 @@ spn_order_way_refresh_effect = {
 spn_order_respondeo_chapter_pays_effect = {
 	save_scope_as = spn_rs_caller
 	var:spn_order_chapter = {
-		every_in_list = {
+		# 2.40 (WORK-ORDER-2.40 G1): any free member of his temple may pay, wherever he lives; two share it, the AI first
+		# (a player is asked and may say no), so nobody is drained and the whole temple is not emptied for one county.
+		ordered_in_list = {
 			variable = spn_order_members
-			limit = { spn_order_respondeo_payer_trigger = { CALLER = scope:spn_rs_caller } }
+			limit = { spn_order_respondeo_willing_payer_trigger = { CALLER = scope:spn_rs_caller } }
+			order_by = spn_order_respondeo_payer_order_value
+			max = 2
+			check_range_bounds = no
 			if = {
 				limit = { is_ai = no }
 				trigger_event = spn_order.0181
 			}
-			else_if = {
-				limit = { opinion = { target = scope:spn_rs_caller value >= 0 } }
+			else = {
 				spend_standard_ps_effect = yes
 			}
 		}
@@ -3271,6 +3542,10 @@ spn_transference_clear_caster_effect = {
 	if = {
 		limit = { has_variable = spn_transference_patient }
 		remove_variable = spn_transference_patient
+	}
+	if = { # 2.40 (WORK-ORDER-2.40 G6)
+		limit = { has_variable = spn_transference_town_count }
+		remove_variable = spn_transference_town_count
 	}
 	clear_variable_list = spn_transference_volunteers
 }
@@ -3638,7 +3913,7 @@ spn_order_tutor_year_effect = {
 	# rolled three times), and none while the flavor gate is closed. The branch that sends sets spn_tp_moment_year.
 	random = {
 		chance = {
-			value = 50
+			value = 35 # 2.40 (WORK-ORDER-2.40 A10): was 50; four more moments below, so the rate does not rise
 			if = {
 				limit = {
 					scope:spn_tp_player = {
@@ -3729,6 +4004,75 @@ spn_order_tutor_year_effect = {
 					add_character_flag = { flag = spn_tp_moment_year months = 11 }
 				}
 			}
+			# 2.40 (WORK-ORDER-2.40 A10): Arcane Training. A Mage tutor teaches a witch acolyte through Witchcraft's own
+			# Teach Sorcery: a player tutor chooses (The Other Road opens the window); an AI tutor runs it for his player
+			# acolyte, who then plays Witchcraft's whole chain from "Arcane Training". The tutor inherits Witchcraft's
+			# cooldown (magic_ev3.10 sets teach_sorcery_cooldown_flag). Finished, it shortens the Order's road by 2 years.
+			20 = {
+				trigger = {
+					scope:spn_tp_tutee = { spn_order_can_teach_sorcery_trigger = { TUTOR = scope:spn_tp_tutor } }
+				}
+				if = {
+					limit = { scope:spn_tp_tutor = { is_ai = no } }
+					scope:spn_tp_tutor = {
+						trigger_event = { id = spn_order.2100 days = { 3 20 } }
+						add_character_flag = { flag = spn_tp_moment_year months = 11 }
+					}
+				}
+				else = {
+					run_interaction = {
+						interaction = teach_sorcery
+						actor = scope:spn_tp_tutor
+						recipient = scope:spn_tp_tutee
+						execute_threshold = accept
+					}
+					scope:spn_tp_player = { add_character_flag = { flag = spn_tp_moment_year months = 11 } }
+				}
+			}
+			# 2.40 (WORK-ORDER-2.40 A10): The Wrong Word. Once in ten years for him (set on arrival).
+			10 = {
+				trigger = {
+					NOT = { scope:spn_tp_player = { has_character_flag = spn_tp_seen_wrong_word } }
+				}
+				scope:spn_tp_player = {
+					trigger_event = { id = spn_order.2101 days = { 10 120 } }
+					add_character_flag = { flag = spn_tp_moment_year months = 11 }
+				}
+			}
+			# 2.40 (WORK-ORDER-2.40 A10): A Question You Cannot Answer. Once in ten years for him (set on arrival).
+			10 = {
+				trigger = {
+					NOT = { scope:spn_tp_player = { has_character_flag = spn_tp_seen_question } }
+				}
+				scope:spn_tp_player = {
+					trigger_event = { id = spn_order.2102 days = { 10 120 } }
+					add_character_flag = { flag = spn_tp_moment_year months = 11 }
+				}
+			}
+			# 2.40 (WORK-ORDER-2.40 A10): Where Were You Last Night? The acolyte has family outside the Order. Once in ten
+			# years for the acolyte (set on arrival).
+			10 = {
+				trigger = {
+					scope:spn_tp_tutee = {
+						NOT = { has_character_flag = spn_tp_seen_night }
+						OR = {
+							primary_spouse ?= {
+								is_alive = yes
+								NOT = { exists = var:spn_order_chapter }
+							}
+							any_close_family_member = {
+								is_alive = yes
+								is_adult = yes
+								NOT = { exists = var:spn_order_chapter }
+							}
+						}
+					}
+				}
+				scope:spn_tp_player = {
+					trigger_event = { id = spn_order.2103 days = { 10 120 } }
+					add_character_flag = { flag = spn_tp_moment_year months = 11 }
+				}
+			}
 			60 = { }
 		}
 	}
@@ -3740,7 +4084,47 @@ spn_order_tutor_year_effect = {
 # The Clay Working: a temple makes a golem. Root: the Magistratus who leads it. Witchcraft's own creation (magic_ev7.119):
 # the template golem_character, the same names, his minion and his hook.
 spn_order_make_golem_effect = {
+	# 2.40 (WORK-ORDER-2.40 D4): the shape chosen at spn_order.2300 (var:spn_cw_shape), Witchcraft's three (magic_ev7.119).
 	if = {
+		limit = { var:spn_cw_shape ?= flag:man }
+		create_character = {
+			name = golem_name
+			employer = root
+			culture = root.culture
+			faith = root.faith
+			rite = root.rite
+			dynasty_house = root.house
+			gender = male
+			template = golem_character
+			save_scope_as = spn_cw_golem
+			after_creation = {
+				add_trait = beauty_good_3
+				remove_mortal_soul_effect = yes
+				set_sexuality = heterosexual
+			}
+		}
+	}
+	else_if = {
+		limit = { var:spn_cw_shape ?= flag:woman }
+		create_character = {
+			name = golem_name2
+			employer = root
+			culture = root.culture
+			faith = root.faith
+			rite = root.rite
+			dynasty_house = root.house
+			gender = female
+			template = golem_character
+			save_scope_as = spn_cw_golem
+			after_creation = {
+				add_trait = beauty_good_3
+				remove_mortal_soul_effect = yes
+				set_sexuality = heterosexual
+			}
+		}
+	}
+	# In the maker's image (2.38b's own two branches, unchanged).
+	else_if = {
 		limit = { is_male = yes }
 		create_character = {
 			name = golem_name
@@ -3779,11 +4163,12 @@ spn_order_make_golem_effect = {
 	}
 	if = {
 		limit = { exists = scope:spn_cw_golem }
-		set_relation_mminion = scope:spn_cw_golem
-		add_hook = {
-			type = magic_domination_hook
-			target = scope:spn_cw_golem
-		}
+		# 2.40 (WORK-ORDER-2.40 D1, D3): the one bond effect (relation, hook, court, last master, puppet)
+		spn_golem_bond_transfer_effect = { GOLEM = scope:spn_cw_golem NEW = root }
+	}
+	if = {
+		limit = { has_variable = spn_cw_shape }
+		remove_variable = spn_cw_shape
 	}
 }
 
@@ -3859,22 +4244,8 @@ spn_order_golem_material_effect = {
 
 # 2.38c: the golem goes to the Temple Magus (.0861): his minion, his hook, his court. Root: the maker.
 spn_order_golem_to_magus_effect = {
-	if = {
-		limit = { has_relation_mminion = scope:spn_cw_golem }
-		remove_relation_mminion = scope:spn_cw_golem
-	}
-	if = {
-		limit = { has_hook = scope:spn_cw_golem }
-		remove_hook = { target = scope:spn_cw_golem }
-	}
-	scope:spn_cw_magus = {
-		set_relation_mminion = scope:spn_cw_golem
-		add_hook = {
-			type = magic_domination_hook
-			target = scope:spn_cw_golem
-		}
-		add_courtier = scope:spn_cw_golem
-	}
+	# 2.40 (WORK-ORDER-2.40 D3): through the one bond effect, which ends the maker's bond first.
+	spn_golem_bond_transfer_effect = { GOLEM = scope:spn_cw_golem NEW = scope:spn_cw_magus }
 }
 
 # 2.38e: renouncing necromancy takes all of it: the trait, Witchcraft's master necromancer modifier and the skeleton

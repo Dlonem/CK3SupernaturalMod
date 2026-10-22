@@ -9,6 +9,28 @@ spn_conclave.0001 = {
 	title = spn_conclave.0001.t
 	desc = {
 		first_valid = {
+			# 2.40 (WORK-ORDER-2.40 A5): the text says why this temple was asked.
+			triggered_desc = {
+				trigger = {
+					var:spn_conclave_reason ?= flag:chair
+					has_variable = spn_conclave_passed
+				}
+				desc = spn_conclave.0001.desc_chair_passed
+			}
+			triggered_desc = {
+				trigger = {
+					var:spn_conclave_reason ?= flag:prerogative
+					has_variable = spn_conclave_passed
+				}
+				desc = spn_conclave.0001.desc_prerogative_passed
+			}
+			triggered_desc = {
+				trigger = {
+					var:spn_conclave_reason ?= flag:prerogative
+					NOT = { global_var:current_archmage_global ?= root }
+				}
+				desc = spn_conclave.0001.desc_prerogative_why
+			}
 			triggered_desc = {
 				trigger = { var:spn_conclave_reason ?= flag:chair }
 				desc = spn_conclave.0001.desc_chair
@@ -49,6 +71,13 @@ spn_conclave.0001 = {
 		is_alive = yes
 		has_character_flag = spn_conclave_may_call
 		NOT = { involved_activity ?= { has_activity_type = spn_conclave } } # 2.38c: already planning or travelling to it
+		# 2.40 (WORK-ORDER-2.40 A3/A5): a call the Order hands him waits for a free player and 30 days after other Order
+		# business. A Grand Magus calling at will asked for it now.
+		trigger_if = {
+			limit = { NOT = { var:spn_conclave_reason ?= flag:will } }
+			spn_order_player_free_trigger = yes
+			spn_order_business_ready_trigger = yes
+		}
 		# 2.39 (WORK-ORDER-2.39 B12 d): the chair may have been filled while the note waited.
 		trigger_if = {
 			limit = { var:spn_conclave_reason ?= flag:chair }
@@ -112,8 +141,42 @@ spn_conclave.0001 = {
 			}
 			spn_invocare_clear_call_effect = yes
 		}
+		# 2.40 (WORK-ORDER-2.40 A3/A5): the call still stands and only he stood in the way. The spacing alone: ask again
+		# in 31 days. Busy: the masks pass the call to another temple, and tell him.
+		else_if = {
+			limit = {
+				is_alive = yes
+				has_character_flag = spn_conclave_may_call
+				exists = var:spn_conclave_reason
+				NOT = { var:spn_conclave_reason ?= flag:will }
+				NOT = { involved_activity ?= { has_activity_type = spn_conclave } }
+			}
+			if = {
+				limit = { spn_order_player_free_trigger = yes }
+				trigger_event = { id = spn_conclave.0001 days = 31 }
+			}
+			else = {
+				spn_conclave_pass_on_effect = yes
+				if = {
+					limit = { exists = scope:spn_cl_host }
+					send_interface_toast = {
+						type = event_toast_text_neutral
+						title = spn_conclave_toast_passed
+						desc = spn_conclave_toast_passed_desc
+					}
+				}
+				else = {
+					send_interface_toast = {
+						type = event_toast_text_neutral
+						title = spn_conclave_toast_passed
+						desc = spn_conclave_toast_passed_none_desc
+					}
+				}
+			}
+		}
 	}
 	immediate = {
+		spn_order_business_mark_effect = yes # 2.40 (WORK-ORDER-2.40 A3)
 		# The named heir first, as the succession does (spn_order_succession_effect); else the highest member.
 		var:spn_order_chapter.var:spn_order_heir ?= {
 			if = {
@@ -148,9 +211,30 @@ spn_conclave.0001 = {
 			data = activity_type:spn_conclave
 		}
 	}
+	# 2.40 (WORK-ORDER-2.40 A5): "Let another temple call it" passes the call on and ends the alert (the old "Not yet" kept
+	# the flag, so vanilla's host-an-activity alert stayed for two years).
 	option = {
 		name = spn_conclave.0001.b
+		trigger = { NOT = { var:spn_conclave_reason ?= flag:will } }
 		custom_tooltip = spn_conclave.0001.b.tt
+		hidden_effect = { spn_conclave_pass_on_effect = yes }
+	}
+	# A Grand Magus who called it at will: not now (the decision calls it again).
+	option = {
+		name = spn_conclave.0001.b_will
+		trigger = { var:spn_conclave_reason ?= flag:will }
+		custom_tooltip = spn_conclave.0001.b_will.tt
+		if = {
+			limit = { has_character_flag = spn_conclave_may_call }
+			remove_character_flag = spn_conclave_may_call
+		}
+		remove_variable = spn_conclave_reason
+	}
+	after = {
+		if = {
+			limit = { has_variable = spn_conclave_passed }
+			remove_variable = spn_conclave_passed
+		}
 	}
 }
 
@@ -387,6 +471,18 @@ spn_conclave.0300 = {
 	title = spn_conclave.0300.t
 	desc = {
 		first_valid = {
+			# 2.40 (WORK-ORDER-2.40 A4): the host does not walk in late; he rises from the chair.
+			triggered_desc = {
+				trigger = {
+					scope:host ?= root
+					exists = scope:spn_cv_proof_art
+				}
+				desc = spn_conclave.0300.desc_host_item
+			}
+			triggered_desc = {
+				trigger = { scope:host ?= root }
+				desc = spn_conclave.0300.desc_host_kill
+			}
 			triggered_desc = {
 				trigger = { exists = scope:spn_cv_proof_art }
 				desc = spn_conclave.0300.desc_item
@@ -401,9 +497,9 @@ spn_conclave.0300 = {
 	theme = learning
 	override_background = { reference = magic_temple }
 	left_portrait = { character = root animation = personality_bold }
-	right_portrait = {
-		trigger = { exists = global_var:current_archmage_global }
-		character = global_var:current_archmage_global
+	right_portrait = { # 2.40 (WORK-ORDER-2.40 A4): the witness (spn_conclave_entrance_effect), never the entrant twice
+		trigger = { exists = scope:spn_cv_witness }
+		character = scope:spn_cv_witness
 		animation = admiration
 	}
 	option = {

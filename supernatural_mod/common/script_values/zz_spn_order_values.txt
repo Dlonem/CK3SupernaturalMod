@@ -243,6 +243,10 @@ spn_order_teach_years_value = {
 		limit = { var:spn_order_tutor ?= { var:spn_order_rank ?= flag:magistratus } }
 		add = -1
 	}
+	if = { # 2.40 (WORK-ORDER-2.40 A10): finished Witchcraft's Arcane Training (magic_ev3.20/.21)
+		limit = { has_character_flag = arcane_unlocked_flag }
+		add = -2
+	}
 	min = 3
 }
 # Gold a year: 5 + 1 per rank step.
@@ -260,6 +264,10 @@ spn_order_dues_value = {
 # The tutor with the fewest tutees first (§5.6 step 4); a tie goes to the higher standing.
 spn_order_tutor_pick_value = {
 	value = 0
+	if = { # 2.40 (WORK-ORDER-2.40 A9): the Medici teach; the Temple Magus only when nobody else can
+		limit = { spn_is_temple_magus_trigger = yes }
+		add = -30
+	}
 	every_in_list = {
 		variable = spn_order_tutees
 		add = -10
@@ -270,6 +278,12 @@ spn_order_tutor_pick_value = {
 			value = var:spn_order_standing
 			divide = 20
 		}
+	}
+	# 2.40 (WORK-ORDER-2.40 A11): an Adeptus works outside the temple, so acolytes go to anyone else first; he still
+	# teaches when nobody else can (an acolyte is never left untaught).
+	if = {
+		limit = { exists = var:spn_order_adeptus }
+		add = -100
 	}
 }
 # Succession (§5.8): Magistratus, then Medicum, then acolyte; within a rank, standing.

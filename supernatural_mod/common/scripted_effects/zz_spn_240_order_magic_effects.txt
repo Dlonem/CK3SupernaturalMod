@@ -1,0 +1,439 @@
+﻿# Supernatural 2.40 -- the Order's magic and people (WORK-ORDER-2.40 A9, A10, B11, G1, G3, G4). Triggers:
+# zz_spn_240_order_magic_triggers.txt. Values: zz_spn_240_order_magic_values.txt. Events: zz_spn_240_order_magic_events.txt.
+# Loc: localization/english/zz_spn_240_q3_l_english.yml.
+#
+# New state, and how long it lives:
+#   chapter (story): spn_order_exposed_member, spn_order_exposed_county (G1: the exposure waiting for Respondeo, 2 years),
+#                    spn_order_respondeo_sent (G1: an AI temple sent someone, 3 years).
+#   character:       spn_order_mage_year (G4: a Mage the temple made, 10 years; the cap counts it), flag
+#                    spn_order_tutor_rests (G4: 5 years), flag spn_order_no_acolytes (G4: identity state, his own choice,
+#                    no duration; "Take Acolytes Again" removes it), flags spn_tp_seen_wrong_word / _question / _night
+#                    (A10 moments, 10 years), flag spn_order_finishing (G4: an AI acolyte sent to The First True
+#                    Working, 90 days), flag spn_order_sought_answer (G3: 90 days).
+
+# ==================================================================================================
+# RESPONDEO BY COMMAND (G1, B9)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 G1): Respondeo paid with a Powder: his own first, else one his temple's Reliquary keeps, found and
+# spent by Q1's one spend effect (it tells the keeper and rebuilds the Reliquary). Caster scope.
+spn_order_respondeo_use_powder_effect = {
+	custom_tooltip = spn_order_respondeo_powder_tt
+	spn_relic_powder_spend_effect = { WHO = this }
+}
+
+# 2.40 (WORK-ORDER-2.40 G1): the nearest member $COMMANDER's$ word reaches, to speak Respondeo in $COUNTY$. A Temple Magus
+# commands the Magistrati of his own temple; the Grand Magus may also command the head of any other temple. The member who
+# was exposed is never sent. Saves scope:spn_rs_agent (none if nobody fits), scope:spn_rs_commander and
+# scope:spn_rs_county. Commander scope.
+spn_order_respondeo_pick_agent_effect = {
+	save_scope_as = spn_rs_commander
+	$COUNTY$ = { save_scope_as = spn_rs_county }
+	scope:spn_rs_county = { title_province = { save_scope_as = spn_rs_prov } }
+	if = { limit = { exists = scope:spn_rs_agent } clear_saved_scope = spn_rs_agent }
+	if = { limit = { exists = scope:spn_rs_agent_far } clear_saved_scope = spn_rs_agent_far }
+	var:spn_order_chapter ?= {
+		ordered_in_list = {
+			variable = spn_order_members
+			limit = {
+				spn_order_respondeo_agent_ok_trigger = { COMMANDER = scope:spn_rs_commander }
+				NOT = { scope:spn_rs_exposed ?= this }
+			}
+			order_by = {
+				value = 0
+				subtract = "location.squared_distance(scope:spn_rs_prov)"
+			}
+			save_scope_as = spn_rs_agent
+		}
+	}
+	if = {
+		limit = { global_var:current_archmage_global ?= scope:spn_rs_commander }
+		ordered_in_global_list = {
+			variable = spn_order_chapters
+			limit = {
+				spn_order_respondeo_agent_ok_trigger = { COMMANDER = scope:spn_rs_commander }
+				NOT = { scope:spn_rs_exposed ?= this }
+			}
+			order_by = {
+				value = 0
+				subtract = "location.squared_distance(scope:spn_rs_prov)"
+			}
+			save_scope_as = spn_rs_agent_far
+		}
+		if = {
+			limit = { exists = scope:spn_rs_agent_far }
+			if = {
+				limit = { NOT = { exists = scope:spn_rs_agent } }
+				scope:spn_rs_agent_far = { save_scope_as = spn_rs_agent }
+			}
+			else = {
+				scope:spn_rs_agent = {
+					save_scope_value_as = {
+						name = spn_rs_d_near
+						value = { value = "location.squared_distance(scope:spn_rs_prov)" }
+					}
+				}
+				scope:spn_rs_agent_far = {
+					save_scope_value_as = {
+						name = spn_rs_d_far
+						value = { value = "location.squared_distance(scope:spn_rs_prov)" }
+					}
+				}
+				if = {
+					limit = { scope:spn_rs_d_far < scope:spn_rs_d_near }
+					scope:spn_rs_agent_far = { save_scope_as = spn_rs_agent }
+				}
+			}
+		}
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 G1): the order goes out to scope:spn_rs_agent. A player agent hears it within days ("Word from
+# Your Temple Magus"); an AI agent travels and does it (30 to 90 days). Commander scope, after the pick.
+spn_order_respondeo_order_agent_effect = {
+	if = {
+		limit = { exists = scope:spn_rs_agent }
+		scope:spn_rs_agent = {
+			if = {
+				limit = { is_ai = no }
+				trigger_event = { id = spn_order.2120 days = { 3 10 } }
+			}
+			else = {
+				trigger_event = { id = spn_order.2121 days = { 30 90 } }
+			}
+		}
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 G1, B9 item 2): an AI temple, or a player head too busy for the Order's business, answers an
+# exposure itself. An AI head sends someone by his nature (spn_order_respondeo_send_chance_value) and at most once in
+# three years per temple; a busy player's temple always tries, and he is told what it did. Head scope; scope:spn_rs_exposed
+# is the member who was exposed.
+spn_order_respondeo_send_agent_effect = {
+	save_scope_as = spn_rs_commander
+	if = { limit = { exists = scope:spn_rs_agent } clear_saved_scope = spn_rs_agent }
+	if = {
+		limit = {
+			OR = {
+				is_ai = no
+				var:spn_order_chapter ?= { NOT = { has_variable = spn_order_respondeo_sent } }
+			}
+		}
+		random = {
+			chance = spn_order_respondeo_send_chance_value
+			spn_order_respondeo_pick_agent_effect = { COUNTY = $COUNTY$ }
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_rs_agent }
+		if = {
+			limit = { is_ai = yes }
+			var:spn_order_chapter ?= { set_variable = { name = spn_order_respondeo_sent value = yes years = 3 } }
+		}
+		spn_order_respondeo_order_agent_effect = yes
+		if = {
+			limit = { is_ai = no }
+			send_interface_toast = {
+				type = event_toast_text_neutral
+				title = spn_order_toast_respondeo_sent
+				desc = spn_order_toast_respondeo_sent_desc
+				left_icon = scope:spn_rs_exposed
+				right_icon = scope:spn_rs_agent
+			}
+		}
+	}
+	else_if = {
+		limit = { is_ai = no }
+		send_interface_toast = {
+			type = event_toast_text_bad
+			title = spn_order.0170.t
+			desc = spn_order_toast_respondeo_nobody_desc
+			left_icon = scope:spn_rs_exposed
+		}
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 G1): the agent has spoken the words; the commander paid nothing. Agent scope (the caster), with
+# scope:spn_rs_commander and scope:spn_rs_county.
+spn_order_respondeo_answered_effect = {
+	spn_order_add_standing_effect = { VALUE = 5 }
+	if = {
+		limit = { exists = scope:spn_rs_commander }
+		scope:spn_rs_commander = {
+			if = {
+				limit = {
+					is_alive = yes
+					is_ai = no
+				}
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order_toast_respondeo_done
+					desc = spn_order_toast_respondeo_done_desc
+					left_icon = scope:spn_rs_agent
+				}
+			}
+		}
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 G1): the commander hears that nobody could pay. Agent scope.
+spn_order_respondeo_unpaid_effect = {
+	if = {
+		limit = { exists = scope:spn_rs_commander }
+		scope:spn_rs_commander = {
+			if = {
+				limit = {
+					is_alive = yes
+					is_ai = no
+				}
+				send_interface_toast = {
+					type = event_toast_text_bad
+					title = spn_order_toast_respondeo_unpaid
+					desc = spn_order_toast_respondeo_unpaid_desc
+					left_icon = scope:spn_rs_agent
+				}
+			}
+		}
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 G1): the agent will not go. -10 standing, and the commander remembers it. Agent scope.
+spn_order_respondeo_refused_effect = {
+	save_scope_as = spn_rs_refuser
+	spn_order_add_standing_effect = { VALUE = -10 }
+	if = {
+		limit = { exists = scope:spn_rs_commander }
+		scope:spn_rs_commander = {
+			if = {
+				limit = { is_alive = yes }
+				add_opinion = { target = scope:spn_rs_refuser modifier = spn_order_refused_command_opinion }
+				if = {
+					limit = { is_ai = no }
+					send_interface_toast = {
+						type = event_toast_text_bad
+						title = spn_order_toast_respondeo_refused
+						desc = spn_order_toast_respondeo_refused_desc
+						left_icon = scope:spn_rs_refuser
+					}
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# TEACHING (A9, A10, G4)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 A9, G4): an acolyte has finished the teaching (spn_order.0140, every finishing option). His tutor
+# rests five years before he is given or finishes another, and earns 5 standing; a player tutor is told. Acolyte scope.
+spn_order_tutee_finished_effect = {
+	save_scope_as = spn_tf_tutee
+	var:spn_order_tutor ?= {
+		if = {
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_tf_tutee }
+			}
+			add_character_flag = { flag = spn_order_tutor_rests years = spn_order_tutor_rest_years_value }
+			spn_order_add_standing_effect = { VALUE = 5 }
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_good
+					title = spn_order_toast_tutee_taught
+					desc = spn_order_toast_tutee_taught_desc
+					left_icon = scope:spn_tf_tutee
+				}
+			}
+		}
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 G4): a tutor who will not take acolytes (or is no longer in the Order to teach) gives up those he
+# has; the chapter year's own assignment finds them another. Acolyte scope.
+spn_order_tutor_release_effect = {
+	save_scope_as = spn_trl_tutee
+	var:spn_order_tutor ?= {
+		if = {
+			limit = { is_target_in_variable_list = { name = spn_order_tutees target = scope:spn_trl_tutee } }
+			remove_list_variable = { name = spn_order_tutees target = scope:spn_trl_tutee }
+		}
+		hidden_effect = { # as promotion does (spn_order effects, step 6)
+			if = {
+				limit = { has_relation_spn_order_tutor_of = scope:spn_trl_tutee }
+				remove_relation_spn_order_tutor_of = scope:spn_trl_tutee
+			}
+		}
+	}
+	remove_variable = spn_order_tutor
+}
+
+# ==================================================================================================
+# MAGICAL RESEARCH (B11)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 B11): a breakthrough's worth of progress on the Magical Research this character is doing now,
+# with Witchcraft's own effect (it prints the gain and moves the activity's bar; one breakthrough is 25). Character scope.
+spn_order_research_progress_effect = {
+	if = {
+		limit = { involved_activity ?= { has_activity_type = magical_research } }
+		involved_activity = { save_scope_as = activity }
+		gain_magical_research_progress_effect = { P = 20 }
+		gain_magical_research_progress_effect = { P = 5 }
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 B11): Ask the Temple for Help with Your Research. The most learned Magistratus of the temple
+# comes, the research moves at once, and he earns standing for it. Root: the member who asked.
+spn_order_research_help_effect = {
+	save_scope_as = spn_rh_asker
+	if = { limit = { exists = scope:spn_rh_helper } clear_saved_scope = spn_rh_helper }
+	var:spn_order_chapter ?= {
+		ordered_in_list = {
+			variable = spn_order_members
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_rh_asker }
+				spn_order_magistratus_plus_trigger = yes
+			}
+			order_by = learning
+			save_scope_as = spn_rh_helper
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_rh_helper }
+		custom_tooltip = spn_order_research_help_helper_tt
+		spn_order_research_progress_effect = yes
+		scope:spn_rh_helper = { hidden_effect = { spn_order_add_standing_effect = { VALUE = 5 } } }
+		if = {
+			limit = { is_ai = no }
+			hidden_effect = {
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.0330.t
+					desc = spn_order_toast_research_helped_desc
+					left_icon = scope:spn_rh_asker
+					right_icon = scope:spn_rh_helper
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE RECRUITMENT SCENES (G3)
+# ==================================================================================================
+
+# 2.40 (WORK-ORDER-2.40 G3): the places a candidate's pledge events name. scope:spn_pl_seat (the temple's seat county),
+# scope:spn_pl_hall (the county of its Collegium, while it stands), scope:spn_pl_tutor (his tutor). Each is saved only if
+# it exists; every text that names one has a fallback without it. Candidate scope; the temple is his chapter, else the one
+# that picked him (A Note and a Blue Rose).
+spn_order_place_scopes_effect = {
+	if = {
+		limit = { exists = var:spn_order_chapter }
+		var:spn_order_chapter = { save_scope_as = spn_pl_ch }
+	}
+	else_if = {
+		limit = { exists = var:spn_order_picker }
+		var:spn_order_picker = { save_scope_as = spn_pl_ch }
+	}
+	if = {
+		limit = { exists = scope:spn_pl_ch }
+		scope:spn_pl_ch = {
+			var:spn_order_seat ?= { save_scope_as = spn_pl_seat }
+			if = {
+				limit = { spn_order_hall_stands_trigger = yes }
+				var:spn_order_hall = {
+					county ?= { save_scope_as = spn_pl_hall }
+				}
+			}
+		}
+	}
+	var:spn_order_tutor ?= {
+		if = {
+			limit = { is_alive = yes }
+			save_scope_as = spn_pl_tutor
+		}
+	}
+}
+
+# ==================================================================================================
+# THE GNOSTIC COUNCIL'S TREASURY (boot 4, COUNCIL 1)
+# ==================================================================================================
+
+# 2.40 (boot 4, COUNCIL 1): a seat takes $GOLD$ from the council's treasury (Witchcraft's own take_from_mc_funds_effect).
+# Root: the seat who draws. The flag is the two-year wait; the other seats take offence (none under the Imperium for the
+# Grand Magus) and a player among them is told.
+spn_council_draw_funds_effect = {
+	# RD3 (boot 4 review): checked again when the option is taken, not only when the ledger opened. Another seat may have
+	# drawn while this ledger stood open, or a second ledger opened from the decision before the first was closed: the
+	# treasury must never go below zero and the two-year wait must hold. Then nothing is taken and he is told.
+	if = {
+		limit = {
+			NOT = { has_character_flag = spn_council_drew_funds }
+			exists = global_var:mc_gold_global
+			global_var:mc_gold_global >= $GOLD$
+		}
+		save_scope_as = spn_cdf_magus
+		save_scope_value_as = {
+			name = spn_cdf_gold
+			value = $GOLD$
+		}
+		take_from_mc_funds_effect = {
+			RECEIVER = root
+			VALUE = $GOLD$
+		}
+		add_character_flag = { flag = spn_council_drew_funds years = 2 }
+		if = {
+			limit = { spn_imperium_holds_trigger = no }
+			custom_tooltip = spn_council_draw_funds_offence_tt
+		}
+		hidden_effect = {
+			spn_council_drew_funds_seat_effect = { SEAT = current_archmage_global }
+			spn_council_drew_funds_seat_effect = { SEAT = current_loremaster_global }
+			spn_council_drew_funds_seat_effect = { SEAT = current_black_mage_global }
+			spn_council_drew_funds_seat_effect = { SEAT = current_admin_global }
+		}
+	}
+	else = {
+		hidden_effect = {
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_council_toast_funds_late
+					desc = spn_council_toast_funds_late_desc
+				}
+			}
+		}
+	}
+}
+
+# 2.40 (boot 4, COUNCIL 1): one other seat hears of the draw. $SEAT$ = a council global's name. A man who holds two seats is
+# told once (temporary list spn_cdf_told: the flag it replaced, one day long, let a second draw that day skip him).
+spn_council_drew_funds_seat_effect = {
+	global_var:$SEAT$ ?= {
+		if = {
+			limit = {
+				is_alive = yes
+				NOT = { this = scope:spn_cdf_magus }
+				NOT = { is_in_list = spn_cdf_told }
+			}
+			add_to_temporary_list = spn_cdf_told
+			if = {
+				limit = { scope:spn_cdf_magus = { spn_imperium_holds_trigger = no } }
+				add_opinion = { target = scope:spn_cdf_magus modifier = spn_council_drew_funds_opinion }
+			}
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_council_toast_funds_drawn
+					desc = spn_council_toast_funds_drawn_desc
+					left_icon = scope:spn_cdf_magus
+				}
+			}
+		}
+	}
+}

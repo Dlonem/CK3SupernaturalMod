@@ -1,0 +1,370 @@
+﻿# Supernatural 2.40 -- "fixes and balance": the relics and the Reliquaries (WORK-ORDER-2.40 G9, B1, B9, G11, G7, B2).
+# Package Q1. Loc: localization/english/zz_spn_240_q1_l_english.yml. Triggers: zz_spn_240_relic_triggers.txt.
+#
+# New state, each with its one writer here:
+#   chapter var spn_order_relics_given   identity state, no expiry: this temple has been looked at by the relic seed once
+#                                        (seeded, or found already holding pledged items). Never seeded twice.
+#   global spn_reliquary_rebuilt_240     once, ever: the 2.40 repair rebuilt every Reliquary list.
+#   character list spn_order_moved_pledges   a member's pledges banked by a transfer (spn_order_remove_member_effect),
+#                                        pledged to his new temple and cleared by spn_order_add_member_effect in the same
+#                                        effect. Never outlives the move.
+#   globals spn_relic_n_<kind>           the debug count (spn_relic_debug_count_effect), overwritten each count.
+
+# ==================================================================================================
+# G9: ONE TEMPLE'S RELICS. Head scope (a Temple Magus). The body of 2.38's seeding loop, moved out of spn_relic_seed_effect
+# so a temple founded later, or emptied in this save, gets the same: one relic for the head and one to three for the
+# members, all pledged. Marks the temple first, so it never runs twice for one temple.
+# ==================================================================================================
+spn_relic_seed_chapter_effect = {
+	save_scope_as = spn_rs_head
+	var:spn_order_chapter = { set_variable = spn_order_relics_given }
+	# One for the head, pledged.
+	spn_relic_make_random_effect = { OWNER = scope:spn_rs_head }
+	if = {
+		limit = { exists = scope:spn_new_relic }
+		spn_relic_pledge_effect = { ART = scope:spn_new_relic TO = scope:spn_rs_head.var:spn_order_chapter }
+		clear_saved_scope = spn_new_relic
+	}
+	# One to three more, spread over the members, pledged.
+	var:spn_order_chapter = {
+		random_list = {
+			40 = { set_variable = { name = spn_rs_more value = 1 } }
+			40 = { set_variable = { name = spn_rs_more value = 2 } }
+			20 = { set_variable = { name = spn_rs_more value = 3 } }
+		}
+	}
+	spn_relic_seed_member_effect = yes
+	if = {
+		limit = { var:spn_order_chapter.var:spn_rs_more >= 2 }
+		spn_relic_seed_member_effect = yes
+	}
+	if = {
+		limit = { var:spn_order_chapter.var:spn_rs_more >= 3 }
+		spn_relic_seed_member_effect = yes
+	}
+	var:spn_order_chapter = { remove_variable = spn_rs_more }
+	# A player Temple Magus hears it.
+	if = {
+		limit = { is_ai = no }
+		send_interface_toast = {
+			type = event_toast_effect_good
+			title = spn_order_toast_reliquary_seeded
+			left_icon = this
+		}
+	}
+}
+
+# ==================================================================================================
+# B1 + G9: THE YEAR. No root. Called from spn_order_yearly_older_save (zz_spn_order_on_actions.txt), after the relic seed.
+#   1. Once, the repair for a running save (WORK-ORDER-2.40 §4 repair 1): every Reliquary list is rebuilt, temples and
+#      covens, so lists and modifiers match what is really pledged after the drain.
+#   2. Every year, after the relic seed has run: each temple the seed has not looked at yet. An empty Reliquary gets its
+#      relics (a daughter temple founded later; on a save's first year of 2.40, every temple the start seeding or the drain
+#      left bare: the "reseed", with no second round of court relics). A Reliquary that holds anything is only marked.
+#      A walk of the temple list, never of the world.
+# ==================================================================================================
+spn_relic_chapters_yearly_effect = {
+	if = {
+		limit = { NOT = { exists = global_var:spn_reliquary_rebuilt_240 } }
+		set_global_variable = spn_reliquary_rebuilt_240
+		every_in_global_list = {
+			variable = spn_order_chapters
+			limit = { exists = var:spn_order_chapter }
+			var:spn_order_chapter = {
+				spn_reliquary_rebuild_effect = yes
+				every_in_list = {
+					variable = spn_order_members
+					limit = {
+						is_alive = yes
+						spn_is_order_member_trigger = yes
+					}
+					spn_reliquary_apply_effect = yes
+				}
+			}
+		}
+		every_in_global_list = {
+			variable = spn_covens
+			spn_reliquary_rebuild_effect = yes
+			every_in_list = {
+				variable = spn_coven_members
+				limit = { is_alive = yes }
+				spn_coven_reliquary_apply_effect = yes
+			}
+		}
+	}
+	if = {
+		limit = {
+			spn_order_on_trigger = yes
+			exists = global_var:spn_relics_seeded
+		}
+		every_in_global_list = {
+			variable = spn_order_chapters
+			limit = {
+				is_alive = yes
+				var:spn_order_chapter ?= { NOT = { has_variable = spn_order_relics_given } }
+			}
+			if = {
+				limit = { var:spn_order_chapter = { spn_relic_reliquary_empty_trigger = yes } }
+				spn_relic_seed_chapter_effect = yes
+			}
+			else = {
+				var:spn_order_chapter = { set_variable = spn_order_relics_given }
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# B1: A MEMBER WHO MOVED TEMPLES BRINGS HIS PLEDGES. Called by spn_order_add_member_effect, in its scope, once he is on
+# the new temple's list (scope:spn_add_who, scope:spn_add_ch). spn_order_remove_member_effect banked them for flag:transfer
+# (a charter, a daughter temple, a founding). Each must still be his, unpledged and not on loan. The list goes first.
+# ==================================================================================================
+spn_relic_repledge_moved_effect = {
+	scope:spn_add_who = {
+		if = {
+			limit = { has_variable_list = spn_order_moved_pledges }
+			every_in_list = {
+				variable = spn_order_moved_pledges
+				limit = {
+					artifact_owner ?= scope:spn_add_who
+					NOT = { has_variable = spn_pledged_to }
+					NOT = { has_variable = spn_borrowed_from }
+				}
+				add_to_temporary_list = spn_add_repledge
+			}
+			clear_variable_list = spn_order_moved_pledges
+			every_in_list = {
+				list = spn_add_repledge
+				spn_relic_pledge_effect = { ART = this TO = scope:spn_add_ch }
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# B9, G11 cross-cutting, G1 step 2: THE ONE WAY A POWDER IS USED UP. $WHO$ spends one: his own (worn first, then carried;
+# never a borrowed one), else one kept in his temple's Reliquary (spn_relic_can_spend_powder_trigger finds the same).
+# Banked first (which Powder, its owner, the Reliquary it was pledged to); its owner told when it was not $WHO$'s; then it
+# is destroyed; then that Reliquary is rebuilt, so no dead entry stays in its list (Throw the Powder and Break the Order
+# both left one). Callers: Throw the Powder, the auto-throw below, A Sister on Trial (spn_order.1007), the Respondeo ladder
+# (Q3), Send for a Hide (Q5). The caller says what the Powder does; this only spends it.
+# ==================================================================================================
+spn_relic_powder_spend_effect = {
+	$WHO$ = { save_scope_as = spn_ps_who }
+	if = {
+		limit = { exists = scope:spn_ps_powder }
+		clear_saved_scope = spn_ps_powder
+	}
+	scope:spn_ps_who = {
+		if = {
+			limit = {
+				any_equipped_character_artifact = {
+					var:spn_relic ?= flag:powder
+					NOT = { has_variable = spn_borrowed_from }
+				}
+			}
+			random_equipped_character_artifact = {
+				limit = {
+					var:spn_relic ?= flag:powder
+					NOT = { has_variable = spn_borrowed_from }
+				}
+				save_scope_as = spn_ps_powder
+			}
+		}
+		else_if = {
+			limit = { spn_order_holds_powder_trigger = yes }
+			random_character_artifact = {
+				limit = {
+					var:spn_relic ?= flag:powder
+					NOT = { has_variable = spn_borrowed_from }
+				}
+				save_scope_as = spn_ps_powder
+			}
+		}
+		else_if = {
+			limit = {
+				var:spn_order_chapter ?= {
+					any_in_list = {
+						variable = spn_order_reliquary
+						spn_relic_reliquary_powder_trigger = yes
+					}
+				}
+			}
+			var:spn_order_chapter = {
+				random_in_list = {
+					variable = spn_order_reliquary
+					limit = { spn_relic_reliquary_powder_trigger = yes }
+					save_scope_as = spn_ps_powder
+				}
+			}
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_ps_powder }
+		# 1. Banked.
+		scope:spn_ps_powder = {
+			var:spn_pledged_to ?= { save_scope_as = spn_ps_story }
+			artifact_owner ?= { save_scope_as = spn_ps_owner }
+		}
+		# 2. A member whose Powder the temple spent is told.
+		if = {
+			limit = {
+				scope:spn_ps_owner ?= {
+					is_ai = no
+					NOT = { this = scope:spn_ps_who }
+				}
+			}
+			scope:spn_ps_owner = {
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_relic_toast_powder_spent
+					left_icon = scope:spn_ps_who
+					right_icon = scope:spn_ps_powder
+				}
+			}
+		}
+		# 3. Spent, last.
+		scope:spn_ps_powder = { destroy_artifact = this }
+		# 4. The Reliquary it was pledged to, and the strength its members draw from it.
+		scope:spn_ps_story ?= { spn_reliquary_rebuild_effect = yes }
+		scope:spn_ps_owner ?= { spn_reliquary_apply_any_effect = yes }
+	}
+}
+
+# ==================================================================================================
+# B9: THE POWDER THROWS ITSELF. Character scope: the culprit a trail was just opened for. Q9's spn_menace_after_mark_effect
+# calls it in his scope at the end of spn_mark_menace_effect, with scope:county the county marked (scope:spn_mm_county is
+# read when scope:county is not saved). It fires only when a trail is open there with him as its culprit (a whisper is not a
+# trail) and he stands in that county holding a Powder of his own: the trail goes cold, the deed is paid as for Throw the
+# Powder, a player is told, and the Powder is spent last. It cannot recurse: after the clear the county has no trail.
+# ==================================================================================================
+spn_relic_powder_autothrow_effect = {
+	save_scope_as = spn_pa_who
+	if = {
+		limit = { exists = scope:county }
+		scope:county = { save_scope_as = spn_pa_county }
+	}
+	else_if = {
+		limit = { exists = scope:spn_mm_county }
+		scope:spn_mm_county = { save_scope_as = spn_pa_county }
+	}
+	if = {
+		limit = {
+			exists = scope:spn_pa_county
+			spn_order_holds_powder_trigger = yes
+			location.county ?= scope:spn_pa_county
+			scope:spn_pa_county = {
+				has_county_modifier = spn_menace_modifier
+				var:spn_menace_culprit ?= scope:spn_pa_who
+			}
+		}
+		scope:spn_pa_county = { spn_menace_clear_county_effect = yes }
+		spn_order_deed_effect = { PREROGATIVE = flag:silence AMOUNT = 5 TOAST = no }
+		if = {
+			limit = { is_ai = no }
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_relic_toast_powder_thrown
+				desc = spn_relic_toast_powder_thrown_desc
+				left_icon = this
+			}
+		}
+		spn_relic_powder_spend_effect = { WHO = scope:spn_pa_who }
+	}
+}
+
+# ==================================================================================================
+# G7, B2: TAKE THE BEETLE INTO CUSTODY. $FROM$ (a member) hands the Homunculus Beetle pledged to $TO$'s temple to $TO$ (its
+# Temple Magus). It stays pledged: the owner hook keeps a pledge whose new holder is of the same temple (B1). The lock comes
+# off for the move and goes back on, as a loan does (spn_relic_lend_effect).
+# ==================================================================================================
+spn_relic_beetle_custody_effect = {
+	$FROM$ = { save_scope_as = spn_cu_from }
+	$TO$ = { save_scope_as = spn_cu_to }
+	scope:spn_cu_from = {
+		random_character_artifact = {
+			limit = {
+				var:spn_relic ?= flag:beetle
+				var:spn_pledged_to ?= scope:spn_cu_to.var:spn_order_chapter
+				NOT = { has_variable = spn_borrowed_from }
+			}
+			save_scope_as = spn_cu_art
+		}
+	}
+	if = {
+		limit = { exists = scope:spn_cu_art }
+		scope:spn_cu_art = {
+			if = {
+				limit = { has_variable = artifact_prevent_transfer }
+				remove_variable = artifact_prevent_transfer
+			}
+			set_owner = {
+				target = scope:spn_cu_to
+				history = {
+					type = given
+					actor = scope:spn_cu_from
+					recipient = scope:spn_cu_to
+				}
+			}
+			set_variable = artifact_prevent_transfer
+		}
+		scope:spn_cu_to.var:spn_order_chapter ?= { spn_reliquary_rebuild_effect = yes }
+		scope:spn_cu_from = {
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_relic_toast_beetle_custody
+					left_icon = scope:spn_cu_to
+					right_icon = scope:spn_cu_art
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# G9 step 4: THE COUNT. How many of each relic exist, and how many are pledged, into globals spn_relic_n_<kind> (read by
+# spn_relic.2090) and one debug_log line. A walk of the world's artifacts: the yearly call runs only in debug mode
+# (debug_only), and the console event runs it on demand.
+# ==================================================================================================
+spn_relic_debug_count_effect = {
+	set_global_variable = { name = spn_relic_n_glove value = 0 }
+	set_global_variable = { name = spn_relic_n_necrophone value = 0 }
+	set_global_variable = { name = spn_relic_n_blade value = 0 }
+	set_global_variable = { name = spn_relic_n_pendant value = 0 }
+	set_global_variable = { name = spn_relic_n_powder value = 0 }
+	set_global_variable = { name = spn_relic_n_mirror value = 0 }
+	set_global_variable = { name = spn_relic_n_bell value = 0 }
+	set_global_variable = { name = spn_relic_n_seal value = 0 }
+	set_global_variable = { name = spn_relic_n_chains value = 0 }
+	set_global_variable = { name = spn_relic_n_beetle value = 0 }
+	set_global_variable = { name = spn_relic_n_fors value = 0 }
+	set_global_variable = { name = spn_relic_n_pledged value = 0 }
+	every_artifact = {
+		limit = { has_variable = spn_relic }
+		spn_relic_debug_count_one_effect = { KEY = glove }
+		spn_relic_debug_count_one_effect = { KEY = necrophone }
+		spn_relic_debug_count_one_effect = { KEY = blade }
+		spn_relic_debug_count_one_effect = { KEY = pendant }
+		spn_relic_debug_count_one_effect = { KEY = powder }
+		spn_relic_debug_count_one_effect = { KEY = mirror }
+		spn_relic_debug_count_one_effect = { KEY = bell }
+		spn_relic_debug_count_one_effect = { KEY = seal }
+		spn_relic_debug_count_one_effect = { KEY = chains }
+		spn_relic_debug_count_one_effect = { KEY = beetle }
+		spn_relic_debug_count_one_effect = { KEY = fors }
+		if = {
+			limit = { has_variable = spn_pledged_to }
+			change_global_variable = { name = spn_relic_n_pledged add = 1 }
+		}
+	}
+	debug_log = spn_relic_debug_count_log
+}
+# Artifact scope: one relic counted under its kind.
+spn_relic_debug_count_one_effect = {
+	if = {
+		limit = { var:spn_relic ?= flag:$KEY$ }
+		change_global_variable = { name = spn_relic_n_$KEY$ add = 1 }
+	}
+}

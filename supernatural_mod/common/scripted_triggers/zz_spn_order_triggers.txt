@@ -248,7 +248,16 @@ spn_order_deadly_disease_trigger = {
 spn_casts_without_price_trigger = {
 	OR = {
 		has_trait = spn_vade_bound
-		has_character_modifier = spn_fors_factorum_modifier
+		# 2.40 (WORK-ORDER-2.40 G5): the Fors Factorum, until its price is paid, and after that only while the cancer
+		# that paid it is still in the body. A cure of any kind ends the free casting here; the watch (spn_order.2200)
+		# then ends the spell itself.
+		AND = {
+			has_character_modifier = spn_fors_factorum_modifier
+			OR = {
+				NOT = { has_variable = spn_fors_price_paid }
+				has_trait = cancer
+			}
+		}
 	}
 }
 # Could this member call a Transference now? The interaction, the Bargain and the debug all ask this one question.
@@ -260,12 +269,16 @@ spn_transference_caster_trigger = {
 	NOT = { exists = var:spn_transference_patient }
 	# Six who could carry it, the caster among them, so five besides him. The patient may be one of the six; the gathering
 	# (.0821) counts again without either, and a Working short of five ends in Not Enough Blood with nothing spent.
-	var:spn_order_chapter = {
-		any_in_list = {
-			variable = spn_order_members
-			count >= 6
-			spn_transference_volunteer_ok_trigger = yes
+	# 2.40 (WORK-ORDER-2.40 B7, G6): or the coin to pay the families of five townsfolk (spn_transference_town_one_effect).
+	OR = {
+		var:spn_order_chapter ?= {
+			any_in_list = {
+				variable = spn_order_members
+				count >= 6
+				spn_transference_volunteer_ok_trigger = yes
+			}
 		}
+		spn_transference_can_pay_five_trigger = yes
 	}
 }
 # A member who may carry a fifth (§5.19). In the volunteer's scope.
@@ -304,17 +317,33 @@ spn_relic_can_move_trigger = {
 	}
 }
 # The one definition of what may be pledged (§9.4, §9.7, §12.1).
+# 2.40 (WORK-ORDER-2.40 B1): each line reads in words (the engine's own read "Has Variable: VARIABLE").
 spn_pledgeable_trigger = {
-	spn_is_magic_item_trigger = yes
-	NOT = { has_variable = spn_hide }
-	NOT = { has_variable = spn_vade_page }
-	NOT = { has_variable = spn_vade_book }
-	NOT = { var:spn_relic ?= flag:seal }
+	custom_tooltip = {
+		text = spn_relic_pick_magic_tt
+		spn_is_magic_item_trigger = yes
+	}
+	custom_tooltip = {
+		text = spn_relic_pick_not_hide_tt
+		NOT = { has_variable = spn_hide }
+	}
+	custom_tooltip = {
+		text = spn_relic_pick_not_vade_tt
+		NOR = {
+			has_variable = spn_vade_page
+			has_variable = spn_vade_book
+		}
+	}
+	custom_tooltip = {
+		text = spn_relic_pick_not_seal_tt
+		NOT = { var:spn_relic ?= flag:seal }
+	}
 }
 # What Zecchia will take (§11.3): never a hide, the book mid-Contract, the Seal, or anything bound to a title.
 spn_zecchia_takeable_trigger = {
 	spn_relic_can_move_trigger = yes
 	NOT = { var:spn_relic ?= flag:seal }
+	NOT = { var:spn_relic ?= flag:fors } # 2.40 (WORK-ORDER-2.40 B12): the temple's letter, not a trinket
 	NOR = {
 		has_variable = banner_dynasty
 		has_variable = banner_house
@@ -411,11 +440,7 @@ spn_order_respondeo_payer_trigger = {
 	NOT = { this = $CALLER$ }
 	spn_is_order_member_trigger = yes
 	can_spend_standard_ps_trigger = yes
-	OR = {
-		is_vassal_or_below_of = $CALLER$
-		is_courtier_of = $CALLER$
-	}
-	NOT = { var:spn_order_rank ?= flag:magistratus }
+	is_imprisoned = no # 2.40 (WORK-ORDER-2.40 G1): any free member of the temple; no realm or rank test (it found none)
 }
 # At least two of them (the decision's second branch). Caster scope.
 spn_order_respondeo_chapter_can_pay_trigger = {
@@ -423,12 +448,8 @@ spn_order_respondeo_chapter_can_pay_trigger = {
 		any_in_list = {
 			variable = spn_order_members
 			count >= 2
-			spn_order_respondeo_payer_trigger = { CALLER = root }
-			# One who would pay: a player is asked; an AI pays if he does not dislike the caller (review, 9 Oct).
-			OR = {
-				is_ai = no
-				opinion = { target = root value >= 0 }
-			}
+			# One who would pay: a free player is asked; an AI pays if he does not dislike the caller (review, 9 Oct; 2.40 G1).
+			spn_order_respondeo_willing_payer_trigger = { CALLER = root }
 		}
 	}
 }
@@ -547,12 +568,15 @@ spn_conclave_seat_open_trigger = {
 	}
 }
 # Artifact scope: a pledged item another temple's member can lend at the Conclave (the borrow interaction's own rules).
+# 2.40 (WORK-ORDER-2.40 G7): the shared lending rules (spn_relic_lendable_trigger): the Beetle only to a $BORROWER$ who
+# is a Magistratus or higher, and never to an AI one (an AI member never uses it).
 spn_conclave_lendable_trigger = {
 	exists = var:spn_pledged_to
-	NOT = { has_variable = spn_borrowed_from }
-	NOT = { has_variable = spn_relic_borrow_cd }
-	NOT = { var:spn_relic ?= flag:powder }
-	NOT = { var:spn_relic ?= flag:beetle } # 2.39 (WORK-ORDER-2.39 F4): the beetle is never lent
+	spn_relic_lendable_trigger = { BORROWER = $BORROWER$ }
+	trigger_if = {
+		limit = { var:spn_relic ?= flag:beetle }
+		$BORROWER$ = { is_ai = no }
+	}
 }
 
 # 2.38b: a hunter who could be the outsider of An Outsider Asks Questions (.0160). Root: the member he asks about.

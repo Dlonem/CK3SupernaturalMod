@@ -10,13 +10,22 @@ spn_beetle_holds_trigger = {
 	any_character_artifact = { var:spn_relic ?= flag:beetle }
 }
 
-# Holds the beetle free to use: not sealed in a Reliquary (a pledged beetle must be taken back first) and not on loan
-# (it can never be lent; the three lending checks exclude it, as they exclude the Powder). Character scope.
+# Holds the beetle free to use: not sealed in a Reliquary (a pledged beetle must be taken back first) and not on loan.
+# 2.40 (WORK-ORDER-2.40 G7; Thomas, 22 Oct, decision 9): it is lent only to a Magistratus or higher, who may use it; a
+# lent jar stays pledged to the lending temple while it is out, so the borrowed case is its own branch. Character scope.
 spn_beetle_usable_trigger = {
 	any_character_artifact = {
 		var:spn_relic ?= flag:beetle
-		NOT = { has_variable = spn_pledged_to }
-		NOT = { has_variable = spn_borrowed_from }
+		OR = {
+			AND = {
+				NOT = { has_variable = spn_pledged_to }
+				NOT = { has_variable = spn_borrowed_from }
+			}
+			AND = {
+				has_variable = spn_borrowed_from
+				artifact_owner ?= { spn_order_magistratus_plus_trigger = yes }
+			}
+		}
 	}
 }
 

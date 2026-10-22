@@ -1,0 +1,111 @@
+﻿# Supernatural 2.40 boot 3 -- the Sire Bond puppet's own orders aimed at the sire himself. Package QS.
+# Puppet decisions (common/puppets/actions/zz_spn_240_sire_puppet_actions.txt): "The decision executes with ROOT = the
+# puppet (not the puppeteer). scope:puppeteer is available" (van/common/puppets/actions/_puppet_actions.info).
+# is_invisible = yes keeps them out of the decision list (vanilla's holy-site decisions, 50_holy_site_decisions.txt);
+# they show on the puppet card. Each re-checks the bond in is_shown (scope:puppeteer ?= ...: never read unset). The AI
+# never takes them (ai_check_interval = 0, ai_potential always = no) and holds no Sire Bond puppet. Group spn_blood
+# (BRIEF-240-boot2 decision groups).
+
+# SEDUCE ME (Thomas: "make my sire-bound individual seduce me"). Still lovers: they come to him (his stress eases).
+# No longer lovers (the bond outlasts the romance): they start vanilla's seduce scheme against him. Once a year.
+# Boot 4: no strain on the bound one either way (Thomas).
+spn_sire_seduce_me_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	decision_group_type = spn_blood
+	is_invisible = yes
+	ai_check_interval = 0
+	desc = spn_sire_seduce_me_decision_desc
+	selection_tooltip = spn_sire_seduce_me_decision_tooltip
+	confirm_text = spn_sire_seduce_me_decision_confirm
+	is_shown = {
+		scope:puppeteer ?= { puppet:spn_sire_puppet ?= root }
+	}
+	is_valid = {
+		is_adult = yes
+		is_imprisoned = no
+		scope:puppeteer = {
+			is_adult = yes
+			custom_tooltip = {
+				text = spn_sire_bond_cooldown_tt
+				NOT = { has_character_flag = spn_sire_seduce_me_cd }
+			}
+		}
+		trigger_if = {
+			limit = {
+				NOR = {
+					has_relation_lover = scope:puppeteer
+					has_relation_soulmate = scope:puppeteer
+				}
+			}
+			can_start_scheme = {
+				type = seduce
+				target_character = scope:puppeteer
+			}
+		}
+	}
+	effect = {
+		save_scope_as = spn_sire_bond_puppet
+		scope:puppeteer = {
+			add_character_flag = { flag = spn_sire_seduce_me_cd years = 1 }
+		}
+		if = {
+			limit = {
+				OR = {
+					has_relation_lover = scope:puppeteer
+					has_relation_soulmate = scope:puppeteer
+				}
+			}
+			custom_tooltip = spn_sire_seduce_me_lovers_tt
+			scope:puppeteer = { add_stress = medium_stress_loss }
+		}
+		else = {
+			custom_tooltip = spn_sire_seduce_me_scheme_tt
+			hidden_effect = {
+				begin_scheme_basic_effect = {
+					SCHEME_TYPE = seduce
+					TARGET_TYPE = target_character
+					TARGET_SCOPE = scope:puppeteer
+				}
+			}
+		}
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# RELEASE THE SIRE BOND (Thomas: the bond ends "on death, on the puppet or sire ceasing to be a vampire, or the sire
+# releasing it"). The release is remembered, so the bond does not form again by itself (spn_sire_bond_forms_trigger);
+# Sense the Sire Bond is the deliberate way back. Vanilla's own "Fire Puppet" only sets them aside: the bond stays.
+spn_sire_release_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	decision_group_type = spn_blood
+	is_invisible = yes
+	ai_check_interval = 0
+	desc = spn_sire_release_decision_desc
+	selection_tooltip = spn_sire_release_decision_tooltip
+	confirm_text = spn_sire_release_decision_confirm
+	is_shown = {
+		scope:puppeteer ?= { puppet:spn_sire_puppet ?= root }
+	}
+	is_valid = {
+		is_alive = yes
+	}
+	effect = {
+		save_scope_as = spn_sire_bond_puppet
+		custom_tooltip = spn_sire_release_tt
+		scope:puppeteer = {
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = spn_sire_release_decision
+				left_icon = scope:puppeteer
+				right_icon = scope:spn_sire_bond_puppet
+				custom_tooltip = spn_sire_release_toast_tt
+			}
+		}
+		hidden_effect = {
+			spn_sire_bond_release_effect = { SIRE = scope:puppeteer PUPPET = scope:spn_sire_bond_puppet }
+		}
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}

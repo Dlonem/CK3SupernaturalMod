@@ -430,6 +430,15 @@ magic_ev.4 = {
 			}
 			desc = ev4.0.desc
 		}
+		# 2.40 (Supernatural): under the ringing, the smell of the book (WORK-ORDER-2.40 B8).
+		triggered_desc = {
+			trigger = {
+				spn_is_champion_trigger = yes
+				NOT = { exists = global_var:spn_vade_destroyed }
+				scope:magic_user ?= { spn_vade_holds_part_trigger = yes }
+			}
+			desc = spn_ev4.0.desc_book
+		}
 	}
 	theme =  mental_health
 """)
@@ -451,28 +460,16 @@ E('events/ev1.txt',
 	}
 	# 2.37 (Supernatural): Follow the ringing. A champion goes after a caster who is none of his own (never his liege,
 	# spouse, close family, friend, lover or courtier), once a year. Magic Tracking names the caster.
+	# 2.40 (Supernatural): six options, one per champion trait, so each shows his own hide as the reason (boot 2);
+	# the body is spn_ringing_follow_effect (+2 bond, the caster known, a holder of the book named: WORK-ORDER-2.40 B8).
 	option = {
 		name = spn_ev4.0.ring
 		trigger = {
-			spn_is_champion_trigger = yes
-			NOT = { has_character_flag = spn_hide_chased_ringing }
-			exists = scope:magic_user
-			NOT = { scope:magic_user = ROOT }
-			NOT = { liege ?= scope:magic_user }
-			scope:magic_user = {
-				NOT = { has_strong_hook = ROOT }
-				NOR = {
-					is_spouse_of = ROOT
-					is_close_family_of = ROOT
-					has_relation_friend = ROOT
-					has_relation_lover = ROOT
-					is_courtier_of = ROOT
-				}
-			}
+			has_trait = spn_champion_silverback
+			spn_ringing_follow_open_trigger = yes
 		}
-		custom_tooltip = spn_ev4.0.ring.tt
-		add_character_flag = { flag = spn_hide_chased_ringing years = 1 }
-		trigger_event = magic_ev.44
+		trait = spn_champion_silverback
+		spn_ringing_follow_effect = yes
 		ai_chance = {
 			base = 0
 			modifier = {
@@ -486,6 +483,179 @@ E('events/ev1.txt',
 			modifier = { add = 20 has_trait = brave }
 			modifier = { add = 20 has_trait = vengeful }
 		}
+	}
+	option = {
+		name = spn_ev4.0.ring
+		trigger = {
+			has_trait = spn_champion_timber
+			spn_ringing_follow_open_trigger = yes
+		}
+		trait = spn_champion_timber
+		spn_ringing_follow_effect = yes
+		ai_chance = {
+			base = 0
+			modifier = {
+				add = 40
+				scope:magic_user = { has_relation_rival = ROOT }
+			}
+			modifier = {
+				add = 40
+				faith = { faith_hostility_level = { target = scope:magic_user.faith value >= faith_hostile_level } }
+			}
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = vengeful }
+		}
+	}
+	option = {
+		name = spn_ev4.0.ring
+		trigger = {
+			has_trait = spn_champion_tundra
+			spn_ringing_follow_open_trigger = yes
+		}
+		trait = spn_champion_tundra
+		spn_ringing_follow_effect = yes
+		ai_chance = {
+			base = 0
+			modifier = {
+				add = 40
+				scope:magic_user = { has_relation_rival = ROOT }
+			}
+			modifier = {
+				add = 40
+				faith = { faith_hostility_level = { target = scope:magic_user.faith value >= faith_hostile_level } }
+			}
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = vengeful }
+		}
+	}
+	option = {
+		name = spn_ev4.0.ring
+		trigger = {
+			has_trait = spn_champion_graybeard
+			spn_ringing_follow_open_trigger = yes
+		}
+		trait = spn_champion_graybeard
+		spn_ringing_follow_effect = yes
+		ai_chance = {
+			base = 0
+			modifier = {
+				add = 40
+				scope:magic_user = { has_relation_rival = ROOT }
+			}
+			modifier = {
+				add = 40
+				faith = { faith_hostility_level = { target = scope:magic_user.faith value >= faith_hostile_level } }
+			}
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = vengeful }
+		}
+	}
+	option = {
+		name = spn_ev4.0.ring
+		trigger = {
+			has_trait = spn_champion_midnight
+			spn_ringing_follow_open_trigger = yes
+		}
+		trait = spn_champion_midnight
+		spn_ringing_follow_effect = yes
+		ai_chance = {
+			base = 0
+			modifier = {
+				add = 40
+				scope:magic_user = { has_relation_rival = ROOT }
+			}
+			modifier = {
+				add = 40
+				faith = { faith_hostility_level = { target = scope:magic_user.faith value >= faith_hostile_level } }
+			}
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = vengeful }
+		}
+	}
+	option = {
+		name = spn_ev4.0.ring
+		trigger = {
+			has_trait = spn_champion_alpha
+			spn_ringing_follow_open_trigger = yes
+		}
+		trait = spn_champion_alpha
+		spn_ringing_follow_effect = yes
+		ai_chance = {
+			base = 0
+			modifier = {
+				add = 40
+				scope:magic_user = { has_relation_rival = ROOT }
+			}
+			modifier = {
+				add = 40
+				faith = { faith_hostility_level = { target = scope:magic_user.faith value >= faith_hostile_level } }
+			}
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = vengeful }
+		}
+	}
+	# 2.40 (Supernatural): Let it ring for [name] no more. Offered only when he already knows who the caster is and has
+	# not silenced them; "Listen Again" (spn_ringing_listen_decision) undoes it (WORK-ORDER-2.40 B8). Six options,
+	# one per champion trait: the single one showed the Mage trait as its reason (boot 2).
+	option = {
+		name = spn_ev4.0.silence
+		trigger = {
+			has_trait = spn_champion_silverback
+			spn_ringing_silence_open_trigger = yes
+		}
+		trait = spn_champion_silverback
+		spn_ringing_silence_effect = yes
+		ai_chance = { base = 0 }
+	}
+	option = {
+		name = spn_ev4.0.silence
+		trigger = {
+			has_trait = spn_champion_timber
+			spn_ringing_silence_open_trigger = yes
+		}
+		trait = spn_champion_timber
+		spn_ringing_silence_effect = yes
+		ai_chance = { base = 0 }
+	}
+	option = {
+		name = spn_ev4.0.silence
+		trigger = {
+			has_trait = spn_champion_tundra
+			spn_ringing_silence_open_trigger = yes
+		}
+		trait = spn_champion_tundra
+		spn_ringing_silence_effect = yes
+		ai_chance = { base = 0 }
+	}
+	option = {
+		name = spn_ev4.0.silence
+		trigger = {
+			has_trait = spn_champion_graybeard
+			spn_ringing_silence_open_trigger = yes
+		}
+		trait = spn_champion_graybeard
+		spn_ringing_silence_effect = yes
+		ai_chance = { base = 0 }
+	}
+	option = {
+		name = spn_ev4.0.silence
+		trigger = {
+			has_trait = spn_champion_midnight
+			spn_ringing_silence_open_trigger = yes
+		}
+		trait = spn_champion_midnight
+		spn_ringing_silence_effect = yes
+		ai_chance = { base = 0 }
+	}
+	option = {
+		name = spn_ev4.0.silence
+		trigger = {
+			has_trait = spn_champion_alpha
+			spn_ringing_silence_open_trigger = yes
+		}
+		trait = spn_champion_alpha
+		spn_ringing_silence_effect = yes
+		ai_chance = { base = 0 }
 	}
 """)
 E('events/ev1.txt',
@@ -503,23 +673,90 @@ E('events/ev1.txt',
 		}
 	}
 	# 2.37 (Supernatural): Go after them. Creature against caster; never a death (the hide's rule C5).
+	# 2.40 (Supernatural): six options, one per champion trait, so each shows his own hide as the reason (boot 2).
 	option = {
 		name = spn_ev4b.0.go
 		trigger = {
-			spn_is_champion_trigger = yes
-			exists = scope:magic_user
-			NOT = { scope:magic_user = ROOT }
+			has_trait = spn_champion_silverback
+			spn_ringing_go_open_trigger = yes
 		}
-		custom_tooltip = spn_ev4b.0.go.tt
-		save_scope_as = spn_ring_champion
-		spn_clash_lean_tooltip_effect = { A = ROOT B = scope:magic_user FORM = no }
-		spn_creature_clash_effect = {
-			A = ROOT
-			B = scope:magic_user
-			THEN = spn_hide_ringing_after_effect
-			FORM = no
+		trait = spn_champion_silverback
+		spn_ringing_go_effect = yes
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = -30 has_trait = craven }
 		}
-		clear_saved_scope = magic_user
+	}
+	option = {
+		name = spn_ev4b.0.go
+		trigger = {
+			has_trait = spn_champion_timber
+			spn_ringing_go_open_trigger = yes
+		}
+		trait = spn_champion_timber
+		spn_ringing_go_effect = yes
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = -30 has_trait = craven }
+		}
+	}
+	option = {
+		name = spn_ev4b.0.go
+		trigger = {
+			has_trait = spn_champion_tundra
+			spn_ringing_go_open_trigger = yes
+		}
+		trait = spn_champion_tundra
+		spn_ringing_go_effect = yes
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = -30 has_trait = craven }
+		}
+	}
+	option = {
+		name = spn_ev4b.0.go
+		trigger = {
+			has_trait = spn_champion_graybeard
+			spn_ringing_go_open_trigger = yes
+		}
+		trait = spn_champion_graybeard
+		spn_ringing_go_effect = yes
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = -30 has_trait = craven }
+		}
+	}
+	option = {
+		name = spn_ev4b.0.go
+		trigger = {
+			has_trait = spn_champion_midnight
+			spn_ringing_go_open_trigger = yes
+		}
+		trait = spn_champion_midnight
+		spn_ringing_go_effect = yes
+		ai_chance = {
+			base = 40
+			modifier = { add = 20 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = -30 has_trait = craven }
+		}
+	}
+	option = {
+		name = spn_ev4b.0.go
+		trigger = {
+			has_trait = spn_champion_alpha
+			spn_ringing_go_open_trigger = yes
+		}
+		trait = spn_champion_alpha
+		spn_ringing_go_effect = yes
 		ai_chance = {
 			base = 40
 			modifier = { add = 20 has_trait = brave }
@@ -6616,6 +6853,863 @@ E("common/scripted_effects/00_variety_magic_effects.txt",
 				id = magic_ev10.157
 				days = 14
 			}
+""")
+
+# 2.39a hotfix (17 Oct; HANDOFF §14). Hovering a magic capstone shows its trait, not the perk's effect (Thomas's screenshot),
+# so the one-path warning in the capstones' effects never reached a player. The perk before each capstone now shows it,
+# and each tree's root says so when the tree's last perk is already closed to you. Tooltip-only scripted effects:
+# common/scripted_effects/zz_spn_239_capstone_warning_effects.txt.
+E("common/lifestyle_perks/00_magic_1_arcane_tree_perks.txt",
+"""	effect = {
+		custom_tooltip = forbidden_ritual_p7_perk_effect
+""",
+"""	effect = {
+		custom_tooltip = forbidden_ritual_p7_perk_effect
+		spn_capstone_next_mage_tt_effect = yes # 2.39a (Supernatural): the next perk is the Mage; one path only
+""")
+E("common/lifestyle_perks/00_magic_2_blackmagic_tree_perks.txt",
+"""	effect = {
+		custom_tooltip = summoner_p8_perk_eff
+""",
+"""	effect = {
+		custom_tooltip = summoner_p8_perk_eff
+		spn_capstone_next_warlock_tt_effect = yes # 2.39a (Supernatural): the next perk is the Warlock; one path only
+""")
+E("common/lifestyle_perks/00_magic_3_witch_tree_perks.txt",
+"""	effect = {
+		custom_tooltip = magical_senses_perk_effect
+""",
+"""	effect = {
+		custom_tooltip = magical_senses_perk_effect
+		spn_capstone_next_true_witch_tt_effect = yes # 2.39a (Supernatural): the next perk is the True Witch; one path only
+""")
+E("common/lifestyle_perks/00_magic_1_arcane_tree_perks.txt",
+"""	effect = {
+		if = {
+			limit = {
+				has_character_flag = special_magic_character
+""",
+"""	effect = {
+		spn_capstone_closed_mage_tt_effect = yes # 2.39a (Supernatural): this tree's last perk is closed to another path
+		if = {
+			limit = {
+				has_character_flag = special_magic_character
+""")
+E("common/lifestyle_perks/00_magic_2_blackmagic_tree_perks.txt",
+"""	effect = {
+		custom_tooltip = evil_eye_perk_effect
+""",
+"""	effect = {
+		custom_tooltip = evil_eye_perk_effect
+		spn_capstone_closed_warlock_tt_effect = yes # 2.39a (Supernatural): this tree's last perk is closed to another path
+""")
+E("common/lifestyle_perks/00_magic_3_witch_tree_perks.txt",
+"""		#custom_tooltip = protective_runes_perk_effect3
+""",
+"""		#custom_tooltip = protective_runes_perk_effect3
+		spn_capstone_closed_true_witch_tt_effect = yes # 2.39a (Supernatural): this tree's last perk is closed to another path
+""")
+
+
+# =====================================================================================================================
+# 2.40 (Supernatural) -- package Q2 (WORK-ORDER-2.40)
+# =====================================================================================================================
+# 2.40 A13 -- the AI never appoints, and fires, a Court Mage who is at war with it (Joe, session 3: "he just appointed me as
+# his court mage while I am actively at war with him"). Thomas approved improving Witchcraft's AI in 2.39 (PB §8); the
+# score only (the AI fires a holder under -50, _court_positions.info), so a player liege's choice is untouched.
+E('common/court_positions/types/01_court_positions_magic.txt',
+"""	ai_candidate_score = {
+		value = 50
+		add = scope:base_value
+		add = court_position_candidate_score_base_value
+		add = court_position_candidate_aptitude_value
+		add = court_position_debt_considerations_value
+""",
+"""	ai_candidate_score = {
+		value = 50
+		add = scope:base_value
+		add = court_position_candidate_score_base_value
+		add = court_position_candidate_aptitude_value
+		add = court_position_debt_considerations_value
+		# 2.40 (Supernatural): never a Court Mage who is at war with his liege (WORK-ORDER-2.40 A13)
+		if = {
+			limit = { scope:employee = { is_at_war_with = scope:liege } }
+			add = -1000
+		}
+""")
+
+# 2.40 A13 -- the same line for the Dark Champion.
+E('common/court_positions/types/01_court_positions_magic.txt',
+"""		add = court_position_debt_considerations_value
+	}
+}
+
+cult_priest_camp_officer = {""",
+"""		add = court_position_debt_considerations_value
+		# 2.40 (Supernatural): never a Dark Champion who is at war with his liege (WORK-ORDER-2.40 A13)
+		if = {
+			limit = { scope:employee = { is_at_war_with = scope:liege } }
+			add = -1000
+		}
+	}
+}
+
+cult_priest_camp_officer = {""")
+
+# 2.40 A13 -- the same line for the cult priest (a camp officer).
+E('common/court_positions/types/01_court_positions_magic.txt',
+"""	ai_candidate_score = {
+		value = 500
+
+		add = court_position_candidate_score_base_value 
+		add = court_position_candidate_aptitude_value
+	}""",
+"""	ai_candidate_score = {
+		value = 500
+
+		add = court_position_candidate_score_base_value 
+		add = court_position_candidate_aptitude_value
+		# 2.40 (Supernatural): never a cult priest who is at war with his liege (WORK-ORDER-2.40 A13)
+		if = {
+			limit = { scope:employee = { is_at_war_with = scope:liege } }
+			add = -1000
+		}
+	}""")
+
+
+# =====================================================================================================================
+# 2.40 (Supernatural) -- package Q3 (WORK-ORDER-2.40)
+# =====================================================================================================================
+# 2.40 G2 -- the Gnostic Council meets less often under an AI Grand Magus (8 to 10 years; a player keeps the 4-year cooldown)
+E('common/decisions/magic_dec.txt',
+"""	effect = {
+		configure_mc_secret_meeting_effect = yes
+	}
+	ai_check_interval = 24
+	ai_will_do = {
+		base = 80
+""",
+"""	effect = {
+		configure_mc_secret_meeting_effect = yes
+		add_character_flag = { flag = spn_council_met years = 8 } # 2.40 (Supernatural): read by the AI below (WORK-ORDER-2.40 G2)
+	}
+	ai_check_interval = 24
+	ai_will_do = {
+		base = 80
+		modifier = { # 2.40 (Supernatural): an AI Grand Magus calls the council every 8 to 10 years, not every 4 (WORK-ORDER-2.40 G2)
+			factor = 0
+			has_character_flag = spn_council_met
+		}
+""")
+# 2.40 G2 -- the Chancellor's "reveal the Council" is a recommendation; the Grand Magus decides (spn_council_reveal_decision)
+E('events/ev10.txt',
+"""		name = ev10.90.b	#The Council should reveal its existence to the rest of the world.
+		trigger = {
+			NOT = {
+				exists = global_var:mc_revealed
+			}
+			has_character_flag = already_participated_in_sm_flag
+		}
+		show_as_tooltip = {
+			random_list = {
+				1 = {
+					desc = mc_approval
+					show_chance = no
+					custom_tooltip = ev10.90.b_ct
+					custom_tooltip = ev10.90.b_ct2
+					custom_tooltip = ev10.90.b_ct3
+					scope:admin = {
+						add_dread = major_dread_gain
+					}
+					scope:amage = {
+						add_dread = major_dread_gain
+					}
+					scope:bmage = {
+						add_dread = major_dread_gain
+					}
+					scope:loremaster = {
+						add_dread = major_dread_gain
+					}
+				}
+				1 = {
+					desc = mc_rejection
+					show_chance = no
+					custom_tooltip = sm_archmage_rejection_ct
+				}
+			}
+		}
+		add_character_flag = admin_rep2_flag
+""",
+"""		name = ev10.90.b	#The Council should reveal its existence to the rest of the world.
+		trigger = {
+			NOT = {
+				exists = global_var:mc_revealed
+			}
+			has_character_flag = already_participated_in_sm_flag
+		}
+		# 2.40 (Supernatural): a recommendation now. The Grand Magus decides, with Reveal the Gnostic Council; his answer
+		# in magic_ev10.91 no longer reveals the council (WORK-ORDER-2.40 G2). The old tooltip listed the reveal's effects.
+		custom_tooltip = spn_ev10.90.b_tt
+		add_character_flag = admin_rep2_flag
+		set_global_variable = { name = spn_council_reveal_recommended value = root years = 10 } # 2.40 (Supernatural)
+""")
+# 2.40 G2 -- the Grand Magus's "I agree" no longer reveals the council here; he takes it under advisement
+E('events/ev10.txt',
+"""		name = ev10.89.c	#I agree with this proposal.
+		trigger = {
+			ROOT = scope:amage
+			scope:admin = {
+				has_character_flag = admin_rep2_flag
+			}
+		}
+		custom_tooltip = ev10.90.b_ct
+		custom_tooltip = ev10.90.b_ct2
+		custom_tooltip = ev10.90.b_ct3
+		scope:amage = {
+			add_dread = major_dread_gain
+		}
+		scope:admin = {
+			add_dread = major_dread_gain
+		}
+		scope:bmage = {
+			add_dread = major_dread_gain
+		}
+		scope:loremaster = {
+			add_dread = major_dread_gain
+		}
+		
+		mc_revealing_effect = yes
+		add_character_flag = amage_rep1_admin_rep2_flag
+""",
+"""		name = spn_ev10.91.weigh	# 2.40 (Supernatural): was ev10.89.c "I agree with this proposal", which revealed the council here
+		trigger = {
+			ROOT = scope:amage
+			scope:admin = {
+				has_character_flag = admin_rep2_flag
+			}
+		}
+		# 2.40 (Supernatural): the reveal is the Grand Magus's own decision now (spn_council_reveal_decision, WORK-ORDER-2.40
+		# G2), with the same dread and mc_revealing_effect. Here he only takes the recommendation under advisement.
+		custom_tooltip = spn_ev10.91.weigh_tt
+		add_character_flag = amage_rep2_admin_rep2_flag
+""")
+# 2.40 G2 -- "This is not the right moment" answers the recommendation
+E('events/ev10.txt',
+"""		custom_tooltip = sm_archmage_rejection_ct0
+		add_character_flag = amage_rep2_admin_rep2_flag
+""",
+"""		custom_tooltip = sm_archmage_rejection_ct0
+		add_character_flag = amage_rep2_admin_rep2_flag
+		if = { # 2.40 (Supernatural): the recommendation is answered (WORK-ORDER-2.40 G2)
+			limit = { exists = global_var:spn_council_reveal_recommended }
+			remove_global_variable = spn_council_reveal_recommended
+		}
+""")
+
+
+# =====================================================================================================================
+# 2.40 (Supernatural) -- package Q4 (WORK-ORDER-2.40)
+# =====================================================================================================================
+# 2.40 B8 -- Witchcraft's "I will suppress my magical sense for a while." is worded for a Mage; a hide's champion who is
+# not one has his own way to quiet the Ringing now (Let it ring for [name] no more), so the option is hidden from him.
+# Boot 2 (22 Oct): written as two options, so no has_trait sits in the trigger everyone else sees: one trigger
+# "not a champion OR a Mage" made the engine show "available because you have the Mage trait" to every non-Mage who
+# hears magic. Witchcraft's option as it was for everyone who is no champion; the same option for a champion who is a
+# Mage, with the Mage trait as its reason.
+E('events/ev1.txt',
+"""		name = ev4.0.e
+		#trigger = {
+		#	has_character_flag = senses_overload
+		#}
+		custom_tooltip = ev4.0.e_ct
+		add_character_flag = {
+			flag = senses_overload3
+			years = 10
+		}
+		ai_chance = {
+			base = 1
+		}
+	}
+	option = {
+		name = ev4.0.c
+""",
+"""		name = ev4.0.e
+		#trigger = {
+		#	has_character_flag = senses_overload
+		#}
+		# 2.40 (Supernatural): not for a hide's champion (WORK-ORDER-2.40 B8); a champion who is a Mage has the option below.
+		trigger = {
+			spn_is_champion_trigger = no
+		}
+		custom_tooltip = ev4.0.e_ct
+		add_character_flag = {
+			flag = senses_overload3
+			years = 10
+		}
+		ai_chance = {
+			base = 1
+		}
+	}
+	# 2.40 (Supernatural): the same for a hide's champion who is a Mage, with the Mage trait as its reason (boot 2).
+	option = {
+		name = ev4.0.e
+		trigger = {
+			has_trait = archmage
+			spn_is_champion_trigger = yes
+		}
+		trait = archmage
+		custom_tooltip = ev4.0.e_ct
+		add_character_flag = {
+			flag = senses_overload3
+			years = 10
+		}
+		ai_chance = {
+			base = 1
+		}
+	}
+	option = {
+		name = ev4.0.c
+""")
+
+# 2.40 G5 -- the metamagic research ends at the edge of the Fors Factorum: a Magistratus of the Order who may cast it is
+# offered it (spn_order.0840, whose desc_research text is for exactly this). Hidden, so the research window's preview
+# (mr_show_metamagic_info shows this effect as a tooltip) prints nothing new.
+E('common/scripted_effects/00_magical_research_effects.txt',
+"""mr_metamagic_effect = {
+	custom_tooltip = ev3.34.d_ct
+	hidden_effect = {
+		add_character_flag = master_metamagic
+	}
+	add_character_modifier = {
+		modifier = master_metamagic_modifier
+	}
+}
+""",
+"""mr_metamagic_effect = {
+	custom_tooltip = ev3.34.d_ct
+	hidden_effect = {
+		add_character_flag = master_metamagic
+	}
+	add_character_modifier = {
+		modifier = master_metamagic_modifier
+	}
+	# 2.40 (Supernatural): the Order's most secret spell, for one who may cast it (WORK-ORDER-2.40 G5).
+	hidden_effect = {
+		if = {
+			limit = { spn_order_fors_research_offer_trigger = yes }
+			trigger_event = { id = spn_order.0840 days = 7 }
+		}
+	}
+}
+""")
+
+# 2.40 G5 -- research into other worlds, or into necromancy, can reach the Vade Maecum: he learns what it is and, if
+# anyone holds part of it, who (spn_vade.2000, A Name in Your Notes; the name gives a claim).
+E('common/scripted_effects/00_magical_research_effects.txt',
+"""mr_other_worlds_effect = {
+	custom_tooltip = ev3.34.g_ct
+	add_character_modifier = {
+		modifier = contact_other_worlds_modifier
+	}
+	hidden_effect = {
+		add_character_flag = blorg_flag
+	}
+}
+""",
+"""mr_other_worlds_effect = {
+	custom_tooltip = ev3.34.g_ct
+	add_character_modifier = {
+		modifier = contact_other_worlds_modifier
+	}
+	hidden_effect = {
+		add_character_flag = blorg_flag
+	}
+	# 2.40 (Supernatural): the Vade Maecum is in the old sources (WORK-ORDER-2.40 G5).
+	hidden_effect = {
+		if = {
+			limit = {
+				NOT = { has_game_rule = spn_vade_off }
+				NOT = { exists = global_var:spn_vade_destroyed }
+			}
+			trigger_event = { id = spn_vade.2000 days = 7 }
+		}
+	}
+}
+""")
+# 2.40 G5 -- the same for the necromancy research (placed first in the effect: it only schedules an event).
+E('common/scripted_effects/00_magical_research_effects.txt',
+"""mr_necromancy_effect = {
+	hidden_effect = {
+		add_character_flag = skeleton_warriors
+""",
+"""mr_necromancy_effect = {
+	# 2.40 (Supernatural): the Vade Maecum is in the old sources (WORK-ORDER-2.40 G5).
+	hidden_effect = {
+		if = {
+			limit = {
+				NOT = { has_game_rule = spn_vade_off }
+				NOT = { exists = global_var:spn_vade_destroyed }
+			}
+			trigger_event = { id = spn_vade.2000 days = 7 }
+		}
+	}
+	hidden_effect = {
+		add_character_flag = skeleton_warriors
+""")
+
+
+# =====================================================================================================================
+# 2.40 (Supernatural) -- package Q7 (WORK-ORDER-2.40)
+# =====================================================================================================================
+# Supernatural 2.40 -- package Q7 (Golems): Witchcraft-origin entries. Each `old` occurs exactly once in the pristine mod.
+
+# 2.40 G8d -- Command your minion's "end your life" is hidden for a golem. A construct does not commit suicide (vanilla's
+# suicide effect brings faith and memory baggage); its master unmakes it from the golem puppet's "Return to Clay".
+E("common/character_interactions/00_magic_interactions.txt",
+"""			#scope:recipient = {
+			#	has_relation_mmaster = scope:actor
+			#}
+		}
+		flag = command_minion_suicide
+""",
+"""			#scope:recipient = {
+			#	has_relation_mmaster = scope:actor
+			#}
+			scope:recipient = { NOT = { has_trait = golem } } # 2.40 (Supernatural): a golem is unmade by its own order, Return to Clay (WORK-ORDER-2.40 G8d)
+		}
+		flag = command_minion_suicide
+""")
+
+# 2.40 G8d -- "tell me your secrets": the body moves, unchanged but for its three names, into the shared
+# spn_minion_tell_secrets_effect (zz_spn_240_golem_effects.txt), so the order and the golem puppet's "What Did You See?"
+# are one code path.
+E("common/character_interactions/00_magic_interactions.txt",
+"""						custom_tooltip = command_minion_secrets_ct
+						hidden_effect = {
+							scope:recipient = {
+								every_secret = {
+									limit = {
+										NOT = {
+											is_known_by = scope:actor
+										}
+									}
+									if = {
+										limit = {
+											exists = secret_target
+										}
+										scope:actor = {
+											send_interface_toast = {
+												title = command_minion_interaction
+												left_icon = scope:recipient
+												right_icon = secret_target
+												PREV = {
+													reveal_to = scope:actor
+												}
+											}
+										}
+									}
+									else = {
+										scope:actor = {
+											send_interface_toast = {
+												title = command_minion_interaction
+												left_icon = scope:recipient
+												PREV = {
+													reveal_to = scope:actor
+												}
+											}
+										}
+									}
+								}
+								every_known_secret = {
+									limit = {
+										NOT = {
+											is_known_by = scope:actor
+										}
+									}
+									if = {
+										limit = {
+											exists = secret_target
+										}
+										scope:actor = {
+											send_interface_toast = {
+												title = command_minion_interaction
+												left_icon = prev.secret_owner
+												right_icon = secret_target
+												PREV = {
+													reveal_to = scope:actor
+												}
+											}
+										}
+									}
+									else = {
+										scope:actor = {
+											send_interface_toast = {
+												title = command_minion_interaction
+												left_icon = prev.secret_owner
+												PREV = {
+													reveal_to = scope:actor
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+""",
+"""						custom_tooltip = command_minion_secrets_ct
+						hidden_effect = { # 2.40 (Supernatural): the same body, shared with the golem puppet's "What Did You See?" (WORK-ORDER-2.40 G8d)
+							spn_minion_tell_secrets_effect = { MINION = scope:recipient MASTER = scope:actor TITLE = command_minion_interaction }
+						}
+""")
+
+# 2.40 D1/D3 -- the Artificial Human is bound through the one bond effect (zz_spn_240_golem_effects.txt), as the
+# Order's Clay Working is: the same relation and hook as before, plus its last master and, for a player, the golem puppet.
+E("events/ev7.txt",
+"""		name = ev7.119.a
+		hidden_effect = {
+			add_character_flag = me_golem_project_done
+			set_relation_mminion = scope:golem
+			add_hook = {
+				type = magic_domination_hook
+				target = scope:golem
+			}
+		}
+""",
+"""		name = ev7.119.a
+		hidden_effect = {
+			add_character_flag = me_golem_project_done
+			# 2.40 (Supernatural): the one bond effect: minion, hook, court, last master, and the golem puppet (WORK-ORDER-2.40 D1, D3)
+			spn_golem_bond_transfer_effect = { GOLEM = scope:golem NEW = root }
+		}
+""")
+
+# 2.40 D4 -- "Upgrading the Golem": the four option bodies move, unchanged, into shared effects that the Order's
+# Clay Working (spn_order.2301) calls too. One code path, two doors.
+E("events/ev7.txt",
+"""	option = {
+		name = ev7.120.a
+		scope:golem = {
+			if = {
+				limit = {
+					has_trait = intellect_bad_3
+				}
+				remove_trait = intellect_bad_3
+			}
+			random_list = {
+				1 = {
+					add_trait = education_diplomacy_2
+				}
+				1 = {
+					add_trait = education_martial_2
+				}
+				1 = {
+					add_trait = education_stewardship_2
+				}
+				1 = {
+					add_trait = education_intrigue_2
+				}
+				1 = {
+					add_trait = education_learning_2
+				}
+			}
+		}
+	}
+	option = {
+		name = ev7.120.b
+		scope:golem = {
+			add_trait = giant
+			add_trait = lifestyle_blademaster
+			add_trait_xp = {
+				trait = lifestyle_blademaster
+				value = 60
+			}
+		}
+		
+	}
+	option = {
+		name = ev7.120.c
+		scope:golem = {
+			add_min_source_trait = yes
+		}
+		
+	}
+	option = {
+		name = ev7.120.d
+		trigger = {
+			has_trait = intellect_good_3
+		}
+		trait = intellect_good_3
+		scope:golem = {
+			if = {
+				limit = {
+					has_trait = intellect_bad_3
+				}
+				remove_trait = intellect_bad_3
+			}
+			random_list = {
+				1 = {
+					add_trait = education_diplomacy_2
+				}
+				1 = {
+					add_trait = education_martial_2
+				}
+				1 = {
+					add_trait = education_stewardship_2
+				}
+				1 = {
+					add_trait = education_intrigue_2
+				}
+				1 = {
+					add_trait = education_learning_2
+				}
+			}
+			add_trait = lifestyle_blademaster
+			add_min_source_trait = yes
+		}
+	}
+""",
+"""	option = {
+		name = ev7.120.a
+		scope:golem = { spn_golem_upgrade_mind_effect = yes } # 2.40 (Supernatural): shared with the Order's Clay Working (WORK-ORDER-2.40 D4)
+	}
+	option = {
+		name = ev7.120.b
+		scope:golem = { spn_golem_upgrade_combat_effect = yes } # 2.40 (Supernatural): shared (WORK-ORDER-2.40 D4)
+	}
+	option = {
+		name = ev7.120.c
+		scope:golem = { spn_golem_upgrade_source_effect = yes } # 2.40 (Supernatural): shared (WORK-ORDER-2.40 D4)
+	}
+	option = {
+		name = ev7.120.d
+		trigger = {
+			has_trait = intellect_good_3
+		}
+		trait = intellect_good_3
+		scope:golem = { spn_golem_upgrade_all_effect = yes } # 2.40 (Supernatural): shared (WORK-ORDER-2.40 D4)
+	}
+""")
+
+# 2.40 D4 -- "Final Calibration": +20 to the golem and a perk point to the maker, through the shared
+# spn_golem_calibrate_effect that spn_order.2302 calls too.
+E("events/ev7.txt",
+"""	option = {
+		name = ev7.133.a
+		scope:golem = {
+			add_diplomacy_skill = 20
+		}
+		add_diplomacy_lifestyle_perk_points = 1
+	}
+	option = {
+		name = ev7.133.b
+		scope:golem = {
+			add_martial_skill = 20
+		}
+		add_martial_lifestyle_perk_points = 1
+	}
+	option = {
+		name = ev7.133.c
+		scope:golem = {
+			add_stewardship_skill = 20
+		}
+		add_stewardship_lifestyle_perk_points = 1
+	}
+	option = {
+		name = ev7.133.d
+		scope:golem = {
+			add_learning_skill = 20
+		}
+		add_learning_lifestyle_perk_points = 1
+	}
+	option = {
+		name = ev7.133.e
+		scope:golem = {
+			add_intrigue_skill = 20
+		}
+		add_intrigue_lifestyle_perk_points = 1
+	}
+""",
+"""	option = {
+		name = ev7.133.a
+		spn_golem_calibrate_effect = { GOLEM = scope:golem SKILL = diplomacy } # 2.40 (Supernatural): shared (WORK-ORDER-2.40 D4)
+	}
+	option = {
+		name = ev7.133.b
+		spn_golem_calibrate_effect = { GOLEM = scope:golem SKILL = martial } # 2.40 (Supernatural): shared (WORK-ORDER-2.40 D4)
+	}
+	option = {
+		name = ev7.133.c
+		spn_golem_calibrate_effect = { GOLEM = scope:golem SKILL = stewardship } # 2.40 (Supernatural): shared (WORK-ORDER-2.40 D4)
+	}
+	option = {
+		name = ev7.133.d
+		spn_golem_calibrate_effect = { GOLEM = scope:golem SKILL = learning } # 2.40 (Supernatural): shared (WORK-ORDER-2.40 D4)
+	}
+	option = {
+		name = ev7.133.e
+		spn_golem_calibrate_effect = { GOLEM = scope:golem SKILL = intrigue } # 2.40 (Supernatural): shared (WORK-ORDER-2.40 D4)
+	}
+""")
+
+# 2.40 boot 3 (item 4) -- a golem has no soul, and never forfeited one. Golems no longer carry no_soul_modifier
+# ("Soul Forfeit", a demon pact's mark: spn_golem_bond_transfer_effect and the one-time repair remove it), so the
+# "Has a Soul" line (ev8.2.desc07) answers No for a golem by its trait.
+E("common/customizable_localization/01_magic_custom_loc.txt",
+"""		localization_key = demon_has_no_soul
+	}
+	text = {
+		trigger = {
+			has_character_modifier = no_soul_modifier
+		}
+		localization_key = NO
+	}
+""",
+"""		localization_key = demon_has_no_soul
+	}
+	text = {
+		trigger = {
+			has_trait = golem # 2.40 (Supernatural): a golem never had a soul (boot 3, item 4)
+		}
+		localization_key = NO
+	}
+	text = {
+		trigger = {
+			has_character_modifier = no_soul_modifier
+		}
+		localization_key = NO
+	}
+""")
+
+# 2.40 boot 3 (RC1 review) -- a golem is not a soul to offer. With Soul Forfeit gone from golems (item 4), the rite
+# demon's pick of a soul to take (magic_ev4.64 immediate: an AI attendee with no no_soul_modifier) could fall on a golem
+# at the rite, and option b would mark it with Soul Forfeit again and send the demon for it in 18-20 years.
+E("events/ev4.txt",
+"""				limit = {
+					is_ai = yes
+					NOT = {	this = root	}
+					NOT = { has_character_modifier = no_soul_modifier }
+				}
+				save_scope_as = sssac
+""",
+"""				limit = {
+					is_ai = yes
+					NOT = {	this = root	}
+					NOT = { has_character_modifier = no_soul_modifier }
+					NOT = { has_trait = golem } # 2.40 (Supernatural): a golem has no soul to give (boot 3, item 4)
+				}
+				save_scope_as = sssac
+""")
+
+
+# =====================================================================================================================
+# 2.40 (Supernatural) -- package Q8 (WORK-ORDER-2.40)
+# =====================================================================================================================
+# 2.40 F3 -- the embrace level pickers: Witchcraft's four hunter callers. Each does `trigger_event = spn_initiate.3001`
+# and then `add_trait_xp` on supernatural_hunter in the same block. The door runs after the block, so for anyone who was
+# not a hunter yet the XP went nowhere. Each caller keeps its own lines (they still land on someone who already is a
+# hunter, and they are registered 2.34 / 2.39 entries that must stay whole); one line is added beside them that banks
+# the same amount for the door when the trait is not there yet (spn_initiate_queue_xp_effect,
+# common/scripted_effects/zz_spn_240_initiate_effects.txt). The door spends it right after add_trait.
+
+# 2.40 F3 -- the witch hunter's heir (on_action_death_witch_hunter): 25 witch_hunting, now landing.
+E("common/on_action/yearly2_on_actions.txt",
+"""				#add_perk = protective_runes_perk
+				#add_perk = magical_senses_perk
+				hidden_effect = {
+""",
+"""				#add_perk = protective_runes_perk
+				#add_perk = magical_senses_perk
+				spn_initiate_queue_xp_effect = { TRAIT = supernatural_hunter VAR = spn_initiate_xp_witch VALUE = 25 } # 2.40 (Supernatural): F3, the 25 above lands through the door
+				hidden_effect = {
+""")
+
+# 2.40 F3 -- a duel won against a witch (magic_ev4.2): the 10% roll that starts a hunter, 25 witch_hunting.
+E("events/ev4.txt",
+"""					add_prestige = 100
+					if = {
+						limit = {	has_trait = witch_hunter	}
+""",
+"""					add_prestige = 100
+					spn_initiate_queue_xp_effect = { TRAIT = supernatural_hunter VAR = spn_initiate_xp_witch VALUE = 25 } # 2.40 (Supernatural): F3, kept one day, spent only if the 10% roll below makes him a hunter
+					if = {
+						limit = {	has_trait = witch_hunter	}
+""")
+
+# 2.40 F3 -- the witch hunter's apprentice graduates (magic_ev3.53 option a): 25 witch_hunting.
+E("events/ev3.txt",
+"""		create_witch_hunter_crossbow_effect = yes
+	}
+	after = {
+""",
+"""		create_witch_hunter_crossbow_effect = yes
+		spn_initiate_queue_xp_effect = { TRAIT = supernatural_hunter VAR = spn_initiate_xp_witch VALUE = 25 } # 2.40 (Supernatural): F3, the 25 above lands through the door
+	}
+	after = {
+""")
+
+# 2.40 F3 -- the world's inquisitor (magic_ev2.16): 90 witch_hunting.
+E("events/ev2.txt",
+"""		#}
+		if = {
+			limit = {
+				has_game_rule = high_whunters
+""",
+"""		#}
+		spn_initiate_queue_xp_effect = { TRAIT = supernatural_hunter VAR = spn_initiate_xp_witch VALUE = 90 } # 2.40 (Supernatural): F3, the 90 above lands through the door
+		if = {
+			limit = {
+				has_game_rule = high_whunters
+""")
+
+
+# =====================================================================================================================
+# 2.40 (Supernatural) -- package Q9 (WORK-ORDER-2.40)
+# =====================================================================================================================
+# 2.40 F -- Witchcraft's mage duel window used vanilla's unused template Window_Decoration_Thin_Bottom, whose texture vanilla
+# does not ship (decoration_frame_bottom_thin_duel.dds): line 1 of every error.log. Vanilla's own duel window uses
+# Window_Decoration_Frontend_Flat_Bottom (gui/event_windows/duel_event.gui:55); so does this one now.
+E("gui/event_windows/mage_duel_event.gui",
+"""		using = Window_Background
+		using = Window_Decoration_Thin_Bottom
+		parentanchor = bottom
+""",
+"""		using = Window_Background
+		# 2.40 (Supernatural): the template vanilla's duel window uses; Window_Decoration_Thin_Bottom's texture is not shipped
+		using = Window_Decoration_Frontend_Flat_Bottom
+		parentanchor = bottom
+""")
+
+
+# =====================================================================================================================
+# 2.40 (Supernatural) -- package QD (WORK-ORDER-2.40)
+# =====================================================================================================================
+# 2.40 boot 2 (i) -- Become a Fallen Hunter is shown only to a Supernatural hunter (has_trait = supernatural_hunter): the hunters' own group
+E('common/decisions/magic_dec.txt',
+"""	confirm_text = become_fallen_hunter_decision_confirm
+	decision_group_type = magic_decisions
+""",
+"""	confirm_text = become_fallen_hunter_decision_confirm
+	decision_group_type = spn_hunt # 2.40 (Supernatural): the hunters' group (boot 2, item i); Witchcraft had magic_decisions here and major below
+""")
+# 2.40 boot 2 (i) -- the same decision's second group line (Witchcraft's `major`, a duplicate key) goes, so the group is set once.
+# Anchored on the text the 2.34 entry above leaves (that entry runs first), so it matches on Witchcraft and on the mod.
+E('common/decisions/magic_dec.txt',
+"""	decision_group_type = major
+	cooldown = { years = 5 }
+	effect = {
+		# 2.34: was a bare remove_trait""",
+"""	# 2.40 (Supernatural): Witchcraft's second group line (major) removed; the group is set once, above (boot 2, item i)
+	cooldown = { years = 5 }
+	effect = {
+		# 2.34: was a bare remove_trait""")
+# 2.40 boot 2 (i) -- Witch Hunting (shown to witch hunters, the anti-mage perk and hunters with witch-hunting experience) joins the hunters' group
+E('common/decisions/magic_dec.txt',
+"""witch_hunting_decision = {
+	desc = witch_hunting_decision_desc
+""",
+"""witch_hunting_decision = {
+	desc = witch_hunting_decision_desc
+	decision_group_type = spn_hunt # 2.40 (Supernatural): the hunters' group (boot 2, item i); Witchcraft set none (Decisions)
 """)
 
 

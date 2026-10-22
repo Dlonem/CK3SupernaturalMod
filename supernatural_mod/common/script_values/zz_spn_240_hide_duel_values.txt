@@ -1,0 +1,104 @@
+﻿# Supernatural 2.40 -- the hide duel (WORK-ORDER-2.40 F1). Package Q6. Every roll here is hidden: no option, tooltip or event
+# shows a number (Thomas's rule); the events say which way a fight leans in words only (spn_clash_lean_tooltip_effect).
+
+# Side scope. How many knights fight on this side (the commander is not a knight).
+spn_hide_duel_side_knights_value = {
+	value = 0
+	every_side_knight = {
+		add = 1
+	}
+}
+
+# Do two champions with their wolves out find each other in this battle? Root = the champion the combat phase picked
+# (scope:spn_fc_champ); scope:spn_fc_foe = the other; scope:spn_hduel_kn_a / _kn_b / _kn_total = the knights, counted by
+# spn_hide_duel_field_effect before this is read. Base 40, clamped 10 to 85.
+spn_hide_duel_meet_chance_value = {
+	value = 40
+	# Either commands his side: the standard draws the eye.
+	if = {
+		limit = {
+			OR = {
+				scope:combat_side.side_commander ?= scope:spn_fc_champ
+				scope:combat_side.enemy_side.side_commander ?= scope:spn_fc_foe
+			}
+		}
+		add = 20
+	}
+	# Midnight let all the way out goes looking.
+	if = {
+		limit = {
+			OR = {
+				has_character_modifier = spn_let_it_take_me_modifier
+				scope:spn_fc_foe = { has_character_modifier = spn_let_it_take_me_modifier }
+			}
+		}
+		add = 25
+	}
+	# A deep bond: the hides know each other's smell.
+	if = {
+		limit = {
+			OR = {
+				spn_hide_bond_value >= 75
+				scope:spn_fc_foe = { spn_hide_bond_value >= 75 }
+			}
+		}
+		add = 10
+	}
+	# Timber knows how to disappear.
+	if = {
+		limit = {
+			OR = {
+				has_trait = spn_champion_timber
+				scope:spn_fc_foe = { has_trait = spn_champion_timber }
+			}
+		}
+		add = -15
+	}
+	# A small field, or a great press of knights.
+	if = {
+		limit = { scope:spn_hduel_kn_total < 6 }
+		add = 15
+	}
+	if = {
+		limit = {
+			OR = {
+				scope:spn_hduel_kn_a >= 10
+				scope:spn_hduel_kn_b >= 10
+			}
+		}
+		add = -15
+	}
+	min = 10
+	max = 85
+}
+
+# AI against AI: does the weaker one break off before the fight? scope:spn_hduel_ca = A's chance to win (spn_clash_chance_a_value,
+# banked by spn_hide_duel_breakoff_roll_effect), scope:spn_clash_a / scope:spn_clash_b = the two. Only the one the fight leans
+# against considers it: 20, +15 if craven, +15 if he wears Timber.
+spn_hide_duel_breakoff_chance_value = {
+	value = 0
+	if = {
+		limit = { scope:spn_hduel_ca <= 35 }
+		value = 20
+		if = {
+			limit = { scope:spn_clash_a = { has_trait = craven } }
+			add = 15
+		}
+		if = {
+			limit = { scope:spn_clash_a = { has_trait = spn_champion_timber } }
+			add = 15
+		}
+	}
+	else_if = {
+		limit = { scope:spn_hduel_ca >= 65 }
+		value = 20
+		if = {
+			limit = { scope:spn_clash_b = { has_trait = craven } }
+			add = 15
+		}
+		if = {
+			limit = { scope:spn_clash_b = { has_trait = spn_champion_timber } }
+			add = 15
+		}
+	}
+}

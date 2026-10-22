@@ -223,7 +223,40 @@ spn_hide_owner_changed = {
 					scope:old_owner = { exists = var:spn_pack }
 				}
 				if = {
-					limit = { NOT = { scope:owner.var:spn_pack = scope:old_owner.var:spn_pack } }
+					limit = {
+						NOT = { scope:owner.var:spn_pack = scope:old_owner.var:spn_pack }
+						# 2.40 (WORK-ORDER-2.40 C6): only a hide taken: from a dead champion by his killer, won from its holder at
+						# the fire, or from a living holder who thinks ill of the taker (a demand, a theft, a war). A gift between
+						# friends, an heir, the Choosing's own gift: no feud.
+						OR = {
+							scope:owner = { has_character_flag = spn_hide_taken_by_force }
+							scope:owner = { has_character_flag = spn_hide_won_from_holder }
+							AND = {
+								scope:old_owner = { is_alive = yes }
+								NOT = { scope:owner = { has_character_flag = spn_hide_passed_kindly } }
+								scope:old_owner = {
+									opinion = {
+										target = scope:owner
+										value < 0
+									}
+								}
+							}
+						}
+					}
+					# The cause and the two people, for A Feud Over a Hide (spn_pack.0200).
+					if = {
+						limit = { scope:owner = { has_character_flag = spn_hide_taken_by_force } }
+						save_scope_value_as = { name = spn_feud_cause value = flag:force }
+					}
+					else_if = {
+						limit = { scope:owner = { has_character_flag = spn_hide_won_from_holder } }
+						save_scope_value_as = { name = spn_feud_cause value = flag:fight }
+					}
+					else = {
+						save_scope_value_as = { name = spn_feud_cause value = flag:demand }
+					}
+					scope:owner = { save_scope_as = spn_feud_taker }
+					scope:old_owner = { save_scope_as = spn_feud_loser }
 					scope:owner.var:spn_pack.story_owner = { save_scope_as = spn_mv_a }
 					scope:old_owner.var:spn_pack.story_owner = { save_scope_as = spn_mv_b }
 					spn_hide_feud_effect = { A = scope:spn_mv_b B = scope:spn_mv_a }

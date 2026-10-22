@@ -18,6 +18,7 @@ spn_initiate.0001 { #Initialize Vampire
 		# so a clause here covers every route in -- interactions, AI actions, activities, and
 		# anything added later -- not just the buttons that were known about when it was written.
 		spn_is_valid_supernatural_target = yes
+		spn_can_become_creature_trigger = yes # 2.40 (WORK-ORDER-2.40 F3): no golem, demon-blooded or Baba Yaga (an opposite trait refuses add_trait and the rest of the door ran anyway)
 	}
 
 	immediate = {
@@ -31,9 +32,16 @@ spn_initiate.0001 { #Initialize Vampire
 		else = {
 			add_trait = supernatural_vampire
 		}
-		set_variable = {
-			name = spn_age_aquired_immortality
-			value = age
+		# 2.40 (WORK-ORDER-2.40 F3): the level the caller chose (a picker, a randomiser, an embrace), now that the trait exists
+		spn_initiate_apply_pending_xp_effect = { TRAIT = supernatural_vampire TRACK = vampirism VAR = spn_initiate_xp }
+		spn_initiate_clear_pending_xp_effect = yes
+		# 2.40 (WORK-ORDER-2.40 F3): a value set before this door (the made vampires of the embrace events, 20) is kept; a cure removes it
+		if = {
+			limit = { NOT = { has_variable = spn_age_aquired_immortality } }
+			set_variable = {
+				name = spn_age_aquired_immortality
+				value = age
+			}
 		}
 		set_variable = {
 			name = spn_yearly_pulses_since_trait_upgrade
@@ -123,32 +131,27 @@ spn_initiate.0003 { #Select what level Vampire Trait to add
 		name = spn_initiate.0003.a
 		custom_tooltip = spn_initiate.0003.a.tt
 		trigger_event = spn_initiate.0001
-		add_trait_xp = {
-			trait = supernatural_vampire
-			track = vampirism
-			value = 0
-		}
+		set_variable = { name = spn_initiate_xp value = 0 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): vampire vampirism, applied by the door
 	}
 
 	option = {
 		name = spn_initiate.0003.b
 		custom_tooltip = spn_initiate.0003.b.tt
 		trigger_event = spn_initiate.0001
-		add_trait_xp = {
-			trait = supernatural_vampire
-			track = vampirism
-			value = 50
-		}
+		set_variable = { name = spn_initiate_xp value = 50 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): vampire vampirism, applied by the door
 	}
 
 	option = {
 		name = spn_initiate.0003.c
 		custom_tooltip = spn_initiate.0003.c.tt
 		trigger_event = spn_initiate.0001
-		add_trait_xp = {
-			trait = supernatural_vampire
-			track = vampirism
-			value = 100
+		set_variable = { name = spn_initiate_xp value = 100 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): vampire vampirism, applied by the door
+	}
+	# 2.40 (WORK-ORDER-2.40 F3): the embrace decision may be taken again (it is hidden while this window is open)
+	after = {
+		if = {
+			limit = { has_character_flag = spn_embrace_choosing }
+			remove_character_flag = spn_embrace_choosing
 		}
 	}
 }
@@ -177,27 +180,15 @@ spn_initiate.0006 { #Initiate Random Vampire Traits
 		random_list = {
 			75 = {
 				trigger_event = spn_initiate.0001 #Initialize Vampire
-				add_trait_xp = {
-					trait = supernatural_vampire
-					track = vampirism
-					value = { 0 25 }
-				}
+				set_variable = { name = spn_initiate_xp value = { integer_range = { min = 0 max = 25 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): vampire vampirism, applied by the door
 			}
 			20 = {
 				trigger_event = spn_initiate.0001 #Initialize Vampire
-				add_trait_xp = {
-					trait = supernatural_vampire
-					track = vampirism
-					value = { 25 50 }
-				}
+				set_variable = { name = spn_initiate_xp value = { integer_range = { min = 25 max = 50 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): vampire vampirism, applied by the door
 			}
 			5 = {
 				trigger_event = spn_initiate.0001 #Initialize Vampire
-				add_trait_xp = {
-					trait = supernatural_vampire
-					track = vampirism
-					value = { 50 75 }
-				}
+				set_variable = { name = spn_initiate_xp value = { integer_range = { min = 50 max = 75 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): vampire vampirism, applied by the door
 			}
 		}
 		#Removed a trailing "trigger_event = spn_initiate.0001" here: all three branches above
@@ -219,6 +210,7 @@ spn_initiate.1001 { #Initiate Werewolf
 		# so a clause here covers every route in -- interactions, AI actions, activities, and
 		# anything added later -- not just the buttons that were known about when it was written.
 		spn_is_valid_supernatural_target = yes
+		spn_can_become_creature_trigger = yes # 2.40 (WORK-ORDER-2.40 F3): no golem, demon-blooded or Baba Yaga (an opposite trait refuses add_trait and the rest of the door ran anyway)
 	}
 
 	immediate = { 
@@ -231,6 +223,9 @@ spn_initiate.1001 { #Initiate Werewolf
 		else = {
 			add_trait = supernatural_werewolf
 		}
+		# 2.40 (WORK-ORDER-2.40 F3): the level the caller chose, now that the trait exists
+		spn_initiate_apply_pending_xp_effect = { TRAIT = supernatural_werewolf TRACK = lycanthropy VAR = spn_initiate_xp }
+		spn_initiate_clear_pending_xp_effect = yes
 
 		# Born-vs-turned tag (for the gathering activity & future content).
 		# The wound/incubation climax sets spn_turned_werewolf BEFORE firing this event;
@@ -337,32 +332,27 @@ spn_initiate.1003 { #Select what level Werewolf Trait to add
 		name = spn_initiate.1003.a
 		custom_tooltip = spn_initiate.1003.a.tt
 		trigger_event = spn_initiate.1001
-		add_trait_xp = {
-			trait = supernatural_werewolf
-			track = lycanthropy
-			value = 0
-		}
+		set_variable = { name = spn_initiate_xp value = 0 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): werewolf lycanthropy, applied by the door
 	}
 
 	option = {
 		name = spn_initiate.1003.b
 		custom_tooltip = spn_initiate.1003.b.tt
 		trigger_event = spn_initiate.1001
-		add_trait_xp = {
-			trait = supernatural_werewolf
-			track = lycanthropy
-			value = 50
-		}
+		set_variable = { name = spn_initiate_xp value = 50 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): werewolf lycanthropy, applied by the door
 	}
 
 	option = {
 		name = spn_initiate.1003.c
 		custom_tooltip = spn_initiate.1003.c.tt
 		trigger_event = spn_initiate.1001
-		add_trait_xp = {
-			trait = supernatural_werewolf
-			track = lycanthropy
-			value = 100
+		set_variable = { name = spn_initiate_xp value = 100 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): werewolf lycanthropy, applied by the door
+	}
+	# 2.40 (WORK-ORDER-2.40 F3): the embrace decision may be taken again (it is hidden while this window is open)
+	after = {
+		if = {
+			limit = { has_character_flag = spn_embrace_choosing }
+			remove_character_flag = spn_embrace_choosing
 		}
 	}
 }
@@ -391,27 +381,15 @@ spn_initiate.1006 { #Initiate Random Werewolf Levels
 		random_list = {
 			75 = {
 				trigger_event = spn_initiate.1001 #Initialize Werewolf
-				add_trait_xp = {
-					trait = supernatural_werewolf
-					track = lycanthropy
-					value = { 0 25 }
-				}
+				set_variable = { name = spn_initiate_xp value = { integer_range = { min = 0 max = 25 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): werewolf lycanthropy, applied by the door
 			}
 			20 = {
 				trigger_event = spn_initiate.1001 #Initialize Werewolf (was 0001 - the VAMPIRE initialiser)
-				add_trait_xp = {
-					trait = supernatural_werewolf
-					track = lycanthropy
-					value = { 25 50 }
-				}
+				set_variable = { name = spn_initiate_xp value = { integer_range = { min = 25 max = 50 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): werewolf lycanthropy, applied by the door
 			}
 			5 = {
 				trigger_event = spn_initiate.1001 #Initialize Werewolf (was 0001 - the VAMPIRE initialiser)
-				add_trait_xp = {
-					trait = supernatural_werewolf
-					track = lycanthropy
-					value = { 50 75 }
-				}
+				set_variable = { name = spn_initiate_xp value = { integer_range = { min = 50 max = 75 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): werewolf lycanthropy, applied by the door
 			}
 		}
 	}
@@ -439,6 +417,7 @@ spn_initiate.2001 { #Initiate Hybrid
 		# so a clause here covers every route in -- interactions, AI actions, activities, and
 		# anything added later -- not just the buttons that were known about when it was written.
 		spn_is_valid_supernatural_target = yes
+		spn_can_become_creature_trigger = yes # 2.40 (WORK-ORDER-2.40 F3): no golem, demon-blooded or Baba Yaga (an opposite trait refuses add_trait and the rest of the door ran anyway)
 	}
 
 	immediate = {
@@ -482,6 +461,10 @@ spn_initiate.2001 { #Initiate Hybrid
 		else = {
 			add_trait = supernatural_hybrid
 		}
+		# 2.40 (WORK-ORDER-2.40 F3): the level the caller chose, on both tracks, now that the trait exists
+		spn_initiate_apply_pending_xp_effect = { TRAIT = supernatural_hybrid TRACK = hybrid_vampirism VAR = spn_initiate_xp }
+		spn_initiate_apply_pending_xp_effect = { TRAIT = supernatural_hybrid TRACK = hybrid_lycanthropy VAR = spn_initiate_xp }
+		spn_initiate_clear_pending_xp_effect = yes
 		# 2.37 -- ...and onto the hybrid's own wolf_pack track: a Second at 80 is still a Second (§13.3b).
 		if = {
 			limit = { exists = scope:spn_carry_standing }
@@ -585,47 +568,30 @@ spn_initiate.2003 { #Select what level Hybrid Trait to add
 		name = spn_initiate.2003.a
 		custom_tooltip = spn_initiate.2003.a.tt
 		trigger_event = spn_initiate.2001
-		add_trait_xp = {
-			trait = supernatural_hybrid
-			track = hybrid_vampirism
-			value = 0
-		}
-		add_trait_xp = {
-			trait = supernatural_hybrid
-			track = hybrid_lycanthropy
-			value = 0
-		}
+		set_variable = { name = spn_initiate_xp value = 0 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hybrid hybrid_vampirism, applied by the door
+		set_variable = { name = spn_initiate_xp value = 0 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hybrid hybrid_lycanthropy, applied by the door
 	}
 
 	option = {
 		name = spn_initiate.2003.b
 		custom_tooltip = spn_initiate.2003.b.tt
 		trigger_event = spn_initiate.2001
-		add_trait_xp = {
-			trait = supernatural_hybrid
-			track = hybrid_vampirism
-			value = 50
-		}
-		add_trait_xp = {
-			trait = supernatural_hybrid
-			track = hybrid_lycanthropy
-			value = 50
-		}
+		set_variable = { name = spn_initiate_xp value = 50 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hybrid hybrid_vampirism, applied by the door
+		set_variable = { name = spn_initiate_xp value = 50 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hybrid hybrid_lycanthropy, applied by the door
 	}
 
 	option = {
 		name = spn_initiate.2003.c
 		custom_tooltip = spn_initiate.2003.c.tt
 		trigger_event = spn_initiate.2001
-		add_trait_xp = {
-			trait = supernatural_hybrid
-			track = hybrid_vampirism
-			value = 100
-		}
-		add_trait_xp = {
-			trait = supernatural_hybrid
-			track = hybrid_lycanthropy
-			value = 100
+		set_variable = { name = spn_initiate_xp value = 100 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hybrid hybrid_vampirism, applied by the door
+		set_variable = { name = spn_initiate_xp value = 100 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hybrid hybrid_lycanthropy, applied by the door
+	}
+	# 2.40 (WORK-ORDER-2.40 F3): the embrace decision may be taken again (it is hidden while this window is open)
+	after = {
+		if = {
+			limit = { has_character_flag = spn_embrace_choosing }
+			remove_character_flag = spn_embrace_choosing
 		}
 	}
 }
@@ -658,6 +624,7 @@ spn_initiate.3001 { #Initiate Hunter
 		# so a clause here covers every route in -- interactions, AI actions, activities, and
 		# anything added later -- not just the buttons that were known about when it was written.
 		spn_is_valid_supernatural_target = yes
+		NOR = { has_trait = golem has_trait = demon0 has_trait = yaga } # 2.40 (WORK-ORDER-2.40 F3): a golem, the demon-blooded or a Baba Yaga cannot be made a hunter (supernatural_hunter opposes demon0; yaga opposes the hunter)
 	}
 
 	immediate = { 
@@ -669,6 +636,10 @@ spn_initiate.3001 { #Initiate Hunter
 		else = {
 			add_trait = supernatural_hunter
 		}
+		# 2.40 (WORK-ORDER-2.40 F3): the level the caller chose (monster_hunting, and witch_hunting from Witchcraft's callers), now that the trait exists
+		spn_initiate_apply_pending_xp_effect = { TRAIT = supernatural_hunter TRACK = monster_hunting VAR = spn_initiate_xp }
+		spn_initiate_apply_pending_xp_effect = { TRAIT = supernatural_hunter TRACK = witch_hunting VAR = spn_initiate_xp_witch }
+		spn_initiate_clear_pending_xp_effect = yes
 
 		set_variable = {
 			name = spn_yearly_pulses_since_trait_upgrade
@@ -733,31 +704,29 @@ spn_initiate.3003 { #Select what level Hunter Trait to add
 
 	option = {
 		name = spn_initiate.3003.a
+		custom_tooltip = spn_initiate.3003.a.tt # 2.40 (WORK-ORDER-2.40 F3): the level, in words
 		trigger_event = spn_initiate.3001 #Initiate Hunter
-		add_trait_xp = {
-			trait = supernatural_hunter
-			track = monster_hunting
-			value = 50
-		}
+		set_variable = { name = spn_initiate_xp value = 50 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hunter monster_hunting, applied by the door
 	}
 
 	option = {
 		name = spn_initiate.3003.b
+		custom_tooltip = spn_initiate.3003.b.tt # 2.40 (WORK-ORDER-2.40 F3): the level, in words
 		trigger_event = spn_initiate.3001 #Initiate Hunter
-		add_trait_xp = {
-			trait = supernatural_hunter
-			track = monster_hunting
-			value = 75
-		}
+		set_variable = { name = spn_initiate_xp value = 75 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hunter monster_hunting, applied by the door
 	}
 
 	option = {
 		name = spn_initiate.3003.c
+		custom_tooltip = spn_initiate.3003.c.tt # 2.40 (WORK-ORDER-2.40 F3): the level, in words
 		trigger_event = spn_initiate.3001 #Initiate Hunter
-		add_trait_xp = {
-			trait = supernatural_hunter
-			track = monster_hunting
-			value = 100
+		set_variable = { name = spn_initiate_xp value = 100 days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hunter monster_hunting, applied by the door
+	}
+	# 2.40 (WORK-ORDER-2.40 F3): the embrace decision may be taken again (it is hidden while this window is open)
+	after = {
+		if = {
+			limit = { has_character_flag = spn_embrace_choosing }
+			remove_character_flag = spn_embrace_choosing
 		}
 	}
 }
@@ -788,18 +757,10 @@ spn_initiate.3006 { #Initiate Random Hunter Traits
 				trigger_event = spn_initiate.3001 #Initialize Hunter
 				random_list = {
 					50 = {
-						add_trait_xp = {
-							trait = supernatural_hunter
-							track = monster_hunting
-							value = { 0 25 }
-						}				
+						set_variable = { name = spn_initiate_xp value = { integer_range = { min = 0 max = 25 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hunter monster_hunting, applied by the door
 					}
 					50 = {
-						add_trait_xp = {
-							trait = supernatural_hunter
-							track = witch_hunting
-							value = { 0 25 }
-						}					
+						set_variable = { name = spn_initiate_xp_witch value = { integer_range = { min = 0 max = 25 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hunter witch_hunting, applied by the door
 					}
 				}
 			}
@@ -807,18 +768,10 @@ spn_initiate.3006 { #Initiate Random Hunter Traits
 				trigger_event = spn_initiate.3001 #Initialize Hunter
 				random_list = {
 					50 = {
-						add_trait_xp = {
-							trait = supernatural_hunter
-							track = monster_hunting
-							value = { 25 50 }
-						}				
+						set_variable = { name = spn_initiate_xp value = { integer_range = { min = 25 max = 50 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hunter monster_hunting, applied by the door
 					}
 					50 = {
-						add_trait_xp = {
-							trait = supernatural_hunter
-							track = witch_hunting
-							value = { 25 50 }
-						}					
+						set_variable = { name = spn_initiate_xp_witch value = { integer_range = { min = 25 max = 50 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hunter witch_hunting, applied by the door
 					}
 				}
 			}
@@ -826,18 +779,10 @@ spn_initiate.3006 { #Initiate Random Hunter Traits
 				trigger_event = spn_initiate.3001 #Initialize Hunter
 				random_list = {
 					50 = {
-						add_trait_xp = {
-							trait = supernatural_hunter
-							track = monster_hunting
-							value = { 50 75 }
-						}				
+						set_variable = { name = spn_initiate_xp value = { integer_range = { min = 50 max = 75 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hunter monster_hunting, applied by the door
 					}
 					50 = {
-						add_trait_xp = {
-							trait = supernatural_hunter
-							track = witch_hunting
-							value = { 50 75 }
-						}					
+						set_variable = { name = spn_initiate_xp_witch value = { integer_range = { min = 50 max = 75 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): hunter witch_hunting, applied by the door
 					}
 				}
 			}
@@ -1046,11 +991,7 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 					add_character_flag = supernatural_embrace_werewolf
 
 					trigger_event = spn_initiate.1001 #Initialize Werewolf
-					add_trait_xp = {
-						trait = supernatural_werewolf
-						track = lycanthropy
-						value = { 0 15 }
-					}
+					set_variable = { name = spn_initiate_xp value = { integer_range = { min = 0 max = 15 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): werewolf lycanthropy, applied by the door
 				}
 			}
 			0 = { #Medium Skill for Supernatural Trait
@@ -1249,11 +1190,7 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 					add_character_flag = supernatural_embrace_werewolf
 
 					trigger_event = spn_initiate.1001 #Initialize Werewolf
-					add_trait_xp = {
-						trait = supernatural_werewolf
-						track = lycanthropy
-						value = { 10 25 }
-					}
+					set_variable = { name = spn_initiate_xp value = { integer_range = { min = 10 max = 25 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): werewolf lycanthropy, applied by the door
 				}
 			}
 			0 = { #High Skill for Supernatural Trait
@@ -1450,11 +1387,7 @@ spn_initiate.9000 { #Initiate From Birth, Determines Inheritance Chance
 					add_character_flag = supernatural_embrace_werewolf
 
 					trigger_event = spn_initiate.1001 #Initialize Werewolf
-					add_trait_xp = {
-						trait = supernatural_werewolf
-						track = lycanthropy
-						value = { 20 35 }
-					}
+					set_variable = { name = spn_initiate_xp value = { integer_range = { min = 20 max = 35 } } days = 1 } # 2.40 (WORK-ORDER-2.40 F3): werewolf lycanthropy, applied by the door
 				}
 
 				#else_if = {

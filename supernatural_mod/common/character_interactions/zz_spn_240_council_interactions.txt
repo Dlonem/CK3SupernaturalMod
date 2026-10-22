@@ -1,0 +1,139 @@
+﻿# Supernatural 2.40 -- the Gnostic Council (boot 4, COUNCIL 2). Loc: localization/english/zz_spn_240_q3_l_english.yml.
+
+# 2.40 (boot 4, COUNCIL 2): Ask the Grand Magus to Fund Your Research. Thomas: "Order members can ask the Grand Magus for
+# research funding". Witchcraft already has this request (ask_mc_for_support_interaction, option "Ask for research funding",
+# answered in the letter magic_ev10.96), but only for donors. This is the Order's way into the SAME request: the same letter
+# to the Grand Magus, the same answer (the minor share of the treasury, max 300 gold, and a Research Fund for 3 years, or a
+# refusal), the same "no more petitions" option. Nothing parallel: the Grand Magus decides in Witchcraft's own event, a
+# player Grand Magus by letter (nobody waits on it), an AI one by opinion (accepts at positive opinion, refuses at negative).
+# Hidden from a donor who already has Witchcraft's own option (spn_council_wc_research_ask_open_trigger).
+# AI askers: only an Order member conducting a Magical Research who is short of gold; rarely.
+spn_council_ask_research_funding_interaction = {
+	icon = icon_archmage
+	category = interaction_category_favorites # the Supernatural menu (as the mod's copy of the Witchcraft request)
+	interface_priority = 100
+	desc = spn_council_ask_research_funding_interaction_desc
+	greeting = positive
+	cooldown = { years = 5 }
+	popup_on_receive = no
+	pause_on_receive = no
+	use_diplomatic_range = no
+	auto_accept = yes
+
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		exists = global_var:current_archmage_global
+		global_var:current_archmage_global = scope:recipient
+		scope:actor = {
+			spn_order_on_trigger = yes
+			spn_is_order_member_trigger = yes
+			is_adult = yes
+			is_imprisoned = no
+			NOT = { spn_council_wc_research_ask_open_trigger = yes }
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:recipient = {
+			is_imprisoned = no
+			NOT = { is_at_war_with = scope:actor }
+			custom_description = {
+				text = archmage_busy_text
+				NOT = { has_character_flag = archmage_busy_flag }
+			}
+			custom_description = {
+				text = has_magic_immunity
+				spn_is_valid_supernatural_target = yes
+			}
+		}
+		custom_description = {
+			text = mc_no_funds_text
+			exists = global_var:mc_gold_global
+			global_var:mc_gold_global > 199
+		}
+		scope:actor = {
+			custom_description = {
+				text = mc_you_are_exc_text
+				NOT = { has_character_modifier = excluded_from_magic_community }
+			}
+			custom_tooltip = {
+				text = spn_council_research_reason_tt
+				spn_council_research_reason_trigger = yes
+			}
+			custom_tooltip = {
+				text = spn_council_research_fund_held_tt
+				NOT = { has_character_modifier = additional_magic_funds_modifier }
+			}
+		}
+	}
+
+	on_accept = {
+		scope:recipient = {
+			custom_tooltip = spn_council_ask_research_funding_considers_tt
+		}
+		scope:actor = {
+			show_as_tooltip = {
+				random_list = {
+					1 = {
+						desc = mc_approval
+						show_chance = no
+						take_from_mc_funds_effect = {
+							RECEIVER = scope:actor
+							VALUE = mc_tiny_gold_value
+						}
+						add_character_modifier = {
+							modifier = additional_magic_funds_modifier
+							years = 3
+						}
+					}
+					1 = {
+						desc = mc_rejection
+						show_chance = no
+						custom_tooltip = sm_archmage_rejection_ct1
+					}
+				}
+			}
+		}
+		hidden_effect = {
+			scope:recipient = {
+				trigger_event = magic_ev10.96
+			}
+		}
+	}
+
+	ai_potential = {
+		is_adult = yes
+		spn_is_order_member_trigger = yes
+		involved_activity ?= { has_activity_type = magical_research }
+		gold < 300
+	}
+	ai_targets = {
+		ai_recipients = liege
+		ai_recipients = scripted_relations
+		ai_recipients = realm_characters
+		ai_recipients = sub_realm_characters
+		ai_recipients = neighboring_rulers
+		ai_recipients = peer_vassals
+		ai_recipients = vassals
+		ai_recipients = courtiers
+		ai_recipients = guests
+		ai_recipients = family
+		ai_recipients = dynasty
+	}
+	ai_frequency = 12
+	ai_will_do = {
+		base = 25
+		modifier = {
+			add = 25
+			scope:actor = { has_trait = greedy }
+		}
+		modifier = {
+			factor = 0.5
+			scope:actor = {
+				OR = {
+					has_trait = generous
+					has_trait = content
+				}
+			}
+		}
+	}
+}

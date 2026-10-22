@@ -1,0 +1,101 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 F2) -- household administration. Thomas's own door, mirrored on the Long Night's
+# household (the-long-night-azor-ahai, common/scripted_triggers/zz_ln_household_triggers.txt). Nobody else is meant to
+# find it; the mod ships its gates as readable text, so this is obscurity, not security, as in the Long Night.
+#
+# THE KEY is the Long Night's (martial exactly 15, Diligent, Lustful, head of his dynasty, a player), so the same saved
+# character opens the door in both mods, with Thomas's ruler-designer condition on top (expert call F2). Martial, because
+# a skill trigger reads the total and neither trait touches martial (vanilla diligent: diplomacy, stewardship, learning;
+# lustful: intrigue), so the number on the designer screen is the number here. A bare `martial = 15` means AT LEAST 15,
+# so exactness takes two lines.
+#
+# Checked once (zz_spn_240_household_on_actions.txt): skills drift, and a yearly check could match another player whose
+# martial passes through 15 years later. The stamp then belongs to the HOUSE: heirs who head the dynasty keep the door.
+spn_household_key_trigger = {
+	is_ai = no
+	is_from_ruler_designer = yes
+	is_dynast = yes
+	has_trait = lustful
+	has_trait = diligent
+	martial >= 15
+	NOT = { martial >= 16 }
+}
+
+# The door, once stamped: a player who heads that dynasty, and an adult (children never use creature powers).
+spn_household_has_door_trigger = {
+	is_ai = no
+	is_adult = yes
+	is_dynast = yes
+	exists = global_var:spn_household_dynasty
+	dynasty ?= global_var:spn_household_dynasty
+}
+
+# Root = the heir. May hide HIDE be sent for? Not worn by its living champion (the same test the hand-over effect makes
+# before it moves a hide, spn_hide_grant_effect), not promised to a listener at a wake, and not in another player's hands.
+spn_household_hide_free_trigger = {
+	NOT = { has_global_variable = spn_hide_$HIDE$_reserved }
+	NOT = {
+		any_artifact = {
+			var:spn_hide ?= flag:$HIDE$
+			artifact_owner ?= {
+				OR = {
+					AND = {
+						is_alive = yes
+						var:spn_champion_of ?= flag:$HIDE$
+					}
+					AND = {
+						is_ai = no
+						NOT = { this = root }
+					}
+				}
+			}
+		}
+	}
+}
+
+# Root = the heir. Is any hide free to come to him? Alpha only for a leader (spn_hide_is_leader_trigger, the body of
+# spn_hide_leader_ok_trigger, which needs a saved scope a decision does not have).
+spn_household_any_hide_free_trigger = {
+	OR = {
+		spn_household_hide_free_trigger = { HIDE = silverback }
+		spn_household_hide_free_trigger = { HIDE = timber }
+		spn_household_hide_free_trigger = { HIDE = tundra }
+		spn_household_hide_free_trigger = { HIDE = graybeard }
+		spn_household_hide_free_trigger = { HIDE = midnight }
+		AND = {
+			spn_household_hide_free_trigger = { HIDE = alpha }
+			spn_hide_is_leader_trigger = yes
+		}
+	}
+}
+
+# Root = a courtier. One the household can ask for loyalty: an adult who is not loyal already.
+spn_household_retainer_trigger = {
+	is_alive = yes
+	is_adult = yes
+	NOT = { has_trait = loyal }
+}
+
+# Root = a courtier; scope:spn_hh_lord = the head of the house. Does he know one of the lord's secrets of this kind?
+spn_household_knows_lord_trigger = {
+	any_known_secret = {
+		secret_owner = scope:spn_hh_lord
+		OR = {
+			secret_type = spn_secret_vampire
+			secret_type = spn_secret_werewolf
+			secret_type = spn_secret_hybrid
+			secret_type = spn_secret_hunter
+			secret_type = spn_secret_blue_rose
+			secret_type = secret_witch
+		}
+	}
+}
+
+# Root = the heir. Can he use Witchcraft's magic tree? magic_lifestyle's own is_valid (01_lifestyles_spn.txt).
+spn_household_magic_tree_trigger = {
+	OR = {
+		has_trait = witch
+		any_secret = { type = secret_witch }
+		has_trait = archmage
+		has_trait = true_witch
+	}
+}

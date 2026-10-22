@@ -1,0 +1,435 @@
+﻿# Supernatural 2.40 -- the hide duel (WORK-ORDER-2.40 F1) and The Hide Speaks before a Challenge (C10). Package Q6.
+#
+# AGOT's dragon duel gave the SHAPE (a sighting, fight or flee, a hidden escape roll, a pursuit, AI weights, a race-guard flag,
+# the commander's permission); it is re-implemented here in the mod's own idiom, no AGOT text. The fight itself is the mod's
+# own clash (spn_creature_clash_effect): Hide Strength, Bond and lycanthropy decide it, as the 2.37 design says they must.
+# Everything runs on vanilla with no AGOT loaded; the compatibility patch only overrides spn_hide_duel_busy_trigger.
+#
+# Saved scopes of the chain (carried into every event it sends):
+#   spn_hduel_a / spn_hduel_b   the two champions (a = the one the combat phase picked, who sees the other first)
+#   spn_hduel_other             in each event, root's opponent (set in the event's immediate)
+#   spn_hduel_runner            set only when one of them got away (the result event reads it)
+#   spn_hduel_fight             saved only while the duel's own clash rolls: the style and caught terms in
+#                               spn_creature_clash_weight_value read nothing outside it
+# Character state, all short-lived (cleared by spn_hide_duel_clean_effect when the duel ends):
+#   flag spn_hide_duel_opening (3 days, refreshed at each step; the busy guard), var spn_hduel_style (flag:throat|flag:wear,
+#   10 days), flag spn_hduel_caught (10 days).
+# Variable list spn_clash_missed_with (60 days, both ways): the pair did not find each other in this battle (or broke off).
+# spn_hide_clash_foe_trigger skips such a pair, so the feats unblock; spn_hide_battle_cleanup_effect clears it.
+
+# ==================================================================================================
+# THE FIELD. Root = the champion the combat phase picked (scope:spn_fc_champ); scope:spn_fc_foe; scope:combat_side.
+# Called from spn_hide_field_clash_effect once the foe is found.
+# ==================================================================================================
+spn_hide_duel_field_effect = {
+	# An earlier pick of the same pulse must not leave its answers here.
+	if = {
+		limit = { exists = scope:spn_hduel_met }
+		clear_saved_scope = spn_hduel_met
+	}
+	if = {
+		limit = { exists = scope:spn_hduel_runner }
+		clear_saved_scope = spn_hduel_runner
+	}
+	if = {
+		limit = { exists = scope:spn_hduel_broke }
+		clear_saved_scope = spn_hduel_broke
+	}
+	# 1. Read first: the knights on each side, then the hidden encounter roll.
+	scope:combat_side = { save_scope_value_as = { name = spn_hduel_kn_a value = spn_hide_duel_side_knights_value } }
+	scope:combat_side.enemy_side = { save_scope_value_as = { name = spn_hduel_kn_b value = spn_hide_duel_side_knights_value } }
+	save_scope_value_as = {
+		name = spn_hduel_kn_total
+		value = {
+			value = scope:spn_hduel_kn_a
+			add = scope:spn_hduel_kn_b
+		}
+	}
+	hidden_effect = {
+		random = {
+			chance = spn_hide_duel_meet_chance_value
+			save_scope_value_as = { name = spn_hduel_met value = yes }
+		}
+	}
+	# 2. A miss: they never find each other. No battle line, no event; the feats unblock for both.
+	if = {
+		limit = { NOT = { exists = scope:spn_hduel_met } }
+		spn_hide_duel_missed_effect = { A = scope:spn_fc_champ B = scope:spn_fc_foe }
+	}
+	# 3. A player in the pair: the chain, started now, answered while the battle goes on (AGOT's way). The pair is recorded
+	#    first (the feats unblock, the aftermath knows two wolves met); the race guard is on both before the first event.
+	else_if = {
+		limit = {
+			OR = {
+				is_ai = no
+				scope:spn_fc_foe = { is_ai = no }
+			}
+		}
+		spn_hide_field_record_pair_effect = yes
+		spn_hide_duel_open_effect = { A = scope:spn_fc_champ B = scope:spn_fc_foe }
+		scope:spn_hduel_a = { trigger_event = spn_hide.2100 }
+	}
+	# 4. An AI champion who is a player's landless knight: the player is asked first ("Your Wolf Has Seen Another"). The pair
+	#    is written as missed for this battle; the answer decides whether they fight.
+	else_if = {
+		limit = {
+			OR = {
+				spn_hide_duel_asks_leave_trigger = yes
+				scope:spn_fc_foe = { spn_hide_duel_asks_leave_trigger = yes }
+			}
+		}
+		spn_hide_duel_missed_effect = { A = scope:spn_fc_champ B = scope:spn_fc_foe }
+		if = {
+			limit = { spn_hide_duel_asks_leave_trigger = yes }
+			spn_hide_duel_open_effect = { A = scope:spn_fc_champ B = scope:spn_fc_foe }
+		}
+		else = {
+			spn_hide_duel_open_effect = { A = scope:spn_fc_foe B = scope:spn_fc_champ }
+		}
+		scope:spn_hduel_a.liege_or_court_owner = { trigger_event = spn_hide.2103 }
+	}
+	# 5. AI against AI: instant, no events. The weaker may break off first; otherwise the clash as before 2.40, with its
+	#    battle line (spn_hide_field_clash_after_effect).
+	else = {
+		spn_hide_duel_breakoff_roll_effect = { A = scope:spn_fc_champ B = scope:spn_fc_foe }
+		if = {
+			limit = { exists = scope:spn_hduel_broke }
+			spn_hide_duel_missed_effect = { A = scope:spn_fc_champ B = scope:spn_fc_foe }
+		}
+		else = {
+			spn_hide_field_record_pair_effect = yes
+			spn_creature_clash_effect = {
+				A = scope:spn_fc_champ
+				B = scope:spn_fc_foe
+				THEN = spn_hide_field_clash_after_effect
+				FORM = no
+			}
+		}
+	}
+}
+
+# The pair, recorded: once a battle, the feat unblocked for both, and the aftermath finds them. Moved here unchanged from
+# spn_hide_field_clash_effect step 1 (2.37), so the duel and the instant clash share it. Root = scope:spn_fc_champ.
+spn_hide_field_record_pair_effect = {
+	add_to_variable_list = { name = spn_clash_done_with target = scope:spn_fc_foe days = 60 }
+	scope:spn_fc_foe = { add_to_variable_list = { name = spn_clash_done_with target = scope:spn_fc_champ days = 60 } }
+	set_variable = { name = spn_feat_province value = scope:combat_side.combat.location days = 60 }
+	scope:spn_fc_foe = { set_variable = { name = spn_feat_province value = scope:combat_side.combat.location days = 60 } }
+	add_character_flag = { flag = spn_feat_seen days = 60 }
+	scope:spn_fc_foe = { add_character_flag = { flag = spn_feat_seen days = 60 } }
+}
+
+# The two did not find each other, broke off, or one got away: written both ways for 60 days (the feats unblock).
+spn_hide_duel_missed_effect = {
+	$A$ = {
+		if = {
+			limit = { NOT = { is_target_in_variable_list = { name = spn_clash_missed_with target = $B$ } } }
+			add_to_variable_list = { name = spn_clash_missed_with target = $B$ days = 60 }
+		}
+	}
+	$B$ = {
+		if = {
+			limit = { NOT = { is_target_in_variable_list = { name = spn_clash_missed_with target = $A$ } } }
+			add_to_variable_list = { name = spn_clash_missed_with target = $A$ days = 60 }
+		}
+	}
+}
+
+# The race guard on both (AGOT's 3-day opening flag), and the chain's two scopes. A = the one who sees the other first.
+spn_hide_duel_open_effect = {
+	$A$ = { save_scope_as = spn_hduel_a }
+	$B$ = { save_scope_as = spn_hduel_b }
+	scope:spn_hduel_a = { spn_hide_duel_guard_effect = yes }
+	scope:spn_hduel_b = { spn_hide_duel_guard_effect = yes }
+}
+
+# Character scope. The busy flag, (re)set for three days.
+spn_hide_duel_guard_effect = {
+	if = {
+		limit = { has_character_flag = spn_hide_duel_opening }
+		remove_character_flag = spn_hide_duel_opening
+	}
+	add_character_flag = { flag = spn_hide_duel_opening days = 3 }
+}
+
+# Character scope. The duel is over for him: every mark it left goes.
+spn_hide_duel_clean_effect = {
+	if = {
+		limit = { has_character_flag = spn_hide_duel_opening }
+		remove_character_flag = spn_hide_duel_opening
+	}
+	if = {
+		limit = { has_variable = spn_hduel_style }
+		remove_variable = spn_hduel_style
+	}
+	if = {
+		limit = { has_character_flag = spn_hduel_caught }
+		remove_character_flag = spn_hduel_caught
+	}
+}
+
+# Character scope. STYLE = throat | wear. "Go for the throat" or "Wear it down": read by the weight (+15 for the throat) and
+# by the after effect (a throat fight can kill a lightly wounded loser).
+spn_hide_duel_style_effect = {
+	set_variable = { name = spn_hduel_style value = flag:$STYLE$ days = 10 }
+}
+
+# Event scope. Root's opponent in this event, whichever of the two root is.
+spn_hide_duel_other_effect = {
+	if = {
+		limit = { exists = scope:spn_hduel_other }
+		clear_saved_scope = spn_hduel_other
+	}
+	if = {
+		limit = { scope:spn_hduel_a = root }
+		scope:spn_hduel_b = { save_scope_as = spn_hduel_other }
+	}
+	else = {
+		scope:spn_hduel_a = { save_scope_as = spn_hduel_other }
+	}
+	# Root's chance against him, banked for the words in the event and the AI's weights (never shown as a number).
+	hidden_effect = {
+		spn_clash_lean_tooltip_effect = { A = root B = scope:spn_hduel_other FORM = no }
+	}
+	save_scope_value_as = { name = spn_hduel_my_chance value = spn_clash_chance_a_value }
+}
+
+# Event scope. The other one is gone, dead, captured or no longer a champion: the moment has passed.
+spn_hide_duel_lapse_effect = {
+	custom_tooltip = spn_moment_passed_tt
+	hidden_effect = {
+		scope:spn_hduel_a ?= { spn_hide_duel_clean_effect = yes }
+		scope:spn_hduel_b ?= { spn_hide_duel_clean_effect = yes }
+	}
+}
+
+# Event scope. RUNNER got away from the other. Both are written as missed; each player of the two hears it.
+spn_hide_duel_escaped_effect = {
+	$RUNNER$ = { save_scope_as = spn_hduel_runner }
+	spn_hide_duel_missed_effect = { A = scope:spn_hduel_a B = scope:spn_hduel_b }
+	scope:spn_hduel_a = { spn_hide_duel_clean_effect = yes }
+	scope:spn_hduel_b = { spn_hide_duel_clean_effect = yes }
+	scope:spn_hduel_a = {
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_hide.0202
+		}
+	}
+	scope:spn_hduel_b = {
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_hide.0202
+		}
+	}
+}
+
+# ==================================================================================================
+# THE FIGHT. The mod's own clash between scope:spn_hduel_a and scope:spn_hduel_b, each with the style he chose (none means
+# "wear it down"). Banked weights, a hidden roll; spn_hide_duel_after_effect does the rest.
+# ==================================================================================================
+spn_hide_duel_resolve_effect = {
+	if = {
+		limit = { exists = scope:spn_hduel_throat }
+		clear_saved_scope = spn_hduel_throat
+	}
+	if = {
+		limit = { exists = scope:spn_hduel_dies }
+		clear_saved_scope = spn_hduel_dies
+	}
+	if = {
+		limit = { exists = scope:spn_hduel_strong }
+		clear_saved_scope = spn_hduel_strong
+	}
+	if = {
+		limit = {
+			OR = {
+				scope:spn_hduel_a = { var:spn_hduel_style ?= flag:throat }
+				scope:spn_hduel_b = { var:spn_hduel_style ?= flag:throat }
+			}
+		}
+		save_scope_value_as = { name = spn_hduel_throat value = yes }
+	}
+	save_scope_value_as = { name = spn_hduel_fight value = yes }
+	spn_creature_clash_effect = {
+		A = scope:spn_hduel_a
+		B = scope:spn_hduel_b
+		THEN = spn_hide_duel_after_effect
+		FORM = no
+	}
+}
+
+# After the roll (inside the clash's hidden_effect). Root = whoever sent the last answer. The order is the field clash's
+# (spn_hide_field_clash_after_effect): read everything first, then the result, the wounds, and death last.
+# No battle line: the battle may be over by the time the last answer comes; the result event replaces it.
+spn_hide_duel_after_effect = {
+	# 1. Read: was the winner much the stronger (a throat fight costs him a wound otherwise)?
+	if = {
+		limit = {
+			scope:spn_clash_winner = scope:spn_hduel_a
+			spn_clash_chance_a_value >= 65
+		}
+		save_scope_value_as = { name = spn_hduel_strong value = yes }
+	}
+	else_if = {
+		limit = {
+			scope:spn_clash_winner = scope:spn_hduel_b
+			spn_clash_chance_a_value <= 35
+		}
+		save_scope_value_as = { name = spn_hduel_strong value = yes }
+	}
+	# The loser's wounds before any is added: badly hurt or maimed, he dies of this one; in a throat fight any wound will do.
+	if = {
+		limit = {
+			scope:spn_clash_loser = {
+				OR = {
+					has_trait_rank = {
+						trait = wounded
+						rank = 2
+					}
+					has_trait_rank = {
+						trait = wounded
+						rank = 3
+					}
+					has_trait = maimed
+				}
+			}
+		}
+		save_scope_value_as = { name = spn_hduel_dies value = yes }
+	}
+	else_if = {
+		limit = {
+			exists = scope:spn_hduel_throat
+			scope:spn_clash_loser = { has_trait = wounded }
+		}
+		save_scope_value_as = { name = spn_hduel_dies value = yes }
+	}
+	clear_saved_scope = spn_hduel_fight
+	# 2. The duel's marks off both.
+	scope:spn_hduel_a = { spn_hide_duel_clean_effect = yes }
+	scope:spn_hduel_b = { spn_hide_duel_clean_effect = yes }
+	# 3. The result to each player of the two. Sent now, shown when this effect has finished, so a dead loser shows dead.
+	scope:spn_hduel_a = {
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_hide.0202
+		}
+	}
+	scope:spn_hduel_b = {
+		if = {
+			limit = { is_ai = no }
+			trigger_event = spn_hide.0202
+		}
+	}
+	# 4. Going for the throat costs the winner a wound unless he was much the stronger.
+	if = {
+		limit = {
+			exists = scope:spn_hduel_throat
+			NOT = { exists = scope:spn_hduel_strong }
+		}
+		scope:spn_clash_winner = { increase_wounds_no_death_effect = { REASON = fight } }
+	}
+	# 5. The loser: a wound, or death, last. The killer takes the hide (spn_hide_move_on_death_effect) as on the field.
+	if = {
+		limit = { exists = scope:spn_hduel_dies }
+		scope:spn_clash_winner = {
+			if = {
+				limit = { NOT = { has_character_flag = spn_feat_weighed } }
+				add_character_flag = { flag = spn_feat_weighed days = 60 }
+				spn_creature_act_fulfillment_effect = { ACT = kill }
+			}
+		}
+		scope:spn_clash_loser = {
+			death = {
+				death_reason = spn_death_torn_in_battle
+				killer = scope:spn_clash_winner
+			}
+		}
+	}
+	else = {
+		scope:spn_clash_loser = { increase_wounds_no_death_effect = { REASON = fight } }
+	}
+}
+
+# AI against AI (the field, and "Let Him Go" off it). A and B as spn_creature_clash_effect's. Banks A's chance and rolls the
+# weaker one's break-off; scope:spn_hduel_broke is saved if he breaks off.
+spn_hide_duel_breakoff_roll_effect = {
+	if = {
+		limit = { exists = scope:spn_hduel_broke }
+		clear_saved_scope = spn_hduel_broke
+	}
+	hidden_effect = {
+		spn_clash_lean_tooltip_effect = { A = $A$ B = $B$ FORM = no }
+	}
+	save_scope_value_as = { name = spn_hduel_ca value = spn_clash_chance_a_value }
+	hidden_effect = {
+		random = {
+			chance = spn_hide_duel_breakoff_chance_value
+			save_scope_value_as = { name = spn_hduel_broke value = yes }
+		}
+	}
+}
+
+# ==================================================================================================
+# THE HIDE SPEAKS (C10). A Challenge waits for the hide's word when a player champion is on either side. A = the challenger,
+# B = the challenged (the interaction's actor and recipient). Nobody else is asked: the AI fights as it always has.
+# ==================================================================================================
+spn_hide_speaks_challenge_effect = {
+	$A$ = { save_scope_as = spn_hs_actor }
+	$B$ = { save_scope_as = spn_hs_recipient }
+	if = {
+		limit = {
+			scope:spn_hs_actor = {
+				is_ai = no
+				spn_is_champion_trigger = yes
+			}
+		}
+		scope:spn_hs_actor = { trigger_event = spn_hide.2110 }
+	}
+	else_if = {
+		limit = {
+			scope:spn_hs_recipient = {
+				is_ai = no
+				spn_is_champion_trigger = yes
+			}
+		}
+		scope:spn_hs_recipient = { trigger_event = spn_hide.2110 }
+	}
+	else = {
+		spn_pack_challenge_effect = { A = scope:spn_hs_actor B = scope:spn_hs_recipient }
+	}
+}
+
+# Event scope (spn_hide.2110, after root answered). The other side's player champion is asked next if he has not been;
+# then the Challenge runs, as it always has, through spn_pack_challenge_effect.
+spn_hide_speaks_next_effect = {
+	add_character_flag = { flag = spn_hs_answered days = 5 }
+	if = {
+		limit = {
+			scope:spn_hs_recipient = {
+				is_ai = no
+				spn_is_champion_trigger = yes
+				NOT = { has_character_flag = spn_hs_answered }
+			}
+		}
+		scope:spn_hs_recipient = { trigger_event = spn_hide.2110 }
+	}
+	else = {
+		save_scope_value_as = { name = spn_hs_fight value = yes }
+		spn_pack_challenge_effect = { A = scope:spn_hs_actor B = scope:spn_hs_recipient }
+		clear_saved_scope = spn_hs_fight
+		scope:spn_hs_actor = { spn_hide_speaks_clean_effect = yes }
+		scope:spn_hs_recipient = { spn_hide_speaks_clean_effect = yes }
+	}
+}
+
+# Character scope.
+spn_hide_speaks_clean_effect = {
+	if = {
+		limit = { has_character_flag = spn_hs_answered }
+		remove_character_flag = spn_hs_answered
+	}
+	if = {
+		limit = { has_character_flag = spn_hs_held }
+		remove_character_flag = spn_hs_held
+	}
+}

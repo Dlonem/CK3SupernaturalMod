@@ -1544,9 +1544,11 @@ spn_compulsion = {
 		}
 		scope:recipient = {
 			#is_imprisoned = no
+			is_adult = yes # 2.40 (QC, boot 4): children are never compelled
 			NOT = { has_trait = supernatural_vampire }
 			NOT = { has_trait = supernatural_hybrid }
 			NOT = { has_trait = supernatural_werewolf }     # 2.39 (WORK-ORDER-2.39 D7): the shows' rule, below
+			NOT = { has_trait = golem }                      # 2.40 (WORK-ORDER-2.40 D2): a construct has no mind to compel
 			NOT = { is_a_demon_trigger = yes }                  # your demon trait check
 			# 2.39 (WORK-ORDER-2.39 B6, D2): hide only for an OPEN witch -- the trait, or a witch secret this vampire already
 			# knows. A menu entry that vanished on a SECRET would tell a vampire player who is a hidden witch; a secret witch
@@ -1642,6 +1644,46 @@ spn_compulsion = {
 				}
 			}
 		}
+		# 2.40 (package QC, boot 4): THE COMPELLED. No chain-compelling, by anyone: a mind compelled in the last two
+		# months, or made Wary by its aftermath, does not take it again. Not for a jailed vampire's Release Me (2.39 F16).
+		trigger_if = {
+			limit = { scope:actor = { is_imprisoned = no } }
+			scope:recipient = {
+				custom_tooltip = {
+					text = spn_compel_wary_tt
+					NOT = { has_character_modifier = spn_compel_wary_modifier }
+				}
+				custom_tooltip = {
+					text = spn_compel_recent_tt
+					NOT = { has_character_flag = spn_compel_recent }
+				}
+			}
+		}
+		# A player's compulsion makes a Compelled puppet: its price (25 Vampirism, 15 with True Vampire), one held at a
+		# time (vanilla set_puppet refuses a full slot), and never another player or someone else's puppet.
+		trigger_if = {
+			limit = { spn_compel_makes_puppet_trigger = yes }
+			scope:actor = {
+				custom_tooltip = {
+					text = spn_compel_cost_tt
+					spn_compel_can_pay_trigger = yes
+				}
+				custom_tooltip = {
+					text = spn_compel_holding_one_tt
+					NOT = { exists = puppet:spn_compel_puppet }
+				}
+			}
+			scope:recipient = {
+				custom_tooltip = {
+					text = spn_compel_player_tt
+					is_ai = yes
+				}
+				custom_tooltip = {
+					text = pam_recipient_already_puppet_tt # vanilla's own line (puppet_actions_l_english.yml)
+					NOT = { exists = puppeteer }
+				}
+			}
+		}
 	}
 
 
@@ -1652,7 +1694,7 @@ spn_compulsion = {
 
 	# Demand Gold (cost 20)
 	send_option = {
-		is_shown = { scope:actor = { is_imprisoned = no } }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
+		is_shown = { scope:actor = { is_imprisoned = no is_ai = yes } }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order # 2.40 (QC, boot 4): the AI's command list; a player's compulsion makes a Compelled puppet instead
 		is_valid = {
 			custom_description = {
 				text = invoke_bond_requires_vampiric_strength_20
@@ -1673,7 +1715,7 @@ spn_compulsion = {
 	# Reveal Secrets (cost 20)
 	send_option = {
 		is_shown = {
-			scope:actor = { is_imprisoned = no }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
+			scope:actor = { is_imprisoned = no is_ai = yes }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order # 2.40 (QC, boot 4): the AI's command list; a player's compulsion makes a Compelled puppet instead
 			scope:recipient = { any_secret = { NOT = { is_known_by = scope:actor } } }
 		}
 		is_valid = {
@@ -1695,7 +1737,7 @@ spn_compulsion = {
 	# Join My Court (cost 25) — non-ruler targets
 	send_option = {
 		is_shown = {
-			scope:actor = { is_imprisoned = no }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
+			scope:actor = { is_imprisoned = no is_ai = yes }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order # 2.40 (QC, boot 4): the AI's command list; a player's compulsion makes a Compelled puppet instead
 			scope:actor = { is_ruler = yes }
 			scope:recipient = { is_ruler = no NOT = { is_courtier_of = scope:actor } }
 		}
@@ -1725,7 +1767,7 @@ spn_compulsion = {
 	# Become My Lover (cost 25)
 	send_option = {
 		is_shown = {
-			scope:actor = { is_imprisoned = no }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
+			scope:actor = { is_imprisoned = no is_ai = yes }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order # 2.40 (QC, boot 4): the AI's command list; a player's compulsion makes a Compelled puppet instead
 			scope:recipient = {
 				is_adult = yes
 				NOT = { has_relation_lover    = scope:actor }
@@ -1750,7 +1792,7 @@ spn_compulsion = {
 
 	# Be Obedient (weak hook on target) (cost 35)
 	send_option = {
-		is_shown = { scope:actor = { is_imprisoned = no } }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
+		is_shown = { scope:actor = { is_imprisoned = no is_ai = yes } }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order # 2.40 (QC, boot 4): the AI's command list; a player's compulsion makes a Compelled puppet instead
 		is_valid = {
 			custom_description = {
 				text = invoke_bond_requires_vampiric_strength_35
@@ -1770,7 +1812,7 @@ spn_compulsion = {
 	# Become My Patron (strong hook on target) (cost 20)
 	send_option = {
 	  is_shown = {
-		scope:actor = { is_imprisoned = no }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
+		scope:actor = { is_imprisoned = no is_ai = yes }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order # 2.40 (QC, boot 4): the AI's command list; a player's compulsion makes a Compelled puppet instead
 		scope:actor = { is_landless_adventurer = yes }
 		scope:recipient = { is_landed_or_landless_administrative = yes NOT = { is_contact_of = scope:actor } }
 	  }
@@ -1794,7 +1836,7 @@ spn_compulsion = {
 	send_option = {
 		is_shown = {
 			scope:recipient = { is_imprisoned = yes }
-			scope:actor = { is_imprisoned = no }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
+			scope:actor = { is_imprisoned = no is_ai = yes }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order # 2.40 (QC, boot 4): the AI's command list; a player's compulsion makes a Compelled puppet instead
 		}
 		is_valid = {
 			custom_description = {
@@ -1849,7 +1891,7 @@ spn_compulsion = {
 
 	# End Your Life (cost 85)
 	send_option = {
-		is_shown = { scope:actor = { is_imprisoned = no } }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order
+		is_shown = { scope:actor = { is_imprisoned = no is_ai = yes } }    # 2.39 (WORK-ORDER-2.39 F16): from a cell, Release Me is the only order # 2.40 (QC, boot 4): the AI's command list; a player's compulsion makes a Compelled puppet instead
 		is_valid = {
 			custom_description = {
 				text = invoke_bond_requires_vampiric_strength_75
@@ -1878,6 +1920,12 @@ spn_compulsion = {
 					}
 				}
 				spn_give_knowledge_of_vampire_secret = { CHARACTER = scope:recipient }
+			}
+			# 2.40 (review RD1, boot 4): a hybrid who is refused is exposed as well. spn_message.4002 has always told both
+			# sides the nature was learned, and the 2.39 witch failure below reveals both secrets; this was the gap.
+			if = {
+				limit = { any_secret = { type = spn_secret_hybrid NOT = { is_known_by = scope:recipient } } }
+				spn_give_knowledge_of_hybrid_secret = { CHARACTER = scope:recipient }
 			}
 		}
 
@@ -2049,8 +2097,8 @@ spn_compulsion = {
 				# ---- JOIN MY COURT ----
 				else_if = {
 					limit = { scope:compel_mortal_join_me = yes }
-					# Use the vanilla effect that prints "joins your court" in the toast
-					scope:actor = { add_courtier = scope:recipient }
+					# 2.40 (QC, boot 4): one shared effect with the Compelled verb, vanilla invite_to_court's own shape
+					spn_compel_join_court_effect = { MASTER = scope:actor JOINER = scope:recipient }
 					if      = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism        value = -15 } }
 					else_if = { limit = { has_trait = supernatural_hybrid  } add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -15 } }
 				}
@@ -2066,15 +2114,8 @@ spn_compulsion = {
 				# ---- BECOME MY LOVER ----
 				else_if = {
 					limit = { scope:compel_mortal_lover = yes }
-					scope:recipient = {
-						if = { limit = { has_relation_lover    = scope:actor } remove_relation_lover    = scope:actor }
-						if = { limit = { has_relation_soulmate = scope:actor } remove_relation_soulmate = scope:actor }
-						# 2.39 (WORK-ORDER-2.39 F14, red team M14): a compelled lover is no romance. Both carry the 3-day flag BEFORE
-						# the relation is set, so the Order's romance hook (on_set_relation_lover, either side) passes it by.
-						hidden_effect = { add_character_flag = { flag = spn_compelled_lover days = 3 } }
-						scope:actor = { hidden_effect = { add_character_flag = { flag = spn_compelled_lover days = 3 } } }
-						set_relation_lover = scope:actor
-					}
+					# 2.40 (QC, boot 4): the same body, now one shared effect (2.39 F14's flags first), also the Compelled verb's
+					spn_compel_become_lover_effect = { MASTER = scope:actor LOVER = scope:recipient }
 					if      = { limit = { has_trait = supernatural_vampire } add_trait_xp = { trait = supernatural_vampire track = vampirism        value = -15 } }
 					else_if = { limit = { has_trait = supernatural_hybrid  } add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -15 } }
 				}
@@ -2111,6 +2152,14 @@ spn_compulsion = {
 					else_if = { limit = { has_trait = supernatural_hybrid  } add_trait_xp = { trait = supernatural_hybrid  track = hybrid_vampirism value = -85 } }
 				}
 
+				# ---- 2.40 (package QC, boot 4): THE COMPELLED. A free player's compulsion has no option: it makes the
+				# mortal his Compelled puppet for ONE command (spn_compel_take_hold_effect: 25 Vampirism, 15 with True
+				# Vampire). The old commands are its puppet actions now. ----
+				else_if = {
+					limit = { spn_compel_makes_puppet_trigger = yes }
+					spn_compel_take_hold_effect = yes
+				}
+
 				# ---- Werewolf surcharge (applies after any successful command) ----
 				if = {
 					limit = { scope:recipient = { has_trait = supernatural_werewolf } }
@@ -2126,9 +2175,24 @@ spn_compulsion = {
 		hidden_effect = {
 			scope:actor = { spn_compel_leaves_a_trace_effect = yes }
 		}
+		# 2.40 (package QC, boot 4): the AI's victim is told some days later and grows Wary, as a player's puppet is.
+		# Not after End Your Life (dead) or Release Me (2.39: the quiet gaoler believes he chose to, the loud one finds
+		# an empty cell).
+		hidden_effect = {
+			if = {
+				limit = {
+					scope:actor = { is_ai = yes }
+					NOT = { scope:compel_mortal_suicide ?= yes }
+					NOT = { scope:compel_mortal_free_me ?= yes }
+					NOT = { scope:recipient = { has_character_flag = spn_cm_did_not_take } } # RD1: a hidden witch it did not take on
+				}
+				spn_compel_ai_aftermath_effect = yes
+			}
+		}
 
 		# Notify both sides that the compulsion took hold (4001 handles actor + recipient)
-		scope:actor = { trigger_event = { id = spn_message.4001 } } # 2.37: an interaction's on_accept/on_decline has no character in scope
+		# 2.40 (QC, boot 4): a player's compulsion has its own toast (Compulsion: Success, with what it means)
+		if = { limit = { NOT = { spn_compel_makes_puppet_trigger = yes } } scope:actor = { trigger_event = { id = spn_message.4001 } } } # 2.37: an interaction's on_accept/on_decline has no character in scope
 
 		# 2.39 (WORK-ORDER-2.39 F16): Release Me, LAST. The release is the irreversible step, after the trace and the message.
 		#   quiet: vanilla's own release (ransom_me's on_accept, 00_prison_interactions.txt); the gaoler believes he chose to;
@@ -2268,9 +2332,11 @@ spn_compulsion = {
 		# --- TEMPERAMENT. Who reaches for other people's minds as a first resort.
 		modifier = { add = 15  scope:actor = { has_trait = ambitious } }
 		modifier = { add = 15  scope:actor = { has_trait = deceitful } }
-		modifier = { add = 12  scope:actor = { has_trait = arrogant } }
+		# 2.40 (QC, boot 4): Thomas, of the Sire Bond and this alike: "callous, sadistic, arrogant people".
+		modifier = { add = 18  scope:actor = { has_trait = arrogant } }
 		modifier = { add = 12  scope:actor = { has_trait = arbitrary } }
-		modifier = { add = 10  scope:actor = { has_trait = sadistic } }
+		modifier = { add = 18  scope:actor = { has_trait = sadistic } }
+		modifier = { add = 18  scope:actor = { has_trait = callous } }
 		modifier = { add = 8   scope:actor = { has_trait = impatient } }
 		modifier = { add = -20 scope:actor = { has_trait = just } }
 		modifier = { add = -15 scope:actor = { has_trait = compassionate } }

@@ -1,0 +1,50 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 F2) -- household administration: the one check of the key.
+#
+# Once per game. on_game_start_after_lobby is the hook the mod already uses for its one-time repairs
+# (zz_spn_secret_knowers_on_actions.txt: it fires on the first opening of a save under a new version too). So this one
+# list is both the new game's check and the running save's repair (WORK-ORDER-2.40 §4 item 6): the first time it runs it
+# checks every player whose build still matches, stamps the house if one does, and never runs again in that game, so a
+# later player whose martial passes through 15 can never match (the Long Night's reason for checking once).
+# global_var:spn_household_checked is identity state for the game: it never expires.
+# on_actions = { } sub-lists merge across files, so this adds to on_game_start_after_lobby without touching
+# 10_spn_on_actions.txt.
+
+on_game_start_after_lobby = {
+	on_actions = {
+		spn_household_game_start
+	}
+}
+
+spn_household_game_start = {
+	trigger = {
+		NOT = { has_global_variable = spn_household_checked }
+	}
+	effect = {
+		set_global_variable = { name = spn_household_checked value = yes }
+		every_player = {
+			spn_household_claim_effect = yes
+		}
+	}
+}
+
+# 2.40 boot 3: on_game_start_after_lobby fires when a game leaves the lobby, not when a single-player save is loaded
+# (Thomas's boot-3 autosave never got the global below). So the repair also runs from a player's first quarterly
+# pulse; the same global keeps it to once per save.
+quarterly_playable_pulse = {
+	on_actions = {
+		spn_household_game_start_pulse
+	}
+}
+
+spn_household_game_start_pulse = {
+	trigger = {
+		is_ai = no
+		NOT = { has_global_variable = spn_household_checked }
+	}
+	effect = {
+		set_global_variable = { name = spn_household_checked value = yes }
+		every_player = {
+			spn_household_claim_effect = yes
+		}
+	}
+}

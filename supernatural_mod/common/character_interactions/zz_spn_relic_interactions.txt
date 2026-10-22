@@ -8,6 +8,7 @@ spn_relic_pledge_interaction = {
 	desc = spn_relic_pledge_interaction_desc
 	target_type = artifact
 	target_filter = actor_artifacts
+	show_all_targets = no # 2.40 (WORK-ORDER-2.40 G7): refused items are hidden, as in every vanilla artifact interaction
 	auto_accept = yes
 	ai_targets = { ai_recipients = self }
 	ai_frequency = 60
@@ -20,13 +21,18 @@ spn_relic_pledge_interaction = {
 			}
 		}
 	}
-	can_be_picked_artifact = {
-		scope:target = {
-			artifact_owner ?= scope:actor
-			spn_pledgeable_trigger = yes
-			NOT = { has_variable = spn_pledged_to }
-			NOT = { has_variable = spn_borrowed_from }
+	# 2.40 (WORK-ORDER-2.40 G7, B1): the pick rule is one trigger with readable lines; the summary line says why when
+	# nothing he holds can be pledged.
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_relic_pledge_nothing_tt
+				any_character_artifact = { spn_relic_pledgeable_by_trigger = { ACTOR = scope:actor } }
+			}
 		}
+	}
+	can_be_picked_artifact = {
+		scope:target = { spn_relic_pledgeable_by_trigger = { ACTOR = scope:actor } }
 	}
 	on_accept = {
 		custom_tooltip = spn_relic_pledge_interaction_tt
@@ -76,6 +82,7 @@ spn_relic_take_back_interaction = {
 	desc = spn_relic_take_back_interaction_desc
 	target_type = artifact
 	target_filter = actor_artifacts
+	show_all_targets = no # 2.40 (WORK-ORDER-2.40 G7): the list opened on his first artifact, often not a pledged one
 	auto_accept = yes
 	is_shown = {
 		scope:recipient = scope:actor
@@ -83,12 +90,17 @@ spn_relic_take_back_interaction = {
 			any_character_artifact = { has_variable = spn_pledged_to } # 2.39 (final pass, 17 Oct): also a pledge to a temple that is gone
 		}
 	}
-	can_be_picked_artifact = {
-		scope:target = {
-			artifact_owner ?= scope:actor
-			has_variable = spn_pledged_to # 2.39 (final pass, 17 Oct): also a pledge to a temple that is gone
-			NOT = { has_variable = spn_borrowed_from }
+	# 2.40 (WORK-ORDER-2.40 G7): a pledged item he holds only on loan cannot be taken back; the summary line says so.
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_relic_take_back_nothing_tt
+				any_character_artifact = { spn_relic_take_back_pickable_trigger = { ACTOR = scope:actor } }
+			}
 		}
+	}
+	can_be_picked_artifact = {
+		scope:target = { spn_relic_take_back_pickable_trigger = { ACTOR = scope:actor } } # 2.40 (WORK-ORDER-2.40 G7)
 	}
 	on_accept = {
 		custom_tooltip = spn_relic_take_back_interaction_tt
@@ -100,13 +112,24 @@ spn_relic_take_back_interaction = {
 
 # Ask to Borrow (§9.5). A Magistratus asks a member of his chapter for a pledged item; an Adeptus may ask any member he knows
 # (§5.22). Three years; the owner keeps a claim.
+# 2.40 (WORK-ORDER-2.40 B2, G7): a Medicum may ask too, of his own temple; below Medicum the entry shows greyed with the
+# rank rule, so the rule can be learned. The Homunculus Beetle is lent only to a Magistratus or higher, and the AI never
+# asks for it. The pick rule is spn_relic_borrowable_trigger (zz_spn_240_relic_triggers.txt).
 spn_relic_borrow_interaction = {
 	category = interaction_category_favorites
 	icon = artifact
 	desc = spn_relic_borrow_interaction_desc
 	target_type = artifact
 	target_filter = recipient_artifacts
-	use_diplomatic_range = yes
+	show_all_targets = no # 2.40 (WORK-ORDER-2.40 G7): the list opened on the first item, often a hide, and blocked the button
+	# 2.40 boot 2 (22 Oct, Thomas item d): inside his own temple a member asks the keeper by letter, at any distance (Thomas
+	# could not reach his own temple's members); an Adeptus asking a member of another temple still needs diplomatic range.
+	use_diplomatic_range = {
+		trigger_if = {
+			limit = { exists = scope:actor.var:spn_order_chapter }
+			NOT = { scope:recipient.var:spn_order_chapter ?= scope:actor.var:spn_order_chapter }
+		}
+	}
 	ai_targets = {
 		ai_recipients = vassals
 		ai_recipients = courtiers
@@ -119,7 +142,7 @@ spn_relic_borrow_interaction = {
 		NOT = { scope:recipient = scope:actor }
 		scope:actor = {
 			spn_order_on_trigger = yes
-			spn_order_magistratus_plus_trigger = yes
+			spn_is_order_member_trigger = yes # 2.40 (WORK-ORDER-2.40 B2): the rank rule moved to is_valid, shown greyed
 		}
 		scope:recipient = { spn_is_order_member_trigger = yes }
 		OR = {
@@ -132,21 +155,27 @@ spn_relic_borrow_interaction = {
 	}
 	is_valid_showing_failures_only = {
 		scope:actor = {
+			# 2.40 (WORK-ORDER-2.40 B2): a Medicum or higher; an Adeptus reaches other temples (is_shown).
+			custom_tooltip = {
+				text = spn_relic_borrow_rank_tt
+				spn_order_medicum_plus_trigger = yes
+			}
 			custom_tooltip = {
 				text = spn_relic_borrow_cd_tt
 				NOT = { has_character_flag = spn_order_borrow_cd }
 			}
 		}
+		# 2.40 (WORK-ORDER-2.40 G7): nothing pickable says why (the hidden items show no reason of their own).
+		custom_tooltip = {
+			text = spn_relic_borrow_nothing_tt
+			scope:recipient = {
+				any_character_artifact = { spn_relic_borrowable_trigger = { ACTOR = scope:actor RECIPIENT = scope:recipient } }
+			}
+		}
 	}
 	can_be_picked_artifact = {
-		scope:target = {
-			artifact_owner ?= scope:recipient
-			var:spn_pledged_to ?= scope:recipient.var:spn_order_chapter
-			NOT = { has_variable = spn_borrowed_from }
-			NOT = { has_variable = spn_relic_borrow_cd }
-			NOT = { var:spn_relic ?= flag:powder }
-			NOT = { var:spn_relic ?= flag:beetle } # 2.39 (WORK-ORDER-2.39 F4): the beetle is never lent
-		}
+		# 2.40 (WORK-ORDER-2.40 G7, B1, B2): one rule, readable lines; the Beetle to a Magistratus or higher only.
+		scope:target = { spn_relic_borrowable_trigger = { ACTOR = scope:actor RECIPIENT = scope:recipient } }
 	}
 	on_accept = {
 		custom_tooltip = spn_relic_borrow_interaction_tt
@@ -196,6 +225,11 @@ spn_relic_borrow_interaction = {
 			scope:actor = {
 				any_character_artifact = { var:spn_relic ?= scope:target.var:spn_relic }
 			}
+		}
+		# 2.40 (WORK-ORDER-2.40 G7): an AI member never uses the Beetle, so it never borrows it.
+		modifier = {
+			factor = 0
+			scope:target = { var:spn_relic ?= flag:beetle }
 		}
 	}
 }
@@ -325,11 +359,9 @@ spn_relic_powder_interaction = {
 		custom_tooltip = spn_relic_powder_interaction_tt
 		scope:actor = {
 			location.county = { spn_menace_clear_county_effect = yes }
-			random_equipped_character_artifact = {
-				limit = { var:spn_relic ?= flag:powder }
-				destroy_artifact = this
-			}
 			spn_order_deed_effect = { PREROGATIVE = flag:silence AMOUNT = 5 TOAST = yes }
+			# 2.40 (WORK-ORDER-2.40 G11, B9): the one spend effect: destroyed last, then its Reliquary is rebuilt.
+			spn_relic_powder_spend_effect = { WHO = scope:actor }
 		}
 	}
 	ai_will_do = {

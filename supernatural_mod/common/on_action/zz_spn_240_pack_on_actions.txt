@@ -1,0 +1,37 @@
+﻿# Supernatural 2.40 boot 2 (package Q5, item b): a save from before this build gets "The Rest of the Pack" list on every
+# pack at once (spn_pack_rest_list_repair_effect), not at each pack's next refresh. on_game_start_after_lobby fires on
+# every load (as zz_spn_240_q4_on_actions.txt); the global variable keeps it to once per save. on_actions = { } merges.
+
+on_game_start_after_lobby = {
+	on_actions = {
+		spn_pack_rest_list_repair
+	}
+}
+
+spn_pack_rest_list_repair = {
+	trigger = {
+		NOT = { has_global_variable = spn_pack_rest_list_240 }
+	}
+	effect = {
+		spn_pack_rest_list_repair_effect = yes
+	}
+}
+
+# 2.40 boot 3: on_game_start_after_lobby fires when a game leaves the lobby, not when a single-player save is loaded
+# (Thomas's boot-3 autosave never got the global below). So the repair also runs from a player's first quarterly
+# pulse; the same global keeps it to once per save.
+quarterly_playable_pulse = {
+	on_actions = {
+		spn_pack_rest_list_repair_pulse
+	}
+}
+
+spn_pack_rest_list_repair_pulse = {
+	trigger = {
+		is_ai = no
+		NOT = { has_global_variable = spn_pack_rest_list_240 }
+	}
+	effect = {
+		spn_pack_rest_list_repair_effect = yes
+	}
+}

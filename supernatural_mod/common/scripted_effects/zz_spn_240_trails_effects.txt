@@ -1,0 +1,305 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 G12, B9): the menace hook and the trails map.
+#
+# spn_menace_after_mark_effect is the ONE line at the end of spn_mark_menace_effect (zz_spn_menace_effects.txt). Every
+# incident in the world passes through that effect (its header lists every caller), so anything that must happen after a
+# mark hangs here, once, instead of at each caller. It runs last, after the mark is fully written, and it never marks
+# again, so it cannot recurse into itself. Clearing a county inside it (the Powder) is safe: spn_menace_clear_county_effect
+# calls only the map sync, never this hook.
+
+# Called at the end of spn_mark_menace_effect, inside it: scope:spn_mm_county and scope:spn_mm_culprit are the county and
+# the culprit that effect saved first thing. SEVERITY = kill | prowl, handed on from the mark.
+spn_menace_after_mark_effect = {
+	# Bookkeeping only. The feeding options walk the mark effect for their tooltips; none of this belongs in one.
+	hidden_effect = {
+		save_temporary_scope_value_as = { name = spn_mm_severity value = flag:$SEVERITY$ }
+		# 1. A kill on an open trail is on record for the map (the Bloodied band) for as long as the trail itself: five
+		#    years from the last kill, the same span spn_open_menace_trail_effect gives the modifier. A kill that only
+		#    raised a whisper is not on record, because nothing about a whisper is.
+		if = {
+			limit = {
+				scope:spn_mm_severity = flag:kill
+				scope:spn_mm_county = { has_county_modifier = spn_menace_modifier }
+			}
+			scope:spn_mm_county = {
+				set_variable = { name = spn_trail_blood value = yes years = 5 }
+			}
+		}
+		# Boot 2 (TRAILS): a kill that only raised a whisper is held for the whisper's year (var:spn_trail_whisper_blood,
+		# 1 year, the life of spn_menace_whisper). If a second incident opens the trail inside that year, the death that
+		# started the talk goes on record with it: "a body, then somebody saw something" is a Bloodied trail, not a Rumoured
+		# one. If nothing follows, the variable expires with the whisper and nothing is ever shown.
+		else_if = {
+			limit = { scope:spn_mm_severity = flag:kill }
+			scope:spn_mm_county = {
+				set_variable = { name = spn_trail_whisper_blood value = yes years = 1 }
+			}
+		}
+		if = {
+			limit = {
+				scope:spn_mm_county = {
+					has_county_modifier = spn_menace_modifier
+					has_variable = spn_trail_whisper_blood
+				}
+			}
+			scope:spn_mm_county = {
+				remove_variable = spn_trail_whisper_blood
+				set_variable = { name = spn_trail_blood value = yes years = 5 }
+			}
+		}
+		# Boot 3 (TRAILS): the year of the last incident on an open trail, for the Supernatural Trails window's "Last
+		#    seen" (gui/zz_spn_240_trails_window.gui). Five years, like the trail it dates; spn_trails_map_sync_effect drops
+		#    it with the trail. A whisper is not dated: nothing about a whisper is on record. A trail opened before this
+		#    build has no date until its next incident and the window says so ("Last seen: unknown").
+		if = {
+			limit = { scope:spn_mm_county = { has_county_modifier = spn_menace_modifier } }
+			scope:spn_mm_county = {
+				set_variable = { name = spn_trail_seen_year value = current_year years = 5 }
+			}
+		}
+		# 2. B9 (Q1): a Powder the culprit carries throws itself when he is marked where he stands. Q1's effect decides
+		#    whether one is thrown; it reads the culprit as its scope and the county as scope:county.
+		#    2.40 review (R3): scope:county is a common name (sieges, hunts). The caller's own scope:county is banked and
+		#    put back afterwards, so the mark never changes what the rest of its caller's chain reads.
+		if = {
+			limit = { exists = scope:county }
+			scope:county = { save_scope_as = spn_trails_caller_county }
+		}
+		scope:spn_mm_county = { save_scope_as = county }
+		scope:spn_mm_culprit = { spn_relic_powder_autothrow_effect = yes }
+		if = {
+			limit = { exists = scope:spn_trails_caller_county }
+			scope:spn_trails_caller_county = { save_scope_as = county }
+			clear_saved_scope = spn_trails_caller_county
+		}
+		else = {
+			clear_saved_scope = county
+		}
+		# 3. G12: the county's band on the trails map, last, so it shows the state the two steps above left.
+		scope:spn_mm_county = { spn_trails_map_sync_effect = yes }
+	}
+}
+
+# COUNTY scope. Puts this county in the one band of the trails map that its trail earns, or in none. One county; no walk.
+# Safe with no situation (an older save before its first 1 January under 2.40): it then only tidies the blood record.
+spn_trails_map_sync_effect = {
+	save_temporary_scope_as = spn_trail_county
+	# The blood record lives exactly as long as a trail: a trail removed by any writer takes it with it.
+	if = {
+		limit = {
+			has_variable = spn_trail_blood
+			NOT = { has_county_modifier = spn_menace_modifier }
+		}
+		remove_variable = spn_trail_blood
+	}
+	# Boot 3: and so does the year it was last seen.
+	if = {
+		limit = {
+			has_variable = spn_trail_seen_year
+			NOT = { has_county_modifier = spn_menace_modifier }
+		}
+		remove_variable = spn_trail_seen_year
+	}
+	situation:spn_trails ?= {
+		# Out of every band it no longer belongs in first: sub-regions cannot overlap (_situations.info).
+		situation_sub_region:spn_trail_faint = {
+			if = {
+				limit = {
+					situation_sub_region_has_county = scope:spn_trail_county
+					scope:spn_trail_county = { NOT = { spn_trails_band_faint_trigger = yes } }
+				}
+				remove_dejure_title_from_sub_region = scope:spn_trail_county
+			}
+		}
+		situation_sub_region:spn_trail_strong = {
+			if = {
+				limit = {
+					situation_sub_region_has_county = scope:spn_trail_county
+					scope:spn_trail_county = { NOT = { spn_trails_band_strong_trigger = yes } }
+				}
+				remove_dejure_title_from_sub_region = scope:spn_trail_county
+			}
+		}
+		situation_sub_region:spn_trail_blood = {
+			if = {
+				limit = {
+					situation_sub_region_has_county = scope:spn_trail_county
+					scope:spn_trail_county = { NOT = { spn_trails_band_blood_trigger = yes } }
+				}
+				remove_dejure_title_from_sub_region = scope:spn_trail_county
+			}
+		}
+		# Then into the one it earns, if it is not there already.
+		situation_sub_region:spn_trail_faint = {
+			if = {
+				limit = {
+					NOT = { situation_sub_region_has_county = scope:spn_trail_county }
+					scope:spn_trail_county = { spn_trails_band_faint_trigger = yes }
+				}
+				add_dejure_title_to_sub_region = scope:spn_trail_county
+			}
+		}
+		situation_sub_region:spn_trail_strong = {
+			if = {
+				limit = {
+					NOT = { situation_sub_region_has_county = scope:spn_trail_county }
+					scope:spn_trail_county = { spn_trails_band_strong_trigger = yes }
+				}
+				add_dejure_title_to_sub_region = scope:spn_trail_county
+			}
+		}
+		situation_sub_region:spn_trail_blood = {
+			if = {
+				limit = {
+					NOT = { situation_sub_region_has_county = scope:spn_trail_county }
+					scope:spn_trail_county = { spn_trails_band_blood_trigger = yes }
+				}
+				add_dejure_title_to_sub_region = scope:spn_trail_county
+			}
+		}
+	}
+}
+
+# SITUATION scope (spn_trails: on_start and on_monthly). Re-syncs every county that is, or may need to be, on the map:
+# every trail the world lists (spn_menace_counties: each entry expires with its trail) and every county a band holds.
+# The second half is what removes a trail that expired on its own or that a writer removed without the clear effect.
+# Collected into a list first, so no band is changed while it is being walked.
+spn_trails_map_reconcile_effect = {
+	# Review RB2: the mark the mod's window_situation_list.gui reads to list this situation only for its watchers
+	# (spn_trails_hud_gui). Set on start and, on a save where the map already runs, at its first monthly pass.
+	if = {
+		limit = { NOT = { has_variable = spn_trails_map } }
+		set_variable = spn_trails_map
+	}
+	every_in_global_list = {
+		variable = spn_menace_counties
+		add_to_temporary_list = spn_trails_recheck
+	}
+	situation_sub_region:spn_trail_faint = {
+		every_situation_sub_region_county = { add_to_temporary_list = spn_trails_recheck }
+	}
+	situation_sub_region:spn_trail_strong = {
+		every_situation_sub_region_county = { add_to_temporary_list = spn_trails_recheck }
+	}
+	situation_sub_region:spn_trail_blood = {
+		every_situation_sub_region_county = { add_to_temporary_list = spn_trails_recheck }
+	}
+	every_in_list = {
+		list = spn_trails_recheck
+		spn_trails_map_sync_effect = yes
+	}
+}
+
+# Supernatural 2.40 boot 3 (TRAILS): CHARACTER scope, the player opening the Supernatural Trails window (root of
+# spn_trails_fill_gui, run by the HUD's Trails button). Fills the lists the window shows, on the player. Four per band
+# (blood = Bloodied, strong = Troubled, faint = Rumoured):
+#   spn_trv_<band>_s   his own trails: "Left by: you" and the year it was last seen
+#   spn_trv_<band>_t   he employs a Trailsman: what left it and the year it was last seen
+#   spn_trv_<band>_k   left by someone of his pack, coven or temple whom he knows to be one: what left it, year unknown
+#   spn_trv_<band>_u   the rest: "unknown" for both
+# Boot 4 (TRAILS): Thomas's rule, see spn_trails_viewer_knows_culprit_trigger (zz_spn_240_trails_triggers.txt). The _k
+# and _u names are boot 3's; _s and _t are new. var:spn_trv_trailsman tells the window's header line whether he has a
+# Trailsman. All of these are a UI cache, cleared and rebuilt at every click, like vanilla's funeral_activity_targets (no
+# expiry, the same as vanilla's; they never hold anything a later click does not rewrite). Each county is placed by the
+# same band triggers the map uses, so the window and the map cannot disagree.
+# Candidates: every trail the world lists (global spn_menace_counties) and every county the map's bands hold (a county can
+# drop off the global list while its trail is still open: in Thomas's boot-3 save, Karur is Bloodied on the map and not on
+# the list). Only open trails are shown (spn_trails_public_trigger: the county carries Something Stalks Here, which every
+# player can already see on the county). Tens of counties, no world walk.
+spn_trails_fill_view_effect = {
+	save_temporary_scope_as = spn_trv_viewer
+	clear_variable_list = spn_trv_blood_s
+	clear_variable_list = spn_trv_blood_t
+	clear_variable_list = spn_trv_blood_k
+	clear_variable_list = spn_trv_blood_u
+	clear_variable_list = spn_trv_strong_s
+	clear_variable_list = spn_trv_strong_t
+	clear_variable_list = spn_trv_strong_k
+	clear_variable_list = spn_trv_strong_u
+	clear_variable_list = spn_trv_faint_s
+	clear_variable_list = spn_trv_faint_t
+	clear_variable_list = spn_trv_faint_k
+	clear_variable_list = spn_trv_faint_u
+	# The header line: a Trailsman reads the trails. Set or cleared at every click (UI cache, see above).
+	if = {
+		limit = { spn_trails_employs_trailsman_trigger = yes }
+		set_variable = { name = spn_trv_trailsman value = yes }
+	}
+	else_if = {
+		limit = { has_variable = spn_trv_trailsman }
+		remove_variable = spn_trv_trailsman
+	}
+	every_in_global_list = {
+		variable = spn_menace_counties
+		limit = {
+			spn_trails_public_trigger = yes
+			NOT = { is_in_list = spn_trv_candidates }
+		}
+		add_to_temporary_list = spn_trv_candidates
+	}
+	situation:spn_trails ?= {
+		situation_sub_region:spn_trail_blood = {
+			every_situation_sub_region_county = {
+				limit = {
+					spn_trails_public_trigger = yes
+					NOT = { is_in_list = spn_trv_candidates }
+				}
+				add_to_temporary_list = spn_trv_candidates
+			}
+		}
+		situation_sub_region:spn_trail_strong = {
+			every_situation_sub_region_county = {
+				limit = {
+					spn_trails_public_trigger = yes
+					NOT = { is_in_list = spn_trv_candidates }
+				}
+				add_to_temporary_list = spn_trv_candidates
+			}
+		}
+		situation_sub_region:spn_trail_faint = {
+			every_situation_sub_region_county = {
+				limit = {
+					spn_trails_public_trigger = yes
+					NOT = { is_in_list = spn_trv_candidates }
+				}
+				add_to_temporary_list = spn_trv_candidates
+			}
+		}
+	}
+	every_in_list = {
+		list = spn_trv_candidates
+		save_temporary_scope_as = spn_trv_county
+		if = {
+			limit = { spn_trails_band_blood_trigger = yes }
+			spn_trails_fill_row_effect = { BAND = blood }
+		}
+		else_if = {
+			limit = { spn_trails_band_strong_trigger = yes }
+			spn_trails_fill_row_effect = { BAND = strong }
+		}
+		else_if = {
+			limit = { spn_trails_band_faint_trigger = yes }
+			spn_trails_fill_row_effect = { BAND = faint }
+		}
+	}
+}
+
+# Boot 4 (TRAILS): COUNTY scope = scope:spn_trv_county, inside spn_trails_fill_view_effect. Puts the county in the one
+# list of its band that says what the viewer may know (order matters: his own trail first, then a Trailsman's reading,
+# then a circle he knows, else unknown).
+spn_trails_fill_row_effect = {
+	if = {
+		limit = { spn_trails_viewer_left_it_trigger = yes }
+		scope:spn_trv_viewer = { add_to_variable_list = { name = spn_trv_$BAND$_s target = scope:spn_trv_county } }
+	}
+	else_if = {
+		limit = { scope:spn_trv_viewer = { has_variable = spn_trv_trailsman } }
+		scope:spn_trv_viewer = { add_to_variable_list = { name = spn_trv_$BAND$_t target = scope:spn_trv_county } }
+	}
+	else_if = {
+		limit = { spn_trails_viewer_knows_culprit_trigger = yes }
+		scope:spn_trv_viewer = { add_to_variable_list = { name = spn_trv_$BAND$_k target = scope:spn_trv_county } }
+	}
+	else = {
+		scope:spn_trv_viewer = { add_to_variable_list = { name = spn_trv_$BAND$_u target = scope:spn_trv_county } }
+	}
+}

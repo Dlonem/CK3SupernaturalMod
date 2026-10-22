@@ -1,0 +1,103 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40, package Q5: hides and packs). New script values.
+
+# ==================================================================================================
+# C12 (a) Pack Standing, a year in a pack: +5 below 50, +3 from 50 to 74, +1 from 75. Root = the member. The Alpha
+# champion's x2 still applies on top (spn_pack_gain_standing_effect), as Thomas decided.
+# ==================================================================================================
+spn_pack_yearly_standing_value = {
+	value = 5
+	if = {
+		limit = { spn_pack_standing_value >= 75 }
+		value = 1
+	}
+	else_if = {
+		limit = { spn_pack_standing_value >= 50 }
+		value = 3
+	}
+}
+
+# ==================================================================================================
+# B5 + G11 Send for a Hide: the chance of each road at the shrine (spn_hide.0381), rolled hidden; the option shows words
+# only (spn_hide_errand_lean_tooltip_effect). Root = the one who sent.
+# ==================================================================================================
+# The steal: the man he sent works it, and his master's planning counts for half. With no man (an errand sent before
+# 2.40) it is the master's own intrigue, as the old duel read it (value 25, 3.5 a point).
+spn_hide_errand_steal_chance_value = {
+	value = 50
+	if = {
+		limit = { exists = scope:spn_errand_agent }
+		add = {
+			value = scope:spn_errand_agent.intrigue
+			add = {
+				value = intrigue
+				divide = 2
+			}
+			subtract = 25
+			multiply = 3.5
+		}
+	}
+	else = {
+		add = {
+			value = intrigue
+			subtract = 25
+			multiply = 3.5
+		}
+	}
+	min = 5
+	max = 90
+}
+
+# The Powder thrown in the shrine: nobody remembers the man, so he has far longer to work.
+spn_hide_errand_powder_chance_value = {
+	value = spn_hide_errand_steal_chance_value
+	add = 30
+	min = 5
+	max = 95
+}
+
+# By night, himself: his own strength in the wolf's shape. A champion's hide counts.
+spn_hide_errand_night_chance_value = {
+	value = 50
+	add = {
+		value = prowess
+		subtract = 20
+		multiply = 2.5
+	}
+	if = {
+		limit = { spn_is_champion_trigger = yes }
+		add = 10
+	}
+	min = 10
+	max = 90
+}
+
+# A wolf of the pack: the strongest wolf the alpha can send (scope:spn_errand_wolf).
+spn_hide_errand_pack_chance_value = {
+	value = 50
+	if = {
+		limit = { exists = scope:spn_errand_wolf }
+		add = {
+			value = scope:spn_errand_wolf.prowess
+			subtract = 20
+			multiply = 2.5
+		}
+		if = {
+			limit = { scope:spn_errand_wolf = { spn_is_champion_trigger = yes } }
+			add = 10
+		}
+	}
+	min = 10
+	max = 90
+}
+
+# The keeper compelled: the hybrid's voice, not his man's hands.
+spn_hide_errand_compel_chance_value = {
+	value = 50
+	add = {
+		value = diplomacy
+		subtract = 15
+		multiply = 3
+	}
+	min = 10
+	max = 90
+}

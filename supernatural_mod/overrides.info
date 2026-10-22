@@ -1,21 +1,116 @@
-common > genes > 02_genes_accessories_misc.txt 
-gfx > portraits > accessories > bodyparts.txt
-gfx > portraits > portrait_modifiers > muscularity and weight modifier
+What the mod overrides in vanilla CK3, so each can be re-checked after a CK3 patch.
+Refreshed for 2.40 against vanilla 1.20.1.2 (WORK-ORDER-2.40 E3). Nothing needed re-basing for 1.20.1.2.
+After each CK3 patch: list the vanilla files newer than the patch date and compare them with this list.
 
-common > scripted_triggers > 00_religious_triggers
-trait_is_shunned_in_faith_trigger
-trait_is_criminal_in_faith_trigger
+== 1. Whole vanilla files the mod ships a copy of (the mod's copy wins; a CK3 change to these never reaches players) ==
+
+common > holdings > 00_holdings.txt, the entire file
+2.39: vanilla's file with the Collegium (spn_order_collegium_01) added to the castle, city and church holdings. Copy it again from vanilla whenever a CK3 patch changes it.
+
+common > on_action > child_birth_on_actions.txt, the entire file
+on_birth_child calls spn_on_genetic_birth; the six pregnancy.* events are fired from spn_check_pregnancy instead.
+
+common > scripted_effects > 00_intrigue_perk_effects.txt, the entire file
+One OR adds bloodthirsty_perk.
+
+common > scripted_modifiers > 00_perk_modifiers.txt, the entire file
+One OR adds vampire_seduction_perk.
+
+gui > window_situation_list.gui, the entire file
+2.40 boot 2: vanilla's file plus the story focus for the HUD's pack, Order and coven buttons, and the Supernatural Trails
+situation listed only for its watchers; changes marked "Supernatural 2.40". Regenerate from vanilla with
+tool/pkgs/Q2/gen_situation_list.py whenever a CK3 patch changes it.
+
+common > effect_localization > 00_perk_effects.txt, the entire file
+Two added keys: master_shadows_perk_effect, unlocks_truce_purchasing_interaction_desc.
+
+common > scripted_triggers > 00_lifestyle_triggers.txt, the entire file
+Witchcraft and mod edits; 11 of its 13 triggers are identical to vanilla.
+
+== 2. Single vanilla definitions the mod redefines in its own files (the mod's wins) ==
+
+common > scripted_triggers > 00_religious_triggers (in 10_spn_religious_triggers.txt; RE-DIFF AFTER EVERY CK3 UPDATE)
+trait_is_criminal_in_rite_trigger
+trait_is_shunned_in_rite_trigger
+has_any_shunned_or_criminal_trait_in_rite_trigger
+has_any_criminal_trait_in_rite_trigger
+has_any_shunned_trait_in_rite_trigger
 has_negative_attitude_towards_trait_trigger
+(CK3 1.20 replaced the old trait_is_shunned_in_faith_trigger and trait_is_criminal_in_faith_trigger with the _rite_ forms.)
 
-common > scripted_effects > 00_secret_effects
+common > scripted_effects > 00_secret_effects (in 20_spn_secret_effects.txt)
 secret_exposed_notification_effect
 secret_exposed_owner_effects_effect
 give_secret_and_save_as_secret_effect
 
-common > on_action > councillor_on_actions
-task_find_secrets_reveal_selection
+common > on_action > councillor_on_actions (in 10_spn_councillor_on_actions.txt)
+task_find_secrets_reveal_selection (vanilla's 14 entries, plus spn_spymaster_task.0001 to .0004)
 
-common > on_action > child_birth_on_actions, the entire file
+common > scripted_triggers > 00_scripted_triggers (in 10_scripted_triggers.txt)
+has_any_lifestyle_focus_trigger
+has_any_lifestyle_trait_trigger
+basic_allowed_to_imprison_character_trigger
+advanced_allowed_to_imprison_character_trigger
 
-common > holdings > 00_holdings.txt, the entire file
-2.39: vanilla's file with the Collegium (spn_order_collegium_01) added to the castle, city and church holdings. Copy it again from vanilla whenever a CK3 patch changes it.
+common > scripted_triggers > 00_scheme_triggers (in zz_spn_scheme_triggers.txt)
+can_use_befriend_scheme_trigger
+
+common > character_interactions > 00_scheme_interactions (in 10_scheme_interactions.txt)
+start_abduct
+
+common > decisions > 80_major_decisions (in zz_spn_coven_decisions.txt)
+found_witch_coven_decision
+
+common > customizable_localization > 00_secrets_custom_loc (in 10_spn_secrets_custom_loc.txt)
+SecretDescriptionThirdPerson
+SecretDescriptionFirstPerson
+
+common > important_actions > 00_lifestyle (in 10_spn_lifestyle.txt)
+action_can_choose_lifestyle, action_can_spend_perk_point, action_lifestyle_diplo, action_lifestyle_intrigue,
+action_lifestyle_learning, action_lifestyle_martial, action_lifestyle_stewarship
+
+common > scripted_effects > 00_laamp_effects (in zz_spn_laamp_purpose_effects.txt)
+laamp_clear_inappropriate_buildings_effect
+
+common > scripted_modifiers > 00_marriage_scripted_modifiers (in spn_marriage_scripted_modifiers.txt)
+marriage_ai_accept_fertility_modifier
+
+common > scripted_rules > 00_rules (in 10_rules.txt)
+has_natural_death_second_chance
+
+common > traits > 00_traits (in 10_spn_traits.txt)
+education_learning_5, heresiarch, leper, erudite
+(education_learning_5, heresiarch and leper are also redefined by Witchcraft's 00_traits_magic.txt; see 3.)
+
+== 3. Vanilla files and definitions overridden by the mod's Witchcraft-origin files ==
+These are Witchcraft's overrides, but the mod ships its own copies, so a CK3 fix to them does not reach players either.
+
+Whole files:
+common > activities > activity_types > witch_ritual.txt
+common > activities > intents > witch_ritual_intents.txt
+common > activities > pulse_actions > witch_ritual_actions.txt
+common > schemes > scheme_types > abduct_scheme.txt, convert_to_witchcraft_scheme.txt, steal_back_artifact_scheme.txt
+gui > window_activity_planner.gui (the mod's copy differs from vanilla by one width: size = { 320 44 })
+gui > window_character_lifestyle.gui
+
+Single definitions:
+common > traits > 00_traits (00_traits_magic.txt): lifestyle_mystic, witch, possessed_1, possessed_genetic, heresiarch, education_learning_5, gallowsbait, leper
+common > character_interactions (00_overwritten_interactions.txt): disinherit_interaction, disinherit_children_interaction, demand_artifact_interaction
+common > activities > guest_invite_rules (activity_invite_rules_witch_fix.txt): activity_invite_rule_house_witches, activity_invite_rule_other_witches
+common > decisions > 00_lifestyle_decisions (magic_dec_overwritten.txt): hold_mystical_communion_decision
+common > effect_localization > 01_ep1_effects (01_magic_witchcraft_effects.txt): add_artifact_modifier
+common > important_actions > 00_lifestyle (01_lifestyle_magic.txt): action_can_spend_perk_point
+common > modifiers > 00_event_modifiers (00_magic_modifiers.txt): witch_coven, confused_modifier
+common > modifiers > 00_artifact_modifiers (01_magic_artifact_modifiers.txt): artifact_monthly_lifestyle_xp_1_modifier
+common > scripted_relations > 00_scripted_relations (01_magic_scripted_relations_overwritten.txt): rival, nemesis
+common > scripted_rules > 00_rules (00_rules_magic_overwritten.txt): can_raid
+common > scripted_triggers > 00_interaction_triggers (01_interaction_overwritten_triggers.txt): title_revocation_is_tyrannical_trigger
+common > scripted_triggers > 20_health_triggers and 00_crime_triggers (20_health_overwritten_triggers.txt): age_ranked_health_vulnerability_threshold_trigger, immune_to_epidemic, is_witch_known_by_trigger
+common > travel > travel_options (travel_options_magic_overwritten.txt): adventurers_search_for_secrets_option
+(common > defines 01_magic_graphics.txt sets NGui values; defines merge with vanilla's, they do not replace the file.)
+
+== 4. Listed before, not in the mod as shipped (2.39a has no such files) ==
+common > genes > 02_genes_accessories_misc.txt
+gfx > portraits > accessories > bodyparts.txt
+gfx > portraits > portrait_modifiers > muscularity and weight modifier
+If a local copy still has these, re-check them against vanilla before shipping them.

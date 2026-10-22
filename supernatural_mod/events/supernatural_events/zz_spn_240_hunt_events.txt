@@ -1,0 +1,354 @@
+﻿namespace = spn_hunt
+
+# Supernatural 2.40 (WORK-ORDER-2.40 D6, D8) -- the hunt, told in the hunt window. Q8's range: spn_hunt.2000-2099.
+#
+# THE TWINS. Each is the hunt-window copy of a map event, with the same title, text and options, and the option bodies in
+# one shared effect each (zz_spn_240_hunt_effects.txt). spn_hunt_send_beat_effect sends the twin while the hunter is still
+# at his hunt and the original otherwise. Every twin re-checks its situation in its own trigger, and if the hunt has
+# ended by the time it fires (Gone and the Fate of the Witch are sent days later), on_trigger_fail sends the original, so
+# nothing is lost (the original's own trigger then decides, as before).
+#   .2000 Overmatched (.0210)          .2001 Gone (.0211)               .2002 Turned Back (.0212)
+#   .2003 This Is Not the Man (.0221)  .2004 The Price of Silence (.0240) .2005 Decide on the Fate of the Witch
+#                                                                          (spn_hunters.0003)
+#   .2010 Riding Home (a player guest's ending)                         .2020 hidden: a player creature's 7 more days (D8)
+
+# Overmatched (twin of spn_hunt.0210). Root = the hunter.
+spn_hunt.2000 = {
+	type = activity_event
+	title = spn_hunt.0210.t
+	desc = {
+		desc = spn_hunt.0210.desc
+		desc = spn_hunt.2000.desc_company
+	}
+	theme = hunt_activity
+	override_background = { reference = alley_night }
+	left_portrait = { character = root animation = pain }
+	right_portrait = { character = scope:spn_defender animation = menacing }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_defender
+		scope:spn_defender = { is_alive = yes }
+		exists = scope:activity
+		involved_activity ?= scope:activity
+	}
+	on_trigger_fail = { trigger_event = spn_hunt.0210 }
+
+	# Fall back.
+	option = {
+		name = spn_hunt.0210.a
+		custom_tooltip = spn_hunt.0210.a.tt
+		spn_hunt_overmatched_fall_back_effect = yes
+		ai_chance = {
+			base = 60
+			modifier = { add = 30 has_trait = craven }
+			modifier = { add = 15 has_trait = patient }
+			modifier = { add = -20 has_trait = brave }
+		}
+	}
+	# Press on. A second duel with the creature at +20; lose it and you die by its kind.
+	option = {
+		name = spn_hunt.0210.b
+		custom_tooltip = spn_hunt.0210.b.tt
+		spn_hunt_overmatched_press_on_effect = yes
+		ai_chance = {
+			base = 20
+			modifier = { add = 30 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = 15 has_trait = zealous }
+			modifier = { add = 10 has_trait = stubborn }
+			modifier = { add = -30 has_trait = craven }
+		}
+	}
+}
+
+# Gone (twin of spn_hunt.0211). Root = the hunter.
+spn_hunt.2001 = {
+	type = activity_event
+	title = spn_hunt.0211.t
+	desc = spn_hunt.0211.desc
+	theme = hunt_activity
+	override_background = { reference = ep2_hunt_foggy_forest }
+	left_portrait = { character = root animation = disbelief }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:activity
+		involved_activity ?= scope:activity
+	}
+	on_trigger_fail = { trigger_event = spn_hunt.0211 }
+
+	option = {
+		name = spn_hunt.0211.a
+	}
+}
+
+# Turned Back (twin of spn_hunt.0212). Root = the hunter.
+spn_hunt.2002 = {
+	type = activity_event
+	title = spn_hunt.0212.t
+	desc = {
+		desc = spn_hunt.0212.desc
+		desc = spn_hunt.2002.desc_company
+	}
+	theme = hunt_activity
+	override_background = { reference = ep2_travel_bridge }
+	left_portrait = { character = root animation = stress }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:activity
+		involved_activity ?= scope:activity
+	}
+	on_trigger_fail = { trigger_event = spn_hunt.0212 }
+
+	immediate = {
+		spn_write_lost_the_thread_memory_effect = yes
+	}
+
+	option = {
+		name = spn_hunt.0212.a
+	}
+}
+
+# This Is Not the Man (twin of spn_hunt.0221). Root = the hunter.
+spn_hunt.2003 = {
+	type = activity_event
+	title = spn_hunt.0221.t
+	desc = spn_hunt.0221.desc
+	theme = hunt_activity
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = disbelief }
+	right_portrait = { character = scope:spn_proxy animation = fear }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_proxy
+		scope:spn_proxy = { is_alive = yes }
+		exists = scope:spn_hunt_activity
+		exists = scope:activity
+		involved_activity ?= scope:activity
+	}
+	on_trigger_fail = { trigger_event = spn_hunt.0221 }
+
+	# Then he dies first.
+	option = {
+		name = spn_hunt.0221.a
+		custom_tooltip = spn_hunt.0221.a.tt
+		spn_hunt_not_the_man_fight_effect = yes
+	}
+	# Stand aside. I came for the one who made you.
+	option = {
+		name = spn_hunt.0221.b
+		custom_tooltip = spn_hunt.0221.b.tt
+		spn_hunt_not_the_man_stand_aside_effect = yes
+	}
+}
+
+# The Price of Silence (twin of spn_hunt.0240). Root = the hunter.
+spn_hunt.2004 = {
+	type = activity_event
+	title = spn_hunt.0240.t
+	desc = spn_hunt.0240.desc
+	theme = hunt_activity
+	override_background = { reference = sitting_room }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = { character = scope:spn_culprit animation = scheme }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_culprit
+		scope:spn_culprit = { is_alive = yes }
+		exists = scope:spn_hunt_activity
+		exists = scope:activity
+		involved_activity ?= scope:activity
+	}
+	on_trigger_fail = { trigger_event = spn_hunt.0240 }
+
+	# Take the gold. Fifty now, a stipend for five years -- and the creature holds a strong hook on you.
+	option = {
+		name = spn_hunt.0240.a
+		custom_tooltip = spn_hunt.0240.a.tt
+		spn_hunt_price_take_effect = yes
+		ai_chance = {
+			base = 20
+			modifier = { add = 30 has_trait = greedy }
+			modifier = { add = 20 has_trait = ambitious }
+			modifier = { add = 25 gold < 50 }
+			modifier = { add = -40 has_trait = just }
+			modifier = { add = -40 has_trait = zealous }
+		}
+	}
+	# Refuse. The insult is worth +5 in the fight that follows.
+	option = {
+		name = spn_hunt.0240.b
+		custom_tooltip = spn_hunt.0240.b.tt
+		spn_hunt_price_refuse_effect = yes
+		ai_chance = {
+			base = 40
+			modifier = { add = 40 has_trait = just }
+			modifier = { add = 40 has_trait = zealous }
+			modifier = { add = 20 has_trait = brave }
+		}
+	}
+}
+
+# Decide on the Fate of the Witch (twin of spn_hunters.0003), from The Woman They Talk About (spn_hunt.0121 a) two days
+# on. Root = the hunter; scope:witch.
+spn_hunt.2005 = {
+	type = activity_event
+	title = spn_hunters.0001.t
+	desc = spn_hunters.0003.desc
+	theme = hunt_activity
+	override_background = { reference = wilderness_scope }
+	right_portrait = { character = root animation = personality_compassionate }
+	left_portrait = { character = scope:witch animation = fear }
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_has_supernatural_trait = no
+		scope:witch ?= {
+			is_alive = yes
+			OR = {
+				is_imprisoned = no
+				is_imprisoned_by = root
+			}
+			OR = {
+				has_trait = witch
+				any_secret = { secret_type = secret_witch }
+			}
+			NOT = { spn_hunt_is_creature_trigger = yes }
+			NOT = { has_trait = supernatural_hunter }
+		}
+		exists = scope:activity
+		involved_activity ?= scope:activity
+	}
+	on_trigger_fail = { trigger_event = spn_hunters.0003 }
+
+	# Burn her.
+	option = {
+		name = spn_hunters.0003.a
+		trigger = { scope:witch ?= { is_alive = yes } }
+		spn_witch_fate_burn_effect = yes
+		ai_chance = {
+			base = 50
+			ai_value_modifier = { ai_zeal = 0.5 }
+			modifier = { add = -20 has_trait = cynical }
+			modifier = { add = 20 has_trait = zealous }
+		}
+	}
+	# Don't kill her.
+	option = {
+		name = spn_hunters.0003.b
+		custom_tooltip = spn_hunters.0003.b.tt
+		spn_witch_fate_spare_effect = yes
+		ai_chance = {
+			base = 50
+			ai_value_modifier = { ai_zeal = -0.5 }
+			modifier = { add = 20 has_trait = just }
+			modifier = { add = -20 has_trait = zealous }
+		}
+	}
+	# Learn witchcraft.
+	option = {
+		name = spn_hunters.0003.c
+		custom_tooltip = spn_hunters.0003.c.tt
+		trigger = { NOT = { has_trait = supernatural_hunter } }
+		spn_witch_fate_learn_effect = yes
+		ai_chance = {
+			base = 30
+			ai_value_modifier = { ai_zeal = -0.5 }
+			modifier = { add = 20 learning > 25 }
+			modifier = { add = -20 has_trait = zealous }
+		}
+	}
+}
+
+# Riding Home -- a player who rode as a guest. Guests get no event during a hunt (every phase hook is the host's), so a
+# player guest watched an empty window for three weeks and was never told how it ended or what it paid him. Sent from
+# What the Hunt Was Worth (spn_hunt.0300) to each player guest. Root = the guest.
+spn_hunt.2010 = {
+	type = activity_event
+	title = spn_hunt.2010.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					scope:spn_hunt_activity ?= {
+						OR = {
+							var:spn_hunt_outcome ?= flag:slain
+							var:spn_hunt_outcome ?= flag:exorcised
+							var:spn_hunt_outcome ?= flag:proxy_slain
+						}
+					}
+				}
+				desc = spn_hunt.2010.desc_done
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hunt_activity ?= { var:spn_hunt_outcome ?= flag:hunter_beaten } }
+				desc = spn_hunt.2010.desc_beaten
+			}
+			triggered_desc = {
+				trigger = { scope:spn_hunt_activity ?= { var:spn_hunt_outcome ?= flag:compelled } }
+				desc = spn_hunt.2010.desc_compelled
+			}
+			triggered_desc = {
+				trigger = {
+					scope:spn_hunt_activity ?= {
+						OR = {
+							var:spn_hunt_outcome ?= flag:bought
+							var:spn_hunt_outcome ?= flag:bargained
+						}
+					}
+				}
+				desc = spn_hunt.2010.desc_terms
+			}
+			desc = spn_hunt.2010.desc_quiet
+		}
+	}
+	theme = hunt_activity
+	override_background = { reference = ep2_travel_bridge }
+	left_portrait = { character = root animation = personality_content }
+	right_portrait = { character = scope:spn_hunter animation = marshal }
+
+	trigger = {
+		is_alive = yes
+		is_ai = no
+		exists = scope:spn_hunter
+		NOT = { this = scope:spn_hunter }
+		exists = scope:activity
+		involved_activity ?= scope:activity
+	}
+
+	option = {
+		name = spn_hunt.2010.a
+	}
+}
+
+# D8 -- 7 MORE DAYS, ONCE. The confrontation ends 14 days after it opens and the conclusion reads whatever outcome it has.
+# A player creature who had not yet answered Someone Is Asking Questions (spn_hunt.0200) then fought a hunter who had
+# gone home. Sent from the confrontation phase two days before it would end; if the hunt's creature is a player who has
+# not answered (var:spn_hunt_answer_pending, set and cleared by .0200), the phase is pushed on to 7 days past its old end.
+# Once per hunt. Root = the host. Re-calling progress_activity_phase_after reschedules the phase: the confrontation
+# already relies on that (its on_enter_phase sets 5 days, its on_phase_active 14).
+spn_hunt.2020 = {
+	hidden = yes
+
+	trigger = {
+		is_alive = yes
+		involved_activity ?= {
+			has_activity_type = supernatural_hunt
+			has_current_phase = spn_confrontation_phase
+			has_variable = spn_hunt_answer_pending
+			NOT = { has_variable = spn_hunt_answer_extended }
+		}
+	}
+
+	immediate = {
+		involved_activity = {
+			set_variable = { name = spn_hunt_answer_extended value = yes days = 60 }
+			progress_activity_phase_after = { days = 9 }
+		}
+	}
+}

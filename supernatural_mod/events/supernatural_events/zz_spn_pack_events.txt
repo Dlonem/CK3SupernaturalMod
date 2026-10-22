@@ -89,6 +89,10 @@ spn_pack.0013 = {
 	title = spn_pack.0013.t
 	desc = {
 		first_valid = {
+			triggered_desc = { # 2.40 (WORK-ORDER-2.40 C6): joined by Offer Pack Terms
+				trigger = { exists = scope:spn_sa_terms }
+				desc = spn_pack.0013.desc_terms
+			}
 			# 2.37o: a pack joined to another by the Unification (spn_pack_unify_effect).
 			triggered_desc = {
 				trigger = { exists = scope:spn_sa_joined }
@@ -270,34 +274,7 @@ spn_pack.0101 = {
 	}
 }
 
-# .0102 -- Young Wolves Fight.
-spn_pack.0102 = {
-	type = character_event
-	title = spn_pack.0102.t
-	desc = {
-		first_valid = {
-			triggered_desc = {
-				trigger = { exists = scope:spn_mo_fight_friends }
-				desc = spn_pack.0102.desc_friends
-			}
-			triggered_desc = {
-				trigger = { scope:spn_clash_winner = scope:spn_mo_ours }
-				desc = spn_pack.0102.desc_won
-			}
-			desc = spn_pack.0102.desc_lost
-		}
-	}
-	theme = hunting
-	override_background = { reference = wilderness_forest }
-	left_portrait = { character = scope:spn_mo_ours animation = rage }
-	right_portrait = { character = scope:spn_mo_theirs animation = anger }
-	immediate = {
-		spn_flavor_mark_effect = yes # 2.39 (WORK-ORDER-2.39 F14): marks the flavor gate
-	}
-	option = {
-		name = spn_pack.0102.a
-	}
-}
+# .0102 -- Young Wolves Fight: 2.40 boot 2 (k) rebuilt it as a real choice; it is in zz_spn_240_pack_events.txt now.
 
 # .0103 -- Kindred.
 spn_pack.0103 = {
@@ -341,13 +318,6 @@ spn_pack.0104 = {
 			triggered_desc = {
 				trigger = { scope:spn_waf_kind ?= flag:shrine }
 				desc = spn_pack.0104.shrine
-			}
-			triggered_desc = {
-				trigger = {
-					scope:spn_waf_kind ?= flag:held
-					scope:spn_waf_holder ?= root
-				}
-				desc = spn_pack.0104.held_mine
 			}
 			triggered_desc = {
 				trigger = { scope:spn_waf_kind ?= flag:held }
@@ -401,6 +371,10 @@ spn_pack.0104 = {
 			}
 			desc = spn_pack.0104.nothing
 		}
+		triggered_desc = { # 2.40 (WORK-ORDER-2.40 F5): others have heard where his hide is
+			trigger = { has_character_flag = spn_hide_word_out }
+			desc = spn_pack.0104.held_mine
+		}
 	}
 	theme = hunting
 	override_background = { reference = wilderness_forest }
@@ -415,6 +389,10 @@ spn_pack.0104 = {
 	}
 	option = {
 		name = spn_pack.0104.a
+		if = { # 2.40 (WORK-ORDER-2.40 F5): told once
+			limit = { has_character_flag = spn_hide_word_out }
+			remove_character_flag = spn_hide_word_out
+		}
 	}
 }
 
@@ -422,7 +400,23 @@ spn_pack.0104 = {
 spn_pack.0200 = {
 	type = character_event
 	title = spn_pack.0200.t
-	desc = spn_pack.0200.desc
+	desc = {
+		desc = spn_pack.0200.desc
+		first_valid = { # 2.40 (WORK-ORDER-2.40 C6): the cause (spn_hide_owner_changed)
+			triggered_desc = {
+				trigger = { scope:spn_feud_cause ?= flag:force }
+				desc = spn_pack.0200.desc_force
+			}
+			triggered_desc = {
+				trigger = { scope:spn_feud_cause ?= flag:fight }
+				desc = spn_pack.0200.desc_fight
+			}
+			triggered_desc = {
+				trigger = { scope:spn_feud_cause ?= flag:demand }
+				desc = spn_pack.0200.desc_demand
+			}
+		}
+	}
 	theme = unfriendly
 	left_portrait = { character = root animation = anger }
 	right_portrait = { character = scope:spn_feud_other animation = anger }
@@ -437,6 +431,45 @@ spn_pack.0200 = {
 	}
 	option = {
 		name = spn_pack.0200.a
+	}
+	# 2.40 (WORK-ORDER-2.40 C6): the alpha whose wolf lost it may call the holder out. The Challenge settles who is
+	# stronger; it does not move the hide, and the text says so. Greyed when the Challenge's own test says no.
+	option = {
+		name = spn_pack.0200.b
+		show_as_unavailable = {
+			scope:spn_fe_a ?= root
+			scope:spn_feud_taker ?= { is_alive = yes }
+		}
+		trigger = {
+			scope:spn_fe_a ?= root
+			scope:spn_feud_taker ?= {
+				is_alive = yes
+				NOT = { this = root }
+			}
+			spn_pack_challenge_shown_trigger = { ACTOR = root TARGET = scope:spn_feud_taker }
+		}
+		custom_tooltip = spn_pack.0200.b.tt
+		open_interaction_window = {
+			interaction = spn_challenge_interaction
+			actor = root
+			recipient = scope:spn_feud_taker
+		}
+	}
+	# 2.40 (WORK-ORDER-2.40 C6): or let it go, both ways.
+	option = {
+		name = spn_pack.0200.c
+		custom_tooltip = spn_pack.0200.c.tt
+		if = {
+			limit = { has_opinion_modifier = { target = scope:spn_feud_other modifier = spn_hide_feud_opinion } }
+			remove_opinion = { target = scope:spn_feud_other modifier = spn_hide_feud_opinion }
+		}
+		scope:spn_feud_other = {
+			if = {
+				limit = { has_opinion_modifier = { target = root modifier = spn_hide_feud_opinion } }
+				remove_opinion = { target = root modifier = spn_hide_feud_opinion }
+			}
+		}
+		add_prestige = minor_prestige_loss
 	}
 }
 
@@ -475,9 +508,16 @@ spn_pack.0300 = {
 				spn_is_alpha_trigger = no
 			}
 			custom_tooltip = spn_pack.0300.a.tt
-			scope:spn_ta_pack = { spn_pack_set_alpha_effect = { NEW = root } }
-			scope:spn_ta_old_alpha = {
-				add_opinion = { target = root modifier = spn_true_alpha_rose_opinion }
+			# 2.40 (WORK-ORDER-2.40 C5): the alpha he would replace answers: a player is asked (Red Eyes in Your Pack), an
+			# AI alpha yields, fights or lets him go by his temper (spn_pack_true_alpha_ai_answer_effect).
+			save_scope_as = spn_ta
+			scope:spn_ta_pack.story_owner = { save_scope_as = spn_ta_old_alpha }
+			if = {
+				limit = { scope:spn_ta_old_alpha = { is_ai = no } }
+				scope:spn_ta_old_alpha = { trigger_event = spn_pack.2000 }
+			}
+			else = {
+				spn_pack_true_alpha_ai_answer_effect = yes
 			}
 		}
 		else = {

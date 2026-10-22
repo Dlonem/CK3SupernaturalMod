@@ -105,7 +105,7 @@ spn_hunt.0151 = {
 	type = activity_event
 	title = spn_hunt.0151.t
 	desc = spn_hunt.0151.desc
-	theme = hunting
+	theme = hunt_activity # 2.40 (WORK-ORDER-2.40 D6): was the deprecated hunting
 	override_background = { reference = ep2_hunt_snowy_forest } # 2.35a art pass -- was ep2_hunt_foggy_forest. By the Moon: a calendar of kills across cold nights.
 	left_portrait = { character = root animation = thinking }
 
@@ -280,7 +280,7 @@ spn_hunt.0154 = {
 			desc = spn_hunt.0154.desc
 		}
 	}
-	theme = hunting
+	theme = hunt_activity # 2.40 (WORK-ORDER-2.40 D6): was the deprecated hunting
 	override_background = { reference = ep2_forest_managed } # 2.35a art pass -- was alley_night. What the Dogs Will Not Pass: there is a place the dogs stop at.
 	left_portrait = { character = root animation = thinking }
 	right_portrait = { character = scope:spn_hunt_reader animation = personality_rational }
@@ -386,7 +386,17 @@ spn_hunt.0155 = {
 		spn_menace_gone_to_ground_effect = yes
 		spn_hunt_set_outcome_effect = { OUTCOME = fled }
 		spn_confrontation_survivor_xp_effect = { AMOUNT_MIN = 4 AMOUNT_MAX = 10 }
-		scope:spn_hunter = { trigger_event = { id = spn_hunt.0211 days = { 3 8 } } }
+		# 2.40 (WORK-ORDER-2.40 D6): Gone, in the hunt window if he is still there (the twin falls back to the map event if not)
+		scope:spn_hunter = {
+			if = {
+				limit = { involved_activity ?= scope:spn_hunt_activity }
+				scope:spn_hunt_activity = { save_scope_as = activity }
+				trigger_event = { id = spn_hunt.2001 days = { 3 8 } }
+			}
+			else = {
+				trigger_event = { id = spn_hunt.0211 days = { 3 8 } }
+			}
+		}
 		ai_chance = {
 			base = 40
 			modifier = { add = 35 has_trait = craven }

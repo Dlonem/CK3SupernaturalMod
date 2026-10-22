@@ -1,0 +1,450 @@
+﻿# Supernatural 2.40 -- golems (WORK-ORDER-2.40 D1, D3, D4, G8b, G8d). Package Q7.
+# One shared effect per act, so every door into it (Witchcraft's Artificial Human, the Order's Clay Working, the
+# Temple Magus's gift, Last Instructions, the puppet decisions, the interactions) runs the same code.
+
+# ==================================================================================================
+# THE BOND (D1, D3, G8b)
+# ==================================================================================================
+# 2.40 (WORK-ORDER-2.40 D3): the one bond effect. Binds GOLEM to NEW: the old bond ends first (every master but NEW lets
+# go: Witchcraft's mminion relation and its domination hook, the pair that makes Command your minion work), then NEW
+# holds it (relation, hook, court), the golem remembers NEW as its last master, and a player master with no golem
+# puppet yet has it as his puppet. The relation's +400 opinion (mmaster, 01_magic_scripted_relations.txt) is what keeps
+# the golem loving its master whatever he does; nothing else is needed for that.
+# Callers: Witchcraft's magic_ev7.119 (registered upstream entry), spn_order_make_golem_effect,
+# spn_order_golem_to_magus_effect, spn_golem.0001/.0002, the yearly safety line. Any scope.
+spn_golem_bond_transfer_effect = {
+	$GOLEM$ = { save_scope_as = spn_gbt_golem }
+	$NEW$ = { save_scope_as = spn_gbt_new }
+	# 0. Boot 3: banked before anything changes. Was NEW already its master? (Make Your Golem a Puppet re-binds a golem to
+	# its own master: then a search it is on is his, and goes on.)
+	if = {
+		limit = { scope:spn_gbt_new = { has_relation_mminion = scope:spn_gbt_golem } }
+		save_scope_value_as = { name = spn_gbt_same_master value = yes }
+	}
+	# 1. Whoever held it before lets go. Banked in a list first: the relations change while we walk them.
+	scope:spn_gbt_golem = {
+		every_relation = {
+			type = mmaster
+			limit = { NOT = { this = scope:spn_gbt_new } }
+			add_to_temporary_list = spn_gbt_old_masters
+		}
+		if = {
+			limit = {
+				exists = puppeteer
+				NOT = { puppeteer = scope:spn_gbt_new }
+			}
+			clear_puppet_status = yes
+		}
+	}
+	every_in_list = {
+		list = spn_gbt_old_masters
+		if = {
+			limit = { has_relation_mminion = scope:spn_gbt_golem }
+			remove_relation_mminion = scope:spn_gbt_golem
+		}
+		if = {
+			limit = { has_hook = scope:spn_gbt_golem }
+			remove_hook = { target = scope:spn_gbt_golem }
+		}
+	}
+	# 2. The new master holds it: the relation, the hook, and his court if he keeps one.
+	scope:spn_gbt_new = {
+		if = {
+			limit = { NOT = { has_relation_mminion = scope:spn_gbt_golem } }
+			set_relation_mminion = scope:spn_gbt_golem
+		}
+		if = {
+			limit = { NOT = { has_hook = scope:spn_gbt_golem } }
+			add_hook = {
+				type = magic_domination_hook
+				target = scope:spn_gbt_golem
+			}
+		}
+		if = {
+			limit = {
+				OR = {
+					is_ruler = yes
+					is_landed_or_landless_administrative = yes # the Temple Magus's own test at spn_order.0861 option c
+				}
+				scope:spn_gbt_golem = {
+					is_ruler = no # boot 2 (logs2 error.log:34727): a golem holding a barony keeps its own seat; add_courtier refuses a ruler
+					NOT = { is_courtier_of = scope:spn_gbt_new }
+				}
+			}
+			add_courtier = scope:spn_gbt_golem
+		}
+	}
+	# 3. Identity state, no expiry (it is who the golem answers to): read by the yearly safety line.
+	scope:spn_gbt_golem = {
+		set_variable = { name = spn_golem_last_master value = scope:spn_gbt_new }
+		if = {
+			limit = { has_character_flag = spn_golem_released }
+			remove_character_flag = spn_golem_released
+		}
+		# Boot 3: a search for a former master ends with the old bond. Its result (spn_vade.0210) goes to the master who
+		# sent it, and a dead master never receives it, so the golem stayed "away" for ever (Thomas's Count Titan, save of
+		# 22 Oct: spn_golem_searching and spn_golem_away_modifier to 9999, no master).
+		if = {
+			limit = {
+				NOT = { exists = scope:spn_gbt_same_master }
+				has_character_flag = spn_golem_searching
+			}
+			remove_character_flag = spn_golem_searching
+			if = {
+				limit = { has_character_modifier = spn_golem_away_modifier }
+				remove_character_modifier = spn_golem_away_modifier
+			}
+		}
+		# Boot 3 (Thomas, item 4): a golem never had a soul to forfeit. Witchcraft's creation marks it with the demon-pact
+		# modifier "Soul Forfeit" (remove_mortal_soul_effect in magic_ev7.119 and spn_order_make_golem_effect); the golem
+		# trait already says what it is, and DoesHaveSoul answers "No" for a golem (registered upstream entry). Every
+		# reader of no_soul_modifier was checked (Q7 HANDOFF-BOOT3.md): they are soul-pact and soul-sale tests, none of
+		# which a golem should pass or fail because of a pact it never made.
+		if = {
+			limit = { has_character_modifier = no_soul_modifier }
+			remove_character_modifier = no_soul_modifier
+		}
+	}
+	# 4. The puppet (D1): a player master with no golem puppet yet.
+	if = {
+		limit = {
+			scope:spn_gbt_golem = { spn_golem_puppet_open_trigger = { MASTER = scope:spn_gbt_new } }
+		}
+		scope:spn_gbt_new = {
+			set_puppet = {
+				target = scope:spn_gbt_golem
+				type = spn_golem_puppet
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# THE GOLEM'S ORDERS (G8d)
+# ==================================================================================================
+# 2.40 (WORK-ORDER-2.40 G8d): Send the Golem to Search. The one body behind the interaction (zz_spn_vade_interactions.txt)
+# and the puppet decision. Any scope. spn_vade.0210 runs on the master and re-checks the search in its trigger.
+spn_golem_send_search_effect = {
+	spn_golem_end_guard_effect = { GOLEM = $GOLEM$ } # boot 2: a golem that leaves stops guarding anyone
+	$GOLEM$ = {
+		if = { # boot 2: and drops an errand (spn_golem.0010/.0011 then fail their trigger)
+			limit = { has_character_flag = spn_golem_on_errand }
+			remove_character_flag = spn_golem_on_errand
+		}
+		add_character_flag = spn_golem_searching
+		add_character_modifier = spn_golem_away_modifier
+		save_scope_as = spn_golem
+	}
+	$MASTER$ = { trigger_event = { id = spn_vade.0210 days = { 730 1825 } } }
+}
+
+# 2.40 (WORK-ORDER-2.40 G8d): everything the golem carries goes to its master: every artifact it may give (vanilla's own
+# test, 07_ep3_wars.txt) and all its gold. Shared by "Hand Over What You Carry" and "Return to Clay". Any scope.
+# A pledged relic or a hide passes through the mod's own owner hooks (on_artifact_changed_owner), as any gift does.
+spn_golem_hand_over_effect = {
+	$GOLEM$ = {
+		save_scope_as = spn_gho_golem
+		every_character_artifact = {
+			limit = { NOT = { has_variable = artifact_prevent_transfer } }
+			add_to_temporary_list = spn_gho_items
+		}
+	}
+	every_in_list = {
+		list = spn_gho_items
+		set_owner = {
+			target = $MASTER$
+			history = {
+				type = given
+				actor = scope:spn_gho_golem
+				recipient = $MASTER$
+			}
+		}
+	}
+	$GOLEM$ = {
+		if = {
+			limit = { gold > 0 }
+			pay_short_term_gold = {
+				gold = gold
+				target = $MASTER$
+			}
+		}
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 G8d): a minion tells its master every secret it holds or knows that he does not. Witchcraft's own
+# body from Command your minion's "tell me your secrets" (00_magic_interactions.txt), moved here unchanged but for its
+# three names, so the order and the golem's "What Did You See?" are one code path (registered upstream entry).
+# MINION, MASTER: characters. TITLE: the toast title key.
+spn_minion_tell_secrets_effect = {
+	$MINION$ = {
+		every_secret = {
+			limit = {
+				NOT = {
+					is_known_by = $MASTER$
+				}
+			}
+			if = {
+				limit = {
+					exists = secret_target
+				}
+				$MASTER$ = {
+					send_interface_toast = {
+						title = $TITLE$
+						left_icon = $MINION$
+						right_icon = secret_target
+						PREV = {
+							reveal_to = $MASTER$
+						}
+					}
+				}
+			}
+			else = {
+				$MASTER$ = {
+					send_interface_toast = {
+						title = $TITLE$
+						left_icon = $MINION$
+						PREV = {
+							reveal_to = $MASTER$
+						}
+					}
+				}
+			}
+		}
+		every_known_secret = {
+			limit = {
+				NOT = {
+					is_known_by = $MASTER$
+				}
+			}
+			if = {
+				limit = {
+					exists = secret_target
+				}
+				$MASTER$ = {
+					send_interface_toast = {
+						title = $TITLE$
+						left_icon = prev.secret_owner
+						right_icon = secret_target
+						PREV = {
+							reveal_to = $MASTER$
+						}
+					}
+				}
+			}
+			else = {
+				$MASTER$ = {
+					send_interface_toast = {
+						title = $TITLE$
+						left_icon = prev.secret_owner
+						PREV = {
+							reveal_to = $MASTER$
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+# ==================================================================================================
+# SHAPING (D4): Witchcraft's Artificial Human choices, one body for both doors
+# ==================================================================================================
+# Golem scope. magic_ev7.120 options a-d (registered upstream entries) and spn_order.2301 call these.
+# 2.40 (WORK-ORDER-2.40 D4): "I will work on its intelligence."
+spn_golem_upgrade_mind_effect = {
+	if = {
+		limit = {
+			has_trait = intellect_bad_3
+		}
+		remove_trait = intellect_bad_3
+	}
+	random_list = {
+		1 = {
+			add_trait = education_diplomacy_2
+		}
+		1 = {
+			add_trait = education_martial_2
+		}
+		1 = {
+			add_trait = education_stewardship_2
+		}
+		1 = {
+			add_trait = education_intrigue_2
+		}
+		1 = {
+			add_trait = education_learning_2
+		}
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 D4): "I need to improve the combat function."
+spn_golem_upgrade_combat_effect = {
+	add_trait = giant
+	add_trait = lifestyle_blademaster
+	add_trait_xp = {
+		trait = lifestyle_blademaster
+		value = 60
+	}
+}
+
+# 2.40 (WORK-ORDER-2.40 D4): "How about installing a magic generator?"
+spn_golem_upgrade_source_effect = {
+	add_min_source_trait = yes
+}
+
+# 2.40 (WORK-ORDER-2.40 D4): "I will not limit myself." (the maker's genius: intellect_good_3)
+spn_golem_upgrade_all_effect = {
+	spn_golem_upgrade_mind_effect = yes
+	add_trait = lifestyle_blademaster
+	add_min_source_trait = yes
+}
+
+# 2.40 (WORK-ORDER-2.40 D4): Final Calibration (magic_ev7.133 options a-e, spn_order.2302). Root: the maker.
+# GOLEM: the golem. SKILL: diplomacy, martial, stewardship, learning or intrigue. +20 to the golem, a perk point to the maker.
+spn_golem_calibrate_effect = {
+	$GOLEM$ = {
+		add_$SKILL$_skill = 20
+	}
+	add_$SKILL$_lifestyle_perk_points = 1
+}
+
+# ==================================================================================================
+# THE GOLEM STANDS GUARD (boot 2, item g)
+# ==================================================================================================
+# GOLEM guards WARD for a year: WARD carries spn_golem_guarded_modifier (hostile schemes against WARD do worse, and
+# another golem finds WARD harder to seize or strike, zz_spn_240_golem_values.txt). One ward at a time: the old guard
+# ends first. var:spn_golem_guarding on the golem names its ward (expires with the modifier). Any scope.
+spn_golem_start_guard_effect = {
+	spn_golem_end_guard_effect = { GOLEM = $GOLEM$ }
+	$WARD$ = {
+		add_character_modifier = {
+			modifier = spn_golem_guarded_modifier
+			years = 1
+		}
+	}
+	$GOLEM$ = {
+		set_variable = {
+			name = spn_golem_guarding
+			value = $WARD$
+			years = 1
+		}
+	}
+}
+
+# The guard ends: the golem goes on an errand, goes searching, guards someone else, or is about to die
+# (on_death_relation_mmaster, zz_spn_240_golem_on_actions.txt). The ward is read only while alive. Any scope.
+spn_golem_end_guard_effect = {
+	$GOLEM$ = {
+		if = {
+			limit = { exists = var:spn_golem_guarding }
+			var:spn_golem_guarding = {
+				if = {
+					limit = {
+						is_alive = yes
+						has_character_modifier = spn_golem_guarded_modifier
+					}
+					remove_character_modifier = spn_golem_guarded_modifier
+				}
+			}
+			remove_variable = spn_golem_guarding
+		}
+	}
+}
+
+# An errand starts (Seize and Imprison, Strike Them Down): the puppet leaves, a golem's guard ends, the master's
+# hostile-order pause starts, and the result comes to the master when the puppet arrives (spn_golem.0010 / .0011
+# re-check it). The flag and the record expire after the latest arrival (21 days), so a lost errand never blocks the
+# puppet. Root: the master. GOLEM (boot 4: any puppet: a golem, a sire-bound lover, any type in the shared contract, or
+# an AI master's servant, zz_spn_240_puppet_ai_on_actions.txt), TARGET: characters. EVENT: the result event.
+# Boot 4: var:spn_puppet_errand_for records whom the errand is for, so the result holds for a puppet that is not bound
+# by Witchcraft's relation (and for a one-command puppet type whose status ended when it set out).
+spn_golem_errand_start_effect = {
+	save_scope_as = spn_golem_master
+	$GOLEM$ = { save_scope_as = spn_golem }
+	$TARGET$ = { save_scope_as = spn_golem_target }
+	spn_golem_end_guard_effect = { GOLEM = scope:spn_golem }
+	scope:spn_golem = {
+		add_character_flag = {
+			flag = spn_golem_on_errand
+			days = 45
+		}
+		set_variable = {
+			name = spn_puppet_errand_for
+			value = scope:spn_golem_master
+			days = 45
+		}
+	}
+	add_character_flag = {
+		flag = spn_golem_hostile_order_pause
+		days = 180
+	}
+	trigger_event = {
+		id = $EVENT$
+		days = { 7 21 }
+	}
+}
+
+# ==================================================================================================
+# THE ONE-TIME REPAIR (boot 3; zz_spn_240_golem_on_actions.txt says why and when). Any scope. Sets its global first.
+# ==================================================================================================
+spn_golem_repair_effect = {
+	set_global_variable = {
+		name = spn_240_golem_repair_2_done
+		value = yes
+	}
+	# 1. Soul Forfeit off every golem (once).
+	every_living_character = {
+		limit = {
+			has_trait = golem
+			has_character_modifier = no_soul_modifier
+		}
+		remove_character_modifier = no_soul_modifier
+	}
+	# 2. Masterless golems, each offered once, to the first player who holds it: court or guest, vassal, then house.
+	every_player = {
+		save_scope_as = spn_golem_court_owner
+		every_courtier_or_guest = {
+			limit = {
+				spn_golem_masterless_trigger = yes
+				NOT = { is_in_list = spn_golem_repair_seen }
+			}
+			add_to_temporary_list = spn_golem_repair_seen
+			spn_golem_repair_offer_effect = yes
+		}
+		every_vassal = {
+			limit = {
+				spn_golem_masterless_trigger = yes
+				NOT = { is_in_list = spn_golem_repair_seen }
+			}
+			add_to_temporary_list = spn_golem_repair_seen
+			spn_golem_repair_offer_effect = yes
+		}
+		house ?= {
+			every_house_member = {
+				limit = {
+					spn_golem_masterless_trigger = yes
+					NOT = { is_in_list = spn_golem_repair_seen }
+				}
+				add_to_temporary_list = spn_golem_repair_seen
+				spn_golem_repair_offer_effect = yes
+			}
+		}
+	}
+}
+
+# One golem, offered. Scope: the golem. scope:spn_golem_court_owner: the player. A search that can never report back
+# ends first (its master is gone).
+spn_golem_repair_offer_effect = {
+	if = {
+		limit = { has_character_flag = spn_golem_searching }
+		remove_character_flag = spn_golem_searching
+		if = {
+			limit = { has_character_modifier = spn_golem_away_modifier }
+			remove_character_modifier = spn_golem_away_modifier
+		}
+	}
+	save_scope_as = spn_golem
+	scope:spn_golem_court_owner = {
+		trigger_event = { id = spn_golem.0002 days = { 3 10 } }
+	}
+}

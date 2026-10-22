@@ -1,0 +1,55 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 F3) -- the embrace level pickers, and every other caller that gives a new creature
+# or hunter a starting level.
+#
+# THE BUG. Every caller did `trigger_event = spn_initiate.0001` (or .1001 / .2001 / .3001) and then `add_trait_xp` in the
+# same block. A trigger_event with no delay runs after the current script (vanilla says so in pam_effects.txt, above
+# pam_holy_myron_consume_charge_effect), so the XP was given while the character did not have the trait yet, and the
+# door then added the trait at 0. Taking "Master" at the vampire picker gave a vampire at 0.
+#
+# THE FIX. The caller banks the level as a variable; the door applies it right after add_trait, then clears it. The
+# variable lives one day, so a door that refuses the character (a child, a golem, a witch at the hunter door) leaves
+# nothing behind that a later turning could pick up.
+#   var:spn_initiate_xp        the main track: vampirism, lycanthropy, both hybrid tracks, or monster_hunting
+#   var:spn_initiate_xp_witch  the hunter's witch_hunting track
+# No top-up for creatures made before 2.40 (expert call F3): nothing records what they picked.
+
+# Door side. Root = the new creature, after add_trait. TRAIT, TRACK, VAR.
+spn_initiate_apply_pending_xp_effect = {
+	if = {
+		limit = {
+			has_variable = $VAR$
+			has_trait = $TRAIT$
+		}
+		add_trait_xp = {
+			trait = $TRAIT$
+			track = $TRACK$
+			value = var:$VAR$
+		}
+	}
+}
+
+# Door side, last line of each door: the banked levels are spent (or were never wanted).
+spn_initiate_clear_pending_xp_effect = {
+	if = {
+		limit = { has_variable = spn_initiate_xp }
+		remove_variable = spn_initiate_xp
+	}
+	if = {
+		limit = { has_variable = spn_initiate_xp_witch }
+		remove_variable = spn_initiate_xp_witch
+	}
+}
+
+# Caller side, for the Witchcraft-origin callers (registered upstream entries). Those keep their own add_trait_xp line,
+# which still lands on someone who already has the trait (the door is then a no-op); this banks the same amount for the
+# door only when the trait is not there yet, so nobody gets it twice. TRAIT, VAR, VALUE (a number).
+spn_initiate_queue_xp_effect = {
+	if = {
+		limit = { NOT = { has_trait = $TRAIT$ } }
+		set_variable = {
+			name = $VAR$
+			value = $VALUE$
+			days = 1
+		}
+	}
+}

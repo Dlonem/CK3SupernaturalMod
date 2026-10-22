@@ -1,0 +1,229 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 G12): which band of the trails map a county belongs in. County scope.
+# Read by spn_trails_map_sync_effect (zz_spn_240_trails_effects.txt). The bands are exclusive: blood wins over strong,
+# strong over faint, and a county with no open trail is in none.
+
+# On the map (B6): the trail is open, i.e. the county carries spn_menace_modifier ("Something Stalks Here"). That modifier
+# is shown on the county to every player, so the map tells nobody anything the county view does not.
+# Boot-2 fix (TRAILS): this used to also require var:spn_menace_notified, which is set only at the THIRD incident. In
+# Thomas's boot 2 (about ten years, observer mode) a Trailsman reported a warm trail eight times (eventstats
+# spn_hunt.0400 = 8) but no lord was ever told (spn_hunt.0001 never fired), so every county failed that test and the map
+# stayed empty. A whisper (spn_menace_whisper, the first incident on clean ground) is still not on the map: it is not a
+# trail and nothing shows it on the county.
+spn_trails_public_trigger = {
+	has_county_modifier = spn_menace_modifier
+}
+
+# Bloodied: a kill on the open trail (var:spn_trail_blood, 5 years from the last kill, spn_menace_after_mark_effect).
+spn_trails_band_blood_trigger = {
+	spn_trails_public_trigger = yes
+	has_variable = spn_trail_blood
+}
+
+# Troubled: three or more incidents on record (the count is capped at six by spn_open_menace_trail_effect). Three is the
+# count at which spn_open_menace_trail_effect sends the county's lord word (spn_hunt.0001), so the band means "the lord
+# has been told", except where the culprit holds the county himself.
+spn_trails_band_strong_trigger = {
+	spn_trails_public_trigger = yes
+	NOT = { has_variable = spn_trail_blood }
+	trigger_if = {
+		limit = { has_variable = spn_menace_count }
+		var:spn_menace_count >= 3
+	}
+	trigger_else = {
+		always = no
+	}
+}
+
+# Rumoured: public, and neither of the above.
+spn_trails_band_faint_trigger = {
+	spn_trails_public_trigger = yes
+	NOT = { spn_trails_band_blood_trigger = yes }
+	NOT = { spn_trails_band_strong_trigger = yes }
+}
+
+# Supernatural 2.40 boot 2 (TRAILS): who the HUD's trails button is for. Character scope: the local player.
+# Boot 3: the button no longer asks a scripted gui (that call, made with no player in observer mode and on the loading
+# screen, was 22,506 errors in boot 3's error.log); gui/zz_spn_hud_buttons.gui spells out this same list with
+# GetPlayer.HasTrait / GetPlayer.MakeScope.Var, which are silent with no player. Change one, change the other. The creatures (spn_has_supernatural_trait:
+# vampire, werewolf, hybrid, demon), the witches and Mages of Witchcraft (witch, true_witch, archmage), members of the Order
+# (var:spn_order_member, the Order's own membership test spn_is_order_member_trigger) and both hunter traits. It reads only
+# the player's own traits and variables, so it never shows or hides anything on another character's secret (B6).
+spn_trails_watcher_trigger = {
+	OR = {
+		spn_has_supernatural_trait = yes
+		has_trait = witch
+		has_trait = true_witch
+		has_trait = archmage
+		spn_is_order_member_trigger = yes
+		has_trait = supernatural_hunter
+		has_trait = witch_hunter
+	}
+}
+
+# Supernatural 2.40 boot 4 (TRAILS): what the viewer of the Supernatural Trails window may know about a trail.
+# Thomas, boot 4: "I shouldn't be able to know who it was left by, rather that there was just an incident ... unless a
+# werewolf in my pack was the one who caused an incident ... if I'm not actively having a Trailsman hired, then I
+# shouldn't really be able to see that kind of information." So, read once per trail when the list is filled
+# (spn_trails_fill_view_effect), the window prints "Left by" and "Last seen" only for these reasons:
+#   1. The trail is the viewer's own (spn_trails_viewer_left_it_trigger): "Left by: you", and the year (he was there).
+#   2. He employs a Trailsman, court position or camp officer (spn_trails_employs_trailsman_trigger): what left every
+#      trail and when it was last seen. The Trailsman is the mod's man who reads trails (02_spn_trailsman.txt).
+#   3. The culprit is of his pack, coven or temple AND he knows what the culprit is, by an open fact or a secret he holds
+#      (spn_trails_viewer_knows_culprit_trigger): what left it, not when.
+# Everything else reads "unknown". The 2.40 boot-3 rule (an experienced hunter, a creature of the same kind, a witch for
+# witchcraft read the kind from their own traits) is gone with it: Thomas's call. The Supernatural Hunt's planner keeps
+# its own reading for a hunter planning a ride (supernatural_hunt.txt province_description), which is the hunt, not this
+# list. B6: the culprit is never named, and nothing about another character's secret decides anything unless the viewer
+# holds that secret (any_known_secret) or it is open (a known trait).
+
+# COUNTY scope (the trail's county); scope:spn_trv_viewer = the viewer. The trail is pinned on the viewer himself. The
+# culprit can also be a creature the county now blames after the first one died (spn_menace_culprit_died_effect): the
+# trail is then his in every way the game counts (hunters come for him), so "you" is still true.
+spn_trails_viewer_left_it_trigger = {
+	var:spn_menace_culprit ?= scope:spn_trv_viewer
+}
+
+# CHARACTER scope (the viewer). He has a Trailsman: the landed court position or the camp officer (vanilla
+# employs_court_position, as in laamp_extra_contracts.txt:1058 for a camp officer).
+spn_trails_employs_trailsman_trigger = {
+	OR = {
+		employs_court_position = spn_trailsman_court_position
+		employs_court_position = spn_trailsman_camp_officer
+	}
+}
+
+# CHARACTER scope (the culprit, alive). Is he of $VIEWER$'s pack, coven or temple? Pack: the same pack story
+# (var:spn_pack) or the pack-mate relation, as spn_host_knows_wolf_trigger reads it. Coven: the same coven story
+# (var:spn_coven). Temple: the same chapter of the Order (var:spn_order_chapter, members and neophytes). Each cross-scope
+# variable read sits in trigger_if (CK3 does not short-circuit AND siblings).
+spn_trails_shares_circle_trigger = {
+	OR = {
+		has_relation_spn_pack_mate = $VIEWER$
+		AND = {
+			trigger_if = {
+				limit = {
+					exists = var:spn_pack
+					$VIEWER$ = { exists = var:spn_pack }
+				}
+				var:spn_pack = $VIEWER$.var:spn_pack
+			}
+			trigger_else = { always = no }
+		}
+		AND = {
+			trigger_if = {
+				limit = {
+					exists = var:spn_coven
+					$VIEWER$ = { exists = var:spn_coven }
+				}
+				var:spn_coven = $VIEWER$.var:spn_coven
+			}
+			trigger_else = { always = no }
+		}
+		AND = {
+			trigger_if = {
+				limit = {
+					exists = var:spn_order_chapter
+					$VIEWER$ = { exists = var:spn_order_chapter }
+				}
+				var:spn_order_chapter = $VIEWER$.var:spn_order_chapter
+			}
+			trigger_else = { always = no }
+		}
+	}
+}
+
+# COUNTY scope (the trail's county, saved as scope:spn_trv_county by the fill); scope:spn_trv_viewer = the viewer.
+# The culprit is alive, of the viewer's pack, coven or temple, and the viewer knows he is what left this kind of trail:
+#   vampire   he knows the culprit is a vampire or a hybrid (known trait or the secret: 10_spn_immortal_triggers.txt)
+#   werewolf  he knows the culprit is a werewolf or a hybrid, or they run in the same pack (a pack knows its wolves,
+#             spn_host_knows_wolf_trigger)
+#   demon     the culprit is a demon (demon1/demon2 have no secret type: an open trait)
+#   witch     he knows the culprit is a witch (vanilla knows_about_character_being_witch_trigger: the witch trait or the
+#             secret), or the culprit is a witch, true witch or Mage of the same coven or temple (they work it together)
+# No dead culprit is read (the trigger_if limit), never a variable on a dead character.
+spn_trails_viewer_knows_culprit_trigger = {
+	trigger_if = {
+		limit = {
+			exists = var:spn_menace_kind
+			var:spn_menace_culprit ?= { is_alive = yes }
+		}
+		var:spn_menace_culprit = {
+			spn_trails_shares_circle_trigger = { VIEWER = scope:spn_trv_viewer }
+		}
+		OR = {
+			AND = {
+				var:spn_menace_kind = flag:vampire
+				scope:spn_trv_viewer = {
+					OR = {
+						spn_knows_about_character_being_vampire_trigger = { CHARACTER = scope:spn_trv_county.var:spn_menace_culprit }
+						spn_knows_about_character_being_hybrid_trigger = { CHARACTER = scope:spn_trv_county.var:spn_menace_culprit }
+					}
+				}
+			}
+			AND = {
+				var:spn_menace_kind = flag:werewolf
+				scope:spn_trv_viewer = {
+					OR = {
+						spn_knows_about_character_being_lycan_trigger = { CHARACTER = scope:spn_trv_county.var:spn_menace_culprit }
+						spn_knows_about_character_being_hybrid_trigger = { CHARACTER = scope:spn_trv_county.var:spn_menace_culprit }
+						has_relation_spn_pack_mate = scope:spn_trv_county.var:spn_menace_culprit
+						AND = {
+							trigger_if = {
+								limit = {
+									exists = var:spn_pack
+									scope:spn_trv_county.var:spn_menace_culprit = { exists = var:spn_pack }
+								}
+								var:spn_pack = scope:spn_trv_county.var:spn_menace_culprit.var:spn_pack
+							}
+							trigger_else = { always = no }
+						}
+					}
+				}
+			}
+			AND = {
+				var:spn_menace_kind = flag:demon
+				var:spn_menace_culprit = { is_a_demon_trigger = yes }
+			}
+			AND = {
+				var:spn_menace_kind = flag:witch
+				scope:spn_trv_viewer = {
+					OR = {
+						knows_about_character_being_witch_trigger = { CHARACTER = scope:spn_trv_county.var:spn_menace_culprit }
+						AND = {
+							scope:spn_trv_county.var:spn_menace_culprit = {
+								OR = {
+									has_trait = witch
+									has_trait = true_witch
+									has_trait = archmage
+								}
+							}
+							OR = {
+								AND = {
+									trigger_if = {
+										limit = {
+											exists = var:spn_coven
+											scope:spn_trv_county.var:spn_menace_culprit = { exists = var:spn_coven }
+										}
+										var:spn_coven = scope:spn_trv_county.var:spn_menace_culprit.var:spn_coven
+									}
+									trigger_else = { always = no }
+								}
+								AND = {
+									trigger_if = {
+										limit = {
+											exists = var:spn_order_chapter
+											scope:spn_trv_county.var:spn_menace_culprit = { exists = var:spn_order_chapter }
+										}
+										var:spn_order_chapter = scope:spn_trv_county.var:spn_menace_culprit.var:spn_order_chapter
+									}
+									trigger_else = { always = no }
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	trigger_else = { always = no }
+}

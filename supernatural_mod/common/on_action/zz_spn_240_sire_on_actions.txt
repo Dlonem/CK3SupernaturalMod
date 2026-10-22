@@ -1,0 +1,162 @@
+﻿# Supernatural 2.40 boot 2 (item h) -- the Sire Bond's on_actions. Package QS.
+#
+# Vanilla generates on_set_relation_<relation> and on_remove_relation_<relation> for every relation
+# (van/common/on_action/relations/relation_on_actions.txt, header note; _scripted_relations.info: "root = the relation
+# owner, scope:target = the relation target ... For two-way relations, the on-action only fires on the initiator").
+# Appending an on_actions list merges with vanilla's own definition.
+#
+# Boot 3 (Thomas's calls, 22 Oct): the bond FORMS BY ITSELF when a vampire or hybrid player turns his lover or soulmate,
+# or when someone he turned becomes his lover or soulmate, and it LASTS (the end of the romance no longer ends it).
+
+on_set_relation_mmaker = {
+	on_actions = { spn_sire_bond_may_form }
+}
+
+on_set_relation_pprogeny = {
+	on_actions = { spn_sire_bond_may_form }
+}
+
+on_set_relation_lover = {
+	on_actions = { spn_sire_bond_may_form }
+}
+
+on_set_relation_soulmate = {
+	on_actions = { spn_sire_bond_may_form }
+}
+
+on_remove_relation_lover = {
+	on_actions = { spn_sire_bond_romance_lost }
+}
+
+on_remove_relation_soulmate = {
+	on_actions = { spn_sire_bond_romance_lost }
+}
+
+# Boot 3: was hooked on lover_quarterly_pulse and soulmate_quarterly_pulse. soulmate_quarterly_pulse is never fired
+# (vanilla's quarterly_playable_pulse lists lover/friendship/rival/mentor_student only, yearly_on_actions.txt), and
+# lover_quarterly_pulse is itself just a call from quarterly_playable_pulse, so the hook now sits there directly.
+quarterly_playable_pulse = {
+	on_actions = {
+		spn_sire_bond_old_save_check
+	}
+}
+
+on_game_start_after_lobby = {
+	on_actions = { spn_sire_bond_old_save_check_lobby }
+}
+
+# A RELATION WAS SET between root and scope:target: maker, progeny, lover or soulmate. Find which of the two is the sire
+# (he holds pprogeny on the other, or the other holds mmaker on him: the corresponding side may not be written yet when
+# the on_action fires) and look again in a few days. When a lover is turned, the maker relation is set
+# BEFORE the trait (spn_turn_into_vampire's on_accept, spn_bind_blood_donor_as_maker_effect), so the turned is not yet a
+# vampire here: spn_sire.0002 re-checks everything in its own trigger. Only a player sire is ever asked.
+spn_sire_bond_may_form = {
+	trigger = {
+		exists = scope:target
+		OR = {
+			AND = {
+				is_ai = no
+				OR = {
+					has_relation_pprogeny = scope:target
+					scope:target = { has_relation_mmaker = root }
+				}
+			}
+			AND = {
+				scope:target = { is_ai = no }
+				OR = {
+					has_relation_mmaker = scope:target
+					scope:target = { has_relation_pprogeny = root }
+				}
+			}
+		}
+	}
+	effect = {
+		if = {
+			limit = {
+				is_ai = no
+				OR = {
+					has_relation_pprogeny = scope:target
+					scope:target = { has_relation_mmaker = root }
+				}
+			}
+			save_scope_as = spn_sire_bond_sire
+			scope:target = { save_scope_as = spn_sire_bond_puppet }
+		}
+		else = {
+			save_scope_as = spn_sire_bond_puppet
+			scope:target = { save_scope_as = spn_sire_bond_sire }
+		}
+		# Twice: a turning can take weeks to finish (the blood's transition events), and spn_sire.0002 forms the bond only
+		# once the turned is a vampire. Once formed, the second look asks nothing (its trigger reads the record).
+		scope:spn_sire_bond_sire = {
+			trigger_event = { id = spn_sire.0002 days = 5 }
+			trigger_event = { id = spn_sire.0002 days = 60 }
+		}
+	}
+}
+
+# THE ROMANCE ENDED. Root = one partner, scope:target = the other. Boot 3: the bond holds. A bond claimed in boot 2 has
+# no record yet, so the record is written here, while the romance still stands (this on_action runs before the
+# relation is removed), and the sire is told a day later that the bond outlasted it (spn_sire.0001 re-checks; a lover
+# who becomes a soulmate loses the lover relation first, and is not told anything).
+spn_sire_bond_romance_lost = {
+	trigger = {
+		is_alive = yes
+		exists = scope:target
+		scope:target = { is_alive = yes }
+	}
+	effect = {
+		if = {
+			limit = { puppet:spn_sire_puppet ?= scope:target }
+			save_scope_as = spn_sire_bond_sire
+			scope:target = {
+				save_scope_as = spn_sire_bond_puppet
+				if = {
+					limit = { NOT = { var:spn_sire_bond_of ?= root } }
+					set_variable = { name = spn_sire_bond_of value = root } # identity state, as spn_sire_bond_form_effect
+				}
+			}
+			trigger_event = { id = spn_sire.0001 days = 1 }
+		}
+		else_if = {
+			limit = { scope:target.puppet:spn_sire_puppet ?= root }
+			save_scope_as = spn_sire_bond_puppet
+			if = {
+				limit = { NOT = { var:spn_sire_bond_of ?= scope:target } }
+				set_variable = { name = spn_sire_bond_of value = scope:target } # identity state
+			}
+			scope:target = {
+				save_scope_as = spn_sire_bond_sire
+				trigger_event = { id = spn_sire.0001 days = 1 }
+			}
+		}
+	}
+}
+
+# Boot 4 (Thomas: "Every favor does not wear on them"): the yearly strain on the bound one (spn_sire_bond_yearly_strain,
+# stress and a decaying opinion of the sire once a year) is removed. Its flag spn_sire_bond_yearly_done had a 300-day
+# expiry and is never read again. The opinion spn_sire_bond_strain_opinion stays defined (zz_spn_240_sire_opinions.txt)
+# so an opinion already on a running save decays away normally.
+
+# OLD SAVES (Thomas's: his hybrid turned Damiane, who is his lover, before the bond could form by itself). Once per
+# player character, on his first quarterly pulse on this build: if he holds no Sire Bond and someone he turned loves
+# him, he is asked (spn_sire.0002). No world walk: his own relations only. on_game_start_after_lobby does the same at
+# once for a hosted game; the flag keeps it to one ask.
+spn_sire_bond_old_save_check = {
+	trigger = {
+		is_ai = no
+		NOT = { has_character_flag = spn_240_sire_bond_checked }
+	}
+	effect = {
+		spn_sire_bond_old_save_check_effect = yes
+	}
+}
+
+spn_sire_bond_old_save_check_lobby = {
+	effect = {
+		every_player = {
+			limit = { NOT = { has_character_flag = spn_240_sire_bond_checked } }
+			spn_sire_bond_old_save_check_effect = yes
+		}
+	}
+}

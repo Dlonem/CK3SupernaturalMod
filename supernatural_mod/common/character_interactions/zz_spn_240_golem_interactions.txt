@@ -1,0 +1,440 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 D1) -- Make Your Golem a Puppet. Package Q7.
+# The golem puppet type's set-up interaction (common/puppets/types/zz_spn_puppet_types.txt). "The game does not set the
+# puppet up automatically, you need to run set_puppet yourself in the interaction" (_puppet_types.info): here it runs
+# through the one bond effect, which also writes the last master. A new golem is a puppet at once (the bond effect at
+# creation); this is for a golem bound before 2.40, or a second golem after the first is set aside with vanilla's
+# Fire Puppet. Players only, as the type's can_have.
+spn_bind_golem_interaction = {
+	category = interaction_category_favorites
+	icon = icon_magic
+	desc = spn_bind_golem_interaction_desc
+	auto_accept = yes
+	# Boot 2 (item g): the Intrigue window's "Select a Puppet" lists these targets ("set up ai_targets in the interaction
+	# to be able to select the puppet from a list in the UI", _puppet_types.info). Was courtiers alone, which left out a
+	# Temple Magus's golem (no court), a golem that holds land, and a golem living elsewhere. scripted_relations is every
+	# character the actor holds a scripted relation with, so every golem bound to him by mminion (vanilla's list,
+	# 00_artifact_interactions.txt:20; Witchcraft's Command your minion uses it).
+	ai_targets = {
+		ai_recipients = scripted_relations
+		ai_recipients = courtiers
+	}
+	ai_frequency = 0
+
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = { is_ai = no }
+		scope:recipient = {
+			has_trait = golem
+			has_relation_mmaster = scope:actor
+			NOT = { exists = puppeteer }
+		}
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = { is_adult = yes }
+		scope:recipient = { is_ai = yes } # RB1 (boot-2 review): a puppet is never another player
+	}
+
+	on_accept = {
+		# Boot 2: one golem puppet at a time (the engine's one per type), so a second golem replaces the first. The first
+		# keeps its bond and its Command your minion; only its place on the puppet card ends.
+		scope:actor = {
+			if = {
+				limit = { exists = puppet:spn_golem_puppet }
+				custom_tooltip = spn_bind_golem_replaces_tt
+				hidden_effect = {
+					puppet:spn_golem_puppet = { clear_puppet_status = yes }
+				}
+			}
+		}
+		scope:actor = {
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_bind_golem_interaction
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				custom_tooltip = spn_bind_golem_interaction_tt
+				hidden_effect = {
+					spn_golem_bond_transfer_effect = { GOLEM = scope:recipient NEW = scope:actor }
+				}
+			}
+		}
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# ==================================================================================================
+# Boot 4: Seize and Imprison, Strike Them Down and Loom Over Them are SHARED verbs (spn_puppet_verb_shown_trigger, the
+# contract in zz_spn_240_puppet_verb_triggers.txt): the Sire Bond puppet does them for its sire (Thomas's item 4), and any
+# type in the contract may list them. The interaction keys stay (Thomas's save holds a cooldown under
+# spn_golem_strike_interaction); the action keys are puppet_action_spn_puppet_seize/_strike/_loom. Any puppet must be
+# free (spn_puppet_deed_ready_trigger) and able to reach them (spn_puppet_deed_reach_trigger). Mystique (Thomas's item
+# 2): whether the victim learns WHO SENT the puppet is a hidden roll in the result event (spn_puppet_deed_unknown_chance
+# _value); Loom Over Them is always known, because its whole point is that they give in to you.
+# Stand Guard Over Them stays the golem's own.
+# THE PUPPET'S DEEDS (boot 2, item g, as the golem's own; boot 4, shared). Listed as puppet actions
+# (common/puppets/actions/zz_spn_puppet_actions.txt), so a player right-clicks someone, chooses to act as his puppet, and
+# the puppet does it. A child is never a target of the three hostile ones. Every roll is hidden; the tooltips promise
+# only what always happens. Whoever it frightens, or holds in the master's prison, knows who sent it; the others may not
+# (the mystique, above). Players only (no ai_frequency); an AI master's servant goes through the same errand from
+# zz_spn_240_puppet_ai_on_actions.txt (QS). Stand Guard Over Them stays the golem's own (spn_golem_order_shown_trigger).
+# ==================================================================================================
+
+# Seize and Imprison: the golem goes to them, takes them, and carries them to the actor's prison (vanilla's own
+# abduction effects: hard_imprison_character_effect and abduct_opinion_effect). Needs a prison: a landed or
+# administrative actor. Result: spn_golem.0010.
+spn_golem_seize_interaction = {
+	category = interaction_category_hostile
+	icon = icon_scheme_abduct
+	interface_priority = 40
+	desc = spn_golem_seize_interaction_desc
+	auto_accept = yes
+	# boot 3: no ai_frequency (logs3: "'ai_frequency' ... but no 'ai_targets', won't be used"); players only
+
+	is_shown = {
+		spn_puppet_verb_shown_trigger = yes # boot 4: a shared verb (golem, Sire Bond, and any type in the shared contract)
+		NOT = { scope:recipient = scope:actor } # boot 3: never against its own master
+		scope:recipient = { is_adult = yes }
+	}
+
+	is_valid_showing_failures_only = {
+		spn_puppet_deed_ready_trigger = yes # boot 4: any puppet (zz_spn_240_puppet_verb_triggers.txt)
+		spn_puppet_deed_reach_trigger = yes
+		spn_golem_order_mp_rules_trigger = yes
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_golem_needs_prison_tt
+				is_landed_or_landless_administrative = yes
+			}
+			custom_tooltip = {
+				text = spn_golem_hostile_pause_tt
+				NOT = { has_character_flag = spn_golem_hostile_order_pause }
+			}
+		}
+		scope:recipient = { is_imprisoned = no }
+	}
+
+	cooldown_against_recipient = { years = 5 }
+
+	on_accept = {
+		scope:actor = {
+			custom_tooltip = spn_golem_seize_interaction_tt
+			hidden_effect = {
+				spn_golem_errand_start_effect = { GOLEM = scope:puppet_or_actor TARGET = scope:recipient EVENT = spn_golem.0010 }
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_golem_errand_toast
+					left_icon = scope:spn_golem
+					right_icon = scope:spn_golem_target
+					custom_tooltip = spn_golem_seize_interaction_tt
+				}
+			}
+		}
+		if = { # boot 4: a sire-bound lover can be careless (the Sire Bond's careless trace; no strain)
+			limit = { scope:actor.puppet:spn_sire_puppet ?= scope:puppet_or_actor }
+			spn_sire_bond_careless_effect = yes
+		}
+		spn_puppet_shared_verb_done_effect = yes # boot 4: last line (shared contract, zz_spn_240_puppet_verb_effects.txt)
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# Strike Them Down: the golem goes to them and beats them. Mostly a wound; rarely, an AI character dies of it (never a
+# player). Result: spn_golem.0011.
+spn_golem_strike_interaction = {
+	category = interaction_category_hostile
+	icon = icon_combat
+	interface_priority = 39
+	desc = spn_golem_strike_interaction_desc
+	auto_accept = yes
+	# boot 3: no ai_frequency (logs3: "'ai_frequency' ... but no 'ai_targets', won't be used"); players only
+
+	is_shown = {
+		spn_puppet_verb_shown_trigger = yes # boot 4: a shared verb (golem, Sire Bond, and any type in the shared contract)
+		NOT = { scope:recipient = scope:actor } # boot 3: never against its own master
+		scope:recipient = { is_adult = yes }
+	}
+
+	is_valid_showing_failures_only = {
+		spn_puppet_deed_ready_trigger = yes # boot 4: any puppet (zz_spn_240_puppet_verb_triggers.txt)
+		spn_puppet_deed_reach_trigger = yes
+		spn_golem_order_mp_rules_trigger = yes
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_golem_hostile_pause_tt
+				NOT = { has_character_flag = spn_golem_hostile_order_pause }
+			}
+		}
+		scope:recipient = { is_imprisoned = no }
+	}
+
+	cooldown_against_recipient = { years = 5 }
+
+	on_accept = {
+		scope:actor = {
+			custom_tooltip = spn_golem_strike_interaction_tt
+			hidden_effect = {
+				spn_golem_errand_start_effect = { GOLEM = scope:puppet_or_actor TARGET = scope:recipient EVENT = spn_golem.0011 }
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_golem_errand_toast
+					left_icon = scope:spn_golem
+					right_icon = scope:spn_golem_target
+					custom_tooltip = spn_golem_strike_interaction_tt
+				}
+			}
+		}
+		if = { # boot 4: a sire-bound lover can be careless (the Sire Bond's careless trace; no strain)
+			limit = { scope:actor.puppet:spn_sire_puppet ?= scope:puppet_or_actor }
+			spn_sire_bond_careless_effect = yes
+		}
+		spn_puppet_shared_verb_done_effect = yes # boot 4: last line (shared contract, zz_spn_240_puppet_verb_effects.txt)
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# Loom Over Them: the golem stands over them and says nothing. Done at once. They are frightened (stress, a grudge),
+# the actor's dread grows, and they may give in to him (a weak threat hook, hidden roll: spn_golem_loom_hook_chance_value).
+spn_golem_loom_interaction = {
+	category = interaction_category_hostile
+	icon = icon_dark_champion
+	interface_priority = 38
+	desc = spn_golem_loom_interaction_desc
+	auto_accept = yes
+	# boot 3: no ai_frequency (logs3: "'ai_frequency' ... but no 'ai_targets', won't be used"); players only
+
+	is_shown = {
+		spn_puppet_verb_shown_trigger = yes # boot 4: a shared verb (golem, Sire Bond, and any type in the shared contract)
+		NOT = { scope:recipient = scope:actor } # boot 3: never against its own master
+		scope:recipient = { is_adult = yes }
+	}
+
+	is_valid_showing_failures_only = {
+		spn_puppet_deed_ready_trigger = yes # boot 4: any puppet (zz_spn_240_puppet_verb_triggers.txt)
+		spn_puppet_deed_reach_trigger = yes
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_golem_hostile_pause_tt
+				NOT = { has_character_flag = spn_golem_hostile_order_pause }
+			}
+		}
+		scope:recipient = { is_imprisoned = no }
+	}
+
+	cooldown_against_recipient = { years = 2 }
+
+	on_accept = {
+		scope:puppet_or_actor = { save_scope_as = spn_golem }
+		scope:recipient = { save_scope_as = spn_golem_target }
+		scope:actor = {
+			save_scope_as = spn_golem_master
+			add_character_flag = {
+				flag = spn_golem_hostile_order_pause
+				days = 90
+			}
+			add_dread = minor_dread_gain
+		}
+		scope:recipient = {
+			add_stress = minor_stress_gain
+			add_opinion = {
+				target = scope:actor
+				modifier = threatened_opinion
+			}
+		}
+		custom_tooltip = spn_golem_loom_interaction_tt
+		hidden_effect = {
+			if = {
+				limit = { scope:actor = { NOT = { has_hook = scope:recipient } } }
+				random = {
+					chance = spn_golem_loom_hook_chance_value
+					scope:actor = {
+						add_hook = {
+							type = threat_hook
+							target = scope:recipient
+						}
+					}
+					save_scope_value_as = { name = spn_golem_loom_gave_in value = yes }
+				}
+			}
+			scope:actor = {
+				send_interface_toast = {
+					type = event_toast_effect_good
+					title = spn_golem_loom_interaction
+					left_icon = scope:spn_golem
+					right_icon = scope:spn_golem_target
+					if = {
+						limit = { exists = scope:spn_golem_loom_gave_in }
+						custom_tooltip = spn_golem_loom_gave_in_tt
+					}
+					else = {
+						custom_tooltip = spn_golem_loom_held_tt
+					}
+				}
+			}
+			scope:recipient = {
+				if = {
+					limit = { scope:spn_golem = { has_trait = golem } }
+					send_interface_message = {
+						type = event_generic_bad
+						title = spn_golem_loom_msg
+						left_icon = scope:spn_golem
+						right_icon = scope:actor
+						custom_tooltip = spn_golem_loom_msg_tt
+					}
+				}
+				else = {
+					send_interface_message = {
+						type = event_generic_bad
+						title = spn_puppet_loom_msg
+						left_icon = scope:spn_golem
+						right_icon = scope:actor
+						custom_tooltip = spn_puppet_loom_msg_tt
+					}
+				}
+			}
+		}
+		if = { # boot 4: a sire-bound lover can be careless (the Sire Bond's careless trace; no strain)
+			limit = { scope:actor.puppet:spn_sire_puppet ?= scope:puppet_or_actor }
+			spn_sire_bond_careless_effect = yes
+		}
+		spn_puppet_shared_verb_done_effect = yes # boot 4: last line (shared contract, zz_spn_240_puppet_verb_effects.txt)
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# Stand Guard Over Them: the golem keeps watch over someone for a year (spn_golem_start_guard_effect). Friendly; a child
+# may be guarded (guarding is not using the child). One ward at a time. Boot 3: the master himself too (right-click
+# yourself and act as your golem; vanilla's puppet actions allow the puppeteer as the target, gift_interaction's is_shown).
+# "Guard Me" (a puppet decision) is the same guard from the puppet card.
+spn_golem_guard_interaction = {
+	category = interaction_category_friendly
+	icon = powerful_family_shield
+	interface_priority = 37
+	desc = spn_golem_guard_interaction_desc
+	auto_accept = yes
+	# boot 3: no ai_frequency (logs3: "'ai_frequency' ... but no 'ai_targets', won't be used"); players only
+
+	is_shown = {
+		spn_golem_order_shown_trigger = yes
+	}
+
+	is_valid_showing_failures_only = {
+		spn_golem_order_ready_trigger = yes
+		trigger_if = { # boot 3: the master is always within his own golem's reach
+			limit = { NOT = { scope:recipient = scope:actor } }
+			spn_golem_order_reach_trigger = yes
+		}
+		scope:recipient = { is_imprisoned = no }
+		custom_tooltip = {
+			text = spn_golem_guards_already_tt
+			NOT = { scope:puppet_or_actor.var:spn_golem_guarding ?= scope:recipient }
+		}
+	}
+
+	on_accept = {
+		scope:puppet_or_actor = { save_scope_as = spn_golem }
+		scope:recipient = { save_scope_as = spn_golem_target }
+		if = {
+			limit = { scope:spn_golem = { exists = var:spn_golem_guarding } }
+			custom_tooltip = spn_golem_guard_ends_tt
+		}
+		scope:recipient = {
+			show_as_tooltip = {
+				add_character_modifier = {
+					modifier = spn_golem_guarded_modifier
+					years = 1
+				}
+			}
+		}
+		hidden_effect = {
+			spn_golem_start_guard_effect = { GOLEM = scope:spn_golem WARD = scope:spn_golem_target }
+			scope:actor = {
+				send_interface_toast = {
+					type = event_toast_effect_good
+					title = spn_golem_guard_interaction
+					left_icon = scope:spn_golem
+					right_icon = scope:spn_golem_target
+					custom_tooltip = spn_golem_guard_toast_tt
+				}
+			}
+		}
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# ==================================================================================================
+# BIND THE MASTERLESS GOLEM (boot 3, Thomas's item 5b). A golem no one commands (its master died before 2.40 kept golems
+# for heirs, or someone let it go) can be taken up by a magic user: a Mage (trait witch) or an Archmage. The price is
+# Witchcraft's own standard spell price (can_spend_standard_ps_trigger / spend_standard_ps_effect, as Magic Domination,
+# 00_magic_interactions.txt), and the mage must stand where the golem stands or hold it at his court or in his realm
+# (Magic Domination's physical contact, made easier: the golem does not resist). The bond goes through the one shared
+# effect, so the golem remembers its new master and becomes his golem puppet if he holds none.
+# Witchcraft's Magic Domination already binds any character for a mage with Mind Control; this is the golem's own,
+# cheaper door, open to every mage, because a golem with no master has no will to break.
+# AI: never (players only; an AI mage has no reason-gated use for a golem puppet, and the golem stays bindable).
+# ==================================================================================================
+spn_bind_masterless_golem_interaction = {
+	category = interaction_category_friendly
+	icon = icon_magic
+	desc = spn_bind_masterless_golem_interaction_desc
+	interface_priority = 61
+	auto_accept = yes
+
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			is_ai = no
+			OR = {
+				has_trait = witch
+				has_trait = archmage
+			}
+		}
+		scope:recipient = { spn_golem_claimable_trigger = yes }
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			is_adult = yes
+			is_imprisoned = no
+			custom_description = {
+				text = power_needed_custom
+				can_spend_standard_ps_trigger = yes
+			}
+		}
+		scope:recipient = {
+			is_imprisoned = no
+			custom_tooltip = {
+				text = spn_bind_masterless_golem_reach_tt
+				OR = {
+					location = scope:actor.location
+					is_courtier_of = scope:actor
+					host ?= scope:actor
+					is_vassal_or_below_of = scope:actor
+				}
+			}
+		}
+	}
+
+	on_accept = {
+		scope:actor = {
+			spend_standard_ps_effect = yes
+			send_interface_toast = {
+				type = event_toast_effect_good
+				title = spn_bind_masterless_golem_interaction
+				left_icon = scope:actor
+				right_icon = scope:recipient
+				custom_tooltip = spn_bind_masterless_golem_tt
+				hidden_effect = {
+					spn_golem_bond_transfer_effect = { GOLEM = scope:recipient NEW = scope:actor }
+				}
+			}
+		}
+	}
+
+	ai_will_do = { base = 0 }
+}

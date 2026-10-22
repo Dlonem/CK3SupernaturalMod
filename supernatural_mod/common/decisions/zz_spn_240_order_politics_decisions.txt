@@ -1,0 +1,111 @@
+﻿# Supernatural 2.40 -- the Order's politics and pacing: decisions (WORK-ORDER-2.40 A2/A3 automation, A11). Effects:
+# zz_spn_240_order_politics_effects.txt. Loc: localization/english/zz_spn_240_q2_l_english.yml.
+
+# 2.40 (WORK-ORDER-2.40 A2/A3): "the masks run the temple". A player Temple Magus hands the roses and the Rite to the
+# masks (flag spn_order_auto_picks, the 2.38b flag, now covering both). Its twin, spn_order_choose_candidates_decision,
+# now reads "Run Your Temple Yourself" and takes it back. The flag is a standing choice of the player (identity state).
+spn_order_auto_temple_decision = {
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_order_auto_temple_decision_desc
+	selection_tooltip = spn_order_auto_temple_decision_tooltip
+	confirm_text = spn_order_auto_temple_decision_confirm
+	ai_check_interval = 0
+	is_shown = {
+		is_ai = no
+		spn_order_on_trigger = yes
+		spn_is_temple_magus_trigger = yes
+		NOT = { has_character_flag = spn_order_auto_picks }
+	}
+	effect = {
+		custom_tooltip = spn_order_auto_temple_decision_effect_tt
+		add_character_flag = spn_order_auto_picks
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# 2.40 (WORK-ORDER-2.40 A11): Hand On Your Temple. A Temple Magus steps down: he stays as a Magistratus, or works outside
+# the temple with the Adepti. Another Magistratus must be free to lead it. The 10-year wait is a flag set only when he
+# actually steps down, so "Not yet" costs nothing.
+spn_order_step_down_decision = {
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_order_step_down_decision_desc
+	selection_tooltip = spn_order_step_down_decision_tooltip
+	confirm_text = spn_order_step_down_decision_confirm
+	ai_check_interval = 60
+	is_shown = {
+		spn_order_on_trigger = yes
+		spn_is_temple_magus_trigger = yes
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_order_step_down_heir_tt
+			spn_order_step_down_heir_trigger = yes
+		}
+		custom_tooltip = {
+			text = spn_order_step_down_recent_tt
+			NOT = { has_character_flag = spn_order_stepped_down }
+		}
+	}
+	effect = {
+		custom_tooltip = spn_order_step_down_decision_effect_tt
+		trigger_event = spn_order.2050
+	}
+	ai_potential = {
+		spn_order_on_trigger = yes
+		spn_is_temple_magus_trigger = yes
+		NOT = { global_var:current_archmage_global ?= this }
+	}
+	# Reason- and personality-gated, never flat: an old head, or a content one, may pass the temple on. Never the Grand
+	# Magus (the chair is his, and a temple is his voice in it).
+	ai_will_do = {
+		base = 0
+		modifier = {
+			add = 20
+			age >= 65
+		}
+		modifier = {
+			add = 20
+			has_trait = content
+			age >= 50 # orchestrator (R1 review): a content head steps aside in later life, not at any age
+		}
+		modifier = {
+			add = 10
+			has_trait = humble
+		}
+		modifier = {
+			factor = 0
+			OR = {
+				has_trait = ambitious
+				has_trait = arrogant
+			}
+		}
+		modifier = {
+			factor = 0
+			global_var:current_archmage_global ?= this
+		}
+	}
+}
+
+# 2.40 boot 2 (item e): The Temples of the Order. A sworn member sees the temples that could take him in, nearest first,
+# and may write to one (Ask to Join Their Temple, opened from spn_order.2051). A player's decision: the AI never needs it.
+spn_order_temples_decision = {
+	decision_group_type = spn_order
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	desc = spn_order_temples_decision_desc
+	selection_tooltip = spn_order_temples_decision_tooltip
+	ai_check_interval = 0
+	is_shown = {
+		is_ai = no
+		spn_order_on_trigger = yes
+		spn_is_order_member_trigger = yes
+	}
+	effect = {
+		custom_tooltip = spn_order_temples_decision_effect_tt
+		trigger_event = spn_order.2051
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}

@@ -1,0 +1,147 @@
+﻿# Supernatural 2.40 boot 2 (item e): Ask to Join Their Temple. Package Q2. Effects: zz_spn_240_order_politics_effects.txt.
+# Loc: localization/english/zz_spn_240_q2_l_english.yml. The temples list that opens this from a decision: spn_order.2051.
+#
+# A sworn member asks the Temple Magus of another temple to take him in, keeping his rank (spn_order_move_member_effect,
+# the move A Daughter Chapter makes). Who leads a temple is the Order's own business, known to every sworn member (the
+# Conclave and the temples list show them), so the entry shows on a Temple Magus for a sworn member and for no one else
+# (B6: a non-member never sees it, and a member learns only what the Order tells its own: a head he knows is of the Order,
+# or one the temples letter named to him; review RB2). A Temple Magus sees it but must
+# hand his own temple on first (Hand On Your Temple), and is told so. The Order's letters travel anywhere: no range.
+# The AI never asks (its members move only with a founder). An AI Temple Magus answers by his nature and his reasons.
+spn_order_ask_join_temple_interaction = {
+	category = interaction_category_favorites
+	icon = icon_archmage
+	desc = spn_order_ask_join_temple_interaction_desc
+	use_diplomatic_range = no
+	cooldown = { months = 3 }
+	cooldown_against_recipient = { years = 5 }
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		scope:actor = {
+			is_ai = no
+			spn_order_on_trigger = yes
+			spn_is_order_member_trigger = yes
+		}
+		scope:recipient = {
+			spn_is_temple_magus_trigger = yes
+			trigger_if = {
+				limit = { scope:actor = { exists = var:spn_order_chapter } }
+				NOT = { var:spn_order_chapter = scope:actor.var:spn_order_chapter }
+			}
+		}
+		# Review RB2 (B6, T17): only a Temple Magus the asker KNOWS leads a temple: one he knows is of the Order (the rule
+		# every Order interaction on another temple's member keeps), or one the Order's letter named to him (The Temples of
+		# the Order, spn_order.2051, lists each head it shows in spn_order_temples_told for five years). Without this, a
+		# sworn member could right-click anyone to find out who secretly leads a temple.
+		scope:actor = {
+			OR = {
+				spn_order_knows_member_trigger = { WHO = scope:recipient }
+				is_target_in_variable_list = { name = spn_order_temples_told target = scope:recipient }
+			}
+		}
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_order_join_temple_head_tt
+				spn_is_temple_magus_trigger = no
+			}
+			custom_tooltip = {
+				text = spn_order_join_temple_moved_tt
+				NOT = { has_character_flag = spn_order_moved_temple }
+			}
+			custom_tooltip = {
+				text = spn_order_join_temple_free_tt
+				is_imprisoned = no
+			}
+		}
+		scope:recipient = { is_alive = yes }
+		scope:recipient.var:spn_order_chapter = { spn_order_has_room_trigger = yes }
+	}
+	on_accept = {
+		custom_tooltip = spn_order_ask_join_temple_interaction_tt
+		hidden_effect = { spn_order_join_temple_effect = yes }
+	}
+	# Root is the Temple Magus asked. Reasons only: who the asker is to the Order, how far he is from his own temple, how
+	# the head feels about him, and the head's own nature. Never flat.
+	ai_accept = {
+		base = -10
+		opinion_modifier = {
+			who = scope:recipient
+			opinion_target = scope:actor
+			multiplier = 0.5
+		}
+		modifier = {
+			add = 25
+			desc = spn_ai_accept_join_magistratus
+			scope:actor = { var:spn_order_rank ?= flag:magistratus }
+		}
+		modifier = {
+			add = 15
+			desc = spn_ai_accept_join_medicum
+			scope:actor = { var:spn_order_rank ?= flag:medicum }
+		}
+		modifier = {
+			add = 15
+			desc = spn_ai_accept_join_mage
+			scope:actor = { has_trait = archmage }
+		}
+		modifier = {
+			add = 20
+			desc = spn_ai_accept_join_far
+			scope:actor = { spn_order_far_from_temple_trigger = yes }
+		}
+		modifier = {
+			add = 10
+			desc = spn_ai_accept_join_standing
+			scope:actor = {
+				exists = var:spn_order_standing
+				var:spn_order_standing >= 50
+			}
+		}
+		modifier = {
+			add = 10
+			desc = spn_ai_accept_join_gregarious
+			has_trait = gregarious
+		}
+		modifier = {
+			add = 10
+			desc = spn_ai_accept_join_ambitious
+			has_trait = ambitious
+		}
+		modifier = {
+			add = -20
+			desc = spn_ai_accept_join_paranoid
+			has_trait = paranoid
+		}
+		modifier = {
+			add = -10
+			desc = spn_ai_accept_join_arrogant
+			has_trait = arrogant
+		}
+		modifier = {
+			add = -30
+			desc = spn_ai_accept_join_friend_head
+			scope:actor = {
+				var:spn_order_chapter ?= {
+					story_owner ?= {
+						is_alive = yes
+						OR = {
+							has_relation_friend = root
+							has_relation_best_friend = root
+						}
+					}
+				}
+			}
+		}
+		modifier = {
+			add = -50
+			desc = spn_ai_accept_join_rival
+			OR = {
+				has_relation_rival = scope:actor
+				has_relation_nemesis = scope:actor
+			}
+		}
+	}
+	ai_will_do = { base = 0 }
+}

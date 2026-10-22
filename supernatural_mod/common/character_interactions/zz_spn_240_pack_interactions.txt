@@ -1,0 +1,225 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 C6): Offer Pack Terms, alpha to alpha. Loc: zz_spn_240_q5_l_english.yml.
+# Three terms, one per offer: "Run under my lead" (their pack joins yours, their alpha runs in it at his standing), "I will
+# run under yours" (the reverse), "Swear a Blood Pact" (the Gathering's own pact effect). No Evolved: that stays the
+# married rite. The merge is the Unification's member move (spn_pack_merge_effect). The AI never sends it (a player's
+# offer only); an AI alpha who receives it weighs pack size, opinion, a pact, a lost Challenge and a feud.
+spn_offer_pack_terms_interaction = {
+	category = interaction_category_favorites # the mod's Supernatural menu
+	icon = alliance
+	desc = spn_offer_pack_terms_interaction_desc
+	greeting = positive
+	notification_text = spn_offer_pack_terms_interaction_notification
+	popup_on_receive = yes
+	pause_on_receive = yes
+	cooldown_against_recipient = { years = 2 }
+	ai_min_reply_days = 1
+	ai_max_reply_days = 5
+	# Boot 2 (j): shown to any adult wolf (not only an alpha) on another pack's alpha he knows runs a pack
+	# (spn_pack_alpha_known_trigger: the mod's rule for knowing a wolf, a Blood Pact, or a moment between the packs that
+	# named him). Everything here is a fact the actor knows about himself or was told, never a secret (B6). Whether he
+	# can send it is then said in words: only an alpha speaks for a pack.
+	is_shown = {
+		NOT = { scope:recipient = scope:actor }
+		spn_packs_on_trigger = yes
+		spn_pack_politics_built_trigger = yes
+		scope:actor = {
+			is_adult = yes
+			spn_is_wolf_trigger = yes
+		}
+		scope:recipient = {
+			is_adult = yes
+			spn_is_alpha_trigger = yes
+			spn_pack_alpha_known_trigger = { HOST = scope:actor }
+		}
+		NOT = { scope:actor.var:spn_pack ?= scope:recipient.var:spn_pack }
+	}
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			trigger_if = {
+				limit = { exists = var:spn_pack }
+				custom_tooltip = {
+					text = spn_terms_not_alpha_tt
+					spn_is_alpha_trigger = yes
+				}
+			}
+			trigger_else = {
+				custom_tooltip = {
+					text = spn_terms_no_pack_tt
+					exists = var:spn_pack
+				}
+			}
+			is_imprisoned = no
+		}
+		scope:recipient = { is_imprisoned = no }
+	}
+	options_heading = spn_offer_pack_terms_heading
+	send_options_exclusive = yes
+	send_option = {
+		flag = spn_terms_my_lead
+		localization = spn_terms_my_lead
+		is_valid = {
+			spn_pack_terms_merge_ok_trigger = { A = scope:actor B = scope:recipient }
+		}
+		starts_enabled = {
+			spn_pack_terms_merge_ok_trigger = { A = scope:actor B = scope:recipient }
+		}
+		current_description = spn_terms_my_lead_desc
+	}
+	send_option = {
+		flag = spn_terms_your_lead
+		localization = spn_terms_your_lead
+		is_valid = {
+			spn_pack_terms_merge_ok_trigger = { A = scope:recipient B = scope:actor }
+		}
+		current_description = spn_terms_your_lead_desc
+	}
+	send_option = {
+		flag = spn_terms_pact
+		localization = spn_terms_pact
+		is_valid = {
+			custom_tooltip = {
+				text = spn_terms_pact_sworn_tt
+				scope:actor = { NOT = { spn_pack_pact_bound_trigger = { WHO = scope:recipient } } }
+			}
+		}
+		current_description = spn_terms_pact_desc
+	}
+	# Re-checked on the answer: an alpha can fall, or a pack fill, while the offer waits.
+	on_accept = {
+		if = {
+			limit = { scope:spn_terms_my_lead ?= yes }
+			if = {
+				limit = {
+					scope:actor = { spn_is_alpha_trigger = yes }
+					scope:recipient = { spn_is_alpha_trigger = yes }
+					spn_pack_terms_merge_ok_trigger = { A = scope:actor B = scope:recipient }
+				}
+				custom_tooltip = spn_terms_my_lead_tt
+				scope:actor = { spn_pack_merge_effect = { OTHER = scope:recipient HOW = terms } }
+				spn_pack_house_step_effect = {
+					A = scope:actor
+					B = scope:recipient
+					VALUE = house_relation_improve_medium_value
+					REASON = spn_unified
+				}
+			}
+			else = {
+				custom_tooltip = spn_moment_passed_tt
+			}
+		}
+		else_if = {
+			limit = { scope:spn_terms_your_lead ?= yes }
+			if = {
+				limit = {
+					scope:actor = { spn_is_alpha_trigger = yes }
+					scope:recipient = { spn_is_alpha_trigger = yes }
+					spn_pack_terms_merge_ok_trigger = { A = scope:recipient B = scope:actor }
+				}
+				custom_tooltip = spn_terms_your_lead_tt
+				scope:recipient = { spn_pack_merge_effect = { OTHER = scope:actor HOW = terms } }
+				spn_pack_house_step_effect = {
+					A = scope:recipient
+					B = scope:actor
+					VALUE = house_relation_improve_medium_value
+					REASON = spn_unified
+				}
+			}
+			else = {
+				custom_tooltip = spn_moment_passed_tt
+			}
+		}
+		else_if = {
+			limit = { scope:spn_terms_pact ?= yes }
+			custom_tooltip = spn_terms_pact_tt
+			spn_pack_blood_pact_effect = { A = scope:actor B = scope:recipient }
+		}
+	}
+	ai_accept = {
+		base = -10
+		opinion_modifier = {
+			who = scope:recipient
+			opinion_target = scope:actor
+			multiplier = 0.5
+		}
+		# His pack grows and he keeps the lead.
+		modifier = {
+			add = 35
+			scope:spn_terms_your_lead ?= yes
+			desc = spn_ai_terms_they_follow
+		}
+		# He gives up the lead: only to a far bigger pack, or to the wolf who beat him.
+		modifier = {
+			add = -40
+			scope:spn_terms_my_lead ?= yes
+			desc = spn_ai_terms_give_up_lead
+		}
+		# Boot 2: nested, so a wolf without a pack (now shown the entry, greyed) never has a pack read.
+		modifier = {
+			add = 30
+			scope:spn_terms_my_lead ?= yes
+			trigger_if = {
+				limit = {
+					exists = scope:actor.var:spn_pack
+					exists = scope:recipient.var:spn_pack
+				}
+				scope:recipient.var:spn_pack.var:spn_pack_size <= {
+					value = scope:actor.var:spn_pack.var:spn_pack_size
+					divide = 2
+				}
+			}
+			trigger_else = { always = no }
+			desc = spn_ai_terms_smaller
+		}
+		modifier = {
+			add = -30
+			scope:spn_terms_my_lead ?= yes
+			trigger_if = {
+				limit = {
+					exists = scope:actor.var:spn_pack
+					exists = scope:recipient.var:spn_pack
+				}
+				scope:recipient.var:spn_pack.var:spn_pack_size > scope:actor.var:spn_pack.var:spn_pack_size
+			}
+			trigger_else = { always = no }
+			desc = spn_ai_terms_bigger
+		}
+		modifier = {
+			add = 30
+			scope:spn_terms_my_lead ?= yes
+			scope:recipient = { has_opinion_modifier = { target = scope:actor modifier = spn_challenge_lost_opinion } }
+			desc = spn_ai_terms_beaten
+		}
+		modifier = {
+			add = -30
+			scope:spn_terms_my_lead ?= yes
+			scope:recipient = { has_trait = ambitious }
+			desc = spn_ai_terms_ambitious
+		}
+		# Old friends.
+		modifier = {
+			add = 25
+			scope:recipient = { spn_pack_pact_bound_trigger = { WHO = scope:actor } }
+			desc = spn_ai_terms_pact
+		}
+		modifier = {
+			add = 15
+			scope:spn_terms_pact ?= yes
+			scope:recipient = { has_trait = gregarious }
+			desc = spn_ai_terms_gregarious
+		}
+		# Bad blood.
+		modifier = {
+			add = -40
+			scope:recipient = { has_opinion_modifier = { target = scope:actor modifier = spn_hide_feud_opinion } }
+			desc = spn_ai_terms_feud
+		}
+		modifier = {
+			add = -20
+			scope:recipient = { has_trait = paranoid }
+			desc = spn_ai_terms_paranoid
+		}
+	}
+	ai_will_do = {
+		base = 0
+	}
+}

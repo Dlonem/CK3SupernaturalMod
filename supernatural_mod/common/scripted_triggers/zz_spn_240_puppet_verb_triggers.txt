@@ -1,0 +1,104 @@
+﻿# Supernatural 2.40 boot 4 -- the puppet types that may use a SHARED puppet verb. Package QS (agent PUPPETS).
+# Shared contract with package QC (agent COMPEL, BRIEF-240-boot4.md): every verb meant for more than one puppet type
+# (Seize and Imprison, Strike Them Down, Loom Over Them, Keep Them Company, Seduce, Romance, Order a Murder, Hand It Over,
+# Send Me Your Gold) accepts its puppet through this one trigger. QC inserts its own type's line after the marker
+# comment through QC/edits.py; nobody else edits this block.
+# Root: the puppet (scope:puppet_or_actor). Open facts only (B6): whose puppet it is, under which type, and the golem
+# trait. The puppeteer is read through the puppeteer link (vanilla: `puppeteer ?= { is_ai = no }`,
+# 00_prison_interactions.txt:114) and his puppet of a type through puppet:<type> (vanilla:
+# `scope:ruler_temp.puppet:theological_agent_puppet ?= this`, pam_values.txt:9283), so the same test works in a puppet
+# interaction (scope:actor) and a puppet decision (scope:puppeteer) alike.
+spn_puppet_shared_verb_type_trigger = {   # root: the puppet (scope:puppet_or_actor)
+	OR = {
+		# The golem puppet: a golem bound to its puppeteer (Witchcraft's mminion/mmaster bond, read daily by the type)
+		AND = {
+			has_trait = golem
+			puppeteer ?= { puppet:spn_golem_puppet ?= prev }
+		}
+		# The Sire Bond puppet
+		puppeteer ?= { puppet:spn_sire_puppet ?= prev }
+		# 2.40 COMPEL TYPE
+		# 2.40 (package QC, boot 4): the Compelled puppet, for its one command (zz_spn_240_compel_puppet_types.txt)
+		puppeteer ?= { puppet:spn_compel_puppet ?= prev }
+	}
+}
+
+# Is this interaction being used as a shared puppet verb by the actor's own puppet? Interaction scope. Every shared verb's
+# is_shown reads this (moved here from zz_spn_240_sire_triggers.txt in boot 4, same name). The puppeteer test matters:
+# without it an AI who is someone's puppet would pass when using the interaction as herself (scope:puppet_or_actor is
+# then the actor). Vanilla's forms: scope:recipient.puppeteer ?= scope:actor (00_puppet_interactions.txt:1053).
+spn_puppet_verb_shown_trigger = {
+	exists = scope:puppet_or_actor
+	scope:puppet_or_actor.puppeteer ?= scope:actor
+	scope:puppet_or_actor = { spn_puppet_shared_verb_type_trigger = yes }
+	NOT = { scope:recipient = scope:puppet_or_actor }
+}
+
+# The puppet is free to go on a deed (Seize and Imprison, Strike Them Down, Loom Over Them). Interaction scope.
+# Not in a cell, not away on a search for the pages (golems), not already on an errand.
+spn_puppet_deed_ready_trigger = {
+	scope:puppet_or_actor = {
+		is_imprisoned = no
+		custom_tooltip = {
+			text = spn_puppet_busy_tt
+			NOR = {
+				has_character_flag = spn_golem_searching
+				has_character_flag = spn_golem_on_errand
+			}
+		}
+	}
+}
+
+# The puppet can get to them. Interaction scope. They stand where the puppet stands, they live in the puppeteer's or the
+# puppet's own realm (the same top liege; vanilla's test, 10_tgp_interactions.txt:57), or they are within the puppet's
+# own circle (spn_sire_bond_reach_trigger: court, spouse, close family, vassal or liege). Open facts only.
+spn_puppet_deed_reach_trigger = {
+	custom_tooltip = {
+		text = spn_puppet_deed_reach_tt
+		scope:recipient = {
+			OR = {
+				location = scope:puppet_or_actor.location
+				AND = {
+					exists = scope:actor.top_liege
+					top_liege ?= scope:actor.top_liege
+				}
+				AND = {
+					exists = scope:puppet_or_actor.top_liege
+					top_liege ?= scope:puppet_or_actor.top_liege
+				}
+				spn_sire_bond_reach_trigger = { PUPPET = scope:puppet_or_actor }
+			}
+		}
+	}
+}
+
+# Boot 4 (AI deed, zz_spn_240_puppet_ai_on_actions.txt): the AI master's servant can go. Scope: the servant.
+# An adult played by no one, alive, free, not away searching or on an errand.
+spn_puppet_ai_servant_free_trigger = {
+	is_alive = yes
+	is_ai = yes
+	is_adult = yes
+	is_imprisoned = no
+	NOR = {
+		has_character_flag = spn_golem_searching
+		has_character_flag = spn_golem_on_errand
+	}
+}
+
+# Boot 4 (AI deed): a fit target. Scope: the rival or nemesis. scope:spn_ai_master, scope:spn_ai_servant.
+# An adult, free, not the servant nor anyone close to him by blood, within reach (the master's realm, or where the
+# servant stands).
+spn_puppet_ai_target_trigger = {
+	is_alive = yes
+	is_adult = yes
+	is_imprisoned = no
+	NOT = { this = scope:spn_ai_servant }
+	NOT = { is_close_family_of = scope:spn_ai_servant }
+	OR = {
+		location = scope:spn_ai_servant.location
+		AND = {
+			exists = scope:spn_ai_master.top_liege
+			top_liege ?= scope:spn_ai_master.top_liege
+		}
+	}
+}

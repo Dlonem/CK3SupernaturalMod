@@ -1,0 +1,656 @@
+﻿namespace = spn_order
+
+# Supernatural 2.40 -- the Order's magic and people (WORK-ORDER-2.40 A10, G1, G3). spn_order.2100-.2103 (the tutor and
+# the acolyte), .2110 (Seek Out the Order's backstop), .2120-.2121 (Respondeo by command). Effects:
+# zz_spn_240_order_magic_effects.txt. Loc: localization/english/zz_spn_240_q3_l_english.yml.
+# Every delayed event re-checks its situation in its own trigger.
+
+# ==================================================================================================
+# THE TUTOR AND THE ACOLYTE (A10). scope:spn_tp_tutor, scope:spn_tp_tutee; root is the player of the two
+# (spn_order_tutor_year_effect).
+# ==================================================================================================
+
+# .2100 -- The Other Road. A player Mage tutor may teach his witch acolyte through Witchcraft's own Teach Sorcery.
+spn_order.2100 = {
+	type = character_event
+	title = spn_order.2100.t
+	desc = spn_order.2100.desc
+	theme = learning
+	override_background = { reference = magic_academy_lib }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = {
+		character = scope:spn_tp_tutee
+		animation = interested
+	}
+	trigger = {
+		is_alive = yes
+		this = scope:spn_tp_tutor
+		scope:spn_tp_tutee ?= {
+			var:spn_order_tutor ?= root
+			spn_order_can_teach_sorcery_trigger = { TUTOR = root }
+		}
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+	}
+	option = {
+		name = spn_order.2100.a
+		custom_tooltip = spn_order.2100.a.tt
+		open_interaction_window = {
+			interaction = teach_sorcery
+			actor = root
+			recipient = scope:spn_tp_tutee
+		}
+	}
+	option = {
+		name = spn_order.2100.b
+		custom_tooltip = spn_order.2100.b.tt
+	}
+}
+
+# .2101 -- The Wrong Word. The acolyte's working misfires.
+spn_order.2101 = {
+	type = character_event
+	title = spn_order.2101.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { this = scope:spn_tp_tutee }
+				desc = spn_order.2101.desc_tutee
+			}
+			desc = spn_order.2101.desc_tutor
+		}
+	}
+	theme = witchcraft
+	override_background = { reference = study }
+	left_portrait = { character = root animation = shock }
+	right_portrait = {
+		trigger = { root = scope:spn_tp_tutee }
+		character = scope:spn_tp_tutor
+		animation = worry
+	}
+	lower_right_portrait = {
+		trigger = { root = scope:spn_tp_tutor }
+		character = scope:spn_tp_tutee
+	}
+	trigger = {
+		is_alive = yes
+		scope:spn_tp_tutor ?= { is_alive = yes }
+		scope:spn_tp_tutee ?= { is_alive = yes }
+		scope:spn_tp_tutee ?= { var:spn_order_tutor ?= scope:spn_tp_tutor }
+		spn_flavor_ready_trigger = yes
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_tp_seen_wrong_word years = 10 }
+	}
+	# The tutor.
+	option = {
+		name = spn_order.2101.a
+		trigger = { this = scope:spn_tp_tutor }
+		custom_tooltip = spn_order.2101.a.tt
+		scope:spn_tp_tutee = { add_opinion = { target = root modifier = spn_tutor_opinion } }
+	}
+	option = {
+		name = spn_order.2101.b
+		trigger = { this = scope:spn_tp_tutor }
+		custom_tooltip = spn_order.2101.b.tt
+		scope:spn_tp_tutee = {
+			hidden_effect = {
+				random_list = {
+					60 = {
+						add_learning_lifestyle_xp = medium_lifestyle_xp
+						spn_order_add_standing_effect = { VALUE = 3 }
+					}
+					40 = {
+						add_stress = medium_stress_gain
+					}
+				}
+			}
+		}
+	}
+	# The acolyte.
+	option = {
+		name = spn_order.2101.c
+		trigger = { this = scope:spn_tp_tutee }
+		custom_tooltip = spn_order.2101.c.tt
+		add_opinion = { target = scope:spn_tp_tutor modifier = grateful_opinion opinion = 10 }
+		add_stress = minor_stress_loss
+	}
+	option = {
+		name = spn_order.2101.d
+		trigger = { this = scope:spn_tp_tutee }
+		custom_tooltip = spn_order.2101.d.tt
+		hidden_effect = {
+			random_list = {
+				60 = {
+					add_learning_lifestyle_xp = medium_lifestyle_xp
+					spn_order_add_standing_effect = { VALUE = 3 }
+				}
+				40 = {
+					add_stress = minor_stress_gain
+				}
+			}
+		}
+	}
+}
+
+# .2102 -- A Question You Cannot Answer. A learning duel between the two.
+spn_order.2102 = {
+	type = character_event
+	title = spn_order.2102.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { this = scope:spn_tp_tutee }
+				desc = spn_order.2102.desc_tutee
+			}
+			desc = spn_order.2102.desc_tutor
+		}
+	}
+	theme = learning
+	override_background = { reference = magic_academy_lib }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = {
+		trigger = { root = scope:spn_tp_tutee }
+		character = scope:spn_tp_tutor
+		animation = disbelief
+	}
+	lower_right_portrait = {
+		trigger = { root = scope:spn_tp_tutor }
+		character = scope:spn_tp_tutee
+	}
+	trigger = {
+		is_alive = yes
+		scope:spn_tp_tutor ?= { is_alive = yes }
+		scope:spn_tp_tutee ?= { is_alive = yes }
+		scope:spn_tp_tutee ?= { var:spn_order_tutor ?= scope:spn_tp_tutor }
+		spn_flavor_ready_trigger = yes
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_tp_seen_question years = 10 }
+	}
+	# The tutor.
+	option = {
+		name = spn_order.2102.a
+		trigger = { this = scope:spn_tp_tutor }
+		custom_tooltip = spn_order_lean_learning_tt
+		duel = {
+			skill = learning
+			target = scope:spn_tp_tutee
+			50 = {
+				desc = spn_order.2102.a.success
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 3.5
+				}
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.2102.a.success
+					desc = spn_order.2102.a.success_desc
+					left_icon = root
+					spn_order_add_standing_effect = { VALUE = 5 }
+					scope:spn_tp_tutee = { add_opinion = { target = root modifier = spn_tutor_opinion } }
+				}
+			}
+			50 = {
+				desc = spn_order.2102.a.failure
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -3.5
+				}
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_order.2102.a.failure
+					desc = spn_order.2102.a.failure_desc
+					left_icon = root
+					add_stress = minor_stress_gain
+					scope:spn_tp_tutee = { add_learning_lifestyle_xp = minor_lifestyle_xp }
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_order.2102.b
+		trigger = { this = scope:spn_tp_tutor }
+		custom_tooltip = spn_order.2102.b.tt
+		add_learning_lifestyle_xp = minor_lifestyle_xp
+		scope:spn_tp_tutee = {
+			add_learning_lifestyle_xp = minor_lifestyle_xp
+			add_opinion = { target = root modifier = respect_opinion opinion = 10 }
+		}
+	}
+	# The acolyte.
+	option = {
+		name = spn_order.2102.c
+		trigger = { this = scope:spn_tp_tutee }
+		custom_tooltip = spn_order_lean_learning_tt
+		duel = {
+			skill = learning
+			target = scope:spn_tp_tutor
+			50 = {
+				desc = spn_order.2102.c.success
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 3.5
+				}
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.2102.c.success
+					desc = spn_order.2102.c.success_desc
+					left_icon = root
+					add_learning_lifestyle_xp = medium_lifestyle_xp
+					spn_order_add_standing_effect = { VALUE = 3 }
+				}
+			}
+			50 = {
+				desc = spn_order.2102.c.failure
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -3.5
+				}
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_order.2102.c.failure
+					desc = spn_order.2102.c.failure_desc
+					left_icon = root
+					scope:spn_tp_tutor = { add_opinion = { target = root modifier = disappointed_opinion opinion = -10 } }
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_order.2102.d
+		trigger = { this = scope:spn_tp_tutee }
+		custom_tooltip = spn_order.2102.d.tt
+		scope:spn_tp_tutor = { add_opinion = { target = root modifier = respect_opinion opinion = 10 } }
+	}
+}
+
+# .2103 -- Where Were You Last Night? The acolyte's family asks. A secret kept is the Order's Silence.
+spn_order.2103 = {
+	type = character_event
+	title = spn_order.2103.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { this = scope:spn_tp_tutee }
+				desc = spn_order.2103.desc_tutee
+			}
+			desc = spn_order.2103.desc_tutor
+		}
+	}
+	theme = secret
+	override_background = { reference = bedchamber }
+	left_portrait = { character = root animation = worry }
+	right_portrait = {
+		character = scope:spn_tp_kin
+		animation = paranoia
+	}
+	trigger = {
+		is_alive = yes
+		scope:spn_tp_tutor ?= { is_alive = yes }
+		scope:spn_tp_tutee ?= { is_alive = yes }
+		scope:spn_tp_tutee ?= { var:spn_order_tutor ?= scope:spn_tp_tutor }
+		scope:spn_tp_tutee ?= {
+			OR = {
+				primary_spouse ?= {
+					is_alive = yes
+					NOT = { exists = var:spn_order_chapter }
+				}
+				any_close_family_member = {
+					is_alive = yes
+					is_adult = yes
+					NOT = { exists = var:spn_order_chapter }
+				}
+			}
+		}
+		spn_flavor_ready_trigger = yes
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		scope:spn_tp_tutee = { add_character_flag = { flag = spn_tp_seen_night years = 10 } }
+		scope:spn_tp_tutee = {
+			if = {
+				limit = {
+					primary_spouse ?= {
+						is_alive = yes
+						NOT = { exists = var:spn_order_chapter }
+					}
+				}
+				primary_spouse = { save_scope_as = spn_tp_kin }
+			}
+			else = {
+				random_close_family_member = {
+					limit = {
+						is_alive = yes
+						is_adult = yes
+						NOT = { exists = var:spn_order_chapter }
+					}
+					save_scope_as = spn_tp_kin
+				}
+			}
+		}
+	}
+	# The acolyte.
+	option = {
+		name = spn_order.2103.a
+		trigger = { this = scope:spn_tp_tutee }
+		custom_tooltip = spn_order_lean_intrigue_tt
+		duel = {
+			skill = intrigue
+			target = scope:spn_tp_kin
+			50 = {
+				desc = spn_order.2103.a.success
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 3.5
+				}
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.2103.a.success
+					desc = spn_order.2103.a.success_desc
+					left_icon = scope:spn_tp_kin
+					spn_order_add_standing_effect = { VALUE = 3 }
+					spn_order_deed_effect = { PREROGATIVE = flag:silence AMOUNT = 3 TOAST = no }
+				}
+			}
+			50 = {
+				desc = spn_order.2103.a.failure
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -3.5
+				}
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_order.2103.a.failure
+					desc = spn_order.2103.a.failure_desc
+					left_icon = scope:spn_tp_kin
+					scope:spn_tp_kin = { add_opinion = { target = root modifier = suspicion_opinion opinion = -15 } }
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_order.2103.b
+		trigger = { this = scope:spn_tp_tutee }
+		custom_tooltip = spn_order.2103.b.tt
+		scope:spn_tp_kin = { add_opinion = { target = root modifier = disappointed_opinion opinion = -10 } }
+		spn_order_deed_effect = { PREROGATIVE = flag:silence AMOUNT = 3 TOAST = no }
+	}
+	# The tutor.
+	option = {
+		name = spn_order.2103.c
+		trigger = { this = scope:spn_tp_tutor }
+		custom_tooltip = spn_order_lean_intrigue_tt
+		duel = {
+			skill = intrigue
+			target = scope:spn_tp_kin
+			50 = {
+				desc = spn_order.2103.c.success
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = 3.5
+				}
+				send_interface_toast = {
+					type = event_toast_text_good
+					title = spn_order.2103.c.success
+					desc = spn_order.2103.c.success_desc
+					left_icon = scope:spn_tp_kin
+					spn_order_add_standing_effect = { VALUE = 5 }
+					scope:spn_tp_tutee = { add_opinion = { target = root modifier = spn_tutor_opinion } }
+				}
+			}
+			50 = {
+				desc = spn_order.2103.c.failure
+				compare_modifier = {
+					value = scope:duel_value
+					multiplier = -3.5
+				}
+				send_interface_toast = {
+					type = event_toast_text_neutral
+					title = spn_order.2103.c.failure
+					desc = spn_order.2103.c.failure_desc
+					left_icon = scope:spn_tp_kin
+					scope:spn_tp_kin = { add_opinion = { target = root modifier = suspicion_opinion opinion = -15 } }
+				}
+			}
+		}
+	}
+	option = {
+		name = spn_order.2103.d
+		trigger = { this = scope:spn_tp_tutor }
+		custom_tooltip = spn_order.2103.d.tt
+		scope:spn_tp_kin = { add_opinion = { target = root modifier = disappointed_opinion opinion = -15 } }
+		spn_order_deed_effect = { PREROGATIVE = flag:silence AMOUNT = 3 TOAST = no }
+	}
+}
+
+# ==================================================================================================
+# SEEK OUT THE ORDER (G3)
+# ==================================================================================================
+
+# .2110 -- (hidden) The Rose Withered. 400 days after a rose was taken, nothing has come of it: no note on its way, no
+# temple, no refusal. He is told plainly and may leave another rose at once.
+spn_order.2110 = {
+	type = character_event
+	hidden = yes
+	trigger = {
+		is_alive = yes
+		has_character_flag = spn_order_sought
+		NOT = { exists = var:spn_order_chapter }
+		NOT = { exists = var:spn_order_picker }
+		NOT = { has_character_flag = spn_order_refused }
+		NOT = { has_character_flag = spn_order_spurned }
+	}
+	immediate = {
+		remove_character_flag = spn_order_sought
+		remove_decision_cooldown = spn_order_seek_decision
+		send_interface_toast = {
+			type = event_toast_text_neutral
+			title = spn_order_toast_sought_withered
+			desc = spn_order_toast_sought_withered_desc
+			left_icon = root
+		}
+	}
+}
+
+# ==================================================================================================
+# RESPONDEO BY COMMAND (G1). scope:spn_rs_commander, scope:spn_rs_county, scope:spn_rs_exposed (spn_order_respondeo_*).
+# ==================================================================================================
+
+# .2120 -- Word from Your Temple Magus / Word from the Grand Magus. A player sent to speak Respondeo where a member was
+# exposed. The ladder of spn_order.0180 (the same effects), or he will not go.
+spn_order.2120 = {
+	type = character_event
+	title = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { global_var:current_archmage_global ?= scope:spn_rs_commander }
+				desc = spn_order.2120.t_gm
+			}
+			desc = spn_order.2120.t
+		}
+	}
+	desc = spn_order.2120.desc
+	theme = secret
+	override_background = { reference = magic_temple }
+	left_portrait = { character = root animation = thinking }
+	right_portrait = {
+		character = scope:spn_rs_commander
+		animation = personality_rational
+	}
+	lower_right_portrait = {
+		trigger = { exists = scope:spn_rs_exposed }
+		character = scope:spn_rs_exposed
+	}
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_is_order_member_trigger = yes
+		exists = scope:spn_rs_county
+		scope:spn_rs_commander ?= {
+			is_alive = yes
+			spn_order_respondeo_exposure_open_trigger = { COUNTY = scope:spn_rs_county }
+		}
+	}
+	option = {
+		name = spn_order.0180.a_powder
+		trigger = { spn_relic_can_spend_powder_trigger = yes }
+		spn_order_respondeo_use_powder_effect = yes
+		spn_order_respondeo_effect = { COUNTY = scope:spn_rs_county }
+		spn_order_respondeo_answered_effect = yes
+	}
+	option = {
+		name = spn_order.0180.b
+		trigger = { spn_order_respondeo_chapter_can_pay_trigger = yes }
+		spn_order_respondeo_chapter_pays_effect = yes
+		spn_order_respondeo_effect = { COUNTY = scope:spn_rs_county }
+		spn_order_respondeo_answered_effect = yes
+	}
+	option = {
+		name = spn_order.0180.a
+		trigger = { can_spend_standard_ps_trigger = yes }
+		spend_standard_ps_effect = yes
+		spn_order_respondeo_effect = { COUNTY = scope:spn_rs_county }
+		spn_order_respondeo_answered_effect = yes
+	}
+	option = {
+		name = spn_order.2120.cannot
+		trigger = {
+			NOR = {
+				spn_relic_can_spend_powder_trigger = yes
+				spn_order_respondeo_chapter_can_pay_trigger = yes
+				can_spend_standard_ps_trigger = yes
+			}
+		}
+		custom_tooltip = spn_order.2120.cannot.tt
+		spn_order_respondeo_unpaid_effect = yes
+	}
+	option = {
+		name = spn_order.2120.refuse
+		custom_tooltip = spn_order.2120.refuse.tt
+		spn_order_respondeo_refused_effect = yes
+	}
+}
+
+# .2121 -- (hidden) The Order Is Given. An AI agent arrives and answers it, by the ladder: a Powder, his temple, his own
+# power. He refuses only if he holds his commander in contempt or has already broken the Order's rules.
+spn_order.2121 = {
+	type = character_event
+	hidden = yes
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		spn_is_order_member_trigger = yes
+		exists = scope:spn_rs_county
+		scope:spn_rs_commander ?= {
+			is_alive = yes
+			spn_order_respondeo_exposure_open_trigger = { COUNTY = scope:spn_rs_county }
+		}
+	}
+	immediate = {
+		if = {
+			limit = {
+				OR = {
+					has_character_flag = spn_order_broke_rules
+					opinion = { target = scope:spn_rs_commander value <= -25 }
+				}
+			}
+			spn_order_respondeo_refused_effect = yes
+		}
+		else_if = {
+			limit = { spn_relic_can_spend_powder_trigger = yes }
+			spn_order_respondeo_use_powder_effect = yes
+			spn_order_respondeo_effect = { COUNTY = scope:spn_rs_county }
+			spn_order_respondeo_answered_effect = yes
+		}
+		else_if = {
+			limit = { spn_order_respondeo_chapter_can_pay_trigger = yes }
+			spn_order_respondeo_chapter_pays_effect = yes
+			spn_order_respondeo_effect = { COUNTY = scope:spn_rs_county }
+			spn_order_respondeo_answered_effect = yes
+		}
+		else_if = {
+			limit = { can_spend_standard_ps_trigger = yes }
+			spend_standard_ps_effect = yes
+			spn_order_respondeo_effect = { COUNTY = scope:spn_rs_county }
+			spn_order_respondeo_answered_effect = yes
+		}
+		else = {
+			spn_order_respondeo_unpaid_effect = yes
+		}
+	}
+}
+
+# ==================================================================================================
+# THE GNOSTIC COUNCIL'S TREASURY (boot 4, COUNCIL 1)
+# ==================================================================================================
+
+# .2130 -- The Council's Treasury. From spn_council_draw_funds_decision: how much does the seat take? Only the sums the
+# treasury covers are offered. Closing the ledger costs nothing (the two-year flag is set only when gold is taken).
+spn_order.2130 = {
+	type = character_event
+	title = spn_order.2130.t
+	desc = spn_order.2130.desc
+	theme = witchcraft
+	override_background = { reference = mc_shadows }
+	left_portrait = { character = root animation = personality_greedy }
+	trigger = {
+		is_alive = yes
+		spn_council_seat_trigger = yes
+		mc_gold_global_avaiable_trigger = yes
+		NOT = { has_character_flag = spn_council_drew_funds }
+	}
+	option = {
+		name = spn_order.2130.a
+		trigger = { global_var:mc_gold_global >= 100 }
+		spn_council_draw_funds_effect = { GOLD = 100 }
+		ai_chance = {
+			base = 50
+		}
+	}
+	option = {
+		name = spn_order.2130.b
+		trigger = { global_var:mc_gold_global >= 500 }
+		spn_council_draw_funds_effect = { GOLD = 500 }
+		ai_chance = {
+			base = 20
+			modifier = {
+				add = 30
+				gold < 0
+			}
+			modifier = {
+				add = 20
+				is_at_war = yes
+			}
+			modifier = {
+				add = 20
+				has_trait = greedy
+			}
+		}
+	}
+	option = {
+		name = spn_order.2130.c
+		trigger = { global_var:mc_gold_global >= 1000 }
+		spn_council_draw_funds_effect = { GOLD = 1000 }
+		ai_chance = {
+			base = 0
+			modifier = {
+				add = 25
+				has_trait = greedy
+			}
+			modifier = {
+				add = 25
+				is_at_war = yes
+				gold < 0
+			}
+		}
+	}
+	option = {
+		name = spn_order.2130.d
+		custom_tooltip = spn_order.2130.d.tt
+		ai_chance = { base = 0 }
+	}
+}

@@ -1,0 +1,104 @@
+﻿# Supernatural 2.40 boot 4 -- an AI master's servant does a deed (Thomas's item 8: "I would really only have callous,
+# sadistic, arrogant people ever try to use it"). Package QS (agent PUPPETS).
+#
+# Why not the puppet types: both are players only (can_have is_ai = no), and nothing in vanilla's puppet files tells the
+# AI to use a puppet action (_puppet_actions.info has no AI field; the vanilla actions it can take are vanilla's own
+# interactions with their own ai_frequency). So the AI gets the brief's fallback: a rare, reason-gated deed through the
+# same errand the players' Strike Them Down uses (spn_golem_errand_start_effect -> spn_golem.0011, with its hidden rolls,
+# the mystique, the grudges and the rare death of an AI victim, death last).
+#
+# Who: an AI adult who is callous, sadistic or arrogant, not in a cell, with a rival or a nemesis (vanilla relations,
+# relation_on_actions.txt:1007). His servant: a golem bound to him (Witchcraft's mminion), or, for a sire who may hold a
+# Sire Bond (spn_sire_bond_holder_trigger: a hybrid, or a vampire with Vampire's Kiss), an adult he turned who loves him.
+# The target: that rival or nemesis, an adult, free, within the servant's reach (the master's realm or where the servant
+# stands). How often: once a year at most, one chance in ten, and never while his last deed's pause holds
+# (spn_golem_hostile_order_pause, 180 days). Hooked on yearly_playable_pulse (root: a playable character), so no world walk.
+# Multiplayer: a player who is the target is only sent a message (the event fires on the AI master); a player never
+# dies of it (spn_golem.0011). Children are never the servant nor the target.
+
+yearly_playable_pulse = {
+	on_actions = {
+		spn_puppet_ai_deed
+	}
+}
+
+spn_puppet_ai_deed = {
+	trigger = {
+		is_ai = yes
+		is_alive = yes
+		is_adult = yes
+		is_imprisoned = no
+		OR = {
+			has_trait = callous
+			has_trait = sadistic
+			has_trait = arrogant
+		}
+		OR = {
+			any_relation = { type = rival }
+			any_relation = { type = nemesis }
+		}
+		NOT = { has_character_flag = spn_golem_hostile_order_pause }
+	}
+	effect = {
+		random = {
+			chance = 10
+			save_scope_as = spn_ai_master
+			# 1. The servant: his golem first, else the one he turned who loves him.
+			random_relation = {
+				type = mminion
+				limit = {
+					has_trait = golem
+					spn_puppet_ai_servant_free_trigger = yes
+				}
+				save_scope_as = spn_ai_servant
+			}
+			if = {
+				limit = {
+					NOT = { exists = scope:spn_ai_servant }
+					spn_sire_bond_holder_trigger = yes
+				}
+				random_relation = {
+					type = pprogeny
+					limit = {
+						has_relation_mmaker = scope:spn_ai_master
+						OR = {
+							has_relation_lover = scope:spn_ai_master
+							has_relation_soulmate = scope:spn_ai_master
+						}
+						OR = {
+							has_trait = supernatural_vampire
+							has_trait = supernatural_hybrid
+						}
+						spn_puppet_ai_servant_free_trigger = yes
+					}
+					save_scope_as = spn_ai_servant
+				}
+			}
+			# 2. The reason: a rival, else a nemesis, within the servant's reach.
+			if = {
+				limit = { exists = scope:spn_ai_servant }
+				random_relation = {
+					type = nemesis
+					limit = { spn_puppet_ai_target_trigger = yes }
+					save_scope_as = spn_ai_target
+				}
+				if = {
+					limit = { NOT = { exists = scope:spn_ai_target } }
+					random_relation = {
+						type = rival
+						limit = { spn_puppet_ai_target_trigger = yes }
+						save_scope_as = spn_ai_target
+					}
+				}
+			}
+			# 3. The deed: the players' own errand (pause flag, result in 7 to 21 days, re-checked there).
+			if = {
+				limit = {
+					exists = scope:spn_ai_servant
+					exists = scope:spn_ai_target
+				}
+				spn_golem_errand_start_effect = { GOLEM = scope:spn_ai_servant TARGET = scope:spn_ai_target EVENT = spn_golem.0011 }
+			}
+		}
+	}
+}

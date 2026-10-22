@@ -36,50 +36,14 @@ spn_relic_make_beetle_effect = {
 # Who keeps it when no one else should: the Keeper of the Reliquary if he is a member with a temple, else the most learned
 # Temple Magus (Order On); with the Order Off or no temple standing, the most learned AI ruler, as the pages go. Saves
 # scope:spn_bt_keeper and, when he keeps it for the Order, scope:spn_bt_pledge.
+# 2.40 (WORK-ORDER-2.40 G5 step 8): the pick is the shared unique-relic keeper (zz_spn_240_unique_relic_effects.txt),
+# moved there so the Fors Factorum uses the same; the Beetle's callers still read spn_bt_keeper and spn_bt_pledge.
 spn_beetle_pick_keeper_effect = {
+	spn_unique_relic_pick_keeper_effect = yes
+	scope:spn_ur_keeper ?= { save_scope_as = spn_bt_keeper }
 	if = {
-		limit = {
-			spn_order_on_trigger = yes
-			global_var:current_loremaster_global ?= {
-				is_alive = yes
-				spn_is_order_member_trigger = yes
-				exists = var:spn_order_chapter
-			}
-		}
-		global_var:current_loremaster_global = { save_scope_as = spn_bt_keeper }
-	}
-	else_if = {
-		limit = {
-			spn_order_on_trigger = yes
-			any_in_global_list = {
-				variable = spn_order_chapters
-				is_alive = yes
-				exists = var:spn_order_chapter
-			}
-		}
-		ordered_in_global_list = {
-			variable = spn_order_chapters
-			limit = {
-				is_alive = yes
-				exists = var:spn_order_chapter
-			}
-			order_by = learning
-			save_scope_as = spn_bt_keeper
-		}
-	}
-	if = {
-		limit = { exists = scope:spn_bt_keeper }
+		limit = { exists = scope:spn_ur_pledge }
 		save_scope_value_as = { name = spn_bt_pledge value = yes }
-	}
-	else = {
-		ordered_ruler = {
-			limit = {
-				is_ai = yes
-				spn_vade_page_holder_ok_trigger = yes
-			}
-			order_by = learning
-			save_scope_as = spn_bt_keeper
-		}
 	}
 }
 
@@ -91,37 +55,13 @@ spn_beetle_seed_effect = {
 	if = {
 		limit = {
 			NOT = { exists = global_var:spn_beetle_seeded }
-			OR = {
-				NOT = { spn_order_on_trigger = yes }
-				# 2.39 review M1: a new game's Order seeding (days 12-32) founds no temple; temples come at most one a year.
-				# Wait for one, so the beetle starts in a Reliquary (as the Collegium's seed waits, zz_spn_order_on_actions.txt).
-				AND = {
-					exists = global_var:spn_order_seeded
-					OR = {
-						any_in_global_list = {
-							variable = spn_order_chapters
-							is_alive = yes
-							exists = var:spn_order_chapter
-						}
-						years_from_game_start >= 10 # no temple ever stood: a learned ruler keeps it, as with the Order Off
-					}
-				}
-			}
+			# 2.39 review M1's wait (a new game founds its temples one a year), now the shared unique-relic rule (2.40 G5)
+			spn_unique_relic_seed_ready_trigger = yes
 		}
-		set_global_variable = spn_beetle_seeded
-		spn_beetle_pick_keeper_effect = yes
-		if = {
-			limit = { exists = scope:spn_bt_keeper }
-			set_global_variable = { name = spn_beetle_state value = flag:jar }
-			spn_relic_make_beetle_effect = { OWNER = scope:spn_bt_keeper }
-			if = {
-				limit = {
-					exists = scope:spn_bt_pledge
-					exists = scope:spn_new_relic
-				}
-				spn_relic_pledge_effect = { ART = scope:spn_new_relic TO = scope:spn_bt_keeper.var:spn_order_chapter }
-			}
-		}
+		# 2.40 (WORK-ORDER-2.40 G5 step 8): the shared seed (keeper, make, pointer, pledge). The state is set first: with no
+		# keeper found, the yearly backstop below makes it next year.
+		set_global_variable = { name = spn_beetle_state value = flag:jar }
+		spn_unique_relic_seed_effect = { KEY = beetle }
 	}
 }
 
@@ -203,10 +143,47 @@ spn_beetle_swallowed_effect = {
 			add_to_temporary_list = spn_bs_jars
 		}
 	}
+	# 2.40 (WORK-ORDER-2.40 G7; Thomas, 22 Oct: a Magistratus who borrows it may use it, and the lending temple is told).
+	# A borrowed jar: banked first (its lender, its temple), its loan ends, and the lender and that temple's Temple Magus
+	# hear who loosed it; then the jar goes; then that Reliquary is rebuilt.
+	every_in_list = {
+		list = spn_bs_jars
+		limit = { has_variable = spn_borrowed_from }
+		var:spn_borrowed_from = { save_scope_as = spn_bs_lender }
+		var:spn_pledged_to ?= { save_scope_as = spn_bs_story }
+		if = {
+			limit = { is_target_in_global_variable_list = { name = spn_relic_loans target = this } }
+			remove_list_global_variable = { name = spn_relic_loans target = this }
+		}
+	}
+	scope:spn_bs_lender ?= { add_to_temporary_list = spn_bs_told }
+	scope:spn_bs_story ?= {
+		story_owner ?= {
+			if = {
+				limit = { NOT = { is_in_list = spn_bs_told } }
+				add_to_temporary_list = spn_bs_told
+			}
+		}
+	}
+	every_in_list = {
+		list = spn_bs_told
+		limit = {
+			is_alive = yes
+			is_ai = no
+			NOT = { this = scope:spn_bs_user }
+		}
+		send_interface_toast = {
+			type = event_toast_effect_bad
+			title = spn_beetle_toast_loan_loosed
+			desc = spn_beetle_toast_loan_loosed_desc
+			left_icon = scope:spn_bs_user
+		}
+	}
 	every_in_list = {
 		list = spn_bs_jars
 		destroy_artifact = this
 	}
+	scope:spn_bs_story ?= { spn_reliquary_rebuild_effect = yes }
 	if = {
 		limit = { has_global_variable = spn_beetle_art }
 		remove_global_variable = spn_beetle_art
@@ -534,9 +511,9 @@ spn_beetle_yearly_effect = {
 	if = {
 		limit = {
 			global_var:spn_beetle_state ?= flag:jar
-			NOT = { global_var:spn_beetle_art ?= { exists = artifact_owner } }
 			exists = global_var:spn_beetle_seeded
-			NOT = { any_artifact = { var:spn_relic ?= flag:beetle } }
+			# 2.40 (WORK-ORDER-2.40 G5 step 8): the shared existence test (pointer first, the world's artifacts only then)
+			NOT = { spn_unique_relic_exists_trigger = { KEY = beetle ART = global_var:spn_beetle_art } }
 		}
 		set_global_variable = { name = spn_beetle_state value = flag:inside }
 		spn_beetle_return_effect = yes

@@ -1,0 +1,108 @@
+﻿namespace = spn_sire
+
+# Supernatural 2.40 boot 2 (Thomas's report item h) -- the Sire Bond. Package QS.
+# Boot 3: the bond forms by itself (.0002) and outlasts the romance (.0001 tells the sire it held).
+
+# .0001 -- THE BOND OUTLASTS THE ROMANCE. Fired a day after a lover or soulmate relation ends, on the sire, by
+# spn_sire_bond_romance_lost (zz_spn_240_sire_on_actions.txt), with scope:spn_sire_bond_puppet saved. Re-checks in its
+# own trigger: still no romance (a lover who became a soulmate is not told anything), still his Sire Bond puppet, both
+# alive, a player, told once. A toast only: nothing ends.
+spn_sire.0001 = {
+	type = character_event
+	hidden = yes
+
+	trigger = {
+		is_alive = yes
+		is_ai = no
+		exists = scope:spn_sire_bond_puppet
+		puppet:spn_sire_puppet ?= scope:spn_sire_bond_puppet
+		scope:spn_sire_bond_puppet = {
+			is_alive = yes
+			NOR = {
+				has_relation_lover = root
+				has_relation_soulmate = root
+			}
+		}
+		NOT = { has_character_flag = spn_sire_bond_break_told }
+	}
+
+	immediate = {
+		add_character_flag = { flag = spn_sire_bond_break_told days = 5 }
+		send_interface_toast = {
+			type = event_toast_effect_neutral
+			title = spn_sire.0001.t
+			left_icon = root
+			right_icon = scope:spn_sire_bond_puppet
+			custom_tooltip = spn_sire.0001.tt
+		}
+	}
+}
+
+# .0002 -- THE SIRE BOND. Root: the sire, a player. scope:spn_sire_bond_puppet: someone he turned who loves him. Fired
+# by spn_sire_bond_may_form (a few days after the maker, progeny, lover or soulmate relation was set) and by the one-time
+# check for old saves. Re-checks everything in its own trigger, so a turning that has not finished, a romance that ended
+# in the meantime or a bond already held asks nothing. The bond forms in immediate, by itself; the event tells the
+# story, and its last option lets the sire release them at once. Multiplayer: the puppet is never a player, so only
+# the sire is told.
+spn_sire.0002 = {
+	type = character_event
+	title = spn_sire.0002.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_sire_bond_puppet = { has_relation_soulmate = root } }
+				desc = spn_sire.0002.desc_soulmate
+			}
+			desc = spn_sire.0002.desc
+		}
+	}
+	theme = seduction
+	override_background = { reference = bedchamber }
+	left_portrait = { character = root animation = flirtation }
+	right_portrait = { character = scope:spn_sire_bond_puppet animation = love }
+
+	trigger = {
+		is_alive = yes
+		is_ai = no
+		exists = scope:spn_sire_bond_puppet
+		scope:spn_sire_bond_puppet = { spn_sire_bond_forms_trigger = { SIRE = root } }
+		NOT = { puppet:spn_sire_puppet ?= scope:spn_sire_bond_puppet }
+		NOT = { scope:spn_sire_bond_puppet.var:spn_sire_bond_of ?= root } # formed already: never told twice
+		NOT = { var:spn_sire_bond_asked ?= scope:spn_sire_bond_puppet }
+	}
+
+	immediate = {
+		# Asked once per pair in this round of relations (a turning sets maker and lover hooks within days of each
+		# other). Expires: it only spaces the asks.
+		set_variable = { name = spn_sire_bond_asked value = scope:spn_sire_bond_puppet days = 30 }
+		# The bond forms now, by itself (Thomas: "it happened automatically in the TV show"). Banked first: whether a
+		# Sire Bond puppet was already held, which decides what the options say.
+		if = {
+			limit = { exists = puppet:spn_sire_puppet }
+			save_scope_value_as = { name = spn_sire_bond_slot_full value = yes }
+		}
+		hidden_effect = {
+			spn_sire_bond_form_effect = { SIRE = root PUPPET = scope:spn_sire_bond_puppet }
+		}
+	}
+
+	# Keep them.
+	option = {
+		name = spn_sire.0002.a
+		trigger = { NOT = { exists = scope:spn_sire_bond_slot_full } }
+		custom_tooltip = spn_sire.0002.a.tt
+	}
+	option = {
+		name = spn_sire.0002.a
+		trigger = { exists = scope:spn_sire_bond_slot_full }
+		custom_tooltip = spn_sire.0002.b.tt
+	}
+	# Let them go: the bond is released, and does not form again by itself (Release the Sire Bond's own effect).
+	option = {
+		name = spn_sire.0002.c
+		custom_tooltip = spn_sire.0002.c.tt
+		hidden_effect = {
+			spn_sire_bond_release_effect = { SIRE = root PUPPET = scope:spn_sire_bond_puppet }
+		}
+	}
+}

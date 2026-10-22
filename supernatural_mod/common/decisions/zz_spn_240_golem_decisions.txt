@@ -1,0 +1,271 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 G8d) -- the golem puppet's own orders. Package Q7.
+# Puppet decisions (common/puppets/actions/zz_spn_puppet_actions.txt): ROOT is the golem, scope:puppeteer its master.
+# is_invisible = yes keeps them out of the decision list (vanilla's holy-site decisions); they show on the golem's
+# puppet card. Each re-checks the bond in is_shown (scope:puppeteer ?= { has_relation_mminion = root }: never read unset), so a golem bound to someone else never offers them. The AI never
+# takes them (ai_check_interval = 0; vanilla's test decisions use the same line), and the AI holds no golem puppet.
+# Orders that only a ruler can carry out (war, surrender, titles, influence, regency) and the ones that mean nothing
+# to a construct stay in Witchcraft's Command your minion.
+
+# Return to Clay: the golem's own "end your life" (Command your minion's suicide order is hidden for golems).
+# Death last: everything it carries goes to the master first (spn_golem_hand_over_effect). The golem trait is
+# immortal = yes, which stops natural death only: "Can still be killed by script" (van/common/traits/_traits.info).
+# No killer: a golem is made into its maker's house, and a killer in the house would read as kinslaying.
+spn_golem_return_to_clay_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	decision_group_type = spn_craft # 2.40 (boot 2, item i): was supernatural
+	is_invisible = yes
+	ai_check_interval = 0
+	desc = spn_golem_return_to_clay_decision_desc
+	selection_tooltip = spn_golem_return_to_clay_decision_tooltip
+	confirm_text = spn_golem_return_to_clay_decision_confirm
+	is_shown = {
+		has_trait = golem
+		scope:puppeteer ?= { has_relation_mminion = root } # the bond holds, and it is its master who asks
+	}
+	is_valid = {
+		is_alive = yes
+	}
+	effect = {
+		save_scope_as = spn_golem
+		custom_tooltip = spn_golem_return_to_clay_tt
+		hidden_effect = {
+			spn_golem_hand_over_effect = { GOLEM = scope:spn_golem MASTER = scope:puppeteer }
+			scope:puppeteer = {
+				send_interface_toast = {
+					type = event_toast_effect_neutral
+					title = spn_golem_return_to_clay_decision
+					left_icon = scope:spn_golem
+					custom_tooltip = spn_golem_return_to_clay_toast_tt
+				}
+			}
+		}
+		death = { death_reason = spn_death_golem_unmade }
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# Hand Over What You Carry: every item it may give and all its gold, to the master (Command your minion's gold order
+# gives only a gift's worth). Useful when a golem holds a hide or a relic.
+spn_golem_hand_over_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_spend_money.dds" }
+	decision_group_type = spn_craft # 2.40 (boot 2, item i): was supernatural
+	is_invisible = yes
+	ai_check_interval = 0
+	desc = spn_golem_hand_over_decision_desc
+	selection_tooltip = spn_golem_hand_over_decision_tooltip
+	confirm_text = spn_golem_hand_over_decision_confirm
+	is_shown = {
+		has_trait = golem
+		scope:puppeteer ?= { has_relation_mminion = root } # the bond holds, and it is its master who asks
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_golem_carries_nothing_tt
+			OR = {
+				gold > 0
+				any_character_artifact = { NOT = { has_variable = artifact_prevent_transfer } }
+			}
+		}
+	}
+	effect = {
+		save_scope_as = spn_golem
+		custom_tooltip = spn_golem_hand_over_tt
+		hidden_effect = {
+			spn_golem_hand_over_effect = { GOLEM = scope:spn_golem MASTER = scope:puppeteer }
+		}
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# Come Home: Command your minion's "come to my court" for the golem, and the end of a search (spn_vade.0210 then fails
+# its trigger and does nothing).
+spn_golem_come_home_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_dynasty_house.dds" }
+	decision_group_type = spn_craft # 2.40 (boot 2, item i): was supernatural
+	is_invisible = yes
+	ai_check_interval = 0
+	desc = spn_golem_come_home_decision_desc
+	selection_tooltip = spn_golem_come_home_decision_tooltip
+	confirm_text = spn_golem_come_home_decision_confirm
+	is_shown = {
+		has_trait = golem
+		is_ruler = no
+		scope:puppeteer ?= {
+			has_relation_mminion = root
+			is_ruler = yes
+		}
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_golem_already_home_tt
+			OR = {
+				NOT = { is_courtier_of = scope:puppeteer }
+				has_character_flag = spn_golem_searching
+				has_character_flag = spn_golem_on_errand # boot 2: called back from Seize and Imprison or Strike Them Down
+			}
+		}
+		is_imprisoned = no
+		is_travelling = no
+		is_hostage = no
+	}
+	effect = {
+		save_scope_as = spn_golem
+		if = {
+			limit = { has_character_flag = spn_golem_searching }
+			custom_tooltip = spn_golem_come_home_search_tt
+			hidden_effect = {
+				remove_character_flag = spn_golem_searching
+				if = {
+					limit = { has_character_modifier = spn_golem_away_modifier }
+					remove_character_modifier = spn_golem_away_modifier
+				}
+			}
+		}
+		if = { # boot 2: an errand ends; spn_golem.0010/.0011 then fail their trigger and do nothing
+			limit = { has_character_flag = spn_golem_on_errand }
+			custom_tooltip = spn_golem_come_home_errand_tt
+			hidden_effect = { remove_character_flag = spn_golem_on_errand }
+		}
+		if = {
+			limit = { NOT = { is_courtier_of = scope:puppeteer } }
+			scope:puppeteer = { add_courtier = scope:spn_golem }
+		}
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# What Did You See?: Command your minion's "tell me your secrets", through the same body (spn_minion_tell_secrets_effect).
+# Always shown and always open: a menu entry may never appear or vanish on a secret (B6). With nothing new, a toast says so.
+spn_golem_what_you_saw_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	decision_group_type = spn_craft # 2.40 (boot 2, item i): was supernatural
+	is_invisible = yes
+	ai_check_interval = 0
+	desc = spn_golem_what_you_saw_decision_desc
+	selection_tooltip = spn_golem_what_you_saw_decision_tooltip
+	confirm_text = spn_golem_what_you_saw_decision_confirm
+	is_shown = {
+		has_trait = golem
+		scope:puppeteer ?= { has_relation_mminion = root } # the bond holds, and it is its master who asks
+	}
+	is_valid = {
+		is_alive = yes
+	}
+	effect = {
+		save_scope_as = spn_golem
+		custom_tooltip = spn_golem_what_you_saw_tt
+		hidden_effect = {
+			if = {
+				limit = {
+					OR = {
+						any_secret = { NOT = { is_known_by = scope:puppeteer } }
+						any_known_secret = { NOT = { is_known_by = scope:puppeteer } }
+					}
+				}
+				spn_minion_tell_secrets_effect = { MINION = scope:spn_golem MASTER = scope:puppeteer TITLE = spn_golem_what_you_saw_decision }
+			}
+			else = {
+				scope:puppeteer = {
+					send_interface_toast = {
+						type = event_toast_effect_neutral
+						title = spn_golem_what_you_saw_decision
+						left_icon = scope:spn_golem
+						custom_tooltip = spn_golem_saw_nothing_tt
+					}
+				}
+			}
+		}
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# Send the Golem to Search: the interaction's body (spn_golem_send_search_effect), from the puppet card.
+spn_golem_search_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	decision_group_type = spn_craft # 2.40 (boot 2, item i): was supernatural
+	is_invisible = yes
+	ai_check_interval = 0
+	desc = spn_golem_search_decision_desc
+	selection_tooltip = spn_golem_search_decision_tooltip
+	confirm_text = spn_golem_search_decision_confirm
+	is_shown = {
+		spn_vade_on_trigger = yes
+		has_trait = golem
+		scope:puppeteer ?= {
+			has_relation_mminion = root
+			any_courtier = { this = root }
+		}
+	}
+	is_valid = {
+		custom_tooltip = {
+			text = spn_vade_golem_away_tt
+			NOT = { has_character_flag = spn_golem_searching }
+		}
+		custom_tooltip = { # boot 2
+			text = spn_golem_busy_tt
+			NOT = { has_character_flag = spn_golem_on_errand }
+		}
+		is_imprisoned = no
+	}
+	effect = {
+		save_scope_as = spn_golem_searcher
+		custom_tooltip = spn_vade_golem_interaction_tt
+		spn_golem_send_search_effect = { GOLEM = scope:spn_golem_searcher MASTER = scope:puppeteer }
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# Guard Me (boot 2, item g): Stand Guard Over Them for the master himself (spn_golem_start_guard_effect). A new decision:
+# decision group spn_craft (BRIEF-240-boot2 decision groups; invisible, so it shows on the puppet card only).
+spn_golem_guard_me_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
+	decision_group_type = spn_craft
+	is_invisible = yes
+	ai_check_interval = 0
+	desc = spn_golem_guard_me_decision_desc
+	selection_tooltip = spn_golem_guard_me_decision_tooltip
+	confirm_text = spn_golem_guard_me_decision_confirm
+	is_shown = {
+		has_trait = golem
+		scope:puppeteer ?= { has_relation_mminion = root } # the bond holds, and it is its master who asks
+	}
+	is_valid = {
+		is_imprisoned = no
+		custom_tooltip = {
+			text = spn_golem_busy_tt
+			NOR = {
+				has_character_flag = spn_golem_searching
+				has_character_flag = spn_golem_on_errand
+			}
+		}
+		custom_tooltip = {
+			text = spn_golem_guards_you_already_tt
+			NOT = { var:spn_golem_guarding ?= scope:puppeteer }
+		}
+	}
+	effect = {
+		save_scope_as = spn_golem
+		if = {
+			limit = { exists = var:spn_golem_guarding }
+			custom_tooltip = spn_golem_guard_ends_tt
+		}
+		scope:puppeteer = {
+			show_as_tooltip = {
+				add_character_modifier = {
+					modifier = spn_golem_guarded_modifier
+					years = 1
+				}
+			}
+		}
+		hidden_effect = {
+			spn_golem_start_guard_effect = { GOLEM = scope:spn_golem WARD = scope:puppeteer }
+		}
+	}
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}

@@ -1,0 +1,88 @@
+﻿namespace = spn_puppet
+
+# Supernatural 2.40 boot 3 -- the verbs the golem puppet and the Sire Bond puppet share. Package QS (agent PUPPETS owns
+# Q7 and QS, so the two puppet types share one verb set). Loc: localization/english/zz_spn_240_qs_l_english.yml.
+
+# .0001 -- HAND IT OVER: which item. Root: the puppeteer (spn_puppet_give_artifact_interaction, at once).
+# scope:spn_pa_puppet (the golem or the bound lover), scope:spn_pa_target (who receives it; may be root). Up to three of
+# the puppet's giftable items, finest first (vanilla orders by artifact_rarity, 10_ach_effects.txt), banked in
+# immediate; one option per item, and one to keep them all. Re-checks the puppet in its trigger. The item moves with
+# set_owner (history: given by the puppet), so the mod's owner hooks for relics, pages and hides run as for any gift.
+# Boot 4: no strain on anyone (Thomas).
+spn_puppet.0001 = {
+	type = character_event
+	title = spn_puppet.0001.t
+	desc = spn_puppet.0001.desc
+	theme = intrigue
+	override_background = { reference = sitting_room }
+	left_portrait = { character = scope:spn_pa_puppet animation = idle }
+	right_portrait = { character = scope:spn_pa_target animation = interested }
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_pa_puppet
+		exists = scope:spn_pa_target
+		scope:spn_pa_target = { is_alive = yes }
+		# Boot 4: alive only. The event fires at once from the interaction, which checked the puppet; a one-command puppet
+		# type (QC) ends its puppet status in that interaction's last line, before this event runs.
+		scope:spn_pa_puppet = { is_alive = yes }
+	}
+
+	immediate = {
+		scope:spn_pa_puppet = {
+			ordered_character_artifact = {
+				order_by = artifact_rarity
+				limit = {
+					is_equipped = no
+					NOT = { has_variable = artifact_prevent_transfer }
+					artifact_can_be_gift_to_trigger = { RECIPIENT = scope:spn_pa_target }
+				}
+				position = 0
+				save_scope_as = spn_pa_item_1
+			}
+			ordered_character_artifact = {
+				order_by = artifact_rarity
+				limit = {
+					is_equipped = no
+					NOT = { has_variable = artifact_prevent_transfer }
+					artifact_can_be_gift_to_trigger = { RECIPIENT = scope:spn_pa_target }
+				}
+				position = 1
+				save_scope_as = spn_pa_item_2
+			}
+			ordered_character_artifact = {
+				order_by = artifact_rarity
+				limit = {
+					is_equipped = no
+					NOT = { has_variable = artifact_prevent_transfer }
+					artifact_can_be_gift_to_trigger = { RECIPIENT = scope:spn_pa_target }
+				}
+				position = 2
+				save_scope_as = spn_pa_item_3
+			}
+		}
+	}
+
+	option = {
+		name = spn_puppet.0001.a
+		trigger = { exists = scope:spn_pa_item_1 }
+		scope:spn_pa_item_1 = { save_scope_as = spn_pa_item }
+		spn_puppet_hand_over_item_effect = yes
+	}
+	option = {
+		name = spn_puppet.0001.b
+		trigger = { exists = scope:spn_pa_item_2 }
+		scope:spn_pa_item_2 = { save_scope_as = spn_pa_item }
+		spn_puppet_hand_over_item_effect = yes
+	}
+	option = {
+		name = spn_puppet.0001.c
+		trigger = { exists = scope:spn_pa_item_3 }
+		scope:spn_pa_item_3 = { save_scope_as = spn_pa_item }
+		spn_puppet_hand_over_item_effect = yes
+	}
+	option = {
+		name = spn_puppet.0001.d
+		custom_tooltip = spn_puppet.0001.d.tt
+	}
+}

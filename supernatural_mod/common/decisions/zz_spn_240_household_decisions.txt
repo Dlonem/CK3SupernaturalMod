@@ -1,0 +1,167 @@
+﻿# Supernatural 2.40 (WORK-ORDER-2.40 F2) -- household administration, mirrored on the Long Night's
+# (common/decisions/zz_ln_household_decisions.txt). See zz_spn_240_household_triggers.txt for the key.
+#
+# EVERY GATE IS IN is_shown: a decision that fails is_valid is drawn greyed with its requirements, which would show the
+# door to every player; one that fails is_shown does not exist. is_valid only ever says why a shown one cannot be taken
+# right now, and only Thomas's house ever sees these.
+# Boot 1 (22 Oct, Thomas): their own small group, "The Household", instead of the Major group. No AI ever: ai_check_interval 0, ai_potential never, ai_will_do 0. No cooldowns:
+# every effect is safe to repeat (the Long Night's 1.0.9 rule).
+# The embrace rule (Embrace Decisions Off, the default) does not hide the first one: it is his own gift (D7/F2, option a).
+# The hides rule does hide the second.
+
+# ---- 1. Answer the Old Blood: vampire, werewolf, hybrid or demon. It returns if he is ever cured. ----------------------
+spn_household_blood_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds" }
+	desc = spn_household_blood_decision_desc
+	selection_tooltip = spn_household_blood_decision_tt
+	confirm_text = spn_household_blood_decision_confirm
+	decision_group_type = spn_household
+	ai_check_interval = 0
+
+	is_shown = {
+		spn_household_has_door_trigger = yes
+		spn_has_supernatural_trait = no
+		spn_has_hunter_trait = no
+		spn_can_become_creature_trigger = yes
+		NOT = { has_character_flag = spn_embrace_choosing }
+	}
+
+	is_valid_showing_failures_only = {
+		is_available_adult_or_is_commanding = yes
+	}
+
+	effect = {
+		custom_tooltip = spn_household_blood_decision_effect_tt
+		hidden_effect = {
+			add_character_flag = { flag = spn_embrace_choosing days = 30 } # cleared by the level picker or by .0001's after
+			trigger_event = spn_household.0001
+		}
+	}
+
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# ---- 2. Send for the Family Hide: the best-fitting free hide, through the one hand-over effect. -------------------------
+spn_household_hide_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_spend_money.dds" }
+	desc = spn_household_hide_decision_desc
+	selection_tooltip = spn_household_hide_decision_tt
+	confirm_text = spn_household_hide_decision_confirm
+	decision_group_type = spn_household
+	ai_check_interval = 0
+
+	is_shown = {
+		spn_household_has_door_trigger = yes
+		spn_hides_on_trigger = yes
+		spn_can_bear_hide_trigger = yes
+		spn_is_champion_trigger = no
+		spn_owns_hide_trigger = no
+	}
+
+	is_valid_showing_failures_only = {
+		is_available_adult_or_is_commanding = yes
+	}
+
+	is_valid = {
+		custom_tooltip = {
+			text = spn_household_none_free_tt
+			spn_household_any_hide_free_trigger = yes
+		}
+	}
+
+	effect = {
+		custom_tooltip = spn_household_hide_decision_effect_tt
+		hidden_effect = { spn_household_pick_hide_effect = yes }
+	}
+
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# ---- 3. Open the Family Strongbox: 500 gold, 5 perk points in every tree the blood allows. Repeatable. ------------------
+spn_household_strongbox_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_spend_money.dds" }
+	desc = spn_household_strongbox_decision_desc
+	selection_tooltip = spn_household_strongbox_decision_tt
+	confirm_text = spn_household_strongbox_decision_confirm
+	decision_group_type = spn_household
+	ai_check_interval = 0
+
+	is_shown = {
+		spn_household_has_door_trigger = yes
+	}
+
+	is_valid_showing_failures_only = {
+		is_available_adult_or_is_commanding = yes
+	}
+
+	effect = {
+		spn_household_strongbox_effect = yes
+	}
+
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# ---- 4. Let the Blood Mend You: every wound, scar, sickness and infirmity, and 100 stress. ------------------------------
+# A different name from the Long Night's "Send for the House's Physician", so a player with both mods sees two buttons
+# he can tell apart.
+spn_household_mend_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds" }
+	desc = spn_household_mend_decision_desc
+	selection_tooltip = spn_household_mend_decision_tt
+	confirm_text = spn_household_mend_decision_confirm
+	decision_group_type = spn_household
+	ai_check_interval = 0
+
+	is_shown = {
+		spn_household_has_door_trigger = yes
+	}
+
+	# 2.40 review (R3): no availability test. Vanilla's is_available refuses an incapable character and one with a
+	# contagious deadly disease, the very states this decision heals. It is his own gift and moves nobody anywhere.
+	is_valid_showing_failures_only = {
+		is_alive = yes
+	}
+
+	effect = {
+		# Boot 1 (22 Oct, Thomas): show what it heals, as the Long Night's decisions show their effects.
+		spn_household_mend_effect = yes
+	}
+
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}
+
+# ---- 5. The Household Keeps Its Silence: up to three adult courtiers made loyal, those who know his secrets first. -------
+spn_household_silence_decision = {
+	picture = { reference = "gfx/interface/illustrations/decisions/decision_dynasty_house.dds" }
+	desc = spn_household_silence_decision_desc
+	selection_tooltip = spn_household_silence_decision_tt
+	confirm_text = spn_household_silence_decision_confirm
+	decision_group_type = spn_household
+	ai_check_interval = 0
+
+	is_shown = {
+		spn_household_has_door_trigger = yes
+	}
+
+	is_valid_showing_failures_only = {
+		is_available_adult_or_is_commanding = yes
+	}
+
+	is_valid = {
+		custom_tooltip = {
+			text = spn_household_silence_none_tt
+			any_courtier = { spn_household_retainer_trigger = yes }
+		}
+	}
+
+	effect = {
+		spn_household_silence_effect = yes
+	}
+
+	ai_potential = { always = no }
+	ai_will_do = { base = 0 }
+}

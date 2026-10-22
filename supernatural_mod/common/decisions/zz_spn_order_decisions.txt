@@ -3,7 +3,7 @@
 
 # Leave the Order (§5.10).
 spn_order_leave_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
 	desc = spn_order_leave_decision_desc
 	selection_tooltip = spn_order_leave_decision_tooltip
@@ -32,15 +32,15 @@ spn_order_leave_decision = {
 	}
 }
 
-# Respondeo (§5.12): Magistratus and up; ten years between.
+# Respondeo (§5.12): Magistratus and up; five years between (2.40, WORK-ORDER-2.40 B9: was ten).
 spn_order_respondeo_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds" }
 	desc = spn_order_respondeo_decision_desc
 	selection_tooltip = spn_order_respondeo_decision_tooltip
 	confirm_text = spn_order_respondeo_decision_confirm
 	ai_check_interval = 24
-	cooldown = { years = 10 }
+	cooldown = { years = 5 } # 2.40 (WORK-ORDER-2.40 B9): was 10
 	is_shown = {
 		spn_order_on_trigger = yes
 		spn_order_magistratus_plus_trigger = yes
@@ -48,8 +48,9 @@ spn_order_respondeo_decision = {
 	is_valid = {
 		custom_tooltip = {
 			text = spn_order_respondeo_can_pay_tt
-			OR = {
-				can_spend_huge_ps_trigger = yes
+			OR = { # 2.40 (WORK-ORDER-2.40 G1, B9): a Powder, his own power (standard, was huge), or his temple
+				spn_relic_can_spend_powder_trigger = yes
+				can_spend_standard_ps_trigger = yes
 				spn_order_respondeo_chapter_can_pay_trigger = yes
 			}
 		}
@@ -57,7 +58,7 @@ spn_order_respondeo_decision = {
 	}
 	effect = {
 		custom_tooltip = spn_order_respondeo_decision_effect_tt
-		# 2.39 (WORK-ORDER-2.39 F15): no wound in the temple's own county.
+		# 2.39 (WORK-ORDER-2.39 F15), 2.40 (B9): no wound anywhere now; no stress in the temple's own county.
 		if = {
 			limit = { var:spn_order_chapter ?= { spn_order_hall_stands_trigger = yes } }
 			custom_tooltip = spn_order_respondeo_hall_tt
@@ -74,24 +75,25 @@ spn_order_respondeo_decision = {
 	}
 }
 
-# Prepare the Powder (§5.13): Magistratus and up; five years between.
+# Prepare the Powder (§5.13): Magistratus and up. 2.40 (WORK-ORDER-2.40 B9): a little power, three years between; a
+# held Powder now throws itself when its holder is marked where he stands (spn_relic_powder_autothrow_effect).
 spn_order_powder_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_physician.dds" }
 	desc = spn_order_powder_decision_desc
 	selection_tooltip = spn_order_powder_decision_tooltip
 	confirm_text = spn_order_powder_decision_confirm
 	ai_check_interval = 60
-	cooldown = { years = 5 }
+	cooldown = { years = 3 }
 	is_shown = {
 		spn_order_on_trigger = yes
 		spn_order_magistratus_plus_trigger = yes
 	}
 	is_valid = {
-		can_spend_standard_ps_trigger = yes
+		spn_relic_can_spend_minor_ps_trigger = yes
 	}
 	effect = {
-		spend_standard_ps_effect = yes
+		spend_minor_ps_effect = yes
 		spn_relic_make_powder_effect = { OWNER = root }
 	}
 	ai_potential = {
@@ -110,12 +112,17 @@ spn_order_powder_decision = {
 				}
 			}
 		}
+		# 2.40 (WORK-ORDER-2.40 B9): cheaper now, so an AI who already carries one does not make another (no stockpile).
+		modifier = {
+			factor = 0
+			spn_order_holds_powder_trigger = yes
+		}
 	}
 }
 
 # Seek Out the Order (§5.17): players only, not a member, not spurned. A blue rose on the library steps.
 spn_order_seek_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_tale.dds" }
 	desc = spn_order_seek_decision_desc
 	selection_tooltip = spn_order_seek_decision_tooltip
@@ -145,19 +152,24 @@ spn_order_seek_decision = {
 
 # Ask the Temple to Heal You (§5.19): a member with a deadly disease who is not the head; his Temple Magus decides.
 spn_order_transference_ask_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_physician.dds" }
 	desc = spn_order_transference_ask_decision_desc
 	selection_tooltip = spn_order_transference_ask_decision_tooltip
 	confirm_text = spn_order_transference_ask_decision_confirm
 	ai_check_interval = 12
+	cooldown = { years = 5 } # 2.40 (WORK-ORDER-2.40 A3)
 	is_shown = {
 		spn_order_on_trigger = yes
 		spn_is_order_member_trigger = yes
 		spn_is_temple_magus_trigger = no
-		spn_order_deadly_disease_trigger = yes
+		spn_transference_curable_trigger = yes # 2.40 (WORK-ORDER-2.40 B7 step 3)
 	}
 	is_valid = {
+		custom_tooltip = { # 2.40 (WORK-ORDER-2.40 A3, B7 step 4)
+			text = spn_order_transference_refused_tt
+			NOT = { has_character_flag = spn_transference_refused }
+		}
 		custom_tooltip = {
 			text = spn_order_transference_not_pending_tt
 			NOT = { exists = var:spn_transference_pending }
@@ -204,10 +216,21 @@ spn_order_transference_ask_decision = {
 		}
 	}
 	ai_potential = {
-		spn_order_deadly_disease_trigger = yes
+		spn_transference_curable_trigger = yes # 2.40 (WORK-ORDER-2.40 B7 step 4)
+		NOT = { has_character_flag = spn_transference_refused }
 	}
 	ai_will_do = {
 		base = 100
+		modifier = { # 2.40 (WORK-ORDER-2.40 B7 step 4): a lesser illness is asked about less urgently (100 to 20)
+			factor = 0.2
+			spn_order_deadly_disease_trigger = no
+		}
+		modifier = { # 2.40 review (R2): and only once it has brought him low; a passing illness or old age in good
+			# health is no reason to ask five strangers to carry it (and no reason to prompt a player head)
+			factor = 0
+			spn_order_deadly_disease_trigger = no
+			health >= fine_health # vanilla: below 3 is where the death chance starts
+		}
 		modifier = { # 2.39 (WORK-ORDER-2.39 F4): the Blue Fever alone passes by itself; the AI asks only as its carrier
 			factor = 0
 			has_trait = spn_blue_fever
@@ -224,7 +247,7 @@ spn_order_transference_ask_decision = {
 
 # Set the Order's Prerogative (§5.18): the master; ten years between.
 spn_order_set_prerogative_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_realm.dds" }
 	desc = spn_order_set_prerogative_decision_desc
 	selection_tooltip = spn_order_set_prerogative_decision_tooltip
@@ -244,10 +267,12 @@ spn_order_set_prerogative_decision = {
 	ai_will_do = { base = 0 }
 }
 
-# Learn the Fors Factorum (§5.20): the Grand Magus, the master, a Temple Magus, or a Magistratus whose research found it
-# (2.39, Boot 3; it was a seat or the chair).
+# Cast the Fors Factorum (§5.20): the Grand Magus, the master, a Temple Magus, or a Magistratus whose research found it
+# (2.39, Boot 3; it was a seat or the chair). 2.40 (WORK-ORDER-2.40 G5): it needs the Fors Factorum letter, held or in
+# his temple's Reliquary; never while he carries cancer; five years between castings (the flag .0840 sets, so saying
+# no to the spell costs nothing).
 spn_order_fors_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_destiny_goal.dds" }
 	desc = spn_order_fors_decision_desc
 	selection_tooltip = spn_order_fors_decision_tooltip
@@ -258,11 +283,15 @@ spn_order_fors_decision = {
 		spn_order_fors_eligible_trigger = yes # 2.39 (Boot 3, 16 Oct): the chair, a Temple Magus, or his own research (was any seat)
 		NOT = { has_character_modifier = spn_fors_factorum_modifier }
 	}
+	is_valid = {
+		spn_order_fors_castable_trigger = yes # 2.40 (WORK-ORDER-2.40 G5): the letter, no cancer, five years between
+	}
 	effect = {
 		trigger_event = spn_order.0840
 	}
 	ai_potential = {
 		age >= 30
+		NOT = { has_trait = cancer } # 2.40 (WORK-ORDER-2.40 G5): a sick AI seeks the Transference, not the spell
 		NOR = {
 			has_trait = craven
 			has_trait = content
@@ -277,7 +306,7 @@ spn_order_fors_decision = {
 
 # Seek a Compact with the Order (§11.6): a demon, once a year at the master's door.
 spn_order_compact_seek_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
 	desc = spn_order_compact_seek_decision_desc
 	selection_tooltip = spn_order_compact_seek_decision_tooltip
@@ -330,7 +359,7 @@ spn_order_compact_seek_decision = {
 # ==================================================================================================
 # Petition the Gnostic Council for a Charter: a member at standing 75 (60 under More Hands); the chair answers (.0600).
 spn_order_charter_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_realm.dds" }
 	desc = spn_order_charter_decision_desc
 	selection_tooltip = spn_order_charter_decision_tooltip
@@ -394,7 +423,7 @@ spn_order_charter_decision = {
 # A Daughter Chapter: a full chapter's Magistratus at standing 75 takes up to five who follow him to a new seat. Fifty years
 # between daughters of one chapter.
 spn_order_daughter_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_dynasty_house.dds" }
 	desc = spn_order_daughter_decision_desc
 	selection_tooltip = spn_order_daughter_decision_tooltip
@@ -494,7 +523,7 @@ spn_order_daughter_decision = {
 
 # Found the Order Anew: no chapter is left; a Mage who knows two other Mages for what they are founds one with them.
 spn_order_refound_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_dynasty_house.dds" }
 	desc = spn_order_refound_decision_desc
 	selection_tooltip = spn_order_refound_decision_tooltip
@@ -563,7 +592,7 @@ spn_order_refound_decision = {
 # 2.38b: Dissolve the Gnostic Council (DESIGN-2.38b §3). A player Grand Magus who is of the Order sends the seat holders
 # home; the next Conclave fills the seats again. The AI never does.
 spn_order_dissolve_council_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_realm.dds" }
 	desc = spn_order_dissolve_council_decision_desc
 	selection_tooltip = spn_order_dissolve_council_decision_tooltip
@@ -596,7 +625,7 @@ spn_order_dissolve_council_decision = {
 
 # 2.38b: a player Temple Magus who let the masks choose takes the choice back (DESIGN-2.38b §6).
 spn_order_choose_candidates_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
 	desc = spn_order_choose_candidates_decision_desc
 	selection_tooltip = spn_order_choose_candidates_decision_tooltip
@@ -618,7 +647,7 @@ spn_order_choose_candidates_decision = {
 # 2.38b: Call a Conclave (DESIGN-2.38b §4). A player Grand Magus of the Order, at will (the activity's own five-year
 # cooldown applies).
 spn_conclave_call_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_realm.dds" }
 	desc = spn_conclave_call_decision_desc
 	selection_tooltip = spn_conclave_call_decision_tooltip
@@ -631,7 +660,11 @@ spn_conclave_call_decision = {
 		global_var:current_archmage_global ?= root
 	}
 	is_valid = {
-		is_landed = yes
+		# 2.40 (WORK-ORDER-2.40 A6): a landless Grand Magus calls and hosts from his camp or estate.
+		custom_tooltip = {
+			text = spn_conclave_need_home_tt
+			spn_conclave_can_host_trigger = yes
+		}
 		custom_tooltip = {
 			text = spn_conclave_cooldown_tt
 			NOT = { is_activity_type_on_cooldown = spn_conclave }
@@ -652,7 +685,7 @@ spn_conclave_call_decision = {
 # 2.38b: Ask the Temple for Help with Your Research (DESIGN-2.38b §7b). A member in the middle of Witchcraft's Magical
 # Research: a Magistratus of his temple comes, and the project needs one breakthrough fewer (E31).
 spn_order_research_help_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_order # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_misc.dds" }
 	desc = spn_order_research_help_decision_desc
 	selection_tooltip = spn_order_research_help_decision_tooltip
@@ -666,7 +699,7 @@ spn_order_research_help_decision = {
 	is_valid = {
 		custom_tooltip = {
 			text = spn_order_research_help_in_research_tt
-			involved_activity ?= { has_activity_type = magical_research }
+			spn_order_hosts_research_trigger = yes # 2.40 (boot 4, COUNCIL 3): his own research, not a guest's seat
 		}
 		custom_tooltip = {
 			text = spn_order_research_help_standing_tt
@@ -678,6 +711,7 @@ spn_order_research_help_decision = {
 			var:spn_order_chapter ?= {
 				any_in_list = {
 					variable = spn_order_members
+					is_alive = yes # 2.40 (boot 4, COUNCIL 3): the helper pick counts the living only
 					NOT = { this = root }
 					spn_order_magistratus_plus_trigger = yes
 				}
@@ -687,7 +721,7 @@ spn_order_research_help_decision = {
 	effect = {
 		spn_order_add_standing_effect = { VALUE = -10 }
 		custom_tooltip = spn_order_research_help_decision_effect_tt
-		trigger_event = spn_order.0330
+		spn_order_research_help_effect = yes # 2.40 (WORK-ORDER-2.40 B11): a breakthrough's worth now, the helper named
 	}
 	ai_potential = { spn_is_order_member_trigger = yes }
 	ai_will_do = { base = 50 }
@@ -696,7 +730,7 @@ spn_order_research_help_decision = {
 # 2.38b: The Clay Working (DESIGN-2.38b §7b). The Order's own golem: a Magistratus Mage of a temple of five or more, a
 # great deal of power, and one Working per temple every twenty years.
 spn_order_clay_working_decision = {
-	decision_group_type = supernatural
+	decision_group_type = spn_craft # 2.40 (boot 2, item i): was supernatural
 	picture = { reference = "gfx/interface/illustrations/decisions/decision_personal_religious.dds" }
 	desc = spn_order_clay_working_decision_desc
 	selection_tooltip = spn_order_clay_working_decision_tooltip
@@ -730,7 +764,7 @@ spn_order_clay_working_decision = {
 			spend_huge_ps_effect = yes
 			var:spn_order_chapter = { set_variable = { name = spn_order_clay_cd value = yes years = 20 } }
 		}
-		trigger_event = spn_order.0860
+		trigger_event = spn_order.2300 # 2.40 (WORK-ORDER-2.40 D4): the shape first (Witchcraft's three), then the material (.0860)
 	}
 	ai_potential = {
 		spn_order_magistratus_plus_trigger = yes
