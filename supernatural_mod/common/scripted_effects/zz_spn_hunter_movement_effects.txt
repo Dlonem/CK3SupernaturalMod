@@ -4,7 +4,7 @@
 # below is UNCHANGED; only its address is different. Called from spn_hunter_movement_pulse in that file.
 
 # Root = the landless hunter.
-spn_hunter_seek_the_trail_effect = {
+spn_hunter_seek_the_trail_scan_effect = {
 	save_scope_as = spn_moving_hunter
 	location = { save_scope_as = spn_hunter_here }
 
@@ -82,5 +82,42 @@ spn_hunter_seek_the_trail_effect = {
 			domicile ?= { move_domicile = scope:spn_hunter_target }
 			add_character_flag = { flag = spn_hunter_moved_recently years = 5 }
 		}
+	}
+}
+
+# 2.41 (WORK-ORDER-2.41 §1.6) -- A HUNTER ON THE COLD TRAIL GOES WHERE IT POINTS. The scan above (renamed, body unchanged)
+# looks for the best trail two valleys out once every five years. A hunter who is following someone does not wait five
+# years: he moves his camp beside the county the trail last pointed at, at most once a year, and the scan is skipped.
+# Same move_domicile, same "camp beside it, not in it". Root = the landless AI hunter.
+spn_hunter_seek_the_trail_effect = {
+	if = {
+		limit = {
+			spn_cold_trail_active_trigger = yes
+			NOT = { has_character_flag = spn_hunter_chased_recently }
+			NOT = { location.county ?= var:spn_quarry_county }
+		}
+		var:spn_quarry_county.title_province ?= {
+			save_scope_as = spn_hunter_target
+			random_neighboring_province = {
+				limit = {
+					is_sea_province = no
+					NOT = { this = scope:spn_hunter_target }
+				}
+				save_scope_as = spn_hunter_camp
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_hunter_camp }
+			domicile ?= { move_domicile = scope:spn_hunter_camp }
+		}
+		else_if = {
+			limit = { exists = scope:spn_hunter_target }
+			domicile ?= { move_domicile = scope:spn_hunter_target }
+		}
+		add_character_flag = { flag = spn_hunter_chased_recently years = 1 }
+	}
+	else_if = {
+		limit = { NOT = { has_character_flag = spn_hunter_moved_recently } }
+		spn_hunter_seek_the_trail_scan_effect = yes
 	}
 }

@@ -79,8 +79,13 @@ spn_trails_watcher_trigger = {
 # COUNTY scope (the trail's county); scope:spn_trv_viewer = the viewer. The trail is pinned on the viewer himself. The
 # culprit can also be a creature the county now blames after the first one died (spn_menace_culprit_died_effect): the
 # trail is then his in every way the game counts (hunters come for him), so "you" is still true.
+# 2.41 audit -- or any name on the county's ledger: since 2.41 spn_menace_culprit is the ledger's lead, and a player who
+# killed here but is outscored was shown "Left by: unknown" on his own trail.
 spn_trails_viewer_left_it_trigger = {
-	var:spn_menace_culprit ?= scope:spn_trv_viewer
+	OR = {
+		var:spn_menace_culprit ?= scope:spn_trv_viewer
+		spn_ledger_has_culprit_trigger = { WHO = scope:spn_trv_viewer }
+	}
 }
 
 # CHARACTER scope (the viewer). He has a Trailsman: the landed court position or the camp officer (vanilla
@@ -183,6 +188,16 @@ spn_trails_viewer_knows_culprit_trigger = {
 			AND = {
 				var:spn_menace_kind = flag:demon
 				var:spn_menace_culprit = { is_a_demon_trigger = yes }
+			}
+			# 2.41 (WORK-ORDER-2.41 §1.5) -- a man who kills is known to whoever holds his murder secret.
+			AND = {
+				var:spn_menace_kind = flag:human
+				scope:spn_trv_viewer = {
+					any_known_secret = {
+						secret_owner = scope:spn_trv_county.var:spn_menace_culprit
+						secret_type = secret_murder
+					}
+				}
 			}
 			AND = {
 				var:spn_menace_kind = flag:witch

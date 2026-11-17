@@ -300,6 +300,18 @@ spn_order_remove_member_effect = {
 		}
 		scope:spn_rem_who = { remove_from_mc_effect = yes }
 	}
+	# 2.41 audit -- a Grand Magus who leaves alive stops being master now, not at the next yearly pulse (until then he
+	# kept the Prerogative decision and was still picked as judge).
+	if = {
+		limit = {
+			NOR = {
+				scope:spn_rem_reason = flag:transfer
+				scope:spn_rem_reason = flag:death
+			}
+			global_var:spn_order_master ?= scope:spn_rem_who
+		}
+		spn_order_master_refresh_effect = yes
+	}
 	# What the reason costs (§5.10). Last: the bank is done.
 	if = {
 		limit = { scope:spn_rem_reason = flag:forget }
@@ -853,7 +865,10 @@ spn_order_chapter_year_effect = {
 				}
 			}
 			if = {
-				limit = { var:spn_order_chapter ?= scope:spn_yr_ch }
+				limit = {
+					is_alive = yes # 2.41 audit: no variables on the dead
+					var:spn_order_chapter ?= scope:spn_yr_ch
+				}
 				spn_order_remove_member_effect = { WHO = this REASON = flag:quiet }
 			}
 			else = {
@@ -2070,6 +2085,8 @@ spn_order_strip_magic_effect = {
 		limit = { has_trait = archmage }
 		remove_trait = archmage
 	}
+	# The Warlock trait stays, on purpose (Thomas, 11 Nov 2026): his perks go with the rest, but the bargain was struck
+	# with something else, and the Order cannot take back what it did not give.
 }
 
 # The secret's on_expose (§5.11). Root: the exposed member.
@@ -2815,6 +2832,7 @@ spn_order_summit_complete_effect = {
 # E12, the first line of witch_ritual's on_complete. Root: each attendee. Bring the Coven to the Order (§5.15): at the
 # rite's end, the host's coven's Mages who are not members are handed to the host's chapter as Selection picks.
 spn_coven_rite_complete_effect = {
+	spn_true_witch_rite_xp_effect = yes # 2.41: the True Witch's track (zz_spn_241_three_paths_effects.txt)
 	if = {
 		limit = {
 			this = scope:host
@@ -4252,6 +4270,16 @@ spn_order_golem_to_magus_effect = {
 # warriors it unlocked (Witchcraft clears the same two in 00_magic_advanced_effects.txt). Character scope.
 spn_order_renounce_necromancy_effect = {
 	remove_trait = necromancer
+	# 2.41 audit -- the pardon and the mark of the second judgment were about this necromancy; they go with it, so one
+	# who takes it up again is judged as new, both times.
+	if = {
+		limit = { has_character_flag = spn_order_necro_tolerated }
+		remove_character_flag = spn_order_necro_tolerated
+	}
+	if = {
+		limit = { has_character_flag = spn_order_necro_deep_judged }
+		remove_character_flag = spn_order_necro_deep_judged
+	}
 	if = {
 		limit = { has_character_modifier = master_necromancer_modifier }
 		remove_character_modifier = master_necromancer_modifier

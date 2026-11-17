@@ -1279,14 +1279,14 @@ create_yaga_family_effect = {
 				highest_held_title_tier = 2
 				capital_province = {
 					geographical_region = world_europe_east
-					has_special_building_slot = no
+					has_special_district_slot = no
 				}
 				trait_is_criminal_in_rite_trigger = { TRAIT = trait:witch RITE = this.rite GENDER_CHARACTER = this }
 			}
 			save_scope_as = unlucky_guy
 			add_trait = incapable
 			capital_province = {
-				add_special_building = witch_house
+				add_special_district = witch_house_district
 			}
 		}
 		create_character = {
@@ -1518,7 +1518,7 @@ create_yaga_family_effect2 = {
 				highest_held_title_tier=2
 				capital_province = {
 					geographical_region = world_europe_east
-					has_special_building_slot = no
+					has_special_district_slot = no
 				}
 				NOT = {
 					trait_is_criminal_in_rite_trigger = { TRAIT = trait:witch RITE = this.rite GENDER_CHARACTER = this }
@@ -1526,7 +1526,7 @@ create_yaga_family_effect2 = {
 			}
 			save_scope_as = unlucky_guy
 			capital_province = {
-				add_special_building = witch_house
+				add_special_district = witch_house_district
 			}
 		}
 		create_character = {
@@ -1704,7 +1704,7 @@ create_yaga_family_effectAR = {
 			save_scope_as = unlucky_guy
 			add_trait = incapable
 			capital_province = {
-				add_special_building = witch_house
+				add_special_district = witch_house_district
 			}
 		}
 		create_character = {
@@ -1937,7 +1937,7 @@ create_yaga_family_effect2AR = {
 			}
 			save_scope_as = unlucky_guy
 			capital_province = {
-				add_special_building = witch_house
+				add_special_district = witch_house_district
 			}
 		}
 		create_character = {
@@ -2114,11 +2114,11 @@ create_dark_temple = {
 				# 30 lines a session from each of these two effects. exists = first, then read.
 				exists = capital_province
 				capital_province = {
-					has_special_building_slot = no
+					has_special_district_slot = no
 				}
 			}
 			capital_province = {
-				add_special_building = horned_god_house
+				add_special_district = horned_god_house_district
 			}
 			give_witch_secret_or_trait_effect2 = yes
 		}
@@ -2137,11 +2137,11 @@ create_magic_academy = {
 				# 30 lines a session from each of these two effects. exists = first, then read.
 				exists = capital_province
 				capital_province = {
-					has_special_building_slot = no
+					has_special_district_slot = no
 				}
 			}
 			capital_province = {
-				add_special_building = mage_house
+				add_special_district = mage_house_district
 			}
 			#give_witch_secret_or_trait_effect2 = yes
 		}
@@ -2158,9 +2158,9 @@ create_houska = {
 				title_province = {
 					if = {
 						limit = {
-							has_special_building_slot = no
+							has_special_district_slot = no
 						}
-						add_special_building_slot = houska
+						add_special_district_slot = houska_district
 					}
 				}
 			}
@@ -9686,8 +9686,22 @@ vistited_place_of_power_effect = {
 # 2.39 (Supernatural): WORK-ORDER-2.39 F9, the rule "Supernatural: Mortals Becoming Demons". Under Players Only an AI
 # character is never made a demon here, and a demon-blooded one keeps demon0. Default is exactly 2.38.
 make_demon_effect = {
+	# 2.41 audit (Supernatural) -- a demon-blooded werewolf is asked which he is (The Two Natures) at every door that
+	# makes a demon, not only magic_ev3.75; and a werewolf never runs the body, whose add_trait = demon1 the wolf
+	# refuses while the rest of it still took the demon blood away.
 	if = {
-		limit = { spn_may_become_demon_trigger = yes } # 2.39 (Supernatural): zz_spn_mortal_demons_triggers.txt
+		limit = {
+			has_trait = supernatural_werewolf
+			has_trait = demon0
+			NOT = { has_character_flag = spn_two_natures_done }
+		}
+		trigger_event = spn_two_natures.0010
+	}
+	else_if = {
+		limit = {
+			spn_may_become_demon_trigger = yes # 2.39 (Supernatural): zz_spn_mortal_demons_triggers.txt
+			NOT = { has_trait = supernatural_werewolf }
+		}
 		spn_make_demon_body_effect = yes
 	}
 }
@@ -10337,6 +10351,11 @@ remove_from_mc_effect = {
 		remove_global_variable = current_loremaster_global
 		remove_variable = mc_member_var
 		remove_character_modifier = mc_loremaster_modifier
+		# 2.41 (Supernatural, WORK-ORDER-2.41 §4): leaving the seat takes the office's nickname with it
+		if = {
+			limit = { has_nickname = spn_keeper_of_the_reliquary_nickname }
+			remove_nickname = yes
+		}
 	}
 	if = {
 		limit = {

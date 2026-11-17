@@ -32,7 +32,10 @@ spn_hunter_movement_pulse = {
 		is_adult = yes
 		is_ai = yes
 		has_trait = supernatural_hunter
-		is_landed = no
+		# 2.41 boot 10 -- was `is_landed = no`, which also takes a landless administrative noble (whose domicile is an
+		# estate) and, from 17 Nov, a merchant family (whose domicile is its Company Palace in a city). Only a camp
+		# picks up and follows the work.
+		is_landless_adventurer = yes
 		is_travelling = no
 		is_imprisoned = no
 		NOT = { is_incapable = yes }
@@ -45,7 +48,14 @@ spn_hunter_movement_pulse = {
 		# never registered and the AI hunters have never moved once. Third file in this update killed
 		# by one bad line inside common/on_action/ -- see the two notes at the bottom of this file.
 		NOT = { exists = involved_activity }
-		NOT = { has_character_flag = spn_hunter_moved_recently }
+		# 2.41 (§1.6) -- a hunter on the Cold Trail moves once a year, whatever the five-year scan timer says.
+		OR = {
+			NOT = { has_character_flag = spn_hunter_moved_recently }
+			AND = {
+				spn_cold_trail_active_trigger = yes
+				NOT = { has_character_flag = spn_hunter_chased_recently }
+			}
+		}
 		exists = domicile
 		exists = location
 	}

@@ -101,7 +101,11 @@ spn_vanish_decision = {
 			county ?= {
 				custom_tooltip = {
 					text = spn_vanish_no_trail_tt
-					var:spn_menace_culprit ?= root
+					# 2.41 boot 6: on the ledger at all, not only its lead (a second culprit hides behind the first).
+					OR = {
+						var:spn_menace_culprit ?= root
+						spn_ledger_has_culprit_trigger = { WHO = root }
+					}
 				}
 			}
 		}
@@ -120,7 +124,17 @@ spn_vanish_decision = {
 		location ?= {
 			county ?= {
 				save_scope_as = spn_vanish_county
-				spn_menace_clear_county_effect = yes
+				# 2.41 boot 6 (the ledger): wipe out the trail that points to YOU. If someone else is on it too, only your
+				# name goes, and the county blames whoever is left; if nobody is, the trail goes as it always did.
+				if = {
+					limit = { spn_ledger_has_other_living_culprit_trigger = { WHO = root } }
+					spn_ledger_forget_culprit_effect = { WHO = root }
+					spn_menace_recompute_lead_effect = yes
+					hidden_effect = { spn_trails_map_sync_effect = yes }
+				}
+				else = {
+					spn_menace_clear_county_effect = yes
+				}
 			}
 		}
 		if = {
@@ -133,7 +147,14 @@ spn_vanish_decision = {
 	}
 	ai_potential = {
 		has_trait = spn_champion_timber
-		location ?= { county ?= { var:spn_menace_culprit ?= root } }
+		location ?= {
+			county ?= {
+				OR = {
+					var:spn_menace_culprit ?= root
+					spn_ledger_has_culprit_trigger = { WHO = root }
+				}
+			}
+		}
 	}
 	ai_will_do = {
 		base = 10

@@ -32,6 +32,40 @@ spn_hunt.0400 = {
 				}
 				desc = spn_hunt.0400.desc_werewolf
 			}
+			# 2.41 (WORK-ORDER-2.41 §2.4) -- the report is evidence, not an answer. The kinds the 2.35 report had no words
+			# for, the trail with two kinds of signs on it, and the name the county only guessed.
+			triggered_desc = {
+				trigger = {
+					has_trait = supernatural_hunter
+					spn_hunter_is_seasoned_trigger = yes
+					scope:spn_menace_county = { has_variable = spn_menace_mixed }
+				}
+				desc = spn_hunt.0400.desc_mixed
+			}
+			triggered_desc = {
+				trigger = { scope:spn_menace_county = { var:spn_menace_kind ?= flag:human } }
+				desc = spn_hunt.0400.desc_human
+			}
+			triggered_desc = {
+				trigger = {
+					has_trait = supernatural_hunter
+					spn_hunt_reads_demon_trigger = yes
+					scope:spn_menace_county = { var:spn_menace_kind ?= flag:demon }
+				}
+				desc = spn_hunt.0400.desc_demon
+			}
+			triggered_desc = {
+				trigger = {
+					has_trait = supernatural_hunter
+					spn_hunt_reads_witch_trigger = yes
+					scope:spn_menace_county = { var:spn_menace_kind ?= flag:witch }
+				}
+				desc = spn_hunt.0400.desc_witch
+			}
+			triggered_desc = {
+				trigger = { scope:spn_menace_county = { has_variable = spn_menace_suspected } }
+				desc = spn_hunt.0400.desc_suspected
+			}
 			desc = spn_hunt.0400.desc
 		}
 	}
@@ -98,12 +132,53 @@ spn_hunt.0401 = {
 	desc = {
 		first_valid = {
 			triggered_desc = {
-				trigger = { scope:spn_menace_county = { var:spn_menace_kind ?= flag:vampire } }
+				trigger = {
+					# 2.41 review: the kind of the one he NAMES (scope:spn_tn_kind), not the county's lead
+					trigger_if = {
+						limit = { exists = scope:spn_tn_kind }
+						scope:spn_tn_kind = flag:vampire
+					}
+					trigger_else = { scope:spn_menace_county = { var:spn_menace_kind ?= flag:vampire } }
+				}
 				desc = spn_hunt.0401.desc_vampire
 			}
 			triggered_desc = {
-				trigger = { scope:spn_menace_county = { var:spn_menace_kind ?= flag:werewolf } }
+				trigger = {
+					# 2.41 review: the kind of the one he NAMES (scope:spn_tn_kind), not the county's lead
+					trigger_if = {
+						limit = { exists = scope:spn_tn_kind }
+						scope:spn_tn_kind = flag:werewolf
+					}
+					trigger_else = { scope:spn_menace_county = { var:spn_menace_kind ?= flag:werewolf } }
+				}
 				desc = spn_hunt.0401.desc_werewolf
+			}
+			# 2.41 (§2.4, B4)
+			triggered_desc = {
+				trigger = {
+					# 2.41 review: the kind of the one he NAMES (scope:spn_tn_kind), not the county's lead
+					trigger_if = {
+						limit = { exists = scope:spn_tn_kind }
+						scope:spn_tn_kind = flag:human
+					}
+					trigger_else = { scope:spn_menace_county = { var:spn_menace_kind ?= flag:human } }
+				}
+				desc = spn_hunt.0401.desc_human
+			}
+			triggered_desc = {
+				trigger = {
+					# 2.41 review: the kind of the one he NAMES (scope:spn_tn_kind), not the county's lead
+					trigger_if = {
+						limit = { exists = scope:spn_tn_kind }
+						scope:spn_tn_kind = flag:witch
+					}
+					trigger_else = { scope:spn_menace_county = { var:spn_menace_kind ?= flag:witch } }
+				}
+				desc = spn_hunt.0401.desc_witch
+			}
+			triggered_desc = {
+				trigger = { scope:spn_menace_culprit = { is_a_demon_trigger = yes } }
+				desc = spn_hunt.0401.desc_demon
 			}
 			desc = spn_hunt.0401.desc
 		}
@@ -136,7 +211,31 @@ spn_hunt.0401 = {
 	# Now I know his face.
 	option = {
 		name = spn_hunt.0401.a
-		custom_tooltip = spn_hunt.0401.a.tt
+		# 2.41 (§2.4) -- a demon has no secret to learn; say what the lord actually gets.
+		if = {
+			limit = { scope:spn_menace_culprit = { is_a_demon_trigger = yes } }
+			custom_tooltip = spn_hunt.0401.a.tt_demon
+		}
+		else_if = {
+			# 2.41 review: an open witch or a killer with no murder secret -- a name, and nothing to hold over it.
+			limit = {
+				scope:spn_menace_culprit = {
+					NOT = {
+						any_secret = {
+							OR = {
+								secret_type = spn_secret_vampire
+								secret_type = spn_secret_werewolf
+								secret_type = spn_secret_hybrid
+								secret_type = secret_witch
+								secret_type = secret_murder
+							}
+						}
+					}
+				}
+			}
+			custom_tooltip = spn_hunt.0401.a.tt_name
+		}
+		else = { custom_tooltip = spn_hunt.0401.a.tt }
 		ai_chance = { base = 50 }
 	}
 
@@ -144,7 +243,11 @@ spn_hunt.0401 = {
 	option = {
 		name = spn_hunt.0401.b
 		add_dread = minor_dread_gain
-		custom_tooltip = spn_hunt.0401.b.tt
+		if = {
+			limit = { scope:spn_menace_culprit = { is_a_demon_trigger = yes } }
+			custom_tooltip = spn_hunt.0401.b.tt_demon
+		}
+		else = { custom_tooltip = spn_hunt.0401.b.tt }
 		ai_chance = {
 			base = 40
 			modifier = { add = 30 has_trait = deceitful }

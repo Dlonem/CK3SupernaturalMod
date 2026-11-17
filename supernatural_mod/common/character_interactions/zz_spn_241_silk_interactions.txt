@@ -1,0 +1,143 @@
+﻿# Supernatural 2.41 -- Silk & Silver interactions.
+
+# COLLECT IN BLOOD. Thomas, 17 Nov 2026: "if they don't pay, you can collect in other means. Wink, wink."
+# A vampire or hybrid lender, on a debtor who has already refused to repay him at least once (vanilla 1.21 story_cycle_loan:
+# var:lender, var:reminders counts refusals, loan_repayment_refusal_effect). Vanilla's loans are untouched: this is a
+# second way to settle one, and the debtor is in no position to say no. The choice of HOW is the event (spn_silk.0010).
+# Shown only to the lender (his own list owes_me_money), so it tells no one else anything.
+spn_collect_in_blood_interaction = {
+	category = interaction_category_hostile
+	icon = owner_in_debt
+	interface_priority = 40
+	desc = spn_collect_in_blood_interaction_desc
+	auto_accept = yes
+
+	is_shown = {
+		scope:actor = {
+			OR = {
+				has_trait = supernatural_vampire
+				has_trait = supernatural_hybrid
+			}
+			is_target_in_variable_list = { name = owes_me_money target = scope:recipient }
+		}
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			is_adult = yes
+			is_imprisoned = no
+			is_incapable = no
+		}
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_collect_in_blood_refused_tt
+				any_owned_story = {
+					story_type = story_cycle_loan
+					var:lender ?= scope:actor
+					exists = var:reminders
+					var:reminders >= 1
+				}
+			}
+			is_alive = yes
+		}
+	}
+
+	on_accept = {
+		scope:recipient = {
+			ordered_owned_story = {
+				limit = {
+					story_type = story_cycle_loan
+					var:lender ?= scope:actor
+				}
+				order_by = var:amount_owed
+				save_scope_as = spn_cib_loan
+			}
+			save_scope_as = spn_cib_debtor
+		}
+		scope:actor = {
+			custom_tooltip = spn_collect_in_blood_interaction_tt
+			trigger_event = spn_silk.0010
+		}
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# GRANT ME A CHARTER (a Compelled command). The vampire is a merchant and the compelled is his patron: the patron grants him
+# a charter exactly as vanilla's grant_merchant_charter_interaction does (create_merchant_charter_artifact_effect).
+spn_compel_charter_interaction = {
+	category = interaction_category_diplomacy
+	icon = grant_merchant_charter_interaction
+	interface_priority = 54
+	desc = spn_compel_charter_interaction_desc
+	auto_accept = yes
+
+	is_shown = {
+		has_gdp_dlc_trigger = yes # Silk & Silver owners only: charters are the DLC's merchant content
+		spn_compel_verb_shown_trigger = yes
+		scope:recipient = scope:actor
+		scope:actor = { government_has_flag = government_is_merchant }
+		scope:actor.suzerain ?= scope:puppet_or_actor
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			custom_tooltip = {
+				text = spn_compel_charter_already_tt
+				NOT = { merchant_has_charter_from_patron_trigger = { EQUIPPED = no INCLUDE_FORGERIES = no } }
+			}
+		}
+		scope:puppet_or_actor = { NOT = { is_at_war_with = scope:actor } }
+	}
+
+	on_accept = {
+		scope:actor = {
+			create_merchant_charter_artifact_effect = {
+				PATRON = scope:puppet_or_actor
+				MERCHANT = scope:actor
+			}
+			add_prestige = scope:puppet_or_actor.tier_scaled_prestige_value
+		}
+		spn_compel_command_given_effect = { MASTER = scope:actor PUPPET = scope:puppet_or_actor }
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# VOTE AS I DO (a Compelled command). The compelled votes as the vampire does, in the Assembly and in elections, for a year
+# (vanilla 1.21 force_vote_as, the effect vanilla's own events use to bind a voter). Shown for a member of an Assembly.
+spn_compel_vote_interaction = {
+	category = interaction_category_diplomacy
+	icon = scroll_scales
+	interface_priority = 53
+	desc = spn_compel_vote_interaction_desc
+	auto_accept = yes
+
+	is_shown = {
+		has_gdp_dlc_trigger = yes # Silk & Silver owners only: the Assembly is the DLC's republic content
+		spn_compel_verb_shown_trigger = yes
+		scope:recipient = scope:actor
+		scope:puppet_or_actor = { is_assembly_member = yes }
+	}
+
+	is_valid_showing_failures_only = {
+		scope:puppet_or_actor = {
+			custom_tooltip = {
+				text = spn_compel_vote_already_tt
+				is_forced_voter = no
+			}
+		}
+	}
+
+	on_accept = {
+		scope:puppet_or_actor = {
+			force_vote_as = {
+				target = scope:actor
+				years = 1
+			}
+		}
+		spn_compel_command_given_effect = { MASTER = scope:actor PUPPET = scope:puppet_or_actor }
+	}
+
+	ai_will_do = { base = 0 }
+}

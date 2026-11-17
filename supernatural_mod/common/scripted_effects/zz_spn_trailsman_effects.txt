@@ -32,6 +32,8 @@ spn_trailsman_find_trail_effect = {
 			variable = spn_menace_counties
 			limit = {
 				spn_trailsman_trail_is_news_trigger = yes
+				# 2.41 -- a Trailsman walks past his own work.
+				NOT = { spn_ledger_only_culprit_trigger = { WHO = scope:spn_trailsman } }
 				trigger_if = {
 					limit = { exists = root.location }
 					title_province ?= {
@@ -61,7 +63,10 @@ spn_trailsman_find_trail_effect = {
 			}
 			location.county = {
 				random_neighboring_county = {
-					limit = { spn_trailsman_trail_is_news_trigger = yes }
+					limit = {
+						spn_trailsman_trail_is_news_trigger = yes
+						NOT = { spn_ledger_only_culprit_trigger = { WHO = scope:spn_trailsman } }
+					}
 					save_scope_as = spn_menace_county
 				}
 			}
@@ -69,7 +74,10 @@ spn_trailsman_find_trail_effect = {
 	}
 	else = {
 		random_realm_county = {
-			limit = { spn_trailsman_trail_is_news_trigger = yes }
+			limit = {
+				spn_trailsman_trail_is_news_trigger = yes
+				NOT = { spn_ledger_only_culprit_trigger = { WHO = scope:spn_trailsman } }
+			}
 			save_scope_as = spn_menace_county
 		}
 	}
@@ -78,8 +86,55 @@ spn_trailsman_find_trail_effect = {
 		save_scope_as = spn_hunt_lord
 		scope:spn_menace_county = {
 			set_variable = { name = spn_trailsman_reported value = yes years = 5 }
+			# 2.41 (WORK-ORDER-2.41 §2.2) -- the verdict before the report, so it names the county's lead as it stands.
+			spn_menace_recompute_lead_effect = yes
 		}
-		trigger_event = { id = spn_hunt.0400 days = { 0 20 } }
+		# 2.41 (§2.2, §2.3) -- YOUR OWN TRAIL. If the only name on it is the employer's, the Trailsman is not bringing news
+		# of a stranger: he is telling his master that the county is talking about him. The Trail Leads Home, WHERE form.
+		if = {
+			limit = { scope:spn_menace_county = { spn_ledger_only_culprit_trigger = { WHO = root } } }
+			save_scope_value_as = { name = spn_tlh_where value = yes }
+			trigger_event = { id = spn_hunt.0402 days = { 0 20 } }
+		}
+		else = {
+			trigger_event = { id = spn_hunt.0400 days = { 0 20 } }
+		}
+	}
+	# 2.41 boot 7 -- OLD GRAVES. Nothing new on the ground, but the county remembers a trail that went cold. Players only:
+	# it changes nothing an AI would weigh. The county is told once in ten years.
+	else_if = {
+		limit = { is_ai = no }
+		if = {
+			limit = { is_landless_adventurer = yes }
+			if = {
+				limit = { location ?= { county ?= { spn_trail_is_old_news_trigger = yes } } }
+				location.county = { save_scope_as = spn_old_trail_county }
+			}
+			else_if = {
+				limit = { location ?= { county ?= { any_neighboring_county = { spn_trail_is_old_news_trigger = yes } } } }
+				location.county = {
+					random_neighboring_county = {
+						limit = { spn_trail_is_old_news_trigger = yes }
+						save_scope_as = spn_old_trail_county
+					}
+				}
+			}
+		}
+		else = {
+			random_realm_county = {
+				limit = { spn_trail_is_old_news_trigger = yes }
+				save_scope_as = spn_old_trail_county
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_old_trail_county }
+			scope:spn_old_trail_county = {
+				set_variable = { name = spn_trailsman_old_told value = yes years = 10 }
+				save_scope_value_as = { name = spn_old_trail_years value = spn_trail_years_cold_value }
+				var:spn_trail_last_culprit ?= { save_scope_as = spn_old_trail_culprit }
+			}
+			trigger_event = { id = spn_hunt.0403 days = { 0 20 } }
+		}
 	}
 }
 
@@ -120,15 +175,95 @@ spn_trailsman_follow_trail_effect = {
 		save_scope_as = spn_hunt_lord
 		scope:spn_menace_county = {
 			set_variable = { name = spn_trailsman_named value = yes years = 5 }
+			# 2.41 (WORK-ORDER-2.41 §2.2) -- WHO, READ OFF THE LEDGER. The best-scoring living name that is neither the
+			# employer nor the Trailsman. Until 2.41 the report named whatever the county carried, which put the employer's
+			# own face in the bottom of A Name for the Trail (HonorverseFan, Discord, 1 Nov 2026).
+			spn_menace_recompute_lead_effect = yes
+			spn_trailsman_pick_name_effect = { EMPLOYER = root TRAILSMAN = scope:spn_trailsman }
 		}
 		if = {
+			limit = { exists = scope:spn_trailsman_name }
+			scope:spn_trailsman_name = { save_scope_as = spn_menace_culprit }
+			if = {
+				limit = { NOT = { spn_hunt_knows_culprit_trigger = { CULPRIT = scope:spn_trailsman_name } } }
+				scope:spn_trailsman_name = { spn_hunt_reveal_culprit_effect = { LORD = scope:spn_hunt_lord } }
+				trigger_event = { id = spn_hunt.0401 days = { 0 20 } }
+			}
+		}
+		# Nobody else on it, and the employer is: The Trail Leads Home, WHO form.
+		else_if = {
 			limit = {
-				NOT = {
-					spn_hunt_knows_culprit_trigger = { CULPRIT = scope:spn_menace_county.var:spn_menace_culprit }
+				scope:spn_menace_county = {
+					OR = {
+						spn_ledger_has_culprit_trigger = { WHO = root }
+						var:spn_menace_culprit ?= root
+					}
 				}
 			}
-			spn_hunt_learn_culprit_effect = yes
-			trigger_event = { id = spn_hunt.0401 days = { 0 20 } }
+			save_scope_value_as = { name = spn_tlh_where value = no }
+			trigger_event = { id = spn_hunt.0402 days = { 0 20 } }
 		}
+	}
+}
+
+# 2.41 (§2.2) -- COUNTY scope, after a recompute (scope:spn_lg_s<N> are set). Saves scope:spn_trailsman_name: the
+# best-scoring living name on the ledger that is neither EMPLOYER nor TRAILSMAN; or, on a trail opened before 2.41 that has
+# no ledger yet, its culprit under the same two exclusions.
+spn_trailsman_pick_name_effect = {
+	# 2.41 review: the named slot's own kind, so A Name for the Trail describes the one it names, not the county's lead.
+	save_scope_value_as = { name = spn_tn_kind value = flag:none }
+	spn_trailsman_name_score_effect = { N = 1 EMPLOYER = $EMPLOYER$ TRAILSMAN = $TRAILSMAN$ }
+	spn_trailsman_name_score_effect = { N = 2 EMPLOYER = $EMPLOYER$ TRAILSMAN = $TRAILSMAN$ }
+	spn_trailsman_name_score_effect = { N = 3 EMPLOYER = $EMPLOYER$ TRAILSMAN = $TRAILSMAN$ }
+	if = {
+		limit = {
+			scope:spn_tn_1 > 0
+			scope:spn_tn_1 >= scope:spn_tn_2
+			scope:spn_tn_1 >= scope:spn_tn_3
+		}
+		var:spn_mc1 = { save_scope_as = spn_trailsman_name }
+		if = { limit = { has_variable = spn_mk1 } spn_kind_to_scope_value_effect = { NAME = spn_tn_kind VAR = var:spn_mk1 } }
+	}
+	else_if = {
+		limit = {
+			scope:spn_tn_2 > 0
+			scope:spn_tn_2 >= scope:spn_tn_3
+		}
+		var:spn_mc2 = { save_scope_as = spn_trailsman_name }
+		if = { limit = { has_variable = spn_mk2 } spn_kind_to_scope_value_effect = { NAME = spn_tn_kind VAR = var:spn_mk2 } }
+	}
+	else_if = {
+		limit = { scope:spn_tn_3 > 0 }
+		var:spn_mc3 = { save_scope_as = spn_trailsman_name }
+		if = { limit = { has_variable = spn_mk3 } spn_kind_to_scope_value_effect = { NAME = spn_tn_kind VAR = var:spn_mk3 } }
+	}
+	else_if = {
+		limit = {
+			NOT = { has_variable = spn_mc1 }
+			NOT = { has_variable = spn_mc2 }
+			NOT = { has_variable = spn_mc3 }
+			var:spn_menace_culprit ?= {
+				is_alive = yes
+				NOT = { this = $EMPLOYER$ }
+				NOT = { this = $TRAILSMAN$ }
+			}
+		}
+		var:spn_menace_culprit = { save_scope_as = spn_trailsman_name }
+		if = { limit = { has_variable = spn_menace_kind } spn_kind_to_scope_value_effect = { NAME = spn_tn_kind VAR = var:spn_menace_kind } }
+	}
+}
+
+# COUNTY scope.
+spn_trailsman_name_score_effect = {
+	save_temporary_scope_value_as = { name = spn_tn_$N$ value = 0 }
+	if = {
+		limit = {
+			var:spn_mc$N$ ?= {
+				is_alive = yes
+				NOT = { this = $EMPLOYER$ }
+				NOT = { this = $TRAILSMAN$ }
+			}
+		}
+		save_temporary_scope_value_as = { name = spn_tn_$N$ value = scope:spn_lg_s$N$ }
 	}
 }

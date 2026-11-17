@@ -337,6 +337,28 @@ spn_coven_year_effect = {
 			spn_coven_refresh_effect = yes
 			spn_coven_sync_mirrors_effect = yes
 		}
+		# 2.41 audit (XO, Steam, Nov 2026: "Grand Master of the Coven points never go up") -- LEADING THE COVEN EARNS THEM.
+		# Witchcraft's only repeatable source open at 0 points is hosting a Grand Rite (+10, once in five years), so the
+		# first tier took fifteen years. A Grand Master who leads a standing coven gains 2 a year, 3 with five or more
+		# members. Capped at the track's top.
+		story_owner = {
+			if = {
+				limit = {
+					has_trait = grandmaster_coven
+					NOT = { has_trait_xp = { trait = grandmaster_coven value >= 100 } }
+				}
+				add_trait_xp = { trait = grandmaster_coven value = 2 }
+				if = {
+					limit = {
+						scope:spn_cy_story = {
+							exists = var:spn_coven_size
+							var:spn_coven_size >= 5
+						}
+					}
+					add_trait_xp = { trait = grandmaster_coven value = 1 }
+				}
+			}
+		}
 		# A member of both a coven and a chapter (§16.1): The Sisters Ask What You Are. 20%, players only, once in ten years.
 		random = {
 			chance = 20

@@ -1,0 +1,141 @@
+﻿# Supernatural 2.41 (11 Nov 2026) -- the True Witch's standing and the Necromancer's depth: where the points come from.
+# Both traits gained a single track in 00_traits_magic.txt (apply_upstream_edits.py). Until now Mage had four tracks,
+# Warlock two and True Witch none; Necromancer had none either, though Witchcraft's Raise the Dead asks for 70 points of
+# it and its Aether potion grants 20 (00_magic_interactions.txt), so neither line could ever do anything.
+
+# CHARACTER scope. Inside spn_coven_rite_complete_effect (the Witch Ritual's on_complete runs once for each attendee).
+spn_true_witch_rite_xp_effect = {
+	if = {
+		limit = { has_trait = true_witch }
+		if = {
+			limit = { this = scope:host }
+			add_trait_xp = { trait = true_witch value = 8 }
+		}
+		else = {
+			add_trait_xp = { trait = true_witch value = 4 }
+		}
+	}
+}
+
+# CHARACTER scope. The Artifact Search's on_complete (once for each attendee).
+spn_artifact_search_complete_effect = {
+	if = {
+		limit = { has_trait = true_witch }
+		add_trait_xp = { trait = true_witch value = 6 }
+	}
+}
+
+# CHARACTER scope. Once a year (random_yearly_everyone_pulse).
+spn_practitioner_year_effect = {
+	if = {
+		limit = { has_trait = true_witch }
+		add_trait_xp = { trait = true_witch value = 2 }
+		# A coven is where the craft is kept.
+		if = {
+			limit = { spn_in_coven_trigger = yes }
+			add_trait_xp = { trait = true_witch value = 2 }
+		}
+	}
+	if = {
+		limit = { has_trait = necromancer }
+		add_trait_xp = { trait = necromancer value = 3 }
+		# Witchcraft marks its masters with a modifier. One who already is one starts where Raise the Dead opens.
+		if = {
+			limit = {
+				has_character_modifier = master_necromancer_modifier
+				NOT = { has_character_flag = spn_necro_master_synced }
+			}
+			add_character_flag = spn_necro_master_synced
+			if = {
+				limit = { NOT = { has_trait_xp = { trait = necromancer value >= 70 } } }
+				add_trait_xp = { trait = necromancer value = 70 }
+			}
+		}
+		spn_necromancy_by_path_effect = yes
+	}
+}
+
+# CHARACTER scope (a necromancer), once a year. Thomas, 11 Nov: "for the actual warlock necromancer route, that would be
+# a positive thing. But for mage and witch, that might not be. Witch, it becomes more of a gray area because if your
+# coven's cool with it, great. Mage, a little less." One path decides, in this order: Warlock, then Mage, then True
+# Witch (a character who kept two capstones from before 2.38e is read as the first that applies).
+#
+#   WARLOCK     welcome. Two more points a year, and At Home in the Dark.
+#   MAGE        Against the Art. And the Order, which already judges a member who takes up necromancy (the Old Law,
+#               spn_order.0106) and may let him stay, judges him AGAIN when he reaches 70 -- the depth at which he can
+#               raise the dead. Its three writers of spn_order_necro_tolerated all mean "a judge spared him"; this takes
+#               the pardon back once, and the Order's own yearly pass (zz_spn_order_effects.txt) does the rest.
+#   TRUE WITCH  her coven decides. If its leader practises it too or has the nature for it (spn_dark_nature_trigger),
+#               or she leads it herself, the coven thinks better of her; otherwise it fears her.
+spn_necromancy_by_path_effect = {
+	# 2.41 audit -- THE ORDER'S SECOND JUDGMENT IS FOR ANY MEMBER. The Order admits Warlocks and True Witches, and its
+	# Old Law judges a member necromancer whatever his path; this sat in the Mage branch below and missed them.
+	if = {
+		limit = {
+			spn_is_order_member_trigger = yes
+			has_trait_xp = { trait = necromancer value >= 70 }
+			has_character_flag = spn_order_necro_tolerated
+			NOT = { has_character_flag = spn_order_necro_deep_judged }
+		}
+		add_character_flag = spn_order_necro_deep_judged
+		remove_character_flag = spn_order_necro_tolerated
+	}
+	if = {
+		limit = { has_trait = warlock }
+		add_trait_xp = { trait = necromancer value = 2 }
+		if = {
+			limit = { has_character_modifier = spn_necro_warlock_modifier }
+			remove_character_modifier = spn_necro_warlock_modifier
+		}
+		add_character_modifier = { modifier = spn_necro_warlock_modifier years = 2 }
+	}
+	else_if = {
+		limit = { has_trait = archmage }
+		if = {
+			limit = { has_character_modifier = spn_necro_mage_modifier }
+			remove_character_modifier = spn_necro_mage_modifier
+		}
+		add_character_modifier = { modifier = spn_necro_mage_modifier years = 2 }
+	}
+	else_if = {
+		limit = {
+			has_trait = true_witch
+			exists = var:spn_coven
+		}
+		save_temporary_scope_as = spn_nc_me
+		var:spn_coven = { save_temporary_scope_as = spn_nc_story }
+		if = {
+			limit = {
+				scope:spn_nc_story.story_owner ?= {
+					OR = {
+						this = scope:spn_nc_me
+						has_trait = necromancer
+						spn_dark_nature_trigger = yes
+					}
+				}
+			}
+			scope:spn_nc_story = {
+				every_in_list = {
+					variable = spn_coven_members
+					limit = {
+						is_alive = yes
+						NOT = { this = scope:spn_nc_me }
+					}
+					add_opinion = { target = scope:spn_nc_me modifier = spn_coven_shares_the_dark_opinion }
+				}
+			}
+		}
+		else = {
+			scope:spn_nc_story = {
+				every_in_list = {
+					variable = spn_coven_members
+					limit = {
+						is_alive = yes
+						NOT = { this = scope:spn_nc_me }
+					}
+					add_opinion = { target = scope:spn_nc_me modifier = spn_coven_fears_the_dark_opinion }
+				}
+			}
+		}
+	}
+}

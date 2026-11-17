@@ -758,7 +758,13 @@ spn_wound_incubation.9000 = {
 		trigger = { has_character_flag = spn_sire_involved  exists = var:spn_conferred_sire  var:spn_conferred_sire = { is_alive = yes } }
 		save_scope_value_as = { name = climax_lean  value = 2 }
 		hidden_effect = {
-			var:spn_conferred_sire = { add_hook = { type = loyalty_hook  target = root } }
+			var:spn_conferred_sire = {
+				# 2.41 boot 10 -- guarded: a sire who already held a hook on him logged "already has a 'Loyalty' hook".
+				if = {
+					limit = { NOT = { has_hook = root } }
+					add_hook = { type = loyalty_hook  target = root }
+				}
+			}
 			spn_resolve_wound_climax = yes
 		}
 		ai_chance = { base = 45  modifier = { add = 20  has_trait = trusting } }

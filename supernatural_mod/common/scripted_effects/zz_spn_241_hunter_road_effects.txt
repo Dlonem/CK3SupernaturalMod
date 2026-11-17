@@ -1,0 +1,77 @@
+﻿# Supernatural 2.41 boot 10 (5 Nov 2026) -- HUNTERS TAKE TO THE ROAD. Thomas: "idle hunters could take to the road as
+# adventure camps ... technically that would be a good lore point for being on the road, hunting monsters. That's kind
+# of what Sam and Dean did."
+#
+# THE DEFECT. The Hunt (supernatural_hunt.txt) can only be hosted by a landed ruler or a landless adventurer. The 1147
+# observer save had 38 hunters: 4 landed, the rest courtiers or unemployed. 5 hunts in 75 years, none ending in a kill.
+#
+# THE FIX, built on vanilla's own door: create_landless_adventurer_title_effect (07_dlc_ep3_scripted_effects.txt), which
+# vanilla uses for a wandering pool character who decides to found a camp (00_courtier_guest_management_effects.txt,
+# REASON = flag:voluntary). Once he is a camp, everything already built for a landless hunter takes over: the movement
+# pulse rides him toward the trails (zz_spn_hunter_movement_on_actions.txt), the planner reaches farther for an adventurer
+# (spn_max_hunt_distance), the Trailsman camp officer, the Cold Trail.
+#
+# LIMITS: a hunter with 20 or more in either track; AI only, never out of a player's court; not a councillor, court
+# officer, ruler's spouse or heir; a warm trail within reach; and at most one camp for every two live trails (2 to 8).
+# He is still smart about it: the Hunt's own odds check applies to him (supernatural_hunt.txt ai_will_do).
+# Needs Roads to Power, as every camp does.
+
+# CHARACTER scope (the hunter).
+spn_hunter_take_to_the_road_effect = {
+	save_scope_as = spn_road_hunter
+	create_landless_adventurer_title_effect = {
+		REASON = flag:voluntary
+		FLAVOR_CHAR = scope:spn_road_hunter
+	}
+	if = {
+		limit = { is_landless_adventurer = yes }
+		add_to_global_variable_list = { name = spn_hunter_camps target = this }
+		add_character_flag = spn_hunter_on_the_road
+		spn_tc_bump_effect = { NAME = spn_tc_road }
+		# Pointed at the work at once, rather than at the next yearly movement pulse.
+		if = {
+			limit = {
+				exists = domicile
+				NOT = { has_character_flag = spn_hunter_moved_recently }
+			}
+			spn_hunter_seek_the_trail_effect = yes
+		}
+	}
+}
+
+# NO SCOPE NEEDED (inside spn_trail_census_after_effect). The camp list keeps only living hunters who still run a camp.
+spn_hunter_camps_census_effect = {
+	set_global_variable = { name = spn_tc_camps value = 0 }
+	if = {
+		limit = { has_global_variable_list = spn_hunter_camps }
+		# 2.41 audit -- the road ends when the camp does: a hunter who gained land or lost the camp no longer hunts free.
+		every_in_global_list = {
+			variable = spn_hunter_camps
+			limit = {
+				is_alive = yes
+				is_landless_adventurer = no
+				has_character_flag = spn_hunter_on_the_road
+			}
+			remove_character_flag = spn_hunter_on_the_road
+		}
+		every_in_global_list = {
+			variable = spn_hunter_camps
+			limit = {
+				is_alive = yes
+				is_landless_adventurer = yes
+				has_trait = supernatural_hunter
+			}
+			add_to_global_variable_list = { name = spn_hunter_camps_next target = this }
+			change_global_variable = { name = spn_tc_camps add = 1 }
+		}
+		clear_global_variable_list = spn_hunter_camps
+		if = {
+			limit = { has_global_variable_list = spn_hunter_camps_next }
+			every_in_global_list = {
+				variable = spn_hunter_camps_next
+				add_to_global_variable_list = { name = spn_hunter_camps target = this }
+			}
+			clear_global_variable_list = spn_hunter_camps_next
+		}
+	}
+}

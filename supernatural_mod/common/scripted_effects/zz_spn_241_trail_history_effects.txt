@@ -1,0 +1,247 @@
+﻿# Supernatural 2.41 boot 7 (4 Nov 2026) -- THE TRAIL REMEMBERS. Thomas: "there needs to be some hidden master list, and
+# then lists that apply to everybody ... holding old trail data after its trail ended is a big thing to keep in reference."
+#
+# Three layers, none of them timed (vanilla 1.20 uses no timed variable lists, and the boot-6 save lost four of five
+# entries from one):
+#   THE MASTER LIST   global spn_menace_counties     every county with a live trail. Repaired yearly (census below).
+#                     global spn_trail_history       every county that has ever had a trail. Never pruned.
+#                     global spn_trail_bearers       every living character with a live trail (who to prune).
+#   EACH CHARACTER    spn_my_trails                  the live trails they are on. Pruned yearly.
+#                     spn_trails_ever                every county they have ever been on a trail in. Never pruned.
+#   EACH COUNTY       spn_trail_times                how many trails it has had
+#                     spn_trail_began_year           the year the latest one opened
+#                     spn_trail_last_year            the year of its latest incident
+#                     spn_trail_ended_year           the year it went cold (absent while one is live)
+#                     spn_trail_last_kind            what the county last blamed (a flag)
+#                     spn_trail_last_culprit         who it last blamed (a character, kept after death)
+# Readers: the Trailsman's Old Graves report (spn_hunt.0403) and the census line in debug.log.
+# REFERENCE-the-trail-system.md has the full map.
+
+# Any scope. A world counter for the census line. Untimed.
+spn_tc_bump_effect = {
+	if = {
+		limit = { NOT = { exists = global_var:$NAME$ } }
+		set_global_variable = { name = $NAME$ value = 0 }
+	}
+	change_global_variable = { name = $NAME$ add = 1 }
+}
+
+# Any scope. A counter that has never been bumped is created at 0.
+spn_tc_init_effect = {
+	if = {
+		limit = { NOT = { exists = global_var:$NAME$ } }
+		set_global_variable = { name = $NAME$ value = 0 }
+	}
+}
+
+# CHARACTER scope (the culprit). The one way a county goes onto someone's lists. Replaces the four hand copies in
+# spn_open_menace_trail_effect (x2), spn_menace_culprit_died_effect and spn_ledger_move_heat_effect.
+spn_my_trails_add_effect = {
+	$COUNTY$ = { save_temporary_scope_as = spn_mta_county }
+	if = {
+		limit = { NOT = { is_target_in_variable_list = { name = spn_my_trails target = scope:spn_mta_county } } }
+		add_to_variable_list = { name = spn_my_trails target = scope:spn_mta_county }
+	}
+	if = {
+		limit = { NOT = { is_target_in_variable_list = { name = spn_trails_ever target = scope:spn_mta_county } } }
+		add_to_variable_list = { name = spn_trails_ever target = scope:spn_mta_county }
+	}
+	if = {
+		limit = { NOT = { is_target_in_global_variable_list = { name = spn_trail_bearers target = this } } }
+		add_to_global_variable_list = { name = spn_trail_bearers target = this }
+	}
+}
+
+# COUNTY scope. A trail is opening where there was none. Called by spn_open_menace_trail_effect before the modifier.
+spn_trail_history_open_effect = {
+	if = {
+		limit = { NOT = { has_county_modifier = spn_menace_modifier } }
+		set_variable = { name = spn_trail_began_year value = current_year }
+		if = {
+			limit = { has_variable = spn_trail_times }
+			change_variable = { name = spn_trail_times add = 1 }
+		}
+		else = {
+			set_variable = { name = spn_trail_times value = 1 }
+		}
+		if = { limit = { has_variable = spn_trail_ended_year } remove_variable = spn_trail_ended_year }
+		if = {
+			limit = { NOT = { is_target_in_global_variable_list = { name = spn_trail_history target = this } } }
+			add_to_global_variable_list = { name = spn_trail_history target = this }
+		}
+		spn_tc_bump_effect = { NAME = spn_tc_opened }
+	}
+}
+
+# COUNTY scope. After every verdict on a live trail: what the county believes, kept past the trail. The kind is copied
+# literally (a flag copied through var: into a scope value saves 0; see spn_kind_to_scope_value_effect).
+spn_trail_history_note_effect = {
+	set_variable = { name = spn_trail_last_year value = current_year }
+	if = {
+		limit = { exists = var:spn_menace_culprit }
+		set_variable = { name = spn_trail_last_culprit value = var:spn_menace_culprit }
+	}
+	if = { limit = { var:spn_menace_kind ?= flag:vampire } set_variable = { name = spn_trail_last_kind value = flag:vampire } }
+	else_if = { limit = { var:spn_menace_kind ?= flag:werewolf } set_variable = { name = spn_trail_last_kind value = flag:werewolf } }
+	else_if = { limit = { var:spn_menace_kind ?= flag:demon } set_variable = { name = spn_trail_last_kind value = flag:demon } }
+	else_if = { limit = { var:spn_menace_kind ?= flag:witch } set_variable = { name = spn_trail_last_kind value = flag:witch } }
+	else_if = { limit = { var:spn_menace_kind ?= flag:human } set_variable = { name = spn_trail_last_kind value = flag:human } }
+}
+
+# COUNTY scope. Inside spn_menace_clear_county_effect, before the ledger is wiped: every name on it forgets this county
+# (not only the lead), and the county keeps the year it went cold.
+spn_trail_history_end_effect = {
+	save_temporary_scope_as = spn_the_county
+	var:spn_mc1 ?= { if = { limit = { is_target_in_variable_list = { name = spn_my_trails target = scope:spn_the_county } } remove_list_variable = { name = spn_my_trails target = scope:spn_the_county } } }
+	var:spn_mc2 ?= { if = { limit = { is_target_in_variable_list = { name = spn_my_trails target = scope:spn_the_county } } remove_list_variable = { name = spn_my_trails target = scope:spn_the_county } } }
+	var:spn_mc3 ?= { if = { limit = { is_target_in_variable_list = { name = spn_my_trails target = scope:spn_the_county } } remove_list_variable = { name = spn_my_trails target = scope:spn_the_county } } }
+	# 2.41 audit -- once per trail. began_year is never removed, so the old test was true for any county that ever had a
+	# trail, and a clear called on a quiet county (the Powder, Respondeo) moved the year it went cold to today.
+	if = {
+		limit = {
+			NOT = { has_variable = spn_trail_ended_year }
+			OR = {
+				has_variable = spn_trail_began_year
+				has_variable = spn_menace_ledger
+			}
+		}
+		set_variable = { name = spn_trail_ended_year value = current_year }
+		spn_tc_bump_effect = { NAME = spn_tc_cleared }
+	}
+}
+
+# NO SCOPE NEEDED (yearly_global_pulse). The census around spn_menace_world_census's every_county pass.
+#
+# BEFORE the pass: an entry in the master list whose modifier has gone. Since boot 6 the list is untimed and only the
+# clear effect takes a county off it, so an expired trail is still listed even after its variables have expired with it,
+# and the every_county pass (which looks for the modifier or the variables) would never see it. Two passes, so nothing
+# is removed from a list while it is being walked.
+spn_trail_census_before_effect = {
+	# Older saves: build the bearer registry and each character's history once, from the lists they already carry.
+	if = {
+		limit = { NOT = { exists = global_var:spn_trail_bearers_seeded } }
+		set_global_variable = { name = spn_trail_bearers_seeded value = yes }
+		every_living_character = {
+			limit = { has_variable_list = spn_my_trails }
+			if = {
+				limit = { NOT = { is_target_in_global_variable_list = { name = spn_trail_bearers target = this } } }
+				add_to_global_variable_list = { name = spn_trail_bearers target = this }
+			}
+			save_temporary_scope_as = spn_seed_bearer
+			every_in_list = {
+				variable = spn_my_trails
+				save_temporary_scope_as = spn_seed_county
+				scope:spn_seed_bearer = {
+					if = {
+						limit = { NOT = { is_target_in_variable_list = { name = spn_trails_ever target = scope:spn_seed_county } } }
+						add_to_variable_list = { name = spn_trails_ever target = scope:spn_seed_county }
+					}
+				}
+				if = {
+					limit = { NOT = { is_target_in_global_variable_list = { name = spn_trail_history target = this } } }
+					add_to_global_variable_list = { name = spn_trail_history target = this }
+				}
+			}
+		}
+	}
+	every_in_global_list = {
+		variable = spn_menace_counties
+		limit = { NOT = { has_county_modifier = spn_menace_modifier } }
+		add_to_global_variable_list = { name = spn_menace_expired_tmp target = this }
+	}
+	every_in_global_list = {
+		variable = spn_menace_expired_tmp
+		spn_menace_clear_county_effect = yes
+	}
+	clear_global_variable_list = spn_menace_expired_tmp
+}
+
+# AFTER the pass: each bearer's live list loses the counties whose trail has ended (death, decay, the heir's guess and the
+# blame-shift all leave names behind that the clear effect cannot reach), and the registry is rebuilt from the living
+# bearers who still have one. Then the census line.
+spn_trail_census_after_effect = {
+	every_in_global_list = {
+		variable = spn_trail_bearers
+		limit = { is_alive = yes }
+		save_temporary_scope_as = spn_tb
+		every_in_list = {
+			variable = spn_my_trails
+			limit = { NOT = { has_county_modifier = spn_menace_modifier } }
+			save_temporary_scope_as = spn_tb_c
+			scope:spn_tb = { add_to_variable_list = { name = spn_tb_prune target = scope:spn_tb_c } }
+		}
+		if = {
+			limit = { has_variable_list = spn_tb_prune }
+			every_in_list = {
+				variable = spn_tb_prune
+				save_temporary_scope_as = spn_tb_c
+				scope:spn_tb = { remove_list_variable = { name = spn_my_trails target = scope:spn_tb_c } }
+			}
+			clear_variable_list = spn_tb_prune
+		}
+		if = {
+			limit = { any_in_list = { variable = spn_my_trails always = yes } }
+			if = {
+				limit = { NOT = { is_target_in_global_variable_list = { name = spn_trail_bearers_next target = this } } }
+				add_to_global_variable_list = { name = spn_trail_bearers_next target = this }
+			}
+		}
+		else_if = {
+			limit = { has_variable_list = spn_my_trails }
+			clear_variable_list = spn_my_trails
+		}
+	}
+	clear_global_variable_list = spn_trail_bearers
+	every_in_global_list = {
+		variable = spn_trail_bearers_next
+		add_to_global_variable_list = { name = spn_trail_bearers target = this }
+	}
+	clear_global_variable_list = spn_trail_bearers_next
+
+	# The census line (debug.log). Counts of the three lists, then the running totals since the game began.
+	set_global_variable = { name = spn_tc_live value = 0 }
+	set_global_variable = { name = spn_tc_live_human value = 0 }
+	set_global_variable = { name = spn_tc_live_mixed value = 0 }
+	set_global_variable = { name = spn_tc_history value = 0 }
+	set_global_variable = { name = spn_tc_bearers value = 0 }
+	every_in_global_list = {
+		variable = spn_menace_counties
+		change_global_variable = { name = spn_tc_live add = 1 }
+		if = { limit = { var:spn_menace_kind ?= flag:human } change_global_variable = { name = spn_tc_live_human add = 1 } }
+		if = { limit = { has_variable = spn_menace_mixed } change_global_variable = { name = spn_tc_live_mixed add = 1 } }
+	}
+	every_in_global_list = { variable = spn_trail_history change_global_variable = { name = spn_tc_history add = 1 } }
+	every_in_global_list = { variable = spn_trail_bearers change_global_variable = { name = spn_tc_bearers add = 1 } }
+	spn_hunter_camps_census_effect = yes # 2.41 boot 10: hunter camps (zz_spn_241_hunter_road_effects.txt)
+	# Every counter the line reads exists, so a count of nothing prints 0 rather than a missing-variable error.
+	# 2.41 audit -- the running-hunts counter is recounted from the activities that exist, like every other piece of
+	# trail state. At 4 it stops every AI hunt, so a leaked count would have ended hunting for the rest of the game.
+	set_global_variable = { name = spn_hunts_running value = 0 }
+	every_activity = {
+		limit = {
+			has_activity_type = supernatural_hunt
+			has_variable = spn_hunt_counted
+		}
+		change_global_variable = { name = spn_hunts_running add = 1 }
+	}
+	spn_tc_init_effect = { NAME = spn_tc_marks }
+	spn_tc_init_effect = { NAME = spn_tc_opened }
+	spn_tc_init_effect = { NAME = spn_tc_cleared }
+	spn_tc_init_effect = { NAME = spn_tc_hunts }
+	spn_tc_init_effect = { NAME = spn_tc_road }
+	spn_tc_init_effect = { NAME = spn_tc_out_slain }
+	spn_tc_init_effect = { NAME = spn_tc_out_hunter_beaten }
+	spn_tc_init_effect = { NAME = spn_tc_out_fled }
+	spn_tc_init_effect = { NAME = spn_tc_out_withdrew }
+	spn_tc_init_effect = { NAME = spn_tc_out_cold }
+	spn_tc_init_effect = { NAME = spn_tc_out_exorcised }
+	spn_tc_init_effect = { NAME = spn_tc_out_bargained }
+	spn_tc_init_effect = { NAME = spn_tc_out_bought }
+	spn_tc_init_effect = { NAME = spn_tc_out_compelled }
+	spn_tc_init_effect = { NAME = spn_tc_out_witch }
+	spn_tc_init_effect = { NAME = spn_tc_out_proxy_slain }
+	spn_tc_init_effect = { NAME = spn_tc_out_human_slain }
+	spn_tc_init_effect = { NAME = spn_tc_out_human_spared }
+	spn_tc_init_effect = { NAME = spn_tc_out_human_jailed }
+	debug_log = spn_trail_census_log
+}

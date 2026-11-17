@@ -1,0 +1,59 @@
+﻿# Supernatural 2.41 boot 8 -- wolf blood (zz_spn_241_wolf_blood_values.txt has the rules and the numbers).
+
+# CHARACTER scope (the newborn), inside spn_on_genetic_birth before spn_initiate.9000. Every branch that makes a werewolf
+# baby has already flagged it, named its sire and counted it on its parents; this rolls the blood, and on a miss undoes
+# exactly those three and records what the child carries.
+spn_wolf_birth_roll_effect = {
+	if = {
+		limit = { has_character_flag = spn_baby_werewolf }
+		random = {
+			chance = {
+				value = 100
+				subtract = spn_wolf_birth_chance_value
+			}
+			remove_character_flag = spn_baby_werewolf
+			if = {
+				limit = { has_variable = spn_mother_sire }
+				remove_variable = spn_mother_sire
+			}
+			if = {
+				limit = { has_character_flag = spn_has_mother_sire }
+				remove_character_flag = spn_has_mother_sire
+			}
+			if = {
+				limit = { has_variable = spn_father_sire }
+				remove_variable = spn_father_sire
+			}
+			if = {
+				limit = { has_character_flag = spn_has_father_sire }
+				remove_character_flag = spn_has_father_sire
+			}
+			# The count (spn_update_number_of_supernatural_children_for_parents) was added for a wolf child. A carrier's
+			# throwback was never counted, and a demon-blooded child was counted by the demon roll, which stands.
+			if = {
+				limit = {
+					NOT = { has_character_flag = spn_wb_throwback }
+					NOT = { has_trait = demon0 }
+				}
+				scope:mother ?= { spn_wolf_uncount_child_effect = yes }
+				scope:real_father ?= { spn_wolf_uncount_child_effect = yes }
+			}
+			if = {
+				limit = { spn_wolf_carrier_blood_value >= spn_wolf_carrier_floor_value }
+				set_variable = { name = spn_wolf_blood value = spn_wolf_carrier_blood_value }
+			}
+		}
+	}
+}
+
+# CHARACTER scope (a parent).
+spn_wolf_uncount_child_effect = {
+	if = {
+		limit = {
+			is_alive = yes
+			exists = var:spn_number_of_supernatural_children
+			var:spn_number_of_supernatural_children > 0
+		}
+		change_variable = { name = spn_number_of_supernatural_children subtract = 1 }
+	}
+}

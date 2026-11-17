@@ -23,10 +23,7 @@
 
 supernatural_hunt = {
 	is_shown = {
-		OR = {
-			is_landed_or_landless_administrative = yes
-			is_landless_adventurer = yes
-		}
+		spn_hunt_host_government_trigger = yes # 2.41 boot 10: one place for the governments (merchants, 17 Nov)
 		is_playable_character = yes
 		is_adult = yes
 		has_trait = supernatural_hunter
@@ -60,10 +57,7 @@ supernatural_hunt = {
 	is_valid = {
 		NOT = { has_variable = activity_invalidated }
 		scope:host = {
-			OR = {
-				is_landed_or_landless_administrative = yes
-				is_landless_adventurer = yes
-			}
+			spn_hunt_host_government_trigger = yes # 2.41 boot 10
 			is_alive = yes
 			is_imprisoned = no
 			has_trait = supernatural_hunter #Non Hunters were going on Hunts... fixed that.
@@ -82,26 +76,54 @@ supernatural_hunt = {
 			add_character_flag = { flag = spn_hunt_on_cooldown years = 2 }
 		}
 		scope:activity ?= {
+			# 2.41 (WORK-ORDER-2.41 §1.3 B5, §1.4, §1.6) -- THE QUARRY IS CHOSEN, NOT COPIED. Until 2.41 the hunt banked
+			# whatever name the county carried, which could be the host himself or one of his own guests ("it suggests I
+			# can hunt, imprison, or execute myself"), and could not ride for anyone but the last creature to mark it.
+			# spn_ledger_pick_quarry_effect (zz_spn_241_ledger_effects.txt) recomputes the lead, then picks: the Cold
+			# Trail's quarry if this is where the host's trail points; otherwise the best-scoring name on the ledger that
+			# is neither the host nor a guest (with Another Quarry, not the lead); otherwise a pre-2.41 trail's culprit.
 			if = {
-				limit = {
-					has_activity_option = { category = special_type option = spn_hunt_kind_monster }
-					activity_location.county ?= {
-						exists = var:spn_menace_culprit
-						var:spn_menace_culprit = { is_alive = yes }
-					}
+				limit = { has_activity_option = { category = special_type option = spn_hunt_kind_monster } }
+				activity_location.county ?= {
+					spn_ledger_pick_quarry_effect = { HOST = scope:host ACTIVITY = scope:activity }
 				}
-				activity_location.county = {
-					var:spn_menace_culprit = {
+				if = {
+					limit = { exists = scope:spn_lg_quarry }
+					scope:spn_lg_quarry = {
 						save_scope_as = spn_culprit_at_start
 						save_scope_value_as = { name = spn_culprit_track_at_start value = spn_hunt_creature_track_value }
 					}
+					set_variable = { name = spn_hunt_kind value = scope:spn_lg_quarry_kind }
+					# 2.41 (§1.4) -- A GREEN HUNTER ON A MIXED TRAIL is sometimes reading the other thing's signs. One time in three
+					# he rides as if for what the trail started as; the kit he packs for it is its own answer, as it always was.
+					# Only between two creature kinds: a man's trail is never mistaken for a monster's, nor the reverse.
 					if = {
-						limit = { exists = var:spn_menace_kind }
-						scope:activity = { set_variable = { name = spn_hunt_kind value = prev.var:spn_menace_kind } }
+						limit = {
+							scope:host = { NOT = { spn_hunter_is_seasoned_trigger = yes } }
+							NOT = { scope:spn_lg_quarry_kind = flag:human }
+							activity_location.county ?= {
+								has_variable = spn_menace_mixed
+								exists = var:spn_menace_origin_kind
+								NOT = { var:spn_menace_origin_kind = flag:human }
+								NOT = { var:spn_menace_origin_kind = scope:spn_lg_quarry_kind }
+							}
+						}
+						random = {
+							chance = 33
+							set_variable = { name = spn_hunt_kind value = activity_location.county.var:spn_menace_origin_kind }
+						}
+					}
+					set_variable = { name = spn_hunt_culprit value = scope:spn_culprit_at_start }
+					set_variable = { name = spn_hunt_culprit_track value = scope:spn_culprit_track_at_start }
+					if = {
+						limit = { scope:spn_lg_pursuit = yes }
+						set_variable = { name = spn_hunt_pursuit value = yes }
+					}
+					if = {
+						limit = { has_activity_option = { category = spn_hunt_quarry option = spn_hunt_quarry_all } }
+						set_variable = { name = spn_hunt_quarry_all value = yes }
 					}
 				}
-				set_variable = { name = spn_hunt_culprit value = scope:spn_culprit_at_start }
-				set_variable = { name = spn_hunt_culprit_track value = scope:spn_culprit_track_at_start }
 			}
 			# 2.35 PART TWO (§6.2) -- THE WITCH KIND, WHEN IT HAS A TRAIL.
 			#
@@ -200,7 +222,13 @@ supernatural_hunt = {
 				multiply = 0.25
 			}
 			if = {
-				limit = { has_character_flag = spn_has_hunter_contract }
+				limit = {
+					OR = {
+						has_character_flag = spn_has_hunter_contract
+						# 2.41 boot 11 -- a hunter on the road lives off what the villages give him for the work.
+						has_character_flag = spn_hunter_on_the_road
+					}
+				}
 				multiply = 0
 			}
 		}
@@ -226,7 +254,13 @@ supernatural_hunt = {
 				multiply = 0.25
 			}
 			if = {
-				limit = { has_character_flag = spn_has_hunter_contract }
+				limit = {
+					OR = {
+						has_character_flag = spn_has_hunter_contract
+						# 2.41 boot 11 -- a hunter on the road lives off what the villages give him for the work.
+						has_character_flag = spn_hunter_on_the_road
+					}
+				}
 				multiply = 0
 			}
 			divide = 5
@@ -314,9 +348,34 @@ supernatural_hunt = {
 			add = -25
 		}
 		# Can he actually pay for it? The same shape feast.txt uses, against this activity's own base cost.
+		# 2.41 boot 11 -- not for a hunter on the road: his hunt costs nothing (cost, above), and the vanilla base he was
+		# measured against is a lord's price. The 1168 save's three road camps held 16, -8 and 24 gold, so the -50 here
+		# alone kept every one of them under the engine's ACTIVITY_SCORE_THRESHOLD (20, defines/ai/00_ai.txt).
 		if = {
-			limit = { NOT = { short_term_gold >= standard_activity_base_cost } }
+			limit = {
+				NOT = { has_character_flag = spn_hunter_on_the_road }
+				NOT = { has_character_flag = spn_has_hunter_contract }
+				# 2.41 audit -- measured against this hunt's own price (cost, above: half the vanilla base, a quarter of
+				# that for a camp), not the base itself. A camp's title is duchy tier, so the base was eight times its
+				# hunt and every AI camp took this -50.
+				NOT = {
+					short_term_gold >= {
+						value = standard_activity_base_cost
+						multiply = 0.5
+						if = {
+							limit = { has_government = landless_adventurer_government }
+							multiply = 0.25
+						}
+					}
+				}
+			}
 			add = -50
+		}
+		# 2.41 boot 11 -- and the road is the life he chose. His camp sits beside the trail, not in it, so the
+		# where-he-stands pull (spn_hunter_pull_value) rarely reaches him.
+		if = {
+			limit = { has_character_flag = spn_hunter_on_the_road }
+			add = 20
 		}
 		if = {
 			limit = { short_term_gold >= major_gold_value }
@@ -347,7 +406,12 @@ supernatural_hunt = {
 				NOR = {
 					has_trait = brave
 					has_trait = vengeful
-					spn_hunter_has_nothing_else_trigger = yes
+					# 2.41 boot 10 -- a hunter who took to the road chose this life; he did not run out of options, so he
+					# still weighs the odds. Thomas: "werewolves are strong. These hunters have to be smart."
+					AND = {
+						spn_hunter_has_nothing_else_trigger = yes
+						NOT = { has_character_flag = spn_hunter_on_the_road }
+					}
 				}
 			}
 			multiply = 0
@@ -370,6 +434,24 @@ supernatural_hunt = {
 	ai_will_select_province = {
 		value = 50
 		add = { value = scope:score multiply = 10 }
+		# 2.41 audit -- THE ODDS, ASKED OF THE PLACE HE WOULD RIDE TO. The ai_will_do test only sees the county the
+		# hunter stands in, and a camp parks beside the trail, so it never saw the quarry. Unless he is brave or vengeful,
+		# an AI hunter does not pick a county whose lead is more than 25 points of track above his own.
+		if = {
+			limit = {
+				scope:host = {
+					is_ai = yes
+					NOR = { has_trait = brave has_trait = vengeful }
+				}
+				county ?= {
+					var:spn_menace_culprit ?= {
+						is_alive = yes
+						spn_hunt_creature_track_value > scope:host.spn_hunt_ai_overmatch_value
+					}
+				}
+			}
+			multiply = 0
+		}
 	}
 
 	###################
@@ -531,6 +613,21 @@ supernatural_hunt = {
 								subtract = 25
 								desc = activity_cost_scale_by_era_desc
 							}
+							# 2.41 (Silk & Silver): what silver costs where he sets out from. Plenty in the local market
+							# (vanilla 1.21 trade_market_surplus_of_trade_good_type, as 00_building_modifiers.txt reads it):
+							# cheaper; none to spare: dearer. A price itself cannot be read from script.
+							if = {
+								limit = {
+									location ?= { barony.trade_market ?= { trade_market_surplus_of_trade_good_type = { target = trade_good_type:trade_good_silver value > 0 } } }
+								}
+								add = { value = -10 desc = spn_hunt_prep_silver_plentiful }
+							}
+							# A place with no market (or a game without one) keeps the old price: only a market that has no
+							# silver to spare makes it dearer.
+							else_if = {
+								limit = { location ?= { exists = barony.trade_market } }
+								add = { value = 15 desc = spn_hunt_prep_silver_scarce }
+							}
 							min = 0
 						}
 					}
@@ -570,6 +667,46 @@ supernatural_hunt = {
 		}
 
 		# Approach -- how the hunter goes about it.
+		# 2.41 (WORK-ORDER-2.41 §1.4) -- WHICH ONE. Thomas: "experts... can choose which one to hunt, or they can do them
+		# all." Read at the start (spn_ledger_pick_quarry_effect) and at the kill (spn_hunt.0705). A Green or Seasoned hunter
+		# rides for whoever the county blames; only an expert chooses.
+		spn_hunt_quarry = {
+			spn_hunt_quarry_lead = {
+				default = yes
+				is_shown = { has_trait = supernatural_hunter }
+				ai_will_do = { value = 50 }
+			}
+			spn_hunt_quarry_other = {
+				is_shown = { has_trait = supernatural_hunter }
+				is_valid = {
+					custom_tooltip = {
+						text = spn_hunt_quarry_needs_expert_tt
+						spn_hunter_is_expert_trigger = yes
+					}
+				}
+				ai_will_do = { value = 0 }
+			}
+			spn_hunt_quarry_all = {
+				is_shown = { has_trait = supernatural_hunter }
+				is_valid = {
+					custom_tooltip = {
+						text = spn_hunt_quarry_needs_expert_tt
+						spn_hunter_is_expert_trigger = yes
+					}
+				}
+				ai_will_do = {
+					value = 0
+					if = {
+						limit = { spn_hunter_is_expert_trigger = yes }
+						add = 30
+						if = { limit = { has_trait = brave } add = 20 }
+						if = { limit = { has_trait = diligent } add = 15 }
+						if = { limit = { has_trait = craven } add = -40 }
+					}
+				}
+			}
+		}
+
 		spn_hunt_approach = {
 			# Ask Quietly (intrigue): nothing on the bar; the creatures roll to hear of you.
 			spn_hunt_approach_quiet = {
@@ -704,6 +841,12 @@ supernatural_hunt = {
 						limit = { scope:activity.var:spn_hunt_culprit = { is_a_demon_trigger = yes } }
 						scope:activity.var:spn_hunt_culprit = { trigger_event = { id = spn_hunt.0162 days = { 1 4 } } }
 					}
+					# 2.41 (WORK-ORDER-2.41 §1.5) -- a man who kills gets a man's warning: run, stand or pay. No compel, no
+					# progeny, no wolf.
+					else_if = {
+						limit = { scope:activity.var:spn_hunt_kind ?= flag:human }
+						scope:activity.var:spn_hunt_culprit = { trigger_event = { id = spn_hunt.0716 days = { 1 4 } } }
+					}
 					else = {
 						scope:activity.var:spn_hunt_culprit = { trigger_event = { id = spn_hunt.0155 days = { 1 4 } } }
 					}
@@ -777,20 +920,39 @@ supernatural_hunt = {
 			custom_tooltip = {
 				text = spn_hunt_location_needs_trail_tt
 				# ?= : the tooltip builder walks every branch, sea provinces included, so the county link must be soft here.
-				county ?= {
-					has_county_modifier = spn_menace_modifier
-					exists = var:spn_menace_culprit
-					# 2.35c -- GUARDED. This read produced 1,737 real errors in a 17-minute boot
-					# (error.log, 9 Sep): "is_alive trigger [ Wrong scope for trigger: landed_title, expected character ]".
-					# CK3 does NOT short-circuit the siblings of an AND: has_county_modifier failing does not stop the
-					# line below it being evaluated, so on every province in the world with no trail on it the unset
-					# var: read fell back to the county itself and is_alive got handed a landed_title. province_filter is
-					# `all`, so that is once per province per planner scan -- which is why this one line was 1.7% of the
-					# entire error log. trigger_if's limit DOES gate evaluation; the semantics are unchanged.
-					trigger_if = {
-						limit = { exists = var:spn_menace_culprit }
-						var:spn_menace_culprit = { is_alive = yes }
+				OR = {
+					county ?= {
+						has_county_modifier = spn_menace_modifier
+						exists = var:spn_menace_culprit
+						# 2.35c -- GUARDED. This read produced 1,737 real errors in a 17-minute boot
+						# (error.log, 9 Sep): "is_alive trigger [ Wrong scope for trigger: landed_title, expected character ]".
+						# CK3 does NOT short-circuit the siblings of an AND: has_county_modifier failing does not stop the
+						# line below it being evaluated, so on every province in the world with no trail on it the unset
+						# var: read fell back to the county itself and is_alive got handed a landed_title. province_filter is
+						# `all`, so that is once per province per planner scan -- which is why this one line was 1.7% of the
+						# entire error log. trigger_if's limit DOES gate evaluation; the semantics are unchanged.
+						trigger_if = {
+							limit = { exists = var:spn_menace_culprit }
+							var:spn_menace_culprit = { is_alive = yes }
+						}
 					}
+					# 2.41 (WORK-ORDER-2.41 §1.6) -- THE COLD TRAIL: the county the host's own trail points at, trail or no
+					# trail. Read only off scope:host, so nobody else is offered a county with nothing in it.
+					AND = {
+						scope:host = { spn_cold_trail_active_trigger = yes }
+						county ?= scope:host.var:spn_quarry_county
+					}
+				}
+			}
+			# 2.41 (B5) -- never a trail whose only name is the host's own.
+			custom_tooltip = {
+				text = spn_hunt_location_your_own_trail_tt
+				OR = {
+					AND = {
+						scope:host = { spn_cold_trail_active_trigger = yes }
+						county ?= scope:host.var:spn_quarry_county
+					}
+					county ?= { NOT = { spn_ledger_only_culprit_trigger = { WHO = scope:host } } }
 				}
 			}
 			# 2.35 -- WHO DARES. Thomas, 9 Sep 2026: "all of the hunters know who resides in this specific county,
@@ -855,7 +1017,14 @@ supernatural_hunt = {
 			# that did not end the trail; a hunt that DID end it removes the trail anyway and this never applies.
 			custom_tooltip = {
 				text = spn_hunt_location_recently_hunted_tt
-				county ?= { NOT = { has_variable = spn_hunt_recently_hunted } }
+				OR = {
+					county ?= { NOT = { has_variable = spn_hunt_recently_hunted } }
+					# 2.41 (§1.6) -- a chase does not wait out the county's breather.
+					AND = {
+						scope:host = { spn_cold_trail_active_trigger = yes }
+						county ?= scope:host.var:spn_quarry_county
+					}
+				}
 			}
 		}
 		trigger_if = {
@@ -936,7 +1105,16 @@ supernatural_hunt = {
 	# Not `all`: the engine's own warning in _activity_type.info:79 is explicit about the planner rescan cost.
 	# TRADE-OFF, identical to the feeding's: a landless AI adventurer has no realm and loses the domicile
 	# province it used to get here. The landless PLAYER is unaffected (province_filter = all).
-	ai_province_filter = top_realm
+	#
+	# 2.41 boot 11 (5 Nov) -- top_realm -> ALL. The trade-off above turned out to be the whole problem: an AI camp has no
+	# realm, so top_realm gave it no province at all and no AI camp could ever host the Hunt. The 1168 observer save had
+	# seven hunters take to the road and not one hunt in 21 years. Every filter that reaches a trail outside a realm needs a
+	# realm or is `all`; the camp sits next to the trail, so domicile_domain misses it too. `all` is affordable here
+	# because the planner only asks it of hunters (is_shown) every 36 months, and is_location_valid fails nearly every
+	# province on its first two tests (exists = county, is_county_capital) and the rest on the trail modifier. The leash
+	# (spn_max_hunt_distance, or the host's own top realm) still decides how far he rides. A landed AI hunter now also
+	# sees a trail just over his border within the leash, which is what the 2.35 widening wanted in the first place.
+	ai_province_filter = all
 
 	# 2.35a -- 6 -> 10000 -> 5. The 10000 was the right answer to the wrong question: it was set when the
 	# score handed every county in the world a flat 100, so raising the cap was the only way any trail got a
@@ -1007,6 +1185,14 @@ supernatural_hunt = {
 			}
 			add = 20
 		}
+		# 2.41 (§1.6) -- the county the host's Cold Trail points at outranks everything: that is where he is going.
+		if = {
+			limit = {
+				scope:host = { spn_cold_trail_active_trigger = yes }
+				county ?= scope:host.var:spn_quarry_county
+			}
+			add = 150
+		}
 		if = {
 			limit = { county ?= { has_county_modifier = spn_menace_modifier } }
 			add = 100
@@ -1016,7 +1202,7 @@ supernatural_hunt = {
 				add = { value = county.var:spn_menace_count multiply = 25 }
 			}
 			# A county that has already lost its grip is a worse place to be and an easier place to work.
-			add = { value = county.county_control multiply = -0.5 }
+			add = { value = county.spn_county_control_normal_value multiply = -0.5 }
 			# 2.35a -- a county that has forgotten a week is quieter and still a hunter's business.
 			if = {
 				limit = { county = { has_county_modifier = spn_compelled_modifier } }
@@ -1157,17 +1343,53 @@ supernatural_hunt = {
 				}
 				desc = spn_hunt_tag_kind_witch
 			}
+			# 2.41 (§1.5) -- a man's work reads plainly to anyone who has seen a monster's.
+			triggered_desc = {
+				trigger = {
+					county ?= { has_county_modifier = spn_menace_modifier var:spn_menace_kind ?= flag:human }
+					scope:host = { spn_hunter_is_seasoned_trigger = yes }
+				}
+				desc = spn_hunt_tag_kind_human
+			}
 			triggered_desc = {
 				trigger = { county ?= { has_county_modifier = spn_menace_modifier } }
 				desc = spn_hunt_tag_kind_unknown
 			}
 		}
 
+		# 2.41 (WORK-ORDER-2.41 §1.4) -- FIFTY SHADES. A seasoned hunter knows when there is more than one thing out there; an
+		# expert knows what it started as, and when one of them has already gone.
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					county ?= { has_county_modifier = spn_menace_modifier  has_variable = spn_menace_mixed  exists = var:spn_menace_origin_kind }
+					scope:host = { spn_hunter_is_expert_trigger = yes }
+				}
+				desc = spn_hunt_tag_mixed_origin
+			}
+			triggered_desc = {
+				trigger = {
+					county ?= { has_county_modifier = spn_menace_modifier  has_variable = spn_menace_mixed }
+					scope:host = { spn_hunter_is_seasoned_trigger = yes }
+				}
+				desc = spn_hunt_tag_mixed
+			}
+		}
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					scope:host = { spn_cold_trail_active_trigger = yes }
+					county ?= scope:host.var:spn_quarry_county
+				}
+				desc = spn_hunt_tag_cold_trail
+			}
+		}
+
 		# --- THE COUNTY ITSELF. county_control is the same term the province_score subtracts on, so the tag
 		#     and the ranking agree: a county that has lost its grip is an easier place to work in.
 		first_valid = {
-			triggered_desc = { trigger = { county ?= { county_control < 25 } } desc = spn_hunt_tag_control_none }
-			triggered_desc = { trigger = { county ?= { county_control < 50 } } desc = spn_hunt_tag_control_low }
+			triggered_desc = { trigger = { county ?= { spn_county_control_normal_value < 25 } } desc = spn_hunt_tag_control_none }
+			triggered_desc = { trigger = { county ?= { spn_county_control_normal_value < 50 } } desc = spn_hunt_tag_control_low }
 		}
 		# A week nobody remembers is worth 15 in the score -- it is still a hunter's business -- but for the
 		# man doing the asking it is the worst thing a county can be, so the tag reads negative.
@@ -1243,6 +1465,19 @@ supernatural_hunt = {
 			triggered_desc = {
 				trigger = { scope:activity = { var:spn_hunt_outcome ?= flag:witch } }
 				desc = spn_hunt_conclusion_witch
+			}
+			# 2.41 (§1.5)
+			triggered_desc = {
+				trigger = { scope:activity = { var:spn_hunt_outcome ?= flag:human_slain } }
+				desc = spn_hunt_conclusion_human_slain
+			}
+			triggered_desc = {
+				trigger = { scope:activity = { var:spn_hunt_outcome ?= flag:human_jailed } }
+				desc = spn_hunt_conclusion_human_jailed
+			}
+			triggered_desc = {
+				trigger = { scope:activity = { var:spn_hunt_outcome ?= flag:human_spared } }
+				desc = spn_hunt_conclusion_human_spared
 			}
 			desc = spn_hunt_conclusion_cold
 		}

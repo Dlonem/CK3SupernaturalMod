@@ -8,6 +8,16 @@ Newest first. Notes for 2.29 and earlier are on the Workshop's
 
 ---
 
+## 2.41: Silk & Silver
+
+Updated for Crusader Kings III 1.21 and Silk & Silver. A creature's kills now frighten a county for a year and hurt its market, werewolves make the roads dangerous, and a hunter who ends the trail ends the fear. Vampire merchants get a Vault, can feed on the road as Traders, collect bad debts in blood, and have their patron grant them a charter or their Assembly vote their way. At a carnival, a vampire can feed behind a mask. Creature perks now change for adventurers and merchants, the way vanilla perks do. Also in this release: the Ledger, the Cold Trail, hunters on the road, True Witch and Necromancer tracks, and new creature moments with choices for your traits.
+
+Needs CK3 1.21. Silk & Silver is not required: anything that needs it only appears if you own it. On CK3 1.20, use [v2.40](https://github.com/Dlonem/CK3SupernaturalMod/releases/tag/v2.40). With A Game of Thrones (still on CK3 1.19), use [v2.35a](https://github.com/Dlonem/CK3SupernaturalMod/releases/tag/v2.35a). Back up running saves before updating. Russian translation by Adrian; the new lines are in English until he updates them.
+
+Questions about the mod? Read the wiki: [dlonem.com/mods/supernatural/wiki](https://dlonem.com/mods/supernatural/wiki/)
+
+---
+
 ## 2.40: Fixes and Balance
 
 A fixes-and-balance release built from long multiplayer sessions. Borrowing and pledging to the Order's Reliquary work again, and temples now get their first relics. Respondeo can be paid by your temple or an Obfuscation Powder, and a Temple Magus or the Grand Magus can send someone to cast it. The Order sends far fewer pop-ups, the masks can run your temple, you can ask to join another temple, and every seat of the Gnostic Council can draw on its treasury. The embrace pickers give the level you choose. There are three new kinds of puppet: your golem, a lover you turned through the Sire Bond, and the Compelled, a mortal bent by Compel Mortal for one command. The Fors Factorum and the Elemental Transference were reworked. Hide champions can duel on the battlefield, alphas can offer each other terms, and a hide can lead you to a page of the Vade Maecum. The new Supernatural Trails window lists every open trail, and a Trailsman tells you what left it. Safe for running saves. Russian translation by Adrian; the new lines are in English until he updates them.

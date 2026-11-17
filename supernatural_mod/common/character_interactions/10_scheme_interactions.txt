@@ -80,18 +80,10 @@ start_abduct = {
 			}
 		}
 		scope:recipient = { NOT = { has_strong_hook = scope:puppet_or_actor } }
-		#limit range for landless adventurers
-		trigger_if = {
-			limit = {
-				scope:puppet_or_actor = {
-					has_government = landless_adventurer_government
-				}
-			}
-			#Has to be used instead of diplo range checks in laamp to landed interactions
-			ep3_laamp_diplo_range_trigger = {
-				TARGET = scope:recipient
-				LAAMP = scope:puppet_or_actor
-			}
+		#limit range for landless adventurers/merchants
+		exceptional_diplo_range_trigger = {
+			CHARACTER = scope:puppet_or_actor
+			TARGET = scope:recipient
 		}
 		trigger_if = {
 			limit = { scope:puppet_or_actor = { has_variable = no_scheming_allowed_var } }
@@ -241,6 +233,9 @@ start_abduct = {
 					}
 				}
 			}
+			#Guelphs & Ghibellines
+			gg_scheme_catalyst_warning_effect = { SCHEME = abduct }
+			gg_involvement_scheme_tooltip_effect = yes
 		}
 		if = {
 			limit = {
@@ -334,6 +329,58 @@ start_abduct = {
 				multiply = 2
 			}
 			always = yes
+		}
+		#The target is quite the GG meddler
+		modifier = {
+			add = {
+				value = 0
+				#More weight if they have high involvement, stacking
+				if = {
+					limit = { 
+						scope:recipient = { 
+							exists = var:gg_involvement
+							var:gg_involvement >= gg_involvement_major_value
+						}
+					}
+					add = 25
+				}
+				if = {
+					limit = { 
+						scope:recipient = { 
+							exists = var:gg_involvement
+							var:gg_involvement >= gg_involvement_massive_value
+						}
+					}
+					add = 25
+				}
+				if = {
+					limit = { 
+						scope:recipient = { 
+							exists = var:gg_involvement
+							var:gg_involvement >= gg_involvement_omega_value
+						}
+					}
+					add = 25
+				}
+				if = {
+					limit = { 
+						scope:recipient = { 
+							exists = var:gg_involvement
+							var:gg_involvement >= gg_involvement_capped_value
+						}
+					}
+					add = 25
+				}
+				#Double if the target banished someone from your side
+				if = {
+					limit = { 
+						scope:recipient = { has_character_modifier = vilified_ruler_modifier }
+					}
+					multiply = 2
+				}
+			}
+			exists = situation:guelph_ghibelline
+			gg_first_and_second_are_opposite_sides_trigger = { FIRST = scope:actor SECOND = scope:recipient }
 		}
 		#Promised to abstain from sin
 		modifier = {

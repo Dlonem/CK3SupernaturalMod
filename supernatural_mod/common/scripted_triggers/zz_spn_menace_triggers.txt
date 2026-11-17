@@ -15,7 +15,9 @@
 # executed a traitor, a werewolf knight who won a melee and a hybrid who broke a siege each left the county
 # exactly the same mark as a body found in an alley, and hunters came for all three.
 #
-# death_reason is still deliberately NOT read, for the reason in the header above: root is about to die, and
+# (2.41: confirmed by the 3 Nov boot. The two death_reason triggers below are read only on the dead, a day later, by
+# spn_hunt.0720.)
+# Before 2.41, death_reason was deliberately NOT read, for the reason in the header above: root is about to die, and
 # vanilla only ever evaluates that trigger on characters who are ALREADY dead (accolade_on_actions.txt:176
 # tests is_alive = no first, every time). Every test below is on the living root or on the killer.
 #
@@ -37,10 +39,36 @@ spn_menace_death_is_public_trigger = {
 # Deliberately the same definition of "something is wrong with him" the rest of the layer uses -- a
 # creature, or a witch by trait or by secret -- and never a hunter, who is the one person a frightened
 # county would not be frightened of.
+# 2.41 (WORK-ORDER-2.41 §0, §1.3 B3) -- ROOT = A CHARACTER WHO IS ALREADY DEAD. `death_reason = X` is a character trigger
+# that errors on the living ("Trying to check death reason on living character", 2.41 boot, 3 Nov), so it is never read
+# inside on_death: spn_hunt.0720 reads it a day later. Public deaths: the world watched or the law wrote them down.
+spn_menace_death_reason_is_public_trigger = {
+	OR = {
+		death_reason = death_duel
+		death_reason = death_execution
+		death_reason = death_battle
+		death_reason = death_fight
+	}
+}
+
+# ROOT = the dead character. An ordinary murder. Note what this cannot see: when a murder secret is exposed later,
+# vanilla rewrites the reason (00_secret_types.txt:443-462), so a HIDDEN murder may not read as one at the moment of
+# death. That is accepted: a murder nobody recognised as one is not something a county remembers either.
+spn_menace_death_reason_is_mundane_trigger = {
+	OR = {
+		death_reason = death_murder
+		death_reason = death_poison
+		death_reason = death_assassination
+	}
+}
+
 spn_menace_heir_candidate_trigger = {
 	is_alive = yes
 	is_adult = yes
 	NOT = { this = root }
+	# 2.41 (WORK-ORDER-2.41 §1.3 B2) -- a guess never lands on a player. Thomas: "it keeps telling me it was somebody else";
+	# the other half of that was a county naming him for a trail he never made. A player is named only from the ledger.
+	is_ai = yes
 	NOT = { has_trait = supernatural_hunter }
 	OR = {
 		spn_hunt_is_creature_trigger = yes

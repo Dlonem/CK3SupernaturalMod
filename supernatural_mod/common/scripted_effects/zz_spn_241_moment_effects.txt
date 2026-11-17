@@ -1,0 +1,169 @@
+﻿# Supernatural 2.41 (WORK-ORDER-2.41 §7.2) -- CREATURE MOMENTS for player vampires and hybrids, on the pack moment's pattern
+# (spn_pack_moment_effect): at most one a year, never the same one twice running, each checking its own situation.
+# Events: events/supernatural_events/zz_spn_241_moment_events.txt. var:spn_last_moment = the last one's flag.
+
+# A few points in the creature's own blood track.
+spn_moment_xp_effect = {
+	if = {
+		limit = { has_trait = supernatural_hybrid }
+		add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = $XP$ }
+	}
+	else_if = {
+		limit = { has_trait = supernatural_vampire }
+		add_trait_xp = { trait = supernatural_vampire track = vampirism value = $XP$ }
+	}
+}
+
+# CHARACTER scope: the player creature. Picks this year's moment, if any.
+# 2.41 boot 2 (Thomas, 17 Nov: "I keep getting the cut finger or the mirror"): each moment now rests for years once seen
+# (spn_mo_cd_<moment>: the mirror 25, the rest 15-20), four more moments join the pool, and every one names a real person
+# from his court where it needs one. With nothing eligible this year, nothing fires (the 40% roll already thins it).
+spn_moment_pick_effect = {
+	random_courtier = {
+		limit = {
+			is_adult = no
+			age >= 5
+		}
+		save_scope_as = spn_mo_child
+	}
+	random_child = {
+		even_if_dead = yes
+		limit = { is_alive = no }
+		save_scope_as = spn_mo_grave
+	}
+	random_courtier = {
+		limit = {
+			is_adult = yes
+			is_ai = yes
+			is_imprisoned = no
+			NOT = { is_spouse_of = root }
+		}
+		save_scope_as = spn_mo_carver
+	}
+	court_position:court_physician_court_position ?= {
+		if = {
+			limit = { NOT = { this = root } is_ai = yes }
+			save_scope_as = spn_mo_physician
+		}
+	}
+	cp:councillor_court_chaplain ?= {
+		if = {
+			limit = { NOT = { this = root } }
+			save_scope_as = spn_mo_chaplain
+		}
+	}
+	random_relation = {
+		type = lover
+		limit = { is_alive = yes is_adult = yes is_ai = yes is_imprisoned = no spn_has_supernatural_trait = no }
+		save_scope_as = spn_mo_partner
+	}
+	if = {
+		limit = { NOT = { exists = scope:spn_mo_partner } }
+		random_spouse = {
+			limit = { is_alive = yes is_adult = yes is_ai = yes is_imprisoned = no spn_has_supernatural_trait = no }
+			save_scope_as = spn_mo_partner
+		}
+	}
+	random_list = {
+		10 = {
+			trigger = {
+				age >= 40
+				NOT = { var:spn_last_moment ?= flag:mirror }
+				NOT = { has_character_flag = spn_mo_cd_mirror }
+			}
+			set_variable = { name = spn_last_moment value = flag:mirror }
+			add_character_flag = { flag = spn_mo_cd_mirror years = 25 }
+			trigger_event = { id = spn_moment.0001 days = { 1 60 } }
+		}
+		10 = {
+			trigger = {
+				exists = scope:spn_mo_child
+				NOT = { var:spn_last_moment ?= flag:child }
+				NOT = { has_character_flag = spn_mo_cd_child }
+			}
+			set_variable = { name = spn_last_moment value = flag:child }
+			add_character_flag = { flag = spn_mo_cd_child years = 15 }
+			trigger_event = { id = spn_moment.0002 days = { 1 60 } }
+		}
+		10 = {
+			trigger = {
+				age >= 60
+				NOT = { var:spn_last_moment ?= flag:song }
+				NOT = { has_character_flag = spn_mo_cd_song }
+			}
+			set_variable = { name = spn_last_moment value = flag:song }
+			add_character_flag = { flag = spn_mo_cd_song years = 20 }
+			trigger_event = { id = spn_moment.0003 days = { 1 60 } }
+		}
+		10 = {
+			trigger = {
+				exists = scope:spn_mo_carver
+				NOT = { var:spn_last_moment ?= flag:finger }
+				NOT = { has_character_flag = spn_mo_cd_finger }
+			}
+			set_variable = { name = spn_last_moment value = flag:finger }
+			add_character_flag = { flag = spn_mo_cd_finger years = 20 }
+			trigger_event = { id = spn_moment.0004 days = { 1 60 } }
+		}
+		10 = {
+			trigger = {
+				has_trait = supernatural_hybrid
+				NOT = { var:spn_last_moment ?= flag:moon }
+				NOT = { has_character_flag = spn_mo_cd_moon }
+			}
+			set_variable = { name = spn_last_moment value = flag:moon }
+			add_character_flag = { flag = spn_mo_cd_moon years = 15 }
+			trigger_event = { id = spn_moment.0005 days = { 1 60 } }
+		}
+		10 = {
+			trigger = {
+				exists = scope:spn_mo_grave
+				NOT = { var:spn_last_moment ?= flag:grave }
+				NOT = { has_character_flag = spn_mo_cd_grave }
+			}
+			set_variable = { name = spn_last_moment value = flag:grave }
+			add_character_flag = { flag = spn_mo_cd_grave years = 20 }
+			trigger_event = { id = spn_moment.0006 days = { 1 60 } }
+		}
+		10 = {
+			trigger = {
+				exists = scope:spn_mo_carver
+				NOT = { var:spn_last_moment ?= flag:feast }
+				NOT = { has_character_flag = spn_mo_cd_feast }
+			}
+			set_variable = { name = spn_last_moment value = flag:feast }
+			add_character_flag = { flag = spn_mo_cd_feast years = 15 }
+			trigger_event = { id = spn_moment.0007 days = { 1 60 } }
+		}
+		10 = {
+			trigger = {
+				exists = scope:spn_mo_physician
+				NOT = { var:spn_last_moment ?= flag:lancet }
+				NOT = { has_character_flag = spn_mo_cd_lancet }
+			}
+			set_variable = { name = spn_last_moment value = flag:lancet }
+			add_character_flag = { flag = spn_mo_cd_lancet years = 20 }
+			trigger_event = { id = spn_moment.0008 days = { 1 60 } }
+		}
+		10 = {
+			trigger = {
+				exists = scope:spn_mo_partner
+				NOT = { var:spn_last_moment ?= flag:throat }
+				NOT = { has_character_flag = spn_mo_cd_throat }
+			}
+			set_variable = { name = spn_last_moment value = flag:throat }
+			add_character_flag = { flag = spn_mo_cd_throat years = 15 }
+			trigger_event = { id = spn_moment.0009 days = { 1 60 } }
+		}
+		10 = {
+			trigger = {
+				exists = scope:spn_mo_chaplain
+				NOT = { var:spn_last_moment ?= flag:grace }
+				NOT = { has_character_flag = spn_mo_cd_grace }
+			}
+			set_variable = { name = spn_last_moment value = flag:grace }
+			add_character_flag = { flag = spn_mo_cd_grace years = 20 }
+			trigger_event = { id = spn_moment.0010 days = { 1 60 } }
+		}
+	}
+}

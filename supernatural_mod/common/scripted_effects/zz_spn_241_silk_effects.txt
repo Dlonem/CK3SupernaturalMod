@@ -1,0 +1,164 @@
+﻿# Supernatural 2.41 -- Silk & Silver hooks (CK3 1.21 "Florin"). Every vanilla symbol here was checked in vanilla 1.21.0
+# script or the 1.21.0 exe (claude/EVIDENCE-2.41-silk-and-silver.md, section 3).
+
+# ==========================================================================================================
+# THE MENACE IN THE MARKET. COUNTY scope, inside spn_mark_menace_effect (creature kinds only, never a man who kills).
+# ==========================================================================================================
+spn_menace_market_effect = {
+	# Reads scope:spn_mf_kind (flag:vampire / werewolf / demon / witch), saved by spn_mark_menace_effect. A literal chain,
+	# never a pasted $KIND$: a pasted name had to exist for every kind, the human one included (2.41 boot log).
+	hidden_effect = {
+		title_province.barony.trade_market ?= {
+			if = {
+				limit = { scope:spn_mf_kind ?= flag:vampire }
+				add_trade_market_modifier = { modifier = spn_menace_market_vampire_modifier years = 1 }
+			}
+			else_if = {
+				limit = { scope:spn_mf_kind ?= flag:werewolf }
+				add_trade_market_modifier = { modifier = spn_menace_market_werewolf_modifier years = 1 }
+				# Only a werewolf makes the roads themselves dangerous.
+				every_trade_route_in_market = {
+					add_trade_route_modifier = { modifier = spn_menace_road_modifier years = 1 }
+				}
+			}
+			else_if = {
+				limit = { scope:spn_mf_kind ?= flag:demon }
+				add_trade_market_modifier = { modifier = spn_menace_market_demon_modifier years = 1 }
+			}
+			else_if = {
+				limit = { scope:spn_mf_kind ?= flag:witch }
+				add_trade_market_modifier = { modifier = spn_menace_market_witch_modifier years = 1 }
+			}
+		}
+	}
+}
+
+# COUNTY scope. Inside spn_menace_clear_county_effect: the hunter's kill calms the market too.
+spn_menace_market_clear_effect = {
+	if = { limit = { exists = scope:spn_mc_market } clear_saved_scope = spn_mc_market } # never a stale market from an earlier call
+	save_scope_as = spn_mc_county
+	title_province.barony.trade_market ?= {
+		save_scope_as = spn_mc_market
+	}
+	# A market is shared by many counties: it calms only when no other county in it still has a live trail.
+	if = {
+		limit = {
+			exists = scope:spn_mc_market
+			NOT = {
+				any_in_global_list = {
+					variable = spn_menace_counties
+					NOT = { this = scope:spn_mc_county }
+					title_province.barony.trade_market ?= scope:spn_mc_market
+				}
+			}
+		}
+		spn_menace_market_clear_now_effect = yes
+	}
+}
+spn_menace_market_clear_now_effect = {
+	scope:spn_mc_market = {
+		if = { limit = { has_trade_market_modifier = spn_menace_market_vampire_modifier } remove_trade_market_modifier = spn_menace_market_vampire_modifier }
+		if = { limit = { has_trade_market_modifier = spn_menace_market_werewolf_modifier } remove_trade_market_modifier = spn_menace_market_werewolf_modifier }
+		if = { limit = { has_trade_market_modifier = spn_menace_market_demon_modifier } remove_trade_market_modifier = spn_menace_market_demon_modifier }
+		if = { limit = { has_trade_market_modifier = spn_menace_market_witch_modifier } remove_trade_market_modifier = spn_menace_market_witch_modifier }
+		every_trade_route_in_market = {
+			limit = { has_trade_route_modifier = spn_menace_road_modifier }
+			remove_trade_route_modifier = spn_menace_road_modifier
+		}
+	}
+}
+
+# ==========================================================================================================
+# FEEDING. CHARACTER scope, the vampire or hybrid. Track XP only (Thomas: no lifestyle XP outside the feeding activity).
+# ==========================================================================================================
+spn_silk_feed_xp_effect = {
+	if = {
+		limit = { has_trait = supernatural_vampire }
+		add_trait_xp = { trait = supernatural_vampire track = vampirism value = { $MIN$ $MAX$ } }
+	}
+	else_if = {
+		limit = { has_trait = supernatural_hybrid }
+		add_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value = { $MIN$ $MAX$ } }
+	}
+}
+
+# ==========================================================================================================
+# A TRADER WHO FEEDS ON THE ROAD. Root = the trader, at the market he has just reached (vanilla 1.21
+# on_gdp_trader_arrived_at_market, gdp_trade_on_actions). Thomas wants feeding away from his own court; a Trader is
+# away by definition. He drinks from a stranger in the market town: Vampirism, and an incident the county may or may
+# not notice (spn_mark_menace_effect decides: a whisper on clean ground, a trail if it is the second thing in a year).
+# The trail runs along the trade route, which is what lets a hunter follow it back.
+# ==========================================================================================================
+spn_silk_trader_feeds_effect = {
+	location.county = { save_scope_as = spn_tf_county }
+	spn_silk_feed_xp_effect = { MIN = 4 MAX = 8 }
+	spn_mark_menace_effect = { COUNTY = scope:spn_tf_county CULPRIT = root KIND = vampire SEVERITY = prowl }
+	root = { spn_creature_act_fulfillment_effect = { ACT = feed } }
+	if = {
+		limit = { is_ai = no }
+		send_interface_toast = {
+			type = event_toast_effect_neutral
+			title = spn_silk_trader_fed_toast
+			left_icon = root
+			custom_tooltip = spn_silk_trader_fed_toast_tt
+		}
+	}
+}
+
+# ==========================================================================================================
+# COLLECT IN BLOOD. Root = the vampire lender. scope:spn_cib_debtor, scope:spn_cib_loan (the story_cycle_loan).
+# The debt is settled by vanilla's own end_loan_story_effect (no gold changes hands), and that is the LAST step in each
+# option, after everything that reads the debtor or the loan (the standing ordering rule).
+# ==========================================================================================================
+spn_silk_collect_end_loan_effect = {
+	scope:spn_cib_loan = { end_loan_story_effect = yes }
+}
+
+# ==========================================================================================================
+# SOMETHING OLD IN THE VAULT. Root = a vampire merchant whose company is an Artisan's, with the second vault. Once in
+# his life a piece he has kept for longer than anyone remembers turns out to be one of the Order's relics. Vampires do
+# not MAKE relics (Thomas); they outlive the people who knew what they were.
+# ==========================================================================================================
+spn_silk_vault_relic_effect = {
+	spn_relic_make_random_effect = { OWNER = root }
+	add_character_flag = spn_vault_relic_found
+}
+
+# ==========================================================================================================
+# THE PELT IN THE COMPANY HOUSE. Scope = the werewolf or hybrid a hunt is about to kill (spn_hunt_perform_the_kill_effect,
+# before the death). A hunter who heads a merchant company keeps the wolf's pelt as a Curiosity in the company house
+# (vanilla 1.21 domicile artifact type `curio`, given the vanilla curio trade bonuses, gdp_domicile_artifact_creation_
+# scripted_effects.txt). The Six Hides are not this: a hide is worn, and its bond reads "worn", so it stays a trinket.
+# ==========================================================================================================
+spn_wolf_pelt_curio_effect = {
+	if = {
+		limit = {
+			OR = {
+				has_trait = supernatural_werewolf
+				has_trait = supernatural_hybrid
+			}
+			scope:spn_hunter ?= {
+				is_alive = yes
+				has_gdp_dlc_trigger = yes
+				domicile ?= { is_domicile_type = merchant_company }
+			}
+		}
+		save_scope_as = spn_pelt_wolf
+		scope:spn_hunter = {
+			create_artifact = {
+				name = spn_wolf_pelt_curio_name
+				description = spn_wolf_pelt_curio_desc
+				type = curio
+				visuals = large_animal_hide
+				modifier = spn_wolf_pelt_curio_modifier
+				rarity = masterwork
+				decaying = no
+				save_scope_as = spn_new_pelt
+			}
+		}
+		if = {
+			limit = { exists = scope:spn_new_pelt }
+			scope:spn_new_pelt = { domicile_curio_artifact_modifiers_effect = yes }
+		}
+	}
+}

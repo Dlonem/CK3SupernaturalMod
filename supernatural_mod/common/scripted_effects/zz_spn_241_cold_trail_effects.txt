@@ -1,0 +1,300 @@
+﻿# Supernatural 2.41 -- THE COLD TRAIL (WORK-ORDER-2.41 §1.6). A hunter following a creature from county to county.
+#
+# Thomas, 2 Nov: "I kill three times and I'm long gone... there should be an opportunity to pick up its trail, in the
+# spirit of tracking it from county to county. Especially if it's a roaming type of vampire... this one hunter has
+# tracked me across Europe, and I keep getting away because I'm on the move. Unless I try to throw him off my trail."
+#
+# STATE, all on the hunter (a pursuit never writes a trail: the trail is the county's, the chase is his):
+#   var:spn_quarry          the creature (or killer) he is following
+#   var:spn_quarry_kind     the kind he is following it as (flag)
+#   var:spn_quarry_county   where the trail last pointed; a valid hunt location for him alone (supernatural_hunt.txt)
+#   var:spn_quarry_legs     how many counties he has followed it through
+#   flag spn_on_the_trail   3 years, refreshed at every leg; when it lapses, the trail has gone cold on its own
+# And on the quarry: variable list spn_my_pursuers, so his death ends every chase without a world scan.
+#
+# The quarry's answers (spn_hunt.0715) leave flags on him that the next leg reads: spn_quarry_false_trail,
+# spn_quarry_unseen, spn_quarry_let_him_come, spn_quarry_waiting (read by the fight bonus).
+
+# HUNTER scope. QUARRY = the character, KIND = a flag value. Start following (or keep following) and read the next leg.
+spn_cold_trail_follow_effect = {
+	save_scope_as = spn_ct_hunter
+	$QUARRY$ = { save_scope_as = spn_ct_quarry }
+	if = {
+		limit = { NOT = { var:spn_quarry ?= scope:spn_ct_quarry } }
+		# A new chase replaces any older one.
+		spn_cold_trail_end_effect = yes
+		set_variable = { name = spn_quarry value = scope:spn_ct_quarry }
+		set_variable = { name = spn_quarry_kind value = $KIND$ }
+		set_variable = { name = spn_quarry_legs value = 0 }
+		scope:spn_ct_quarry = {
+			if = {
+				limit = { NOT = { is_target_in_variable_list = { name = spn_my_pursuers target = scope:spn_ct_hunter } } }
+				add_to_variable_list = { name = spn_my_pursuers target = scope:spn_ct_hunter }
+			}
+		}
+	}
+	random = {
+		chance = spn_cold_trail_read_chance_value
+		add_character_flag = { flag = spn_ct_read days = 1 }
+	}
+	if = {
+		limit = { has_character_flag = spn_ct_read }
+		remove_character_flag = spn_ct_read
+		spn_cold_trail_place_effect = yes
+		change_variable = { name = spn_quarry_legs add = 1 }
+		if = { limit = { has_character_flag = spn_on_the_trail } remove_character_flag = spn_on_the_trail }
+		add_character_flag = { flag = spn_on_the_trail years = 3 }
+		trigger_event = spn_hunt.0711
+		scope:spn_ct_quarry = { trigger_event = { id = spn_hunt.0715 days = { 3 10 } } }
+	}
+	else = {
+		trigger_event = spn_hunt.0712
+		spn_cold_trail_end_effect = yes
+	}
+}
+
+# HUNTER scope, scope:spn_ct_quarry set. Where the trail points now: the quarry's real county, blurred by skill, or
+# turned by what the quarry did to throw him off. Writes var:spn_quarry_county.
+spn_cold_trail_place_effect = {
+	scope:spn_ct_quarry = {
+		location ?= { county ?= { save_temporary_scope_as = spn_ct_true } }
+	}
+	if = {
+		limit = { exists = scope:spn_ct_true }
+		# Made the innkeeper forget: nobody remembers him, and the trail does not move this time.
+		if = {
+			limit = { scope:spn_ct_quarry = { has_character_flag = spn_quarry_unseen } }
+			scope:spn_ct_quarry = { remove_character_flag = spn_quarry_unseen }
+			add_character_flag = { flag = spn_ct_lost_a_season days = 60 }
+		}
+		else = {
+			# A false trail: two valleys off. An expert sees through it one time in three.
+			if = {
+				limit = { scope:spn_ct_quarry = { has_character_flag = spn_quarry_false_trail } }
+				scope:spn_ct_quarry = { remove_character_flag = spn_quarry_false_trail }
+				random = {
+					chance = 33
+					modifier = { add = -33 NOT = { spn_hunter_is_expert_trigger = yes } }
+					save_temporary_scope_as = spn_ct_saw_through
+				}
+				if = {
+					limit = { NOT = { exists = scope:spn_ct_saw_through } }
+					scope:spn_ct_true = {
+						random_neighboring_county = {
+							random_neighboring_county = {
+								limit = { NOT = { this = scope:spn_ct_true } }
+								save_temporary_scope_as = spn_ct_place
+							}
+						}
+					}
+				}
+			}
+			# Read true: an expert, or a quarry who chose to let him come.
+			if = {
+				limit = {
+					NOT = { exists = scope:spn_ct_place }
+					OR = {
+						spn_hunter_is_expert_trigger = yes
+						scope:spn_ct_quarry = { has_character_flag = spn_quarry_let_him_come }
+					}
+				}
+				scope:spn_ct_true = { save_temporary_scope_as = spn_ct_place }
+			}
+			# Anyone else: the right county, or the one beside it.
+			if = {
+				limit = { NOT = { exists = scope:spn_ct_place } }
+				random_list = {
+					50 = {
+						scope:spn_ct_true = { save_temporary_scope_as = spn_ct_place }
+					}
+					50 = {
+						scope:spn_ct_true = {
+							random_neighboring_county = { save_temporary_scope_as = spn_ct_place }
+						}
+					}
+				}
+			}
+			if = {
+				limit = { NOT = { exists = scope:spn_ct_place } }
+				scope:spn_ct_true = { save_temporary_scope_as = spn_ct_place }
+			}
+			set_variable = { name = spn_quarry_county value = scope:spn_ct_place }
+		}
+	}
+}
+
+# HUNTER scope. Stops following, and tells the quarry's list.
+spn_cold_trail_end_effect = {
+	save_temporary_scope_as = spn_ct_end_hunter
+	if = {
+		limit = { exists = var:spn_quarry }
+		var:spn_quarry = {
+			if = {
+				limit = { is_target_in_variable_list = { name = spn_my_pursuers target = scope:spn_ct_end_hunter } }
+				remove_list_variable = { name = spn_my_pursuers target = scope:spn_ct_end_hunter }
+			}
+		}
+	}
+	spn_cold_trail_clear_vars_effect = yes
+}
+
+# HUNTER scope. The pursuit's own state, nothing else.
+spn_cold_trail_clear_vars_effect = {
+	if = { limit = { has_variable = spn_quarry } remove_variable = spn_quarry }
+	if = { limit = { has_variable = spn_quarry_kind } remove_variable = spn_quarry_kind }
+	if = { limit = { has_variable = spn_quarry_county } remove_variable = spn_quarry_county }
+	if = { limit = { has_variable = spn_quarry_legs } remove_variable = spn_quarry_legs }
+	if = { limit = { has_character_flag = spn_on_the_trail } remove_character_flag = spn_on_the_trail }
+}
+
+# HUNTER scope. RIVAL = the creature the quarry pointed him at. The chase changes hands: the rival is the quarry now,
+# read true where he stands, and he is told.
+spn_cold_trail_swap_effect = {
+	save_scope_as = spn_ct_hunter
+	$RIVAL$ = { save_scope_as = spn_ct_quarry }
+	spn_cold_trail_end_effect = yes
+	scope:spn_ct_quarry = { spn_ledger_kind_of_character_effect = yes }
+	set_variable = { name = spn_quarry value = scope:spn_ct_quarry }
+	set_variable = { name = spn_quarry_kind value = scope:spn_lg_kind }
+	set_variable = { name = spn_quarry_legs value = 1 }
+	add_character_flag = { flag = spn_on_the_trail years = 3 }
+	# 2.41 review: two rivals cannot pass him back and forth. One redirect a year (spn_hunt.0715 option b reads it).
+	add_character_flag = { flag = spn_ct_swapped_recently years = 1 }
+	scope:spn_ct_quarry = {
+		add_to_variable_list = { name = spn_my_pursuers target = scope:spn_ct_hunter }
+		location ?= { county ?= { save_temporary_scope_as = spn_ct_place } }
+	}
+	if = {
+		limit = { exists = scope:spn_ct_place }
+		set_variable = { name = spn_quarry_county value = scope:spn_ct_place }
+	}
+	scope:spn_ct_quarry = { trigger_event = { id = spn_hunt.0715 days = { 3 10 } } }
+}
+
+# CHARACTER scope: the quarry, dying (on_death, zz_spn_menace_on_actions.txt). Every chase after him ends. His own list
+# is read, not edited, while it is walked.
+spn_cold_trail_quarry_died_effect = {
+	every_in_list = {
+		variable = spn_my_pursuers
+		limit = {
+			is_alive = yes
+			var:spn_quarry ?= root
+		}
+		spn_cold_trail_clear_vars_effect = yes
+	}
+}
+
+# ==========================================================================================================
+# AFTER THE HUNT (WORK-ORDER-2.41 §1.4, §1.6). HUNTER scope, the hunt's scopes bound; the last line of
+# spn_hunt_conclude_effect, so every outcome is settled first.
+#   1. "All of them" (an expert's choice at the planner): another creature on the ledger is standing in the county.
+#   2. Otherwise, an expert who is not already on a trail sees that one of them has gone, and may follow it.
+# A Seasoned hunter's own offer is in the cold ending itself (spn_hunt.0111): the creature he rode for had gone.
+# ==========================================================================================================
+spn_hunt_after_the_hunt_effect = {
+	if = {
+		limit = {
+			is_alive = yes
+			exists = scope:spn_hunt_county
+			exists = scope:spn_hunt_activity
+		}
+		if = {
+			limit = {
+				scope:spn_hunt_activity = {
+					has_variable = spn_hunt_quarry_all
+					OR = {
+						var:spn_hunt_outcome ?= flag:slain
+						var:spn_hunt_outcome ?= flag:human_slain
+					}
+				}
+				scope:spn_hunt_county = {
+					has_county_modifier = spn_menace_modifier
+					# 2.41 review: a creature only (a man's trail is Not a Monster's business, and pays no monster XP).
+					NOT = { var:spn_menace_kind ?= flag:human }
+					var:spn_menace_culprit ?= {
+						is_alive = yes
+						is_imprisoned = no
+						# 2.41 audit -- an AI creature only. This is settled by one duel with no answer event, and the hunt's
+						# rule is that a player is never killed without choosing the option that risked it. A witch or a
+						# framed mortal is not this event's quarry either.
+						is_ai = yes
+						spn_hunt_is_creature_trigger = yes
+						NOT = { this = scope:spn_hunter }
+						NOT = { involved_activity ?= scope:spn_hunt_activity } # B5: never one of the hunt's own guests
+						spn_ledger_is_here_trigger = { COUNTY = scope:spn_hunt_county }
+					}
+				}
+			}
+			scope:spn_hunt_county.var:spn_menace_culprit = { save_scope_as = spn_ct_next }
+			trigger_event = { id = spn_hunt.0705 days = 2 }
+		}
+		else_if = {
+			limit = {
+				spn_hunter_is_expert_trigger = yes
+				NOT = { spn_cold_trail_active_trigger = yes }
+				scope:spn_hunt_county = { spn_ledger_has_absent_culprit_trigger = { COUNTY = scope:spn_hunt_county } }
+			}
+			scope:spn_hunt_county = { spn_cold_trail_pick_absent_effect = { HUNTER = scope:spn_hunter } }
+			if = {
+				limit = { exists = scope:spn_ct_offer }
+				trigger_event = { id = spn_hunt.0710 days = 2 }
+			}
+		}
+	}
+}
+
+# COUNTY scope. The absent culprit with the most heat, not HUNTER: scope:spn_ct_offer and scope:spn_ct_offer_kind.
+spn_cold_trail_pick_absent_effect = {
+	save_temporary_scope_as = spn_ct_county
+	spn_cold_trail_absent_heat_effect = { N = 1 HUNTER = $HUNTER$ }
+	spn_cold_trail_absent_heat_effect = { N = 2 HUNTER = $HUNTER$ }
+	spn_cold_trail_absent_heat_effect = { N = 3 HUNTER = $HUNTER$ }
+	if = {
+		limit = {
+			scope:spn_ct_a1 > 0
+			scope:spn_ct_a1 >= scope:spn_ct_a2
+			scope:spn_ct_a1 >= scope:spn_ct_a3
+		}
+		spn_cold_trail_offer_slot_effect = { N = 1 }
+	}
+	else_if = {
+		limit = {
+			scope:spn_ct_a2 > 0
+			scope:spn_ct_a2 >= scope:spn_ct_a3
+		}
+		spn_cold_trail_offer_slot_effect = { N = 2 }
+	}
+	else_if = {
+		limit = { scope:spn_ct_a3 > 0 }
+		spn_cold_trail_offer_slot_effect = { N = 3 }
+	}
+}
+
+# COUNTY scope.
+spn_cold_trail_absent_heat_effect = {
+	save_temporary_scope_value_as = { name = spn_ct_a$N$ value = 0 }
+	if = {
+		limit = {
+			has_variable = spn_mh$N$
+			var:spn_mc$N$ ?= {
+				is_alive = yes
+				is_imprisoned = no
+				NOT = { this = $HUNTER$ }
+				NOT = { spn_ledger_is_here_trigger = { COUNTY = scope:spn_ct_county } }
+			}
+		}
+		save_temporary_scope_value_as = { name = spn_ct_a$N$ value = var:spn_mh$N$ }
+	}
+}
+
+# COUNTY scope.
+spn_cold_trail_offer_slot_effect = {
+	var:spn_mc$N$ = { save_scope_as = spn_ct_offer }
+	if = {
+		limit = { has_variable = spn_mk$N$ }
+		spn_kind_to_scope_value_effect = { NAME = spn_ct_offer_kind VAR = var:spn_mk$N$ }
+	}
+	else = {
+		save_scope_value_as = { name = spn_ct_offer_kind value = flag:vampire }
+	}
+}

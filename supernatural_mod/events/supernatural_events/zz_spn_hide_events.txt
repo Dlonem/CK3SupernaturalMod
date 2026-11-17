@@ -3389,6 +3389,12 @@ spn_hide.0381 = {
 		}
 		# 2.40 (WORK-ORDER-2.40 B5): the man who went, if he is still free to act; the hide's name for the text
 		# (read before the variable goes); the strongest wolf an alpha could send instead (G11).
+		# 2.41 audit -- .0380 saved this scope and a triggered event inherits it, so a man who died or was imprisoned on
+		# the errand was still named and still scored. Cleared, then saved again only if he is free to act.
+		if = {
+			limit = { exists = scope:spn_errand_agent }
+			clear_saved_scope = spn_errand_agent
+		}
 		if = {
 			limit = {
 				var:spn_hide_errand_agent ?= {
@@ -3398,7 +3404,14 @@ spn_hide.0381 = {
 			}
 			var:spn_hide_errand_agent = { save_scope_as = spn_errand_agent }
 		}
-		save_scope_value_as = { name = spn_errand_hide_flag value = var:spn_hide_errand_hide }
+		# 2.41 boot 5: a flag held in a variable cannot be copied into a scope value ("Value of wrong type ... flag", saves 0),
+		# so the hide's name in "Word from [county]" (zz_spn_240_hide_custom_loc.txt) came out blank. Each hide, as a literal.
+		if = { limit = { var:spn_hide_errand_hide ?= flag:silverback } save_scope_value_as = { name = spn_errand_hide_flag value = flag:silverback } }
+		else_if = { limit = { var:spn_hide_errand_hide ?= flag:timber } save_scope_value_as = { name = spn_errand_hide_flag value = flag:timber } }
+		else_if = { limit = { var:spn_hide_errand_hide ?= flag:tundra } save_scope_value_as = { name = spn_errand_hide_flag value = flag:tundra } }
+		else_if = { limit = { var:spn_hide_errand_hide ?= flag:graybeard } save_scope_value_as = { name = spn_errand_hide_flag value = flag:graybeard } }
+		else_if = { limit = { var:spn_hide_errand_hide ?= flag:midnight } save_scope_value_as = { name = spn_errand_hide_flag value = flag:midnight } }
+		else_if = { limit = { var:spn_hide_errand_hide ?= flag:alpha } save_scope_value_as = { name = spn_errand_hide_flag value = flag:alpha } }
 		if = {
 			limit = {
 				spn_packs_on_trigger = yes

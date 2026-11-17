@@ -1,0 +1,95 @@
+﻿# Supernatural 2.41 -- Silk & Silver hooks. Appended through on_actions lists only: vanilla's trade on_actions carry their
+# own effect blocks, and an on_action may have one (vanilla _on_actions.info).
+
+# Vanilla 1.21 scripted on_action (trade_on_actions.txt): root = the trader, arrived at his target market.
+on_gdp_trader_arrived_at_market = {
+	on_actions = { spn_silk_trader_arrived }
+}
+spn_silk_trader_arrived = {
+	trigger = {
+		is_alive = yes
+		OR = {
+			has_trait = supernatural_vampire
+			has_trait = supernatural_hybrid
+		}
+		is_imprisoned = no
+		NOT = { has_character_flag = spn_trader_fed_recently }
+		exists = location
+		location = { exists = county }
+	}
+	effect = {
+		# At most once every two years, and not every market: a thirst, not a rampage.
+		add_character_flag = { flag = spn_trader_fed_recently years = 2 }
+		random = {
+			chance = 50
+			spn_silk_trader_feeds_effect = yes
+		}
+	}
+}
+
+yearly_playable_pulse = {
+	on_actions = { spn_silk_yearly }
+}
+spn_silk_yearly = {
+	trigger = {
+		is_alive = yes
+		OR = {
+			has_trait = supernatural_vampire
+			has_trait = supernatural_hybrid
+		}
+	}
+	effect = {
+		# THE DOGE WHO DOES NOT AGE. A vampire who has led a republic, or a merchant house, for thirty years and looks no older.
+		if = {
+			limit = {
+				is_ruler = yes
+				OR = {
+					government_has_flag = government_is_republic
+					government_has_flag = government_is_merchant
+				}
+				years_as_ruler >= 30
+				NOT = { has_character_flag = spn_doge_talk_cooldown }
+			}
+			random = {
+				chance = 20
+				trigger_event = { id = spn_silk.0001 days = { 10 60 } }
+			}
+		}
+		# SOMETHING OLD IN THE VAULT. Once in a life; an Artisan's company; the second vault; the Order rule on.
+		if = {
+			limit = {
+				government_has_flag = government_is_merchant
+				has_realm_law = company_purpose_artisan
+				NOT = { has_character_flag = spn_vault_relic_found }
+				NOT = { has_game_rule = spn_order_off }
+				domicile ?= { has_domicile_building_or_higher = spn_merchant_vault_02 }
+			}
+			random = {
+				chance = 5
+				trigger_event = { id = spn_silk.0020 days = { 10 90 } }
+			}
+		}
+	}
+}
+
+# Vanilla 1.21 carnival_on_action.txt: fired every week for every carnival attendee (activity_carnival phase pulse).
+# The carnival is Silk & Silver content; vanilla shows the activity only to its owners, so without the DLC this never runs.
+carnival_random_pulse = {
+	on_actions = { spn_carnival_pulse }
+}
+spn_carnival_pulse = {
+	trigger = {
+		is_alive = yes
+		is_ai = no
+		OR = {
+			has_trait = supernatural_vampire
+			has_trait = supernatural_hybrid
+		}
+		exists = scope:activity
+		spn_flavor_ready_trigger = yes
+	}
+	random_events = {
+		400 = 0
+		100 = spn_silk.0030
+	}
+}
