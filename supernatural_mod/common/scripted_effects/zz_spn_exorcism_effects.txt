@@ -55,12 +55,14 @@ spn_hunt_exorcise_effect = {
 			# The household, from a live demon (§10). Without this, a demon ended by exorcism left no orphan
 			# at all -- the banking used to live inside the fight, and neither of this release's two new
 			# endings goes through it.
-			spn_hunt_bank_the_household_effect = yes
+			# 2.41 -- banked only on the path where somebody dies. A made demon now walks out alive (below), so
+			# its children are not orphans.
 			if = {
 				limit = { spn_hunt_demon_was_mortal_trigger = yes }
 				spn_exorcism_restore_the_person_effect = yes
 			}
 			else = {
+				spn_hunt_bank_the_household_effect = yes
 				spn_exorcism_collapse_the_host_effect = yes
 			}
 		}
@@ -163,71 +165,106 @@ spn_exorcism_free_the_souls_effect = {
 # anybody in or out of it at runtime; and they owe the hunter the rest of their life.
 # ==========================================================================================================
 spn_exorcism_restore_the_person_effect = {
-	# ---- BANK EVERYTHING FIRST. The standing ordering rule, and here it is load-bearing rather than tidy:
-	# every field below is read off a character this effect is about to kill.
+	# 2.41 (4 Nov 2026) -- THE SAME PERSON WALKS OUT. Thomas: "say I'm a 24-year-old demon and somebody exorcises
+	# me. Then I lose demon. Boom." The built path above used to kill the demon and make a stranger in its place,
+	# which cost a player demon his character and every made demon his family, titles and history. This is the
+	# commented path the 2.35 note left beside it, now taken. set_age on a living character has vanilla precedent
+	# outside create_character: change_age on scope:commoner_target (intrigue_scheming_events.txt:3673) and
+	# set_age on scope:old_you (legend_spread_events_8.txt:4012).
+	#
+	# BANK FIRST: nobody dies on this path, but the souls are read off the demon before it stops being one.
 	save_scope_as = spn_exorcised_demon
+	save_scope_as = spn_freed_person
 	spn_exorcism_free_the_souls_effect = yes
-
-	# ---- THE BUILT PATH (fallback, per Thomas's overnight instruction): a new person, at the demon's own
-	# location, in the demon's culture and faith, aged 25-40 by set_age inside create_character.
-	create_character = {
-		location = scope:spn_exorcised_demon.location
-		culture = scope:spn_exorcised_demon.culture
-		faith = scope:spn_exorcised_demon.faith
-		rite = scope:spn_exorcised_demon.rite
-		gender = scope:spn_exorcised_demon
-		save_scope_as = spn_freed_person
-		after_creation = {
-			# The exact vanilla precedent (00_priest_character_template.txt:1084): set_age inside a created
-			# character's own block. Range form, ep3_camp_party_events.txt:1778.
-			set_age = { 25 40 }
-			# They come back whole. Whatever was wearing them was not aging them, and what it did to them
-			# while it was there is not something they keep.
-			spn_remove_negative_age_traits = yes
-			spn_remove_wounds = yes
-			# Ten years of being visibly, physically wrong -- and alive, which is the point.
-			add_character_modifier = { modifier = spn_brought_back_modifier years = 10 }
-			add_character_flag = spn_was_exorcised
-		}
+	spn_exorcism_strip_the_demon_effect = yes
+	# They come back young, because whatever was wearing them was not ageing them. Someone who was taken young
+	# keeps their own age; demon1's immortal = yes only froze the face, so a centuries-old one would otherwise
+	# die of old age within the year.
+	if = {
+		limit = { age > 45 }
+		set_age = { 25 40 }
 	}
+	spn_remove_negative_age_traits = yes
+	spn_remove_wounds = yes
+	add_character_modifier = { modifier = spn_brought_back_modifier years = 10 }
+	add_character_flag = spn_was_exorcised
 
 	# The debt. There is no larger one in this mod.
 	if = {
 		limit = { exists = scope:spn_hunter }
-		scope:spn_freed_person = {
-			add_opinion = { target = scope:spn_hunter modifier = spn_gave_me_back_opinion }
-			# set_relation_benefactor does not exist in this engine version (checked against game/common/
-			# scripted_relations). The written fallback is the relation that actually models this: the man
-			# who pulled you out is your friend for the rest of your life, and the +100 opinion above is
-			# what makes it more than that.
-			set_relation_friend = scope:spn_hunter
+		add_opinion = { target = scope:spn_hunter modifier = spn_gave_me_back_opinion }
+		if = {
+			limit = { can_set_relation_friend_trigger = { CHARACTER = scope:spn_hunter } }
+			set_relation_friend = {
+				target = scope:spn_hunter
+				reason = spn_rel_gave_me_back
+			}
 		}
 		scope:spn_hunter = {
 			add_prestige = { value = minor_prestige_value multiply = 4 }
 			add_piety = { value = minor_piety_value multiply = 4 }
 			spn_write_brought_one_back_memory_effect = { PERSON = scope:spn_freed_person }
-			# "The One You Brought Back" -- they ask to enter your court. Take them and you have a courtier
-			# with a life debt; refuse and they go into the world owing you one.
-			trigger_event = { id = spn_hunt.0165 days = { 5 15 } }
+			# "The One You Brought Back" -- only for someone with nothing to go home to: no realm, and not the
+			# player's own character, who is told in their own event instead.
+			if = {
+				limit = {
+					scope:spn_freed_person = {
+						is_ruler = no
+						is_ai = yes
+					}
+				}
+				trigger_event = { id = spn_hunt.0165 days = { 5 15 } }
+			}
 		}
 	}
+	if = {
+		limit = { is_ai = no }
+		trigger_event = { id = spn_hunt.0167 days = 1 }
+	}
+}
 
-	# ---- LAST. The body the thing was wearing goes with the thing.
-	#
-	# TODO(boot) §13.13 -- THE OTHER PATH, unproven and therefore commented. If the console test in the
-	# session doc shows set_age is safe on a long-lived existing character, delete the create_character block
-	# above and the death below, and use this instead: the SAME character walks out, which is a better story
-	# and keeps their family, titles and history intact.
-	#
-	#	remove_trait = demon1                        # or demon2 -- branch on has_trait
-	#	spn_remove_negative_age_traits = yes
-	#	if = { limit = { has_perk = inhuman_perk } remove_perk = inhuman_perk }        # ... and the rest of
-	#	if = { limit = { has_perk = archdemon_perk } remove_perk = archdemon_perk }    # 00_magic_3_demon_tree_perks
-	#	set_age = { 25 40 }
-	#	if = { limit = { dynasty ?= dynasty:hell_dynasty } set_to_lowborn = yes }      # 00_bastard_effects.txt:33
-	#	add_character_modifier = { modifier = spn_brought_back_modifier years = 10 }
-	#
-	death = { death_reason = spn_death_exorcised }
+# 2.41 -- everything that made them a demon, and nothing that did not. Scope: the character. remove_trait is not
+# guarded (CK3 does not complain about a trait the character lacks); remove_perk is, because it does.
+spn_exorcism_strip_the_demon_effect = {
+	remove_trait = demon2
+	remove_trait = demon1
+	remove_trait = demon0
+	# The demon tree's own perks (00_magic_3_demon_tree_perks.txt). archdemon_perk is what granted demon2.
+	if = { limit = { has_perk = inhuman_perk } remove_perk = inhuman_perk }
+	if = { limit = { has_perk = natural_immunity_perk } remove_perk = natural_immunity_perk }
+	if = { limit = { has_perk = destructive_force_perk } remove_perk = destructive_force_perk }
+	if = { limit = { has_perk = demonic_rage_perk } remove_perk = demonic_rage_perk }
+	if = { limit = { has_perk = master_of_war_perk } remove_perk = master_of_war_perk }
+	if = { limit = { has_perk = tough_as_hell_perk } remove_perk = tough_as_hell_perk }
+	if = { limit = { has_perk = killing_machine_perk } remove_perk = killing_machine_perk }
+	if = { limit = { has_perk = infernal_guardians_perk } remove_perk = infernal_guardians_perk }
+	if = { limit = { has_perk = archdemon_perk } remove_perk = archdemon_perk }
+	# 2.41 audit -- the other eight go too, witch or not. Every one is granted by turn_into_greater_demon and nothing
+	# else (all 17 add_perk lines for the tree are there); the note that a witch gets them with her trait was wrong, and
+	# it left the freed person buying souls (deals_with_mortals_perk) and the Cyrographer trait.
+	if = { limit = { has_perk = infernal_calling_perk } remove_perk = infernal_calling_perk }
+	if = { limit = { has_perk = sixth_sense_perk } remove_perk = sixth_sense_perk }
+	if = { limit = { has_perk = form_control_perk } remove_perk = form_control_perk }
+	if = { limit = { has_perk = master_of_deception_perk } remove_perk = master_of_deception_perk }
+	if = { limit = { has_perk = magical_creature_perk } remove_perk = magical_creature_perk }
+	if = { limit = { has_perk = deals_with_mortals_perk } remove_perk = deals_with_mortals_perk }
+	if = { limit = { has_perk = depravity_perk } remove_perk = depravity_perk }
+	if = { limit = { has_perk = crossroad_dealer_perk } remove_perk = crossroad_dealer_perk }
+	remove_trait = cyrographer
+	if = { limit = { has_character_flag = magical_creature_perk_flag } remove_character_flag = magical_creature_perk_flag }
+	# The disease immunity was the demon's (spn_retro_disease_immunity), unless something else in them still earns it.
+	if = {
+		limit = {
+			has_character_flag = immune_to_disease
+			spn_has_supernatural_trait = no
+		}
+		remove_character_flag = immune_to_disease
+	}
+	# Out of Hell's house (house_hell displays as "Hellion", ev1_l_english.yml:339). 00_bastard_effects.txt:35.
+	if = {
+		limit = { dynasty ?= dynasty:hell_dynasty }
+		set_to_lowborn = yes
+	}
 }
 
 # ==========================================================================================================
@@ -265,11 +302,8 @@ spn_hunt_break_it_off_effect = {
 	if = {
 		limit = { exists = scope:spn_hunt_county }
 		scope:spn_hunt_county = {
-			remove_county_modifier = spn_menace_modifier
-			remove_variable = spn_menace_culprit
-			remove_variable = spn_menace_kind
-			remove_variable = spn_menace_count
-			remove_variable = spn_menace_notified
+			# 2.41 boot 6: the one clearing effect (ledger, world list and the culprit's own list included).
+			spn_menace_clear_county_effect = yes
 		}
 	}
 }

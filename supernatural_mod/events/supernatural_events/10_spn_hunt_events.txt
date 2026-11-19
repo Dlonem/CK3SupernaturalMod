@@ -41,6 +41,11 @@ spn_hunt.0001 = {
 				}
 				desc = spn_hunt.0001.desc_werewolf
 			}
+			# 2.41 (§1.5) -- a knife is a knife; nobody needs a hunter's eye to read it.
+			triggered_desc = {
+				trigger = { scope:spn_menace_county = { var:spn_menace_kind ?= flag:human } }
+				desc = spn_hunt.0001.desc_human
+			}
 			desc = spn_hunt.0001.desc
 		}
 	}
@@ -491,6 +496,14 @@ spn_hunt.0100 = {
 				}
 				desc = spn_hunt.0100.desc_werewolf
 			}
+			# 2.41 (§1.5) -- the human kind reads at Seasoned, the same bar as its planner tag.
+			triggered_desc = {
+				trigger = {
+					spn_hunter_is_seasoned_trigger = yes
+					scope:activity = { var:spn_hunt_kind ?= flag:human }
+				}
+				desc = spn_hunt.0100.desc_human
+			}
 			# 2.35 PART TWO -- the two new kinds, each behind its own read. A demon costs 65 (§4.2) because
 			# nothing about a demon's kill looks like an animal's; a witch is read off the OTHER track
 			# entirely, which is the whole point of the trait having two.
@@ -639,6 +652,13 @@ spn_hunt.0102 = {
 					scope:activity = { var:spn_hunt_kind ?= flag:werewolf }
 				}
 				desc = spn_hunt.0102.desc_werewolf
+			}
+			triggered_desc = {
+				trigger = {
+					spn_hunter_is_seasoned_trigger = yes
+					scope:activity = { var:spn_hunt_kind ?= flag:human }
+				}
+				desc = spn_hunt.0102.desc_human
 			}
 			triggered_desc = {
 				trigger = { scope:activity.activity_location.county ?= { exists = var:spn_menace_count var:spn_menace_count >= 3 } }
@@ -1521,6 +1541,47 @@ spn_hunt.0111 = {
 
 	option = {
 		name = spn_hunt.0111.a
+		# 2.41 -- on a Cold Trail, letting it go ends the chase.
+		if = {
+			limit = {
+				scope:spn_hunt_activity ?= { has_variable = spn_hunt_pursuit }
+				spn_cold_trail_active_trigger = yes
+				exists = scope:spn_culprit
+				var:spn_quarry ?= scope:spn_culprit
+			}
+			spn_cold_trail_end_effect = yes
+		}
+		ai_chance = {
+			base = 50
+			modifier = { add = 30 has_trait = lazy }
+			modifier = { add = 20 has_trait = content }
+			modifier = { add = -20 has_trait = diligent }
+		}
+	}
+
+	# 2.41 (WORK-ORDER-2.41 §1.6) -- THE COLD TRAIL. It fed here and went home somewhere else; a seasoned hunter can pick
+	# that up and follow it. On a leg of a chase already under way, this is how the chase goes on.
+	option = {
+		name = spn_hunt.0111.b
+		trigger = {
+			spn_hunter_is_seasoned_trigger = yes
+			exists = scope:spn_culprit
+			scope:spn_culprit = { spn_cold_trail_can_follow_trigger = yes }
+			NOT = { scope:spn_hunt_activity.activity_location = { spn_hunt_culprit_in_reach_trigger = yes } }
+			scope:spn_hunt_activity = { exists = var:spn_hunt_kind }
+		}
+		custom_tooltip = spn_hunt.0111.b.tt
+		spn_cold_trail_follow_effect = { QUARRY = scope:spn_culprit KIND = scope:spn_hunt_activity.var:spn_hunt_kind }
+		ai_chance = {
+			base = 40
+			modifier = { add = 30 has_trait = diligent }
+			modifier = { add = 25 has_trait = stubborn }
+			modifier = { add = 25 has_trait = vengeful }
+			modifier = { add = 15 has_trait = brave }
+			modifier = { add = -30 has_trait = lazy }
+			modifier = { add = -20 has_trait = content }
+			modifier = { add = -20 has_trait = craven }
+		}
 	}
 }
 
@@ -2415,6 +2476,10 @@ spn_hunt.0300 = {
 			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:exorcised } } desc = spn_hunt.0300.desc_exorcised }
 			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:withdrew } } desc = spn_hunt.0300.desc_withdrew }
 			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:bargained } } desc = spn_hunt.0300.desc_bargained }
+			# 2.41 (WORK-ORDER-2.41 §1.5) -- a man at the end of the trail.
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:human_slain } } desc = spn_hunt.0300.desc_human_slain }
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:human_jailed } } desc = spn_hunt.0300.desc_human_jailed }
+			triggered_desc = { trigger = { scope:spn_hunt_activity = { var:spn_hunt_outcome = flag:human_spared } } desc = spn_hunt.0300.desc_human_spared }
 			desc = spn_hunt.0300.desc_cold
 		}
 	}

@@ -1,0 +1,68 @@
+﻿# Supernatural 2.41 boot 10 (5 Nov 2026) -- hunters take to the road.
+
+# CHARACTER scope. The governments that can host the Hunt (supernatural_hunt.txt is_shown and is_valid read this). One
+# place, so Silk & Silver's landless Merchant government (17 Nov) is one line here once its key is known.
+spn_hunt_host_government_trigger = {
+	OR = {
+		is_landed_or_landless_administrative = yes
+		is_landless_adventurer = yes
+	}
+}
+
+# CHARACTER scope (on random_yearly_everyone_pulse, so root is the hunter). Can this hunter leave where he is and
+# become a landless adventurer camp that hunts? 34 of the 38 hunters in the 1147 observer save were courtiers or
+# unemployed, and only landed rulers and camps can host the Hunt.
+spn_hunter_road_eligible_trigger = {
+	has_trait = supernatural_hunter
+	is_ai = yes
+	has_ep3_dlc_trigger = yes
+	is_ruler = no
+	is_physically_able_adult = yes
+	age <= 55
+	is_imprisoned = no
+	is_travelling = no
+	is_in_army = no
+	NOT = { exists = involved_activity }
+	# 2.41 audit -- never someone close to a player, wherever they live (vanilla's own test for who matters to a player,
+	# ai_can_valid_to_create_laamp_trigger).
+	NOT = {
+		any_player = {
+			OR = {
+				is_close_or_extended_family_of = prev
+				is_consort_of = prev
+			}
+		}
+	}
+	exists = location.county
+	# Relevant, not every man who once held a stake.
+	OR = {
+		has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 20 }
+		has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 20 }
+	}
+	# Someone else needs him where he is.
+	is_councillor = no
+	has_any_court_position = no
+	is_concubine = no
+	NOT = { any_spouse = { is_ruler = yes } }
+	trigger_if = {
+		limit = { exists = liege }
+		NOT = { is_player_heir_of = liege }
+		# Never out of a player's court: the player chose to keep him.
+		liege = { is_ai = yes }
+	}
+	# There is work, and room for him.
+	trigger_if = {
+		limit = { has_global_variable_list = spn_hunter_camps }
+		global_variable_list_size = { name = spn_hunter_camps value < spn_hunter_camp_cap_value }
+	}
+	any_in_global_list = {
+		variable = spn_menace_counties
+		spn_trailsman_trail_is_warm_trigger = yes
+		title_province ?= {
+			squared_distance = {
+				target = root.location
+				value <= squared_distance_large
+			}
+		}
+	}
+}

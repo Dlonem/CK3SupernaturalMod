@@ -1,0 +1,464 @@
+﻿namespace = spn_glitterhoof
+
+# Supernatural 2.41 -- GLITTERHOOF (WORK-ORDER-2.41 §3). Glitterhoof is Buck's (Workshop 2889293511), brought into
+# Supernatural with his permission; "Of Course" is his event and its words are his.
+# Loc: localization/english/event_localization/zz_spn_glitterhoof_l_english.yml.
+#
+#   .0001  Of Course / The Voice Says     a lunatic or possessed ruler appoints his horse (§3.4)
+#   .0002  The Chancellor Receives an Envoy   once, 1-5 years in (§3.5)
+#   .0003  Your Father's Horse            a sane heir inherits a horse chancellor (§3.5)
+#   .0004  The Great Pasture              Glitterhoof dies (§3.5)
+#   .0010  The Horse Question             player-only, once: six horses in the realm (§3.8)
+#
+# Var on the ruler: spn_glitterhoof (the horse). Flags: spn_had_glitterhoof (never twice), spn_gh_envoy_done,
+# spn_gh_question_done.
+
+##################################################
+# Of Course
+# Root = the ruler. Fired by spn_glitterhoof_pulse (zz_spn_glitterhoof_on_actions.txt).
+##################################################
+spn_glitterhoof.0001 = {
+	type = character_event
+	title = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { has_trait = possessed }
+				desc = spn_glitterhoof.0001.t_possessed
+			}
+			desc = spn_glitterhoof.0001.t
+		}
+	}
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { has_trait = possessed }
+				desc = spn_glitterhoof.0001.desc_possessed
+			}
+			desc = spn_glitterhoof.0001.desc
+		}
+	}
+	theme = mental_health
+	override_background = { reference = hills }
+	left_portrait = {
+		character = root
+		animation = personality_irrational
+	}
+	right_portrait = {
+		character = scope:glitterhoof
+	}
+
+	trigger = {
+		spn_glitterhoof_eligible_trigger = yes
+	}
+
+	immediate = {
+		# Buck's G2: his trigger read a flag his immediate never set. This one sets it before anything else.
+		add_character_flag = spn_had_glitterhoof
+		# Buck's G6: no template, no random traits, never fifty. 1.20 needs the rite with the faith (S20).
+		create_character = {
+			name = spn_glitterhoof_name
+			gender_female_chance = 0
+			age = { 16 18 }
+			culture = root.culture
+			faith = root.faith
+			rite = root.rite
+			employer = root # 2.41 boot: not location as well ("Cannot specify both location and employer")
+			random_traits = no
+			trait = spn_horse
+			dynasty = none
+			save_scope_as = glitterhoof
+			after_creation = {
+				# The marriage gate (§3.8): the player's unlock is the only thing that lifts it.
+				set_variable = can_not_marry
+				add_character_flag = spn_the_glitterhoof # 2.41 audit: how an heir finds him (spn_glitterhoof_inherit)
+			}
+		}
+		set_variable = { name = spn_glitterhoof value = scope:glitterhoof }
+	}
+
+	# Glitterhoof, I appoint thee as the Chancellor of the realm. (A landless adventurer: my Second.)
+	option = {
+		name = {
+			trigger = { is_landless_adventurer = no }
+			text = spn_glitterhoof.0001.a
+		}
+		name = {
+			trigger = { is_landless_adventurer = yes }
+			text = spn_glitterhoof.0001.a_camp
+		}
+		trigger = { exists = scope:glitterhoof }
+		if = {
+			limit = { is_landless_adventurer = yes }
+			# The camp's second-in-command (vanilla second_camp_officer, 00_camp_officers.txt), whoever held it steps down.
+			random_court_position_holder = {
+				type = second_camp_officer
+				save_scope_as = spn_gh_old_second
+			}
+			if = {
+				limit = { exists = scope:spn_gh_old_second }
+				scope:spn_gh_old_second = { add_opinion = { target = root modifier = spn_replaced_by_a_horse_opinion } }
+				revoke_court_position = {
+					recipient = scope:spn_gh_old_second
+					court_position = second_camp_officer
+				}
+			}
+			appoint_court_position = {
+				recipient = scope:glitterhoof
+				court_position = second_camp_officer
+			}
+		}
+		else_if = {
+			limit = { exists = cp:councillor_chancellor }
+			cp:councillor_chancellor = {
+				save_scope_as = spn_gh_old_chancellor
+				add_opinion = { target = root modifier = spn_replaced_by_a_horse_opinion }
+			}
+		}
+		if = {
+			limit = { is_landless_adventurer = no }
+			assign_councillor_type = {
+				type = councillor_chancellor
+				target = scope:glitterhoof
+				remove_existing_councillor = yes
+			}
+		}
+		add_prestige = minor_prestige_loss
+		stress_and_fulfillment_impact = {
+			lunatic_1 = medium_stress_impact_loss
+			lunatic_genetic = medium_stress_impact_loss
+			possessed_1 = medium_stress_impact_loss
+			possessed_genetic = medium_stress_impact_loss
+		}
+		trigger_event = { id = spn_glitterhoof.0002 days = { 365 1825 } }
+		ai_chance = { base = 90 }
+	}
+
+	# Not today.
+	option = {
+		name = spn_glitterhoof.0001.b
+		custom_tooltip = spn_glitterhoof.0001.b.tt
+		stress_and_fulfillment_impact = {
+			lunatic_1 = minor_stress_impact_gain
+			lunatic_genetic = minor_stress_impact_gain
+			possessed_1 = minor_stress_impact_gain
+			possessed_genetic = minor_stress_impact_gain
+		}
+		ai_chance = { base = 10 }
+	}
+}
+
+##################################################
+# The Chancellor Receives an Envoy
+# Root = the ruler. var:spn_glitterhoof is still his chancellor.
+##################################################
+spn_glitterhoof.0002 = {
+	type = character_event
+	title = spn_glitterhoof.0002.t
+	desc = spn_glitterhoof.0002.desc
+	theme = diplomacy
+	override_background = { reference = throne_room }
+	left_portrait = {
+		character = root
+		animation = admiration
+	}
+	right_portrait = {
+		character = scope:spn_gh_horse
+	}
+	lower_right_portrait = scope:spn_gh_foreign
+
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		NOT = { has_character_flag = spn_gh_envoy_done }
+		exists = var:spn_glitterhoof
+		var:spn_glitterhoof = {
+			is_alive = yes
+			OR = {
+				has_council_position = councillor_chancellor
+				has_court_position = second_camp_officer
+			}
+			is_courtier_of = root
+		}
+		any_neighboring_and_across_water_top_liege_realm_owner = { is_ai = yes }
+	}
+
+	immediate = {
+		add_character_flag = spn_gh_envoy_done
+		var:spn_glitterhoof = { save_scope_as = spn_gh_horse }
+		random_neighboring_and_across_water_top_liege_realm_owner = {
+			limit = { is_ai = yes }
+			save_scope_as = spn_gh_foreign
+		}
+	}
+
+	# Let him speak for the realm.
+	option = {
+		name = spn_glitterhoof.0002.a
+		custom_tooltip = spn_glitterhoof.0002.a.tt
+		duel = {
+			skill = diplomacy
+			value = 12
+			60 = {
+				desc = spn_glitterhoof.0002.a.success
+				compare_modifier = { value = scope:duel_value multiplier = 3 min = -40 }
+				add_prestige = medium_prestige_gain
+				scope:spn_gh_foreign = { add_opinion = { target = root modifier = spn_glitterhoof_envoy_charmed_opinion } }
+			}
+			40 = {
+				desc = spn_glitterhoof.0002.a.failure
+				compare_modifier = { value = scope:duel_value multiplier = -3 min = -30 }
+				add_prestige = minor_prestige_loss
+				scope:spn_gh_foreign = { add_opinion = { target = root modifier = spn_glitterhoof_envoy_insulted_opinion } }
+			}
+		}
+		ai_chance = { base = 70 }
+	}
+
+	# I will do the talking.
+	option = {
+		name = spn_glitterhoof.0002.b
+		add_prestige = minor_prestige_loss
+		stress_and_fulfillment_impact = {
+			lunatic_1 = minor_stress_impact_gain
+			lunatic_genetic = minor_stress_impact_gain
+			possessed_1 = minor_stress_impact_gain
+			possessed_genetic = minor_stress_impact_gain
+		}
+		ai_chance = { base = 30 }
+	}
+}
+
+##################################################
+# Your Father's Horse
+# Root = the heir. scope:previous_holder kept Glitterhoof. Fired by on_title_gain_inheritance.
+##################################################
+spn_glitterhoof.0003 = {
+	type = character_event
+	title = spn_glitterhoof.0003.t
+	desc = spn_glitterhoof.0003.desc
+	theme = realm
+	override_background = { reference = council_chamber }
+	left_portrait = {
+		character = root
+		animation = shock
+	}
+	right_portrait = {
+		character = scope:spn_gh_horse
+	}
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_gh_horse
+		scope:spn_gh_horse = { is_alive = yes }
+	}
+
+	immediate = {
+		set_variable = { name = spn_glitterhoof value = scope:spn_gh_horse }
+	}
+
+	# He stays.
+	option = {
+		name = spn_glitterhoof.0003.a
+		custom_tooltip = spn_glitterhoof.0003.a.tt
+		add_prestige = minor_prestige_loss
+		stress_and_fulfillment_impact = {
+			eccentric = minor_stress_impact_loss
+			lunatic_1 = minor_stress_impact_loss
+			lunatic_genetic = minor_stress_impact_loss
+			possessed_1 = minor_stress_impact_loss
+			possessed_genetic = minor_stress_impact_loss
+		}
+		ai_chance = {
+			base = 30
+			modifier = { add = 40 has_trait = eccentric }
+		}
+	}
+
+	# To the stables.
+	option = {
+		name = spn_glitterhoof.0003.b
+		trigger = {
+			scope:spn_gh_horse = {
+				OR = {
+					has_council_position = councillor_chancellor
+					has_court_position = second_camp_officer
+				}
+			}
+		}
+		custom_tooltip = spn_glitterhoof.0003.b.tt
+		if = {
+			limit = { scope:spn_gh_horse = { has_council_position = councillor_chancellor } }
+			fire_councillor = scope:spn_gh_horse
+		}
+		else = {
+			revoke_court_position = {
+				recipient = scope:spn_gh_horse
+				court_position = second_camp_officer
+			}
+		}
+		ai_chance = {
+			base = 70
+			modifier = { add = -50 has_trait = eccentric }
+		}
+	}
+}
+
+##################################################
+# The Great Pasture
+# Root = the ruler. scope:spn_gh_dead = Glitterhoof, dead. Fired by spn_glitterhoof_on_death.
+##################################################
+spn_glitterhoof.0004 = {
+	type = character_event
+	title = spn_glitterhoof.0004.t
+	desc = spn_glitterhoof.0004.desc
+	theme = death
+	override_background = { reference = farmland }
+	left_portrait = {
+		character = root
+		animation = sadness
+	}
+	right_portrait = {
+		character = scope:spn_gh_dead
+	}
+
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_gh_dead
+	}
+
+	immediate = {
+		remove_variable = spn_glitterhoof
+	}
+
+	# Bury him under the old oak.
+	option = {
+		name = spn_glitterhoof.0004.a
+		add_prestige = minor_prestige_gain
+		stress_and_fulfillment_impact = {
+			lunatic_1 = medium_stress_impact_loss
+			lunatic_genetic = medium_stress_impact_loss
+			possessed_1 = medium_stress_impact_loss
+			possessed_genetic = medium_stress_impact_loss
+			eccentric = minor_stress_impact_loss
+			compassionate = minor_stress_impact_loss
+		}
+		ai_chance = { base = 70 }
+	}
+
+	# He was a horse.
+	option = {
+		name = spn_glitterhoof.0004.b
+		stress_and_fulfillment_impact = {
+			lunatic_1 = minor_stress_impact_gain
+			lunatic_genetic = minor_stress_impact_gain
+			possessed_1 = minor_stress_impact_gain
+			possessed_genetic = minor_stress_impact_gain
+		}
+		ai_chance = { base = 30 }
+	}
+}
+
+##################################################
+# The Horse Question
+# Root = the player. Six or more horses at his court and among his vassals. Once.
+##################################################
+spn_glitterhoof.0010 = {
+	type = character_event
+	title = spn_glitterhoof.0010.t
+	desc = spn_glitterhoof.0010.desc
+	theme = realm
+	override_background = { reference = courtyard }
+	left_portrait = {
+		character = root
+		animation = worry
+	}
+	right_portrait = {
+		character = scope:spn_gh_eldest
+	}
+	lower_right_portrait = scope:spn_gh_champion
+
+	trigger = {
+		is_ai = no
+		is_alive = yes
+		NOT = { has_character_flag = spn_gh_question_done }
+		spn_horse_count_value >= 6
+	}
+
+	immediate = {
+		add_character_flag = spn_gh_question_done
+		ordered_courtier = {
+			limit = { has_trait = spn_horse }
+			order_by = age
+			save_scope_as = spn_gh_eldest
+		}
+		if = {
+			limit = { NOT = { exists = scope:spn_gh_eldest } }
+			ordered_vassal_or_below = {
+				limit = { has_trait = spn_horse }
+				order_by = age
+				save_scope_as = spn_gh_eldest
+			}
+		}
+		random_court_position_holder = {
+			type = champion_court_position
+			save_scope_as = spn_gh_champion
+		}
+	}
+
+	# Horses are people too.
+	option = {
+		name = spn_glitterhoof.0010.a
+		custom_tooltip = spn_glitterhoof.0010.a.tt
+		add_prestige = medium_prestige_loss
+		stress_and_fulfillment_impact = {
+			compassionate = minor_stress_impact_loss
+			eccentric = minor_stress_impact_loss
+			lunatic_1 = minor_stress_impact_loss
+			lunatic_genetic = minor_stress_impact_loss
+		}
+	}
+
+	# Clear the stables.
+	option = {
+		name = spn_glitterhoof.0010.b
+		custom_tooltip = spn_glitterhoof.0010.b.tt
+		add_dread = medium_dread_gain
+		stress_and_fulfillment_impact = {
+			compassionate = major_stress_impact_gain
+			sadistic = minor_stress_impact_loss
+		}
+		# Last: nothing reads them after this.
+		every_courtier = {
+			limit = { has_trait = spn_horse }
+			death = { death_reason = death_execution killer = root }
+		}
+	}
+
+	# Let them fight it out.
+	option = {
+		name = spn_glitterhoof.0010.c
+		trigger = {
+			exists = scope:spn_gh_champion
+			exists = scope:spn_gh_eldest
+		}
+		custom_tooltip = spn_glitterhoof.0010.c.tt
+		scope:spn_gh_champion = {
+			duel = {
+				skill = prowess
+				target = scope:spn_gh_eldest
+				50 = {
+					desc = spn_glitterhoof.0010.c.man
+					compare_modifier = { value = scope:duel_value multiplier = 3 min = -40 }
+					root = { add_prestige = minor_prestige_gain }
+					scope:spn_gh_eldest = { increase_wounds_no_death_effect = { REASON = fight } }
+				}
+				50 = {
+					desc = spn_glitterhoof.0010.c.horse
+					compare_modifier = { value = scope:duel_value multiplier = -3 min = -30 }
+					root = { add_prestige = minor_prestige_loss }
+					increase_wounds_no_death_effect = { REASON = fight }
+				}
+			}
+		}
+	}
+}

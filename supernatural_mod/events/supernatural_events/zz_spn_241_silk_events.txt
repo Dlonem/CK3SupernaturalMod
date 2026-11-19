@@ -1,0 +1,235 @@
+﻿namespace = spn_silk
+
+# Supernatural 2.41 -- Silk & Silver (CK3 1.21). Loc: localization/english/zz_spn_241_silk_l_english.yml.
+#   .0001  The Doge Who Does Not Age   a vampire who has led a republic or a merchant house for thirty years
+#   .0010  Collect in Blood            the lender's choice (spn_collect_in_blood_interaction)
+#   .0020  Something Old in the Vault  once in a life: an Artisan's vault holds one of the Order's relics
+#   .0030  Behind the Volto            a vampire at a carnival, where every face is a mask
+# No chances are shown anywhere (Thomas: outcomes are not telegraphed).
+
+# THE DOGE WHO DOES NOT AGE. Thomas: every vampire story has the centuries-old one with more money than anyone can count;
+# the price is that a city notices a man who never gets older.
+spn_silk.0001 = {
+	type = character_event
+	title = spn_silk.0001.t
+	desc = spn_silk.0001.desc
+	theme = intrigue
+	override_background = { reference = council_chamber }
+	left_portrait = {
+		character = root
+		animation = scheme
+	}
+	trigger = {
+		is_alive = yes
+		is_ruler = yes
+		NOT = { has_character_flag = spn_doge_talk_cooldown }
+	}
+	immediate = { spn_flavor_mark_effect = yes }
+
+	# I look the gossips in the eye, one at a time.
+	option = {
+		name = spn_silk.0001.a
+		trigger = {
+			OR = {
+				has_trait_xp = { trait = supernatural_vampire track = vampirism value >= 20 }
+				has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 20 }
+			}
+		}
+		spn_compel_pay_amount_effect = { AMOUNT = 20 }
+		add_character_flag = { flag = spn_doge_talk_cooldown years = 25 }
+		ai_chance = {
+			base = 40
+			ai_value_modifier = { ai_boldness = 0.5 }
+		}
+	}
+	# A portrait of my late father, hung where everyone can see the likeness.
+	option = {
+		name = spn_silk.0001.b
+		remove_short_term_gold = medium_gold_value
+		add_prestige = minor_prestige_gain
+		add_character_flag = { flag = spn_doge_talk_cooldown years = 15 }
+		ai_chance = {
+			base = 30
+			ai_value_modifier = { ai_greed = -0.5 }
+		}
+	}
+	# Let them talk.
+	option = {
+		name = spn_silk.0001.c
+		capital_county ?= { add_county_modifier = { modifier = spn_doge_rumours_modifier years = 10 } }
+		add_stress = minor_stress_impact_gain
+		add_character_flag = { flag = spn_doge_talk_cooldown years = 10 }
+		ai_chance = { base = 30 }
+	}
+}
+
+# COLLECT IN BLOOD. Root = the lender. scope:spn_cib_debtor, scope:spn_cib_loan. The loan is closed LAST in every option.
+spn_silk.0010 = {
+	type = character_event
+	title = spn_silk.0010.t
+	desc = spn_silk.0010.desc
+	theme = dread
+	override_background = { reference = alley_night }
+	left_portrait = {
+		character = root
+		animation = scheme
+	}
+	right_portrait = {
+		character = scope:spn_cib_debtor
+		animation = worry
+	}
+	trigger = {
+		exists = scope:spn_cib_debtor
+		exists = scope:spn_cib_loan
+		scope:spn_cib_debtor = { is_alive = yes }
+	}
+	immediate = {
+		scope:spn_cib_debtor = {
+			random_courtier = {
+				limit = {
+					is_adult = yes
+					is_ruler = no
+					NOT = { this = root }
+					NOT = { is_close_or_extended_family_of = root }
+				}
+				save_scope_as = spn_cib_meal
+			}
+		}
+	}
+
+	# From his own veins.
+	option = {
+		name = spn_silk.0010.a
+		vf_mark_fed_on_effect = { VICTIM = scope:spn_cib_debtor }
+		spn_silk_feed_xp_effect = { MIN = 10 MAX = 20 }
+		scope:spn_cib_debtor = { add_stress = medium_stress_impact_gain }
+		spn_silk_collect_end_loan_effect = yes
+		ai_chance = { base = 50 }
+	}
+	# Someone in his household will do.
+	option = {
+		name = spn_silk.0010.b
+		trigger = { exists = scope:spn_cib_meal }
+		vf_mark_fed_on_effect = { VICTIM = scope:spn_cib_meal }
+		spn_silk_feed_xp_effect = { MIN = 6 MAX = 12 }
+		scope:spn_cib_debtor = { add_stress = minor_stress_impact_gain }
+		spn_silk_collect_end_loan_effect = yes
+		ai_chance = { base = 30 }
+	}
+	# He will remember that he owes me, and pay.
+	option = {
+		name = spn_silk.0010.c
+		trigger = {
+			OR = {
+				has_trait_xp = { trait = supernatural_vampire track = vampirism value >= 20 }
+				has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 20 }
+			}
+		}
+		spn_compel_pay_amount_effect = { AMOUNT = 20 }
+		scope:spn_cib_loan = { repay_and_end_loan_story_effect = yes }
+		ai_chance = { base = 20 }
+	}
+	# Not yet.
+	option = {
+		name = spn_silk.0010.d
+		ai_chance = { base = 0 }
+	}
+}
+
+# SOMETHING OLD IN THE VAULT. Root = the vampire merchant. The relic is made in immediate so the text can name it.
+spn_silk.0020 = {
+	type = character_event
+	title = spn_silk.0020.t
+	desc = spn_silk.0020.desc
+	theme = learning
+	override_background = { reference = gdp_merchant_domicile }
+	left_portrait = {
+		character = root
+		animation = thinking
+	}
+	trigger = {
+		is_alive = yes
+		NOT = { has_character_flag = spn_vault_relic_found }
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		spn_silk_vault_relic_effect = yes
+	}
+
+	# I knew it was old. I did not know what it was.
+	option = {
+		name = spn_silk.0020.a
+		add_stress = minor_stress_impact_loss
+	}
+}
+
+# BEHIND THE VOLTO. Root = a vampire or hybrid player attending a carnival (spn_carnival_pulse). Everyone is masked, so a
+# stranger who follows you into an alley is the most ordinary thing in the city tonight. The feed goes through the usual
+# rule (vf_mark_fed_on_effect): now and then somebody talks, mask or no mask.
+spn_silk.0030 = {
+	type = activity_event
+	title = spn_silk.0030.t
+	desc = spn_silk.0030.desc
+	theme = carnival_activity
+	override_background = alley_night
+	cooldown = { years = 1 }
+	left_portrait = {
+		character = root
+		animation = personality_cynical
+		outfit_tags = { carnival_mask no_headgear no_cloak }
+	}
+	right_portrait = {
+		character = scope:spn_cv_meal
+		animation = flirtation
+		outfit_tags = { carnival_mask no_headgear no_cloak }
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:activity
+		OR = {
+			has_trait = supernatural_vampire
+			has_trait = supernatural_hybrid
+		}
+		scope:activity = {
+			any_attending_character = {
+				is_adult = yes
+				is_ai = yes
+				NOT = { this = root }
+				is_imprisoned = no
+				spn_has_supernatural_trait = no
+				NOT = { is_close_or_extended_family_of = root }
+			}
+		}
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		scope:activity = {
+			random_attending_character = {
+				limit = {
+					is_adult = yes
+					is_ai = yes
+					NOT = { this = root }
+					is_imprisoned = no
+					spn_has_supernatural_trait = no
+					NOT = { is_close_or_extended_family_of = root }
+				}
+				save_scope_as = spn_cv_meal
+			}
+		}
+	}
+
+	# Take the hand that is offered.
+	option = {
+		name = spn_silk.0030.a
+		trigger = { exists = scope:spn_cv_meal }
+		vf_mark_fed_on_effect = { VICTIM = scope:spn_cv_meal }
+		spn_silk_feed_xp_effect = { MIN = 6 MAX = 12 }
+		ai_chance = { base = 60 }
+	}
+	# Dance, drink the wine, and go home hungry.
+	option = {
+		name = spn_silk.0030.b
+		add_stress = minor_stress_impact_loss
+		ai_chance = { base = 40 }
+	}
+}

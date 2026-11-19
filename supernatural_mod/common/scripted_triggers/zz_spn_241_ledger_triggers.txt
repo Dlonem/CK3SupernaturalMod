@@ -1,0 +1,116 @@
+﻿# Supernatural 2.41 -- the ledger's triggers (WORK-ORDER-2.41 §1.3 B1). Effects: zz_spn_241_ledger_effects.txt.
+
+# CHARACTER scope. Is this culprit still in COUNTY? His location is in it, he holds it, or he serves its holder's court.
+spn_ledger_is_here_trigger = {
+	OR = {
+		location.county ?= $COUNTY$
+		$COUNTY$.holder ?= this
+		AND = {
+			exists = $COUNTY$.holder
+			employer ?= $COUNTY$.holder
+		}
+	}
+}
+
+# CHARACTER scope. Is he in a county beside COUNTY?
+spn_ledger_is_near_trigger = {
+	location ?= {
+		county ?= {
+			any_neighboring_county = { this = $COUNTY$ }
+		}
+	}
+}
+
+# COUNTY scope. Two filled slots read as different kinds.
+spn_ledger_mixed_trigger = {
+	OR = {
+		AND = {
+			has_variable = spn_mk1
+			has_variable = spn_mk2
+			trigger_if = {
+				limit = { has_variable = spn_mk1 has_variable = spn_mk2 }
+				NOT = { var:spn_mk1 = var:spn_mk2 }
+			}
+		}
+		AND = {
+			has_variable = spn_mk1
+			has_variable = spn_mk3
+			trigger_if = {
+				limit = { has_variable = spn_mk1 has_variable = spn_mk3 }
+				NOT = { var:spn_mk1 = var:spn_mk3 }
+			}
+		}
+		AND = {
+			has_variable = spn_mk2
+			has_variable = spn_mk3
+			trigger_if = {
+				limit = { has_variable = spn_mk2 has_variable = spn_mk3 }
+				NOT = { var:spn_mk2 = var:spn_mk3 }
+			}
+		}
+	}
+}
+
+# COUNTY scope. Is WHO on this county's ledger?
+spn_ledger_has_culprit_trigger = {
+	OR = {
+		var:spn_mc1 ?= $WHO$
+		var:spn_mc2 ?= $WHO$
+		var:spn_mc3 ?= $WHO$
+	}
+}
+
+# COUNTY scope. Is WHO the ONLY living name on this county's ledger? (A legacy trail with no slots counts its culprit.)
+spn_ledger_only_culprit_trigger = {
+	trigger_if = {
+		limit = {
+			OR = {
+				has_variable = spn_mc1
+				has_variable = spn_mc2
+				has_variable = spn_mc3
+			}
+		}
+		spn_ledger_has_culprit_trigger = { WHO = $WHO$ }
+		NOT = { spn_ledger_has_other_living_culprit_trigger = { WHO = $WHO$ } }
+	}
+	trigger_else = {
+		var:spn_menace_culprit ?= $WHO$
+	}
+}
+
+# COUNTY scope. Is someone OTHER than WHO alive on the ledger?
+spn_ledger_has_other_living_culprit_trigger = {
+	OR = {
+		var:spn_mc1 ?= {
+			NOT = { this = $WHO$ }
+			is_alive = yes
+		}
+		var:spn_mc2 ?= {
+			NOT = { this = $WHO$ }
+			is_alive = yes
+		}
+		var:spn_mc3 ?= {
+			NOT = { this = $WHO$ }
+			is_alive = yes
+		}
+	}
+}
+
+# COUNTY scope; COUNTY = this same county as a saved scope (triggers cannot save one). Is any ledger culprit alive and
+# AWAY from it (presence below "here")? The Cold Trail (§1.6).
+spn_ledger_has_absent_culprit_trigger = {
+	OR = {
+		var:spn_mc1 ?= {
+			is_alive = yes
+			NOT = { spn_ledger_is_here_trigger = { COUNTY = $COUNTY$ } }
+		}
+		var:spn_mc2 ?= {
+			is_alive = yes
+			NOT = { spn_ledger_is_here_trigger = { COUNTY = $COUNTY$ } }
+		}
+		var:spn_mc3 ?= {
+			is_alive = yes
+			NOT = { spn_ledger_is_here_trigger = { COUNTY = $COUNTY$ } }
+		}
+	}
+}

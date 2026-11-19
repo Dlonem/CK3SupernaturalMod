@@ -225,8 +225,15 @@ spn_order_hall_year_effect = {
 				chance = 20
 				decrease_mc_funds_effect = { VALUE = spn_order_hall_council_cost_value }
 				scope:spn_hh_prov = {
-					add_building = spn_order_collegium_01
+					# 2.41 boot 2: registered FIRST -- in 1.21 add_building enforces can_construct_potential, whose "already begun here"
+					# branch is the world list; if the building still did not go up, the list and the council's gold are put back.
 					spn_collegium_register_effect = yes
+					holding_district ?= { add_building = spn_order_collegium_01 } # 2.41: CK3 1.21 adds buildings in district scope
+					if = {
+						limit = { NOT = { has_building = spn_order_collegium_01 } }
+						spn_collegium_unregister_effect = yes
+						increase_mc_funds_effect = { VALUE = spn_order_hall_council_cost_value }
+					}
 				}
 				if = {
 					limit = {
@@ -549,8 +556,9 @@ spn_order_hall_seed_effect = {
 			court_owner.capital_province = { save_scope_as = spn_hs_prov }
 		}
 		scope:spn_hs_prov ?= {
-			add_building = spn_order_collegium_01
-			spn_collegium_register_effect = yes # 2.39 (Thomas's call, 16 Oct): the world list
+			spn_collegium_register_effect = yes # 2.39 (Thomas's call, 16 Oct): the world list. 2.41 boot 2: before the build (1.21 add_building checks potential)
+			holding_district ?= { add_building = spn_order_collegium_01 } # 2.41: CK3 1.21 adds buildings in district scope
+			if = { limit = { NOT = { has_building = spn_order_collegium_01 } } spn_collegium_unregister_effect = yes }
 		}
 		# §8.0 row 6: if add_building ran the building's on_complete, the hall is already set and this is skipped.
 		var:spn_order_chapter = {
@@ -574,8 +582,9 @@ spn_order_hall_seed_effect = {
 			limit = { spn_collegia_ordinary_value < spn_collegia_ordinary_cap_value }
 			scope:spn_hs_court ?= {
 				capital_province = {
-					add_building = spn_order_collegium_01
-					spn_collegium_register_effect = yes
+					spn_collegium_register_effect = yes # 2.41 boot 2: before the build (1.21 add_building checks potential)
+					holding_district ?= { add_building = spn_order_collegium_01 } # 2.41: CK3 1.21 adds buildings in district scope
+					if = { limit = { NOT = { has_building = spn_order_collegium_01 } } spn_collegium_unregister_effect = yes }
 				}
 			}
 		}

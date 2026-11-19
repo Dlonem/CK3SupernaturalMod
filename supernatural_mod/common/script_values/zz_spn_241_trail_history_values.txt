@@ -1,0 +1,74 @@
+﻿# Supernatural 2.41 boot 7. COUNTY scope: how many years since this county's last trail went cold.
+spn_trail_years_cold_value = {
+	value = 0
+	if = {
+		limit = { exists = var:spn_trail_ended_year }
+		add = current_year
+		subtract = var:spn_trail_ended_year
+	}
+}
+
+# 2.41 boot 7 -- CAUTION. How much a creature minds the danger where it means to feed. Negative. Read by the vampire
+# feeding activity (vampire_feeding.txt): this one by its ai_will_do (character scope: feed at all?), the province
+# one by ai_will_select_province (province scope, scope:host: feed where?). AI only; the planner's score is untouched.
+# A careful creature (spn_creature_is_careful_trigger) counts it half again; a reckless one barely at all.
+spn_creature_caution_value = {
+	value = 0
+	if = {
+		limit = { location ?= { county ?= { has_county_modifier = spn_menace_modifier } } }
+		add = -10
+		if = {
+			limit = { location.county = { var:spn_menace_culprit ?= root } }
+			add = -10
+		}
+	}
+	if = {
+		limit = { location ?= { county ?= { has_variable = spn_hunt_recently_hunted } } }
+		add = -15
+	}
+	if = {
+		limit = { any_courtier_or_guest = { has_trait = supernatural_hunter } }
+		add = -10
+	}
+	if = {
+		limit = { spn_creature_is_careful_trigger = yes }
+		multiply = 1.5
+	}
+	else_if = {
+		limit = { spn_creature_is_reckless_trigger = yes }
+		multiply = 0.2
+	}
+}
+
+spn_vf_province_caution_value = {
+	value = 0
+	if = {
+		limit = { county ?= { has_county_modifier = spn_menace_modifier } }
+		add = -60
+		# His own trail: lie low. Someone else's as well: the county is already looking.
+		if = {
+			limit = { county = { var:spn_menace_culprit ?= scope:host } }
+			add = -40
+		}
+		if = {
+			limit = { county = { has_variable = spn_menace_mixed } }
+			add = -30
+		}
+	}
+	if = {
+		limit = { county ?= { has_variable = spn_hunt_recently_hunted } }
+		add = -80
+	}
+	if = {
+		limit = { county ?= { holder ?= { has_trait = supernatural_hunter } } }
+		add = -60
+	}
+	if = {
+		limit = { scope:host = { spn_creature_is_careful_trigger = yes } }
+		multiply = 1.5
+	}
+	else_if = {
+		limit = { scope:host = { spn_creature_is_reckless_trigger = yes } }
+		multiply = 0.2
+	}
+}

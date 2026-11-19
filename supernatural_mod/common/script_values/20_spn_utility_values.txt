@@ -101,22 +101,14 @@ spn_pregnancy_chance = {
 		}
 		multiply = 0.25 #Changed for SPN 2.01 for mirroring, originally 20
 	}
+	# 2.41 (WORK-ORDER-2.41 §5.1) -- this else_if had the same condition as the if above, so its 0.5 never ran. Hybrid x
+	# werewolf keeps the 0.25 players have always had. The 0.5 now goes to the pair that could not conceive at all before
+	# 2.41: two hybrids. Neither parent was born what he is, so the child is rarer than a wolf's, but not as rare as a
+	# mixed pair's.
 	else_if = {
 		limit = {
-			OR = {
-				AND = {
-					has_trait = supernatural_hybrid
-					scope:real_father = {
-						has_trait = supernatural_werewolf
-					}
-				}
-				AND = {
-					OR = {
-						has_trait = supernatural_werewolf
-					}
-					scope:real_father = { has_trait = supernatural_hybrid }
-				}
-			}
+			has_trait = supernatural_hybrid
+			scope:real_father = { has_trait = supernatural_hybrid }
 		}
 		multiply = 0.5
 	}
@@ -513,7 +505,7 @@ vf_feeding_success_chance = {
 
 	add = { value = vf_power_bonus desc = vf_sc_power }
 	if = { limit = { activity_location = { exists = county } } activity_location.county = { add = { value = spn_county_prosperity_value multiply = -0.2 desc = vf_sc_development } } }
-	if = { limit = { activity_location = { exists = county } } add = { value = activity_location.county.county_control multiply = -0.15 desc = vf_sc_control } }
+	if = { limit = { activity_location = { exists = county } } add = { value = activity_location.county.spn_county_control_normal_value multiply = -0.15 desc = vf_sc_control } }
 	if = { limit = { activity_location = { county ?= { any_county_province_epidemic = { count >= 1 outbreak_intensity < apocalyptic } } } } add = { value = 12 desc = vf_sc_plague } }
 	if = { limit = { activity_location = { county ?= { holder ?= { is_at_war = yes } } } } add = { value = 8 desc = vf_sc_war } }
 	if = { limit = { activity_host = { has_trait = supernatural_hybrid } } add = { value = 5 desc = vf_sc_hybrid } }
@@ -597,7 +589,7 @@ spn_creature_lifestyle_xp_converted = {
 # idiom vanilla's hunt_success_chance_value uses with activity_host.
 # ============================================================================
 spn_county_prosperity_value = {
-	value = development_level
+	value = prosperity_level
 }
 
 # Convenience wrapper for the two gold-scaling sites, which need the activity's county and sit
@@ -1400,4 +1392,19 @@ spn_summons_fee_value = {
 	if = { limit = { has_trait = greedy }   add = -15 }
 	min = 40
 	max = 150
+}
+
+# 2.41 (CK3 1.21) -- COUNTY scope. Control as a share of the county's own baseline, capped at 100. In 1.20 control rested
+# at 100; in 1.21 it drifts toward a baseline (default 35, 00_defines.txt), so a raw 75 or 90 is now rare and a raw 50 is
+# above normal. Every Supernatural test of "lawless" or "firm" reads this instead (vanilla re-based its own the same way,
+# 00_county_control_values.txt county_control_relative_*).
+spn_county_control_normal_value = {
+	value = county_control
+	multiply = 100
+	divide = {
+		value = county_control_baseline
+		min = 1
+	}
+	min = 0
+	max = 100
 }

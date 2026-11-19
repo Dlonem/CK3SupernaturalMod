@@ -94,6 +94,7 @@ spn_hunt_set_outcome_effect = {
 	scope:spn_hunt_activity ?= {
 		set_variable = { name = spn_hunt_outcome value = flag:$OUTCOME$ }
 	}
+	spn_tc_bump_effect = { NAME = spn_tc_out_$OUTCOME$ } # 2.41 boot 7: the census line (how hunts end)
 }
 
 # ----------------------------------------------------------------------------------------------------------
@@ -196,6 +197,47 @@ spn_hunt_resolve_tracking_effect = {
 		spn_hunt_set_outcome_effect = { OUTCOME = witch }
 	}
 	else = {
+		# 2.41 (WORK-ORDER-2.41 §1.4) -- THE THING HE STUMBLES ACROSS. The ledger can change while the hunter is in the
+		# field: a creature who stayed and kept killing can overtake the one he rode for, who left. If the county's lead
+		# is now somebody else, alive, standing in the county, and neither the host nor a guest, the hunter meets THAT --
+		# with the kit he packed for the other one, which is its own answer. A Cold Trail leg is never redirected: he
+		# came for one particular creature.
+		# 2.41 review: an Expert chose his quarry at the planner (Another One, All of Them), so his choice stands; the
+		# stumble is a Green or Seasoned hunter's.
+		if = {
+			limit = {
+				scope:spn_hunt_activity = {
+					NOT = { has_variable = spn_hunt_pursuit }
+					NOT = { has_activity_option = { category = spn_hunt_quarry option = spn_hunt_quarry_other } }
+					NOT = { has_activity_option = { category = spn_hunt_quarry option = spn_hunt_quarry_all } }
+				}
+				scope:spn_hunter = { NOT = { spn_hunter_is_expert_trigger = yes } }
+				exists = scope:spn_hunt_county
+			}
+			scope:spn_hunt_county = { spn_menace_recompute_lead_effect = yes }
+			if = {
+				limit = {
+					scope:spn_hunt_county = {
+						NOT = { var:spn_menace_culprit ?= scope:spn_culprit }
+						var:spn_menace_culprit ?= {
+							is_alive = yes
+							is_imprisoned = no
+							NOT = { this = scope:spn_hunter }
+							NOT = { involved_activity ?= scope:spn_hunt_activity }
+							spn_ledger_is_here_trigger = { COUNTY = scope:spn_hunt_county }
+						}
+					}
+				}
+				scope:spn_hunt_county.var:spn_menace_culprit = { save_scope_as = spn_culprit }
+				scope:spn_hunt_activity = {
+					set_variable = { name = spn_hunt_culprit value = scope:spn_culprit }
+					if = {
+						limit = { scope:spn_hunt_county = { exists = var:spn_menace_kind } }
+						set_variable = { name = spn_hunt_kind value = scope:spn_hunt_county.var:spn_menace_kind }
+					}
+				}
+			}
+		}
 		# The false lead.
 		if = {
 			limit = {
@@ -245,7 +287,52 @@ spn_hunt_resolve_tracking_effect = {
 				chance = { value = scope:spn_hunt_activity.var:spn_hunt_success_chance }
 				add_character_flag = { flag = spn_hunt_found days = 30 }
 			}
+			# 2.41 (WORK-ORDER-2.41 §1.5) -- A MAN, NOT A MONSTER. A human trail's quarry is found the same way, and is met
+			# by the hunter's own choice (spn_hunt.0700), not by the creature spine.
 			if = {
+				limit = {
+					has_character_flag = spn_hunt_found
+					scope:spn_hunt_activity = { var:spn_hunt_kind ?= flag:human }
+					exists = scope:spn_culprit
+					scope:spn_culprit = {
+						is_alive = yes
+						is_imprisoned = no
+						spn_is_valid_supernatural_target = yes
+						NOT = { has_character_modifier = spn_gone_to_ground_modifier }
+					}
+					scope:spn_hunt_activity.activity_location = { spn_hunt_culprit_in_reach_trigger = yes }
+				}
+				remove_character_flag = spn_hunt_found
+				trigger_event = spn_hunt.0700
+			}
+			# 2.41 audit (11 Nov) -- A WITCH CAN BE CORNERED. The branch below asks for a creature, and it was the only way
+			# to any confrontation, so a quarry who is a witch and nothing else (every witch trail, on a Witch Hunt or a
+			# Monster Hunt) was "found" and then went cold; spn_hunt.0171 was reachable only for a witch who was also a
+			# creature. 0171 binds its own scopes and defender.
+			else_if = {
+				limit = {
+					has_character_flag = spn_hunt_found
+					scope:spn_hunt_activity = { var:spn_hunt_kind ?= flag:witch }
+					exists = scope:spn_culprit
+					scope:spn_culprit = {
+						is_alive = yes
+						is_imprisoned = no
+						spn_is_valid_supernatural_target = yes
+						spn_hunt_is_creature_trigger = no
+						OR = {
+							has_trait = witch
+							has_trait = true_witch
+							has_trait = warlock
+							any_secret = { secret_type = secret_witch }
+						}
+						NOT = { has_character_modifier = spn_gone_to_ground_modifier }
+					}
+					scope:spn_hunt_activity.activity_location = { spn_hunt_culprit_in_reach_trigger = yes }
+				}
+				remove_character_flag = spn_hunt_found
+				trigger_event = spn_hunt.0171
+			}
+			else_if = {
 				limit = {
 					has_character_flag = spn_hunt_found
 					exists = scope:spn_culprit
@@ -347,6 +434,13 @@ spn_hunt_compute_fight_bonus_effect = {
 		if = {
 			limit = { scope:spn_defender = { involved_activity ?= { has_activity_type = vampire_feeding } } }
 			change_variable = { name = spn_hunt_fight_bonus add = 20 }
+		}
+		# 2.41 (WORK-ORDER-2.41 §1.6) -- "Double back and wait for him." The quarry chose the ground; the hunter walks onto
+		# it. Spent on the fight it was laid for.
+		if = {
+			limit = { scope:spn_defender = { has_character_flag = spn_quarry_waiting } }
+			change_variable = { name = spn_hunt_fight_bonus subtract = 15 }
+			scope:spn_defender = { remove_character_flag = spn_quarry_waiting }
 		}
 	}
 	spn_hunt_count_the_pack_effect = yes
@@ -679,6 +773,8 @@ spn_hunt_perform_the_kill_effect = {
 	# sacrilege where it is revered (zz_spn_fulfillment_effects.txt). Before the death, so the traits are still here.
 	save_scope_as = spn_fulfillment_slain
 	scope:spn_hunter ?= { spn_slew_creature_fulfillment_effect = { CREATURE = scope:spn_fulfillment_slain } }
+	# 2.41 -- a merchant house hangs the wolf's pelt in its Curiosities (zz_spn_241_silk_effects.txt). Before the death.
+	spn_wolf_pelt_curio_effect = yes
 	if = {
 		limit = { has_trait = supernatural_hybrid }
 		death = { death_reason = spn_death_beheaded_as_hybrid killer = scope:spn_hunter }
@@ -735,6 +831,14 @@ spn_hunt_conclude_effect = {
 		limit = { scope:spn_hunt_activity = { NOT = { exists = var:spn_hunt_outcome } } }
 		spn_hunt_set_outcome_effect = { OUTCOME = cold }
 	}
+	# 2.41 audit -- a hunt that found nobody closes the county for one year, not four. The four years were to stop three
+	# hunters converging on one creature; a cold hunt met no one, and it was shutting most trails after a single try.
+	if = {
+		limit = { scope:spn_hunt_activity = { var:spn_hunt_outcome ?= flag:cold } }
+		scope:spn_hunt_county ?= {
+			set_variable = { name = spn_hunt_recently_hunted value = yes years = 1 }
+		}
+	}
 	# 2.35 PART TWO -- `exorcised` pays exactly what `slain` pays. The county does not care which verb ended
 	# it; a thing that was taking people is not taking people any more, and the man who did that is owed the
 	# same. It is the one line that makes exorcism a real answer rather than a consolation prize.
@@ -746,6 +850,9 @@ spn_hunt_conclude_effect = {
 			}
 		}
 		scope:spn_hunt_county ?= {
+			# 2.41 (CK3 1.21) -- the county remembers who ended it, the way vanilla's hunt pays a slain dangerous beast
+			# (hunt_dangerous_beast_slain_modifier, 00_activity_effects.txt): opinion of the lord, and order comes back faster.
+			add_county_modifier = { modifier = spn_hunt_delivered_modifier years = 5 }
 			if = {
 				limit = { scope:spn_hunt_activity.var:spn_hunt_slain_kind = flag:werewolf }
 				change_county_control = 2
@@ -786,11 +893,22 @@ spn_hunt_conclude_effect = {
 				remove_variable = spn_bought_silence
 				remove_variable = spn_bought_silence_payer
 			}
-			remove_county_modifier = spn_menace_modifier
-			remove_variable = spn_menace_culprit
-			remove_variable = spn_menace_kind
-			remove_variable = spn_menace_count
-			remove_variable = spn_menace_notified
+			# 2.41 (WORK-ORDER-2.41 §1.3 B1) -- THE TRAIL OUTLIVES ITS DEAD WHEN SOMEONE ELSE IS ON IT. Until 2.41 a kill wiped
+			# the county's whole trail; on a mixed trail that erased a creature still out there. The slain one leaves the
+			# ledger; if any other name on it is alive, the trail stands with him as its lead. Otherwise the county is
+			# cleared exactly as before (spn_menace_clear_county_effect takes the modifier, the variables and the ledger).
+			if = {
+				limit = {
+					exists = scope:spn_culprit
+					spn_ledger_has_other_living_culprit_trigger = { WHO = scope:spn_culprit }
+				}
+				spn_ledger_forget_culprit_effect = { WHO = scope:spn_culprit }
+				spn_menace_recompute_lead_effect = yes
+				hidden_effect = { spn_trails_map_sync_effect = yes }
+			}
+			else = {
+				spn_menace_clear_county_effect = yes
+			}
 			holder ?= {
 				if = {
 					limit = { NOT = { this = scope:spn_hunter } }
@@ -1007,6 +1125,38 @@ spn_hunt_conclude_effect = {
 		# He knows exactly what he saw and exactly what he took for it. That is still knowing.
 		add_trait_xp = { trait = supernatural_hunter track = monster_hunting value = { 5 10 } }
 	}
+	# 2.41 (WORK-ORDER-2.41 §1.5) -- A MAN AT THE END OF THE TRAIL. He learned nothing about monsters, so no monster-hunting
+	# XP: prestige and the hunter's lifestyle. Killed or jailed, the man leaves the ledger as a slain creature would.
+	else_if = {
+		limit = {
+			OR = {
+				scope:spn_hunt_activity.var:spn_hunt_outcome = flag:human_slain
+				scope:spn_hunt_activity.var:spn_hunt_outcome = flag:human_jailed
+			}
+		}
+		scope:spn_hunt_county ?= {
+			if = {
+				limit = {
+					exists = scope:spn_culprit
+					spn_ledger_has_other_living_culprit_trigger = { WHO = scope:spn_culprit }
+				}
+				spn_ledger_forget_culprit_effect = { WHO = scope:spn_culprit }
+				spn_menace_recompute_lead_effect = yes
+				hidden_effect = { spn_trails_map_sync_effect = yes }
+			}
+			else = {
+				spn_menace_clear_county_effect = yes
+			}
+		}
+		add_prestige = minor_prestige_gain
+		add_hunter_lifestyle_xp = minor_lifestyle_xp
+	}
+	else_if = {
+		limit = { scope:spn_hunt_activity.var:spn_hunt_outcome = flag:human_spared }
+		add_hunter_lifestyle_xp = minor_lifestyle_xp
+	}
+	# 2.41 (§1.4, §1.6) -- WHAT HE SEES ON THE WAY OUT. Last, after every outcome above is settled.
+	spn_hunt_after_the_hunt_effect = yes
 }
 
 # Apprentices who rode with their trainer complete the lesson (D2). The bite-chain deferral resolves through its own

@@ -19,8 +19,8 @@ marriage_ai_accept_fertility_modifier = {
 		desc = SAME_SEX_MARRIAGE_FERTILITY_REASON
 
 		scope:secondary_recipient = {
-			allowed_to_marry_same_sex_trigger = yes
 			sex_same_as = scope:secondary_actor
+			allowed_to_marry_same_sex_trigger = yes
 			OR = {
 				is_ruler = yes
 				AND = {
@@ -48,22 +48,17 @@ marriage_ai_accept_fertility_modifier = {
 			scope:secondary_recipient = {
 				is_adult = yes
 				OR = {
-					AND = {
-						exists = scope:secondary_recipient.dynasty
-						scope:secondary_recipient.dynasty = {
-							OR = {
-								any_dynasty_member = {
-									count >= 2
-								}
-								dynasty_prestige_level > 1
-							}
-						}
-					}
 					is_ruler = yes
-					is_close_or_extended_family_of = scope:recipient
 					AND = {
 						exists = scope:recipient.player_heir
 						this = scope:recipient.player_heir
+					}
+					dynasty ?= { dynasty_prestige_level > 1 }
+					is_close_or_extended_family_of = scope:recipient
+					dynasty ?= {
+						any_dynasty_member = {
+							count >= 2
+						}
 					}
 				}
 			}
@@ -95,39 +90,19 @@ marriage_ai_accept_fertility_modifier = {
 		desc = MARRY_AGE
 	}
 
-	modifier = { # A Recipient is unlikely to agree to a marriage where the Secondary_recipient is fertile and the Secondary_actor isn't even if Secondary_recipient has children
-		add = -100
-
-		scope:secondary_recipient = {
-			OR = {
-				fertility > 0.1
-				is_adult = no
-			}
-			OR = {
-				AND = {
-					exists = scope:secondary_recipient.dynasty
-					scope:secondary_recipient.dynasty = {
-						OR = {
-							any_dynasty_member = {
-								count >= 2
-							}
-							dynasty_prestige_level > 1
-						}
+	modifier = { # A Recipient is unlikely to agree to a marriage where the Secondary_recipient is fertile and the Secondary_actor isn't, and VERY unlikely if the Secondary_recipient doesn't have children
+		add = {
+			value = -100
+			if = {
+				limit = {
+					scope:secondary_recipient = {
+						NOT = { any_child = { } }
 					}
 				}
-				is_ruler = yes
-				is_close_or_extended_family_of = scope:recipient
-				AND = {
-					exists = scope:recipient.player_heir
-					this = scope:recipient.player_heir
-				}
+				add = -100
 			}
-			OR = {
-				is_female = no
-				effective_age < 45
-			}
-			any_child = { }
 		}
+
 		scope:secondary_actor = {
 			is_adult = yes
 			OR = {
@@ -139,54 +114,29 @@ marriage_ai_accept_fertility_modifier = {
 			}
 			spn_has_supernatural_trait = no   # Supernatural: the undead do not age out of marriage
 		}
-		desc = MARRY_LOW_FERTILITY_REASON
-	}
-
-	modifier = { # A Recipient is VERY unlikely to agree to a marriage where the Secondary_recipient is fertile and the Secondary_actor isn't if Secondary_recipient doesn't have children
-		add = -200
-
 		scope:secondary_recipient = {
 			OR = {
 				fertility > 0.1
 				is_adult = no
 			}
 			OR = {
-				AND = {
-					exists = scope:secondary_recipient.dynasty
-					scope:secondary_recipient.dynasty = {
-						OR = {
-							any_dynasty_member = {
-								count >= 2
-							}
-							dynasty_prestige_level > 1
-						}
-					}
-				}
 				is_ruler = yes
-				is_close_or_extended_family_of = scope:recipient
 				AND = {
 					exists = scope:recipient.player_heir
 					this = scope:recipient.player_heir
+				}
+				dynasty ?= { dynasty_prestige_level > 1 }
+				is_close_or_extended_family_of = scope:recipient
+				dynasty ?= {
+					any_dynasty_member = {
+						count >= 2
+					}
 				}
 			}
 			OR = {
 				is_female = no
 				effective_age < 45
 			}
-			any_child = {
-				count < 1
-			}
-		}
-		scope:secondary_actor = {
-			is_adult = yes
-			OR = {
-				fertility < 0.1
-				AND = {
-					is_female = yes
-					effective_age >= marriage_female_fertility_cutoff_age_value
-				}
-			}
-			spn_has_supernatural_trait = no   # Supernatural: the undead do not age out of marriage
 		}
 		desc = MARRY_LOW_FERTILITY_REASON
 	}
@@ -194,35 +144,29 @@ marriage_ai_accept_fertility_modifier = {
 	modifier = { # A Recipient is VERY unlikely to agree to a marriage where the Secondary_recipient is a fertile woman and the Secondary_actor is an underage boy who won't become an adult before the woman is infertile
 		add = -200
 
+		scope:secondary_actor = {
+			is_adult = no
+		}
+		marriage_fertile_age_reverse_value >= 43
 		scope:secondary_recipient = {
 			is_female = yes
 			is_adult = yes
 			effective_age < 45
 			OR = {
-				AND = {
-					exists = scope:secondary_recipient.dynasty
-					scope:secondary_recipient.dynasty = {
-						OR = {
-							any_dynasty_member = {
-								count >= 2
-							}
-							dynasty_prestige_level > 1
-						}
-					}
-				}
 				is_ruler = yes
-				is_close_or_extended_family_of = scope:recipient
 				AND = {
 					exists = scope:recipient.player_heir
 					this = scope:recipient.player_heir
 				}
+				dynasty ?= { dynasty_prestige_level > 1 }
+				is_close_or_extended_family_of = scope:recipient
+				dynasty ?= {
+					any_dynasty_member = {
+						count >= 2
+					}
+				}
 			}
 		}
-		scope:secondary_actor = {
-			is_adult = no
-			spn_has_supernatural_trait = no   # Supernatural: the undead do not age out of marriage
-		}
-		marriage_fertile_age_reverse_value >= 43
 
 		desc = MARRY_LOW_FERTILITY_REASON
 	}
@@ -235,29 +179,24 @@ marriage_ai_accept_fertility_modifier = {
 			is_adult = yes
 			spn_has_supernatural_trait = no   # Supernatural: the undead do not age out of marriage
 		}
+		marriage_fertile_age_value >= 43
 		scope:secondary_recipient = {
 			is_adult = no
 			OR = {
-				AND = {
-					exists = scope:secondary_recipient.dynasty
-					scope:secondary_recipient.dynasty = {
-						OR = {
-							any_dynasty_member = {
-								count >= 2
-							}
-							dynasty_prestige_level > 1
-						}
-					}
-				}
 				is_ruler = yes
-				is_close_or_extended_family_of = scope:recipient
 				AND = {
 					exists = scope:recipient.player_heir
 					this = scope:recipient.player_heir
 				}
+				dynasty ?= { dynasty_prestige_level > 1 }
+				is_close_or_extended_family_of = scope:recipient
+				dynasty ?= {
+					any_dynasty_member = {
+						count >= 2
+					}
+				}
 			}
 		}
-		marriage_fertile_age_value >= 43
 
 		desc = MARRY_LOW_FERTILITY_REASON
 	}

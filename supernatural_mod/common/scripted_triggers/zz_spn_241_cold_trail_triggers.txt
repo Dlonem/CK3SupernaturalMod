@@ -1,0 +1,54 @@
+﻿# Supernatural 2.41 -- the hunter's expertise and the Cold Trail (WORK-ORDER-2.41 §1.4, §1.6).
+
+# CHARACTER scope. Seasoned: knows the lead's kind for certain and knows when a trail is mixed; sees the Cold Trail on
+# the creature he rode for.
+spn_hunter_is_seasoned_trigger = {
+	has_trait = supernatural_hunter
+	has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 25 }
+}
+
+# CHARACTER scope. Expert: also the origin and the other slots; chooses his quarry, may take all of them, and sees the
+# Cold Trail on every slot. True Monster Hunter counts whatever the track says.
+spn_hunter_is_expert_trigger = {
+	has_trait = supernatural_hunter
+	OR = {
+		has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 75 }
+		has_trait = spn_true_monster_hunter
+	}
+}
+
+# CHARACTER scope (the hunter). Is he following someone right now?
+spn_cold_trail_active_trigger = {
+	has_character_flag = spn_on_the_trail
+	exists = var:spn_quarry_county
+	var:spn_quarry ?= { is_alive = yes }
+}
+
+# CHARACTER scope (a creature or a killer). May he be followed by a hunter at all?
+spn_cold_trail_can_follow_trigger = {
+	is_alive = yes
+	is_imprisoned = no
+	spn_is_valid_supernatural_target = yes
+	exists = location
+}
+
+# CHARACTER scope: a rival, nemesis or grudge of KNOWER (vanilla relations, game/common/scripted_relations/
+# 00_scripted_relations.txt). Can KNOWER point a hunter at him? He must be a living creature whom KNOWER knows to be one:
+# publicly known, or his creature secret known to KNOWER.
+spn_cold_trail_rival_creature_trigger = {
+	is_alive = yes
+	spn_hunt_is_creature_trigger = yes
+	OR = {
+		has_trait = spn_known_vampire
+		has_trait = spn_known_werewolf
+		has_trait = spn_known_hybrid
+		any_secret = {
+			OR = {
+				secret_type = spn_secret_vampire
+				secret_type = spn_secret_werewolf
+				secret_type = spn_secret_hybrid
+			}
+			is_known_by = $KNOWER$
+		}
+	}
+}

@@ -4,6 +4,15 @@ spn_on_genetic_birth = {
 		# SPECIES GATE -- see common/scripted_triggers/zz_spn_species_triggers.txt. Nothing that is
 		# not a person inherits any of this, whatever its parents are.
 		spn_is_valid_supernatural_target = yes
+		# 2.41 audit -- and never a foal. The gate above reads spn_horse on the newborn, who may not have the trait yet
+		# (spn_glitterhoof_on_birth adds it on this same on_action).
+		NOR = {
+			scope:mother ?= { has_trait = spn_horse }
+			scope:real_father ?= { has_trait = spn_horse }
+		}
+		# 2.41 (WORK-ORDER-2.41 §5.2) -- a hybrid parent with six supernatural children has the seventh born human.
+		# Supernatural children only (C4); the cap never shows in a tooltip.
+		NOT = { spn_hybrid_parent_at_child_cap_trigger = yes }
 		OR = {
 			AND = { #Werewolf / Vampire / Hybrid path (original behaviour)
 				NOR = {
@@ -14,6 +23,9 @@ spn_on_genetic_birth = {
 				OR = {
 					scope:mother = { spn_has_supernatural_trait = yes }
 					scope:real_father = { spn_has_supernatural_trait = yes }
+					# 2.41 boot 8 -- a carrier of wolf blood (zz_spn_241_wolf_blood_values.txt)
+					scope:mother ?= { is_alive = yes has_variable = spn_wolf_blood }
+					scope:real_father ?= { is_alive = yes has_variable = spn_wolf_blood }
 				}
 			}
 			AND = { #Demon path, gated by its own rule so it works even if werewolf inheritance is off
@@ -47,6 +59,35 @@ spn_on_genetic_birth = {
 				#has_trait = demon0 and the first firing removes it.
 				trigger_event = { id = magic_ev3.75 years = { 20 21 } }
 				spn_update_number_of_supernatural_children_for_parents = yes
+			}
+			# 2.41 (WORK-ORDER-2.41 §6, C3 Option A) -- THE WOLF WITH DEMON BLOOD. A wolf or hybrid parent's blood is now
+			# offered as well, the way the wolf-parent branches below offer it: the flag, then spn_initiate.9000's own
+			# inheritance roll. Born both is the demon roll times the wolf roll, so it is rare. magic_ev3.75 hands a
+			# demon-blooded wolf to The Two Natures instead of making him a demon.
+			if = {
+				limit = {
+					NOR = {
+						has_game_rule = spn_no_trait_inheritance
+						has_game_rule = spn_human_no_immortal_trait_inheritance
+						has_game_rule = spn_human_only_trait_inheritance
+					}
+					OR = {
+						scope:mother = { OR = { has_trait = supernatural_werewolf has_trait = supernatural_hybrid } }
+						scope:real_father = { OR = { has_trait = supernatural_werewolf has_trait = supernatural_hybrid } }
+					}
+				}
+				if = {
+					limit = { scope:mother = { OR = { has_trait = supernatural_werewolf has_trait = supernatural_hybrid } } }
+					spn_assign_mother_sire = { MOTHER = scope:mother }
+				}
+				else = {
+					spn_assign_father_sire = { FATHER = scope:real_father }
+				}
+				if = {
+					limit = { NOT = { has_trait = demon0 } }
+					spn_update_number_of_supernatural_children_for_parents = yes
+				}
+				add_character_flag = { flag = spn_baby_werewolf }
 			}
 		}
 		else_if = { #Both Parents Lycan
@@ -131,16 +172,24 @@ spn_on_genetic_birth = {
 		}
 		else_if = { #Mother is Hybrid
 			limit = {
+				# 2.41 boot 8 -- this was an OR of the game rule and the mother's trait, so under the default rule
+				# (spn_werewolf_trait_inheritance) it took EVERY child that reached it: a hybrid father's child got the
+				# human mother as its sire, and a vampire parent's child was born a werewolf. Now the mother must be one.
+				scope:mother = { has_trait = supernatural_hybrid }
 				OR = {
 					has_game_rule = spn_yes_trait_inheritance
 					has_game_rule = spn_werewolf_trait_inheritance
-					scope:mother = { has_trait = supernatural_hybrid }
+					has_game_rule = spn_vampire_trait_inheritance
+					has_game_rule = spn_immortal_only_trait_inheritance
 				}
 			}
 
 			spn_assign_mother_sire = {
 				MOTHER = scope:mother
 			}
+
+			# 2.41 (§5.2) -- the only branch that did not count the child, so a hybrid mother's taper and cap never moved.
+			spn_update_number_of_supernatural_children_for_parents = yes
 
 			add_character_flag = {
 				flag = spn_baby_werewolf
@@ -187,7 +236,23 @@ spn_on_genetic_birth = {
 		 		flag = spn_baby_werewolf
 		 	}
 		}
+		# 2.41 boot 8 -- THE THROWBACK. Neither parent is a creature, but one carries wolf blood. Not counted on the
+		# parents (they are not creatures) and no sire: nobody here made him.
+		else_if = {
+			limit = {
+				OR = {
+					scope:mother ?= { is_alive = yes has_variable = spn_wolf_blood }
+					scope:real_father ?= { is_alive = yes has_variable = spn_wolf_blood }
+				}
+				NOT = { scope:mother ?= { spn_has_supernatural_trait = yes } }
+				NOT = { scope:real_father ?= { spn_has_supernatural_trait = yes } }
+			}
+			add_character_flag = spn_baby_werewolf
+			add_character_flag = { flag = spn_wb_throwback days = 1 }
+		}
 
+		# 2.41 boot 8 -- the blood decides (zz_spn_241_wolf_blood_effects.txt).
+		spn_wolf_birth_roll_effect = yes
 		trigger_event = spn_initiate.9000 #Genetic Init
 	}
 }

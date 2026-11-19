@@ -1,0 +1,85 @@
+﻿# Supernatural 2.41 boot 7 (4 Nov 2026) -- the trail's memory, and who believes in it.
+
+# COUNTY scope. A trail went cold here at least two years ago, nothing has started since, and no Trailsman has told
+# anyone about it in ten years. Read by the Old Graves report (spn_trailsman_find_trail_effect, spn_hunt.0403).
+spn_trail_is_old_news_trigger = {
+	has_variable = spn_trail_ended_year
+	NOT = { has_county_modifier = spn_menace_modifier }
+	NOT = { has_variable = spn_trailsman_old_told }
+	spn_trail_years_cold_value >= 2
+}
+
+# CHARACTER scope. Does this character believe in that sort of thing? Thomas: "arguably I should only really be able to
+# employ a Trailsman if I believe in that type of hooey." Read by both Trailsman positions' is_shown.
+# Any one of these is enough:
+#   they are one, they hunt them, or they practise witchcraft;
+#   they are of a temper that sees them everywhere (paranoid, zealous, a mystic);
+#   they have been touched by it (exorcised, or owe a hunter their life);
+#   they know someone's secret (vampire, werewolf, hybrid, hunter, witch);
+#   their faith holds monster hunting virtuous;
+#   they have seen the bodies: a trail on their land or where they stand, or the memory of one in their realm.
+spn_believes_in_the_supernatural_trigger = {
+	OR = {
+		has_trait = supernatural_hunter
+		has_trait = witch_hunter
+		has_trait = witch
+		spn_has_supernatural_trait = yes
+		is_a_demon_trigger = yes
+		has_trait = paranoid
+		has_trait = zealous
+		has_trait = lifestyle_mystic
+		has_character_flag = spn_was_exorcised
+		has_character_flag = spn_owes_the_hunter
+		any_known_secret = {
+			OR = {
+				secret_type = spn_secret_vampire
+				secret_type = spn_secret_werewolf
+				secret_type = spn_secret_hybrid
+				secret_type = spn_secret_hunter
+				secret_type = secret_witch
+			}
+		}
+		faith = { has_doctrine = spn_doctrine_hunter_virtuous }
+		location ?= { county ?= { has_county_modifier = spn_menace_modifier } }
+		any_realm_county = {
+			OR = {
+				has_county_modifier = spn_menace_modifier
+				has_variable = spn_trail_ended_year
+			}
+		}
+	}
+}
+
+# CHARACTER scope. 2.41 boot 7 -- how a creature weighs danger (Thomas: "sometimes they don't care ... those are the
+# supernaturals that don't really last long"). Read by spn_creature_caution_value and spn_vf_province_caution_value.
+spn_creature_is_careful_trigger = {
+	OR = {
+		has_trait = paranoid
+		has_trait = craven
+		has_trait = calm
+		has_trait = patient
+		has_trait = shy
+		has_trait = temperate
+		has_trait = content
+	}
+	NOR = {
+		has_trait = wrathful
+		has_trait = impatient
+		has_trait = arrogant
+		has_trait = brave
+	}
+}
+spn_creature_is_reckless_trigger = {
+	OR = {
+		has_trait = wrathful
+		has_trait = impatient
+		has_trait = arrogant
+		has_trait = brave
+		has_trait = gluttonous
+		has_trait = sadistic
+	}
+	NOR = {
+		has_trait = paranoid
+		has_trait = craven
+	}
+}

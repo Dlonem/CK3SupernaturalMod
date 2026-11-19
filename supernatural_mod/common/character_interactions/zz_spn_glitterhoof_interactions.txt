@@ -1,0 +1,69 @@
+﻿# Supernatural 2.41 -- GLITTERHOOF'S EASTER EGGS (WORK-ORDER-2.41 §3.8). Player-only, both of them.
+# Loc: localization/english/event_localization/zz_spn_glitterhoof_l_english.yml.
+#
+# ONE BOTTLENECK (Thomas, 2 Nov): "Let Glitterhoof Take a Spouse" is the only gate. It lifts the can_not_marry
+# variable vanilla's own marriage window reads (00_marriage_triggers.txt:21) and blesses him. After that it is
+# ordinary CK3: the player marries him through the vanilla window, the AI may propose, and his foals are born
+# without the variable. Nothing here calls the marry effect.
+
+# Let Glitterhoof Take a Spouse.
+spn_glitterhoof_spouse_interaction = {
+	category = interaction_category_friendly
+	icon = icon_marriage
+	desc = spn_glitterhoof_spouse_interaction_desc
+	auto_accept = yes
+	is_shown = {
+		scope:actor = { is_ai = no }
+		NOT = { scope:recipient = scope:actor }
+		scope:recipient = {
+			spn_glitterhoof_can_unlock_trigger = yes
+			is_courtier_of = scope:actor
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_glitterhoof_spouse_interaction_tt
+		scope:recipient = {
+			remove_variable = can_not_marry
+			add_character_modifier = spn_blessed_by_the_stables_modifier
+		}
+	}
+	ai_will_do = { base = 0 }
+}
+
+# Give Glitterhoof Your Blood. Not the vampire trait: that drives feeding, trails, hunts and turning, all of which
+# assume a person (Thomas: "that might mess it up"). A modifier, a nickname and vanilla's own immortality.
+spn_glitterhoof_blood_interaction = {
+	category = interaction_category_friendly
+	icon = blood_brother
+	desc = spn_glitterhoof_blood_interaction_desc
+	auto_accept = yes
+	is_shown = {
+		scope:actor = {
+			is_ai = no
+			OR = {
+				has_trait = supernatural_vampire
+				has_trait = supernatural_hybrid
+			}
+			NOT = { has_character_flag = spn_gh_gave_blood }
+		}
+		NOT = { scope:recipient = scope:actor }
+		scope:recipient = {
+			has_trait = spn_horse
+			is_courtier_of = scope:actor
+			NOT = { has_character_modifier = spn_undying_steed_modifier }
+		}
+	}
+	on_accept = {
+		custom_tooltip = spn_glitterhoof_blood_interaction_tt
+		scope:actor = { add_character_flag = spn_gh_gave_blood }
+		scope:recipient = {
+			add_character_modifier = spn_undying_steed_modifier
+			give_nickname = nick_the_undying
+			if = {
+				limit = { NOT = { has_trait = immortal } }
+				add_trait = immortal
+			}
+		}
+	}
+	ai_will_do = { base = 0 }
+}

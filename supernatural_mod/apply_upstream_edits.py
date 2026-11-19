@@ -4905,7 +4905,7 @@ E('common/traits/00_traits_magic.txt',
 """	}
 	opposites = {
 		supernatural_hybrid
-		supernatural_werewolf
+		# supernatural_werewolf -- 2.41 (Supernatural, WORK-ORDER-2.41 §6, C3 Option A): a demon-blooded wolf may carry both
 		supernatural_vampire
 		#supernatural_hunter
 		witch_hunter
@@ -6090,8 +6090,22 @@ E("common/scripted_effects/00_variety_magic_effects.txt",
 """# 2.39 (Supernatural): WORK-ORDER-2.39 F9, the rule "Supernatural: Mortals Becoming Demons". Under Players Only an AI
 # character is never made a demon here, and a demon-blooded one keeps demon0. Default is exactly 2.38.
 make_demon_effect = {
+	# 2.41 audit (Supernatural) -- a demon-blooded werewolf is asked which he is (The Two Natures) at every door that
+	# makes a demon, not only magic_ev3.75; and a werewolf never runs the body, whose add_trait = demon1 the wolf
+	# refuses while the rest of it still took the demon blood away.
 	if = {
-		limit = { spn_may_become_demon_trigger = yes } # 2.39 (Supernatural): zz_spn_mortal_demons_triggers.txt
+		limit = {
+			has_trait = supernatural_werewolf
+			has_trait = demon0
+			NOT = { has_character_flag = spn_two_natures_done }
+		}
+		trigger_event = spn_two_natures.0010
+	}
+	else_if = {
+		limit = {
+			spn_may_become_demon_trigger = yes # 2.39 (Supernatural): zz_spn_mortal_demons_triggers.txt
+			NOT = { has_trait = supernatural_werewolf }
+		}
 		spn_make_demon_body_effect = yes
 	}
 }
@@ -7712,6 +7726,113 @@ E('common/decisions/magic_dec.txt',
 	decision_group_type = spn_hunt # 2.40 (Supernatural): the hunters' group (boot 2, item i); Witchcraft set none (Decisions)
 """)
 
+# ---- 2.41 (WORK-ORDER-2.41 §4): the Keeper of the Reliquary nickname. AlduinTWE's report: a random Mage outside the Order
+# wore the seat's title. apply_council_names renamed "Lore Master" to "Keeper of the Reliquary" in every Witchcraft line,
+# mage3_nickname's included, and mage3_nickname is also a random Mage nickname. The office gets its own nickname
+# (spn_keeper_of_the_reliquary_nickname, common/nicknames/zz_spn_241_nicknames.txt) and mage3_nickname stays "the Lore
+# Master" (COUNCIL_SKIP, below). Anchored on Witchcraft's own text.
+E('events/ev10.txt',
+"""			has_character_modifier = mc_loremaster_modifier
+				NOT = {
+					any_living_character = {
+						has_nickname = mage3_nickname
+					}
+				}
+			}
+			if = {
+				limit = {
+					NOR = {
+						has_nickname = mage2_nickname
+						has_nickname = mage3_nickname
+						has_nickname = archmage_nickname""",
+"""			has_character_modifier = mc_loremaster_modifier
+				NOT = {
+					any_living_character = {
+						has_nickname = spn_keeper_of_the_reliquary_nickname # 2.41 (Supernatural): the office's own nickname (was mage3_nickname)
+					}
+				}
+			}
+			if = {
+				limit = {
+					NOR = {
+						has_nickname = mage2_nickname
+						has_nickname = mage3_nickname
+						has_nickname = spn_keeper_of_the_reliquary_nickname # 2.41 (Supernatural)
+						has_nickname = archmage_nickname""")
+E('events/ev10.txt',
+"""						has_nickname = horned_nickname
+					}
+				}
+				give_nickname = mage3_nickname
+			}""",
+"""						has_nickname = horned_nickname
+					}
+				}
+				# 2.41 (Supernatural, WORK-ORDER-2.41 §4): the Keeper of the Reliquary's seat has its own nickname. mage3_nickname
+				# is also handed out at random to any Mage (magic_ev6.69, archmage XP), so it cannot be a title of office.
+				give_nickname = spn_keeper_of_the_reliquary_nickname
+			}""")
+E('common/scripted_effects/00_variety_magic_effects.txt',
+"""			global_var:current_loremaster_global = THIS
+		}
+		remove_global_variable = current_loremaster_global
+		remove_variable = mc_member_var
+		remove_character_modifier = mc_loremaster_modifier
+	}""",
+"""			global_var:current_loremaster_global = THIS
+		}
+		remove_global_variable = current_loremaster_global
+		remove_variable = mc_member_var
+		remove_character_modifier = mc_loremaster_modifier
+		# 2.41 (Supernatural, WORK-ORDER-2.41 §4): leaving the seat takes the office's nickname with it
+		if = {
+			limit = { has_nickname = spn_keeper_of_the_reliquary_nickname }
+			remove_nickname = yes
+		}
+	}""")
+
+
+# ---- 2.41 (WORK-ORDER-2.41 §6, C3 Option A): demon-blooded wolves. demon0 no longer opposes supernatural_werewolf (the
+# demon0 entry above), and the maturity event hands a demon-blooded wolf to The Two Natures instead of making him a demon.
+E('events/ev3.txt',
+"""magic_ev3.75 = {
+	hidden = yes
+	type = character_event
+	trigger = {
+		is_alive = yes
+		has_trait = demon0
+	}
+	immediate = {
+		make_demon_effect = yes
+		#add_trait_xp = {
+		#	trait = demon1
+		#	value = 20
+		#}
+	}
+}""",
+"""magic_ev3.75 = {
+	hidden = yes
+	type = character_event
+	trigger = {
+		is_alive = yes
+		has_trait = demon0
+	}
+	immediate = {
+		# 2.41 (Supernatural, WORK-ORDER-2.41 §6, C3 Option A): a demon-blooded WOLF is not simply made a demon. The Two
+		# Natures decides which nature wins (events/supernatural_events/zz_spn_241_two_natures_events.txt).
+		if = {
+			limit = { has_trait = supernatural_werewolf }
+			trigger_event = spn_two_natures.0010
+		}
+		else = {
+			make_demon_effect = yes
+		}
+		#add_trait_xp = {
+		#	trait = demon1
+		#	value = 20
+		#}
+	}
+}""")
 
 def apply_loc_fix():
     for path in LOC_FIX:
@@ -7863,6 +7984,9 @@ COUNCIL_UPPER = [("High Council of Mages", "Gnostic Council"), ("High Council", 
                  ("an Archmage", "a Grand Magus"), ("Archmagess", "Grand Magus"), ("Archmage", "Grand Magus"),
                  ("Lore Master", "Keeper of the Reliquary"), ("a Black Mage", "an Adeptus Major"), ("Black Mage", "Adeptus Major"),
                  ("Council Administrator", "Chancellor")]
+# 2.41 (WORK-ORDER-2.41 §4): keys the rename never touches. mage3_nickname is a random Mage nickname as well as
+# Witchcraft's office one; the office now has Supernatural's spn_keeper_of_the_reliquary_nickname.
+COUNCIL_SKIP = {"mage3_nickname"}
 # Lower case means the office only in these lines (each read when the order was built); elsewhere "archmage" is any mage.
 COUNCIL_LOWER = {
     "ev7.85.d": [("As a future archmage", "As a future Grand Magus")],
@@ -7903,6 +8027,7 @@ def apply_council_names():
             m = re.match(r'^(\s*)([^\s:#][^:]*):(\d*) ?"(.*)"(\s*)$', ln)
             if not m: continue
             key, val = m.group(2), m.group(4)
+            if key in COUNCIL_SKIP: continue  # 2.41
             new = _council_text(val, COUNCIL_UPPER)
             if key == "mc_admin_modifier_desc" and new.startswith("Administrator "):
                 new = "The Chancellor " + new[len("Administrator "):]
@@ -7917,6 +8042,45 @@ def apply_council_names():
     missing = sorted(set(COUNCIL_LOWER) - seen_lower)
     if missing: print("COUNCIL NAMES: lower-case keys not found (hand check): " + ", ".join(missing))
     if changed_total: print("council names: %d lines" % changed_total)
+
+# ---- 2.41 (11 Nov 2026): the three paths share the basics; the True Witch and Necromancer tracks.
+# Anchored on the text as it stands after every entry above.
+E('common/activities/activity_types/artifacts_searching.txt',
+'\t\tis_adult = yes\n\t\thas_trait = true_witch\n',
+'\t\tis_adult = yes\n\t\tspn_may_host_artifact_search_trigger = yes # 2.41 (Supernatural): was has_trait = true_witch; the search is how anyone reaches the Arcane focus\n')
+E('common/activities/activity_types/artifacts_searching.txt',
+'\ton_complete = {\n\t\t\n\t}',
+"\ton_complete = {\n\t\tspn_artifact_search_complete_effect = yes # 2.41 (Supernatural): the True Witch's track\n\t}")
+E('common/activities/activity_types/mages_summit.txt',
+'\t\t\thas_trait = true_witch\n\t\t\thas_trait = archmage\n\t\t\thas_trait = yaga\n',
+'\t\t\thas_trait = true_witch\n\t\t\thas_trait = archmage\n\t\t\thas_trait = warlock # 2.41 (Supernatural): the three paths share the basics\n\t\t\thas_trait = yaga\n')
+E('common/character_interactions/00_magic_interactions.txt',
+'\t\t\t\thas_trait = archmage\n\t\t\t\thas_trait = yaga\n\t\t\t\thas_trait = true_witch\n\t\t\t\thas_focus = arcane_focus\n',
+'\t\t\t\thas_trait = archmage\n\t\t\t\thas_trait = yaga\n\t\t\t\thas_trait = true_witch\n\t\t\t\thas_trait = warlock # 2.41 (Supernatural): the three paths share the basics\n\t\t\t\thas_focus = arcane_focus\n')
+E('common/domiciles/buildings/01_magic_estate_buildings.txt',
+'\t\t\tOR = {\n\t\t\t\tis_true_mage = yes\n\t\t\t\thas_focus = arcane_focus\n\t\t\t}',
+'\t\t\tOR = {\n\t\t\t\tis_true_mage = yes\n\t\t\t\thas_focus = arcane_focus\n\t\t\t\tspn_finished_practitioner_trigger = yes # 2.41 (Supernatural)\n\t\t\t}')
+E('common/court_positions/types/01_court_positions_magic.txt',
+'\t\t\tlimit = {\n\t\t\t\thas_trait = true_witch\n\t\t\t}\n\t\t\tadd = {\n\t\t\t\tvalue = 35',
+'\t\t\tlimit = {\n\t\t\t\tOR = { has_trait = true_witch has_trait = warlock } # 2.41 (Supernatural)\n\t\t\t}\n\t\t\tadd = {\n\t\t\t\tvalue = 35')
+E('common/court_positions/types/01_court_positions_magic.txt',
+'\t\t\t\t\tOR = {\n\t\t\t\t\t\thas_trait = archmage\n\t\t\t\t\t\thas_trait = true_witch\n\t\t\t\t\t}',
+'\t\t\t\t\tspn_finished_practitioner_trigger = yes # 2.41 (Supernatural): any of the three paths')
+E('common/court_positions/types/01_court_positions_magic.txt',
+'\t\t\tlimit = {\n\t\t\t\thas_trait = true_witch\n\t\t\t}\n\t\t\tadd = 20',
+'\t\t\tlimit = {\n\t\t\t\tOR = { has_trait = true_witch has_trait = warlock } # 2.41 (Supernatural)\n\t\t\t}\n\t\t\tadd = 20')
+E('common/task_contracts/laamp_magic_contracts.txt',
+'\t\tOR = {\n\t\t\thas_trait = true_witch\n\t\t\tis_true_mage = yes\n\t\t}',
+'\t\tOR = {\n\t\t\thas_trait = true_witch\n\t\t\tis_true_mage = yes\n\t\t\thas_trait = warlock # 2.41 (Supernatural)\n\t\t}')
+E('common/task_contracts/laamp_magic_contracts.txt',
+'\t\t\tOR = {\n\t\t\t\thas_trait = true_witch\n\t\t\t\thas_trait = lifestyle_herbalist',
+'\t\t\tOR = {\n\t\t\t\thas_trait = true_witch\n\t\t\t\thas_trait = warlock # 2.41 (Supernatural)\n\t\t\t\thas_trait = lifestyle_herbalist')
+E('common/traits/00_traits_magic.txt',
+'\tdread_baseline_add = 10\n\tdiplomatic_range_mult = 0.5\n\tshown_in_ruler_designer = no\n\t#ruler_designer_cost = 50\n\tculture_modifier = {\n\t\tparameter = coven_rule3\n\t\tsame_culture_opinion = 10\n\t\tstewardship = 2',
+"\tdread_baseline_add = 10\n\tdiplomatic_range_mult = 0.5\n\tshown_in_ruler_designer = no\n\t#ruler_designer_cost = 50\n\t# 2.41 (Supernatural): the True Witch's standing. Mage had four tracks and Warlock two; this path had none. Points\n\t# come from a year of practice, a coven, the Witch Ritual and the Artifact Search (zz_spn_241_three_paths_effects.txt).\n\ttrack = {\n\t\t25 = {\n\t\t\tlearning = 1\n\t\t\tmonthly_magic_lifestyle_xp_gain_mult = 0.05\n\t\t}\n\t\t50 = {\n\t\t\tintrigue = 1\n\t\t\thealth = 0.25\n\t\t}\n\t\t75 = {\n\t\t\tdiplomacy = 1\n\t\t\tlife_expectancy = 5\n\t\t}\n\t\t100 = {\n\t\t\tlearning = 2\n\t\t\thealth = 0.25\n\t\t\tmonthly_prestige = 0.5\n\t\t}\n\t}\n\tculture_modifier = {\n\t\tparameter = coven_rule3\n\t\tsame_culture_opinion = 10\n\t\tstewardship = 2")
+E('common/traits/00_traits_magic.txt',
+'\tgeneral_opinion = -30\n\tdread_baseline_add = 20\n\tarmy_maintenance_mult = -0.1\n',
+"\tgeneral_opinion = -30\n\tdread_baseline_add = 20\n\tarmy_maintenance_mult = -0.1\n\t# 2.41 (Supernatural): how deep it goes. Witchcraft's Raise the Dead asks for 70 points of this trait and its Aether\n\t# potion grants 20, but the trait had no track, so neither did anything. A year of practice adds 3\n\t# (zz_spn_241_three_paths_effects.txt). The deeper, the more it shows.\n\ttrack = {\n\t\t30 = {\n\t\t\tdread_baseline_add = 5\n\t\t}\n\t\t70 = {\n\t\t\tdread_baseline_add = 10\n\t\t\tgeneral_opinion = -5\n\t\t}\n\t\t100 = {\n\t\t\tlife_expectancy = 5\n\t\t\tgeneral_opinion = -5\n\t\t}\n\t}\n")
 
 # ---- apply_interaction_menu (2.38a): Witchcraft's friendly and diplomacy interactions go in the Supernatural menu
 # (interaction_category_favorites, which Supernatural names "Supernatural"), as Supernatural's own magic actions do since

@@ -98,6 +98,7 @@
 spn_mark_menace_effect = {
 	# 2.37 -- banked in the caller's scope before anything is pasted inside the county (a caller's `this` or `prev` meant
 	# the county there). Read below and handed on as saved scopes, never as pasted text.
+	spn_tc_bump_effect = { NAME = spn_tc_marks } # 2.41 boot 7: the census line
 	$CULPRIT$ = { save_scope_as = spn_mm_culprit }
 	$COUNTY$ = { save_scope_as = spn_mm_county }
 	if = {
@@ -115,9 +116,15 @@ spn_mark_menace_effect = {
 	}
 	else = {
 		# Clean ground. Roll for it being noticed anyway; the odds are deliberately poor.
-		random = {
-			chance = spn_menace_first_notice_$SEVERITY$_value
-			spn_open_menace_trail_effect = { COUNTY = scope:spn_mm_county CULPRIT = scope:spn_mm_culprit KIND = $KIND$ SEVERITY = $SEVERITY$ }
+		# 2.41 (WORK-ORDER-2.41 §1.5) -- never for a man. One murder is a murder; two in a year in one county is a killer,
+		# so a human trail only ever opens on the whisper's second death.
+		save_temporary_scope_value_as = { name = spn_mm_kind value = flag:$KIND$ }
+		if = {
+			limit = { NOT = { scope:spn_mm_kind = flag:human } }
+			random = {
+				chance = spn_menace_first_notice_$SEVERITY$_value
+				spn_open_menace_trail_effect = { COUNTY = scope:spn_mm_county CULPRIT = scope:spn_mm_culprit KIND = $KIND$ SEVERITY = $SEVERITY$ }
+			}
 		}
 		# If the roll failed, the county still half-remembers. Tested on the MODIFIER rather than on the roll,
 		# because the roll's own result is not a thing script can read afterwards.
@@ -125,6 +132,9 @@ spn_mark_menace_effect = {
 			limit = { scope:spn_mm_county = { NOT = { has_county_modifier = spn_menace_modifier } } }
 			scope:spn_mm_county = {
 				set_variable = { name = spn_menace_whisper value = scope:spn_mm_culprit years = 1 }
+				# 2.41 (B1) -- what the whisper was, so the culprit keeps it when a second incident opens the trail.
+				set_variable = { name = spn_menace_whisper_kind value = flag:$KIND$ years = 1 }
+				set_variable = { name = spn_menace_whisper_sev value = flag:$SEVERITY$ years = 1 }
 			}
 			# The incident dedupe still has to happen, or a feed that ends in a kill rolls twice for one night.
 			# spn_open_menace_trail_effect sets this itself on the other path; this is the whisper's copy.
@@ -133,17 +143,102 @@ spn_mark_menace_effect = {
 			}
 		}
 	}
+	# 2.41 (CK3 1.21, Thomas 17 Nov): FEAR. Noticed or only whispered about, a creature's incident frightens the county and
+	# lowers its control baseline for a year; another inside that year deepens it (spn_menace_fear_rise_effect). A man who
+	# kills does not: one murder is a murder (the 2.41 rule for human trails).
+	save_temporary_scope_value_as = { name = spn_mf_kind value = flag:$KIND$ }
+	if = {
+		limit = { NOT = { scope:spn_mf_kind = flag:human } }
+		scope:spn_mm_county = {
+			spn_menace_fear_rise_effect = yes
+			spn_menace_market_effect = yes # 2.41 Silk & Silver: the market feels it too (zz_spn_241_silk_effects.txt)
+		}
+	}
 	# 2.40 (WORK-ORDER-2.40 G12, B9): after every mark, once: a Powder throws itself, and the trails map is updated.
 	spn_menace_after_mark_effect = { SEVERITY = $SEVERITY$ }
+}
+
+# 2.41 -- COUNTY scope. One step deeper, capped at three, and a fresh year from now. Every read of the variable sits behind
+# has_variable, because a feeding option's tooltip walks spn_mark_menace_effect without running the set_variable lines
+# (2.36, port120.py S28).
+spn_menace_fear_rise_effect = {
+	if = {
+		limit = { has_variable = spn_menace_fear }
+		if = {
+			limit = { var:spn_menace_fear < 3 }
+			change_variable = { name = spn_menace_fear add = 1 }
+		}
+		# change_variable keeps the old expiry (2.41 audit note on spn_menace_count): re-set it with a fresh year.
+		set_variable = { name = spn_menace_fear value = var:spn_menace_fear years = 1 }
+	}
+	else = {
+		set_variable = { name = spn_menace_fear value = 1 years = 1 }
+	}
+	spn_menace_fear_remove_effect = yes
+	if = {
+		limit = { has_variable = spn_menace_fear }
+		if = {
+			limit = { var:spn_menace_fear <= 1 }
+			add_county_modifier = { modifier = spn_menace_fear_1_modifier years = 1 }
+		}
+		else_if = {
+			limit = { var:spn_menace_fear = 2 }
+			add_county_modifier = { modifier = spn_menace_fear_2_modifier years = 1 }
+		}
+		else = {
+			add_county_modifier = { modifier = spn_menace_fear_3_modifier years = 1 }
+		}
+	}
+}
+
+# 2.41 -- COUNTY scope. Drops whichever tier is on the county. Used when the tier changes, and when the trail is cleared.
+spn_menace_fear_remove_effect = {
+	if = { limit = { has_county_modifier = spn_menace_fear_1_modifier } remove_county_modifier = spn_menace_fear_1_modifier }
+	if = { limit = { has_county_modifier = spn_menace_fear_2_modifier } remove_county_modifier = spn_menace_fear_2_modifier }
+	if = { limit = { has_county_modifier = spn_menace_fear_3_modifier } remove_county_modifier = spn_menace_fear_3_modifier }
 }
 
 # The trail proper. This is the body spn_mark_menace_effect had before 2.35c and it is UNCHANGED below this
 # line -- it is only reached now when the county has actually noticed. Every existing caller still calls
 # spn_mark_menace_effect and does not know the difference.
 spn_open_menace_trail_effect = {
+	save_temporary_scope_value_as = { name = spn_open_kind value = flag:$KIND$ }
 	$COUNTY$ = {
+		# 2.41 (WORK-ORDER-2.41 §1.3 B1) -- A TRAIL OPENED BEFORE 2.41 HAS A CULPRIT AND NO LEDGER. Seed it first, so the
+		# man the county already blamed is weighed against the new one instead of being written over.
+		spn_ledger_seed_legacy_effect = yes
+		# 2.41 (B1) -- THE WHISPER'S CULPRIT WAS HERE FIRST. Until 2.41 a second creature's incident opened the trail in
+		# his own name and the whisper, with the first culprit in it, was simply deleted. Now the first one goes onto the
+		# ledger before the second, with the kind and severity the whisper recorded, and is the trail's origin.
+		if = {
+			# 2.41 review: the same culprit's whisper counts too -- the trail then starts at his two incidents, not one.
+			limit = {
+				var:spn_menace_whisper ?= { is_alive = yes }
+			}
+			var:spn_menace_whisper = { spn_ledger_kind_of_character_effect = yes }
+			if = {
+				limit = { has_variable = spn_menace_whisper_kind }
+				spn_kind_to_scope_value_effect = { NAME = spn_lg_kind VAR = var:spn_menace_whisper_kind } # 2.41 boot 5
+			}
+			if = {
+				limit = {
+					OR = {
+						var:spn_menace_whisper_sev ?= flag:kill
+						has_variable = spn_trail_whisper_blood
+					}
+				}
+				spn_ledger_add_effect = { CULPRIT = var:spn_menace_whisper KIND = scope:spn_lg_kind SEVERITY = kill }
+			}
+			else = {
+				spn_ledger_add_effect = { CULPRIT = var:spn_menace_whisper KIND = scope:spn_lg_kind SEVERITY = prowl }
+			}
+			var:spn_menace_whisper = { spn_my_trails_add_effect = { COUNTY = $COUNTY$ } } # 2.41 boot 7: the one way onto the lists
+		}
 		# A trail supersedes the whisper that led to it.
-		remove_variable = spn_menace_whisper
+		if = { limit = { has_variable = spn_menace_whisper } remove_variable = spn_menace_whisper }
+		if = { limit = { has_variable = spn_menace_whisper_kind } remove_variable = spn_menace_whisper_kind }
+		if = { limit = { has_variable = spn_menace_whisper_sev } remove_variable = spn_menace_whisper_sev }
+		spn_trail_history_open_effect = yes # 2.41 boot 7: before the modifier, so it can tell a new trail from a refreshed one
 		add_county_modifier = { modifier = spn_menace_modifier years = 5 }
 		# 2.35d -- AND THE WORLD KEEPS A LIST. There is no global county iterator in CK3, so without this the
 		# only way to ask "is anything being hunted anywhere" is to walk a realm -- which a landless adventurer
@@ -154,21 +249,25 @@ spn_open_menace_trail_effect = {
 		# anyway (spn_trailsman_trail_is_warm_trigger), so a stale entry is inert rather than wrong. Guarded so a
 		# county that is marked twice is listed once.
 		# 2.37 -- refreshed on every mark, like the modifier and the culprit, and still listed once.
+		# 2.41 boot 6 (4 Nov) -- UNTIMED, and kept by hand. The 1034 autosave had five counties carrying the trail modifier
+		# and one in this list: the timed entries (years = 5) did not live as long as the modifier they were meant to
+		# shadow, (vanilla does use timed lists, in 43 places; the 4 Nov note that it never does was wrong. Why
+		# these aged differently from the modifier is not known). Now: added here, removed by spn_menace_clear_county_effect, and once a year
+		# spn_menace_world_census_effect (zz_spn_menace_on_actions.txt) walks every county and repairs both directions.
 		if = {
-			limit = { is_target_in_global_variable_list = { name = spn_menace_counties target = this } }
-			remove_list_global_variable = { name = spn_menace_counties target = this }
+			limit = { NOT = { is_target_in_global_variable_list = { name = spn_menace_counties target = this } } }
+			add_to_global_variable_list = { name = spn_menace_counties target = this }
 		}
-		add_to_global_variable_list = { name = spn_menace_counties target = this years = 5 }
-		set_variable = { name = spn_menace_culprit value = $CULPRIT$ years = 5 }
+		# 2.41 (B1) -- the incident goes on the ledger; the lead is recomputed below, after the culprit's own list.
+		# (Until 2.41: set_variable = { name = spn_menace_culprit value = $CULPRIT$ years = 5 }, every time.)
+		spn_ledger_add_effect = { CULPRIT = $CULPRIT$ KIND = flag:$KIND$ SEVERITY = $SEVERITY$ }
 		# 2.35h -- THE CULPRIT'S OWN LIST OF WHAT HE HAS LEFT BEHIND, so that when he dies the trails he
 		# made can be found without scanning the world. Read by spn_menace_culprit_died_effect below.
-		$CULPRIT$ = {
-			if = {
-				limit = { NOT = { is_target_in_variable_list = { name = spn_my_trails target = $COUNTY$ } } }
-				add_to_variable_list = { name = spn_my_trails target = $COUNTY$ }
-			}
-		}
-		set_variable = { name = spn_menace_kind value = flag:$KIND$ years = 5 }
+		$CULPRIT$ = { spn_my_trails_add_effect = { COUNTY = $COUNTY$ } } # 2.41 boot 7: the one way onto the lists
+		# 2.41 (B1) -- the verdict: who the county blames now, and what it reads him as.
+		# (Until 2.41: set_variable = { name = spn_menace_kind value = flag:$KIND$ years = 5 }, every time.)
+		spn_menace_recompute_lead_effect = yes
+		spn_trail_history_note_effect = yes # 2.41 boot 7: what the county believes, kept after the trail
 		# 2.35 PART TWO -- THE CEILING, and it is the first of five balance levers (order §3.4). Thomas:
 		# "I don't know if it can scale infinitely... the last thing I want is hunters coming after me all the
 		# time." The count was uncapped, so a vampire who fed forty times in one city was forty marks deep and
@@ -182,6 +281,9 @@ spn_open_menace_trail_effect = {
 			if = {
 				limit = { var:spn_menace_count < 6 }
 				change_variable = { name = spn_menace_count add = 1 }
+				# 2.41 audit -- change_variable keeps the old expiry, so the count died five years after the FIRST
+				# incident while the modifier lived on. Re-set, as the ledger does for its own variables.
+				set_variable = { name = spn_menace_count value = var:spn_menace_count years = 5 }
 			}
 			else = {
 				set_variable = { name = spn_menace_count value = 6 years = 5 }
@@ -218,6 +320,8 @@ spn_open_menace_trail_effect = {
 							is_ai = no
 							is_alive = yes
 							NOT = { has_character_flag = spn_taught_asking }
+							# 2.41 (§1.5) -- the lesson is about creatures; a man who kills is not taught it.
+							NOT = { scope:spn_open_kind = flag:human }
 						}
 						add_character_flag = spn_taught_asking
 						trigger_event = { id = spn_hunt.0502 days = { 4 12 } }
@@ -237,6 +341,8 @@ spn_open_menace_trail_effect = {
 				is_ai = no
 				is_alive = yes
 				NOT = { has_character_flag = spn_taught_first_body }
+				# 2.41 (§1.5) -- nor this one.
+				NOT = { scope:spn_open_kind = flag:human }
 			}
 			add_character_flag = spn_taught_first_body
 			# 2.36 -- a body, or somebody talking? The event reads this for its title and text.
@@ -313,6 +419,17 @@ spn_menace_drain_witch_kill_effect = {
 	change_county_control = -2
 	spn_county_prosperity_change_effect = { VALUE = -1 }
 }
+# 2.41 (WORK-ORDER-2.41 §1.5) -- A MAN WHO KILLS. Thomas: "humans can be just as much monsters as monsters can." The
+# county is frightened, not drained: control only, and a fright is nothing. Proposed in the order; his to change.
+spn_menace_drain_human_kill_effect = {
+	change_county_control = -1
+}
+spn_menace_drain_human_prowl_effect = {
+	if = {
+		limit = { always = no }
+		change_county_control = 0
+	}
+}
 spn_menace_drain_witch_prowl_effect = {
 	change_county_control = -1
 }
@@ -329,17 +446,67 @@ spn_hunt_learn_culprit_effect = {
 		}
 		scope:spn_menace_county.var:spn_menace_culprit = {
 			save_scope_as = spn_menace_culprit
-			random_secret = {
-				limit = {
-					OR = {
-						secret_type = spn_secret_vampire
-						secret_type = spn_secret_werewolf
-						secret_type = spn_secret_hybrid
-					}
-					NOT = { is_known_by = scope:spn_hunt_lord }
+			spn_hunt_reveal_culprit_effect = { LORD = scope:spn_hunt_lord }
+		}
+	}
+}
+
+# 2.41 (WORK-ORDER-2.41 §1.3 B4) -- CHARACTER scope: the culprit. Reveals to LORD the one secret that is the county's
+# business: a creature's, else a witch's, else a murderer's. Until 2.41 only the three creature secrets were looked for,
+# so the Trailsman "named" a witch and the lord learned nothing while the tooltip said he had. Demons carry no secret type
+# (checked 2 Nov: common/secret_types/ and vanilla 00_secret_types.txt); the reports say so instead of promising one.
+spn_hunt_reveal_culprit_effect = {
+	if = {
+		limit = {
+			any_secret = {
+				OR = {
+					secret_type = spn_secret_vampire
+					secret_type = spn_secret_werewolf
+					secret_type = spn_secret_hybrid
 				}
-				reveal_to = scope:spn_hunt_lord
+				NOT = { is_known_by = $LORD$ }
 			}
+		}
+		random_secret = {
+			limit = {
+				OR = {
+					secret_type = spn_secret_vampire
+					secret_type = spn_secret_werewolf
+					secret_type = spn_secret_hybrid
+				}
+				NOT = { is_known_by = $LORD$ }
+			}
+			reveal_to = $LORD$
+		}
+	}
+	else_if = {
+		limit = {
+			any_secret = {
+				secret_type = secret_witch
+				NOT = { is_known_by = $LORD$ }
+			}
+		}
+		random_secret = {
+			limit = {
+				secret_type = secret_witch
+				NOT = { is_known_by = $LORD$ }
+			}
+			reveal_to = $LORD$
+		}
+	}
+	else_if = {
+		limit = {
+			any_secret = {
+				secret_type = secret_murder
+				NOT = { is_known_by = $LORD$ }
+			}
+		}
+		random_secret = {
+			limit = {
+				secret_type = secret_murder
+				NOT = { is_known_by = $LORD$ }
+			}
+			reveal_to = $LORD$
 		}
 	}
 }
@@ -370,7 +537,12 @@ spn_menace_clear_one_effect = {
 spn_menace_gone_to_ground_effect = {
 	if = {
 		limit = { location ?= { county ?= { has_county_modifier = spn_menace_modifier } } }
-		location.county = { spn_menace_clear_one_effect = yes }
+		save_temporary_scope_as = spn_gtg_who
+		location.county = {
+			spn_menace_clear_one_effect = yes
+			# 2.41 boot 6 (the ledger): one mark shorter means HIS heat here, too (one kill's worth), and the verdict again.
+			spn_ledger_cool_culprit_effect = { WHO = scope:spn_gtg_who }
+		}
 	}
 }
 
@@ -403,6 +575,7 @@ spn_hunt_running_open_effect = {
 			set_global_variable = { name = spn_hunts_running value = 0 }
 		}
 		change_global_variable = { name = spn_hunts_running add = 1 }
+		spn_tc_bump_effect = { NAME = spn_tc_hunts } # 2.41 boot 7: the census line
 	}
 }
 
@@ -482,13 +655,30 @@ spn_hunt_refusal_effect = {
 # a mark -- the list is written at the mark, so no county scan happens anywhere.
 # ==========================================================================================================
 spn_menace_culprit_died_effect = {
+	# 2.41 audit -- two passes. The clear below removes the county from this same list (boot 6), and nothing is removed
+	# from a list while it is being walked.
 	every_in_list = {
 		variable = spn_my_trails
 		limit = { has_county_modifier = spn_menace_modifier }
+		add_to_temporary_list = spn_dead_trails
+	}
+	every_in_list = {
+		list = spn_dead_trails
 		# TEMPORARY scopes throughout: this walks several counties in one call and a saved scope would leak
 		# from one iteration into the next. Every branch below re-saves before it reads.
 		save_temporary_scope_as = spn_dead_culprit_county
+		# 2.41 (WORK-ORDER-2.41 §1.3 B2) -- THE LEDGER FIRST. The dead man's slot is cleared by name (inside on_death he
+		# may still read as alive) and the lead recomputed. If anyone else is on the ledger and alive, he is the lead now:
+		# that is attribution, not suspicion, and nothing below runs. The guess further down is only for a county whose
+		# ledger is empty.
+		root = { save_temporary_scope_as = spn_lg_dead }
+		spn_ledger_forget_culprit_effect = { WHO = scope:spn_lg_dead }
+		spn_menace_recompute_lead_effect = yes
 		if = {
+			limit = { spn_ledger_has_other_living_culprit_trigger = { WHO = scope:spn_lg_dead } }
+			spn_trails_map_sync_effect = yes
+		}
+		else_if = {
 			limit = {
 				holder ?= {
 					OR = {
@@ -510,6 +700,8 @@ spn_menace_culprit_died_effect = {
 				}
 			}
 			set_variable = { name = spn_menace_culprit value = scope:spn_menace_heir years = 5 }
+			# 2.41 (B2) -- a guess, and stored as one. Readers say "suspected"; the yearly seed never turns it into evidence.
+			set_variable = { name = spn_menace_suspected value = yes years = 5 }
 			# The kind follows the new name, or the county would be looking for fangs and find a wolf.
 			scope:spn_menace_heir = {
 				if = {
@@ -528,10 +720,7 @@ spn_menace_culprit_died_effect = {
 					scope:spn_dead_culprit_county = { set_variable = { name = spn_menace_kind value = flag:witch years = 5 } }
 				}
 				# The new name inherits the trail, so this can happen to them in turn.
-				if = {
-					limit = { NOT = { is_target_in_variable_list = { name = spn_my_trails target = scope:spn_dead_culprit_county } } }
-					add_to_variable_list = { name = spn_my_trails target = scope:spn_dead_culprit_county }
-				}
+				spn_my_trails_add_effect = { COUNTY = scope:spn_dead_culprit_county } # 2.41 boot 7
 			}
 		}
 		else = {
@@ -544,6 +733,14 @@ spn_menace_culprit_died_effect = {
 # 2.37 -- the county's trail, cleared (extracted from the else branch above, so Timber's Vanish calls the same lines
 # and nothing is copied). County scope.
 spn_menace_clear_county_effect = {
+	# 2.41 boot 6 -- the culprit's own list of trails (spn_my_trails) forgets this county too; it was never pruned.
+	save_temporary_scope_as = spn_cc_county
+	var:spn_menace_culprit ?= {
+		if = {
+			limit = { is_target_in_variable_list = { name = spn_my_trails target = scope:spn_cc_county } }
+			remove_list_variable = { name = spn_my_trails target = scope:spn_cc_county }
+		}
+	}
 	if = {
 		limit = { has_county_modifier = spn_menace_modifier }
 		remove_county_modifier = spn_menace_modifier
@@ -552,6 +749,19 @@ spn_menace_clear_county_effect = {
 	if = { limit = { has_variable = spn_menace_kind }     remove_variable = spn_menace_kind }
 	if = { limit = { has_variable = spn_menace_count }    remove_variable = spn_menace_count }
 	if = { limit = { has_variable = spn_menace_notified } remove_variable = spn_menace_notified }
+	# 2.41 boot 7 -- every name on the ledger forgets the county, and the county keeps the year it went cold.
+	spn_trail_history_end_effect = yes
+	# 2.41 (B1) -- every writer that clears a trail clears its ledger with it.
+	spn_ledger_clear_all_effect = yes
+	# 2.41 (CK3 1.21) -- and the fear goes with the trail: whoever ended it, the county stops looking over its shoulder.
+	spn_menace_fear_remove_effect = yes
+	if = { limit = { has_variable = spn_menace_fear } remove_variable = spn_menace_fear }
+	spn_menace_market_clear_effect = yes
+	# 2.41 boot 6 -- and leaves the world's list (untimed since boot 6).
+	if = {
+		limit = { is_target_in_global_variable_list = { name = spn_menace_counties target = this } }
+		remove_list_global_variable = { name = spn_menace_counties target = this }
+	}
 	# 2.40 (WORK-ORDER-2.40 G12): the trails map forgets the county too.
 	hidden_effect = { spn_trails_map_sync_effect = yes }
 }

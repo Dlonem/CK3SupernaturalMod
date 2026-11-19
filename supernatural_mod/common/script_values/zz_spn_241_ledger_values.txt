@@ -1,0 +1,67 @@
+﻿# Supernatural 2.41 -- THE LEDGER'S KNOBS (WORK-ORDER-2.41 §1.3 B1). Who a county blames is a score, not a timestamp:
+#
+#     score = heat x presence x freshness
+#
+# Thomas, 2 Nov: "a hybrid of both that takes both into account... whether they're still in the area." Every number
+# that decides attribution is here, so tuning it never means touching the effects.
+
+# Heat a culprit earns in a county per incident. A body is three times a fright.
+spn_ledger_heat_kill_value = 3
+spn_ledger_heat_prowl_value = 1
+
+# Presence. Here = his location is in the county, he holds it, or he serves at its holder's court.
+spn_ledger_presence_here_value = 1
+spn_ledger_presence_near_value = 0.75
+spn_ledger_presence_far_value = 0.4
+
+# Freshness. A culprit who has not marked the county for 180 days (the spn_mf<N> flag's life) weighs this much.
+spn_ledger_stale_value = 0.6
+
+# The yearly walk fades every stale slot's heat (spn_ledger_decay_value, below); a slot below this is forgotten.
+spn_ledger_forget_below_value = 0.5
+# 2.41 boot 5 (4 Nov): the yearly fade. Was a halving with a floor of 1, which forgot a one-kill culprit within about two
+# years while his trail (spn_menace_modifier) stays open for five; the 1006 autosave had four open trails and not one
+# name left on any ledger. At x0.75 and a floor of 0.5, one kill (3) is remembered about six years and one prowl (1) about
+# three, which matches the trail's own life. Fresh slots (spn_mf<N>, 180 days) do not fade at all.
+spn_ledger_decay_value = 0.75
+
+# COUNTY scope. Seeding a trail opened before 2.41: three heat per recorded incident, one incident if the count is gone.
+spn_ledger_seed_heat_value = {
+	value = 3
+	if = {
+		limit = { has_variable = spn_menace_count }
+		multiply = var:spn_menace_count
+	}
+}
+
+# ==========================================================================================================
+# THE COLD TRAIL (WORK-ORDER-2.41 §1.6). HUNTER scope; scope:spn_ct_quarry = the creature he is following.
+# The chance he keeps the trail at a leg. A careful, old creature is harder to keep track of than a young, careless one.
+# ==========================================================================================================
+spn_cold_trail_read_chance_value = {
+	value = 40
+	if = {
+		limit = { has_trait = supernatural_hunter }
+		add = { value = "has_trait_xp(supernatural_hunter|monster_hunting)" multiply = 0.5 }
+	}
+	if = {
+		limit = { exists = scope:spn_ct_quarry }
+		scope:spn_ct_quarry = {
+			subtract = intrigue
+			subtract = { value = spn_hunt_creature_track_value divide = 5 }
+		}
+		if = {
+			limit = { scope:spn_ct_quarry = { has_character_modifier = spn_gone_to_ground_modifier } }
+			subtract = 20
+		}
+	}
+	min = 15
+	max = 90
+}
+
+# Expertise tiers (§1.4). Thresholds on the monster_hunting track.
+spn_hunter_seasoned_track_value = 25
+spn_hunter_expert_track_value = 75
+
+# 2.41 (WORK-ORDER-2.41 §5.2) -- a hybrid parent has at most this many supernatural children (C4: supernatural only).
+spn_hybrid_child_cap_value = 6

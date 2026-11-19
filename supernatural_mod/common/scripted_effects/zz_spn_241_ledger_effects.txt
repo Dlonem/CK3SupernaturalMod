@@ -1,0 +1,535 @@
+﻿# Supernatural 2.41 -- THE LEDGER. Who a county blames, and why (WORK-ORDER-2.41 §1.3 B1, B2, B6).
+#
+# THE DEFECT THIS REPLACES. Until 2.41 every mark overwrote spn_menace_culprit and spn_menace_kind. A vampire who fed
+# five times in a county lost the trail to a witch who frightened one girl in it, and a whisper's culprit vanished the
+# moment a second creature opened the trail. Thomas: "I've been the one to cause a trail, and it keeps telling me it was
+# somebody else, even though I know it was me."
+#
+# THE RULE NOW. A county remembers up to three culprits, each with his own heat, and blames the one with the highest
+#     score = heat x presence x freshness            (the knobs: zz_spn_241_ledger_values.txt)
+# Thomas, 2 Nov: "if a vampire kills one person and then a werewolf shows up and kills three people... it's the werewolf
+# who's ruining the countryside more, and who's probably still in the county... a hybrid of both that takes both into
+# account, whether they're still in the area."
+#
+# STORAGE, county scope. Three slots, because CK3 variable lists cannot carry a number per entry:
+#   spn_mc<N>  the culprit (character)          spn_mh<N>  his heat (number)
+#   spn_mk<N>  the kind his last mark read as   spn_mf<N>  set for 180 days on every mark by him (freshness)
+#   spn_menace_origin / spn_menace_origin_kind -- the first culprit and his kind, never overwritten while the trail lives
+#   spn_menace_mixed     -- two slots hold different kinds
+#   spn_menace_suspected -- nobody is on the ledger; the name is the old guess (B2)
+#
+# EVERY READER KEEPS WORKING. spn_menace_recompute_lead_effect writes the winner into spn_menace_culprit and
+# spn_menace_kind, which is all the 22 pre-2.41 readers ever read. The slots are the ledger; those two are its verdict.
+#
+# KIND is passed as a VALUE (flag:vampire, var:spn_menace_whisper_kind, scope:spn_lg_kind), not as bare text, so a
+# whisper can hand on the kind it recorded. SEVERITY is text (kill | prowl): it names the heat value.
+
+# 2.41 boot 5 (4 Nov) -- A FLAG HELD IN A VARIABLE CANNOT BE COPIED INTO A SCOPE VALUE. `save_scope_value_as = { value =
+# var:X }` with X a flag logs "Value of wrong type ... Got value of type 'flag'" and saves 0; a ledger slot then held a
+# number where a kind belongs (spn_ledger_mixed_trigger: "left was 'value', right was 'flag'"). Literal flags are fine,
+# so this reads the variable against each of the five kinds and saves the literal. VAR is guarded by the caller.
+spn_kind_to_scope_value_effect = {
+	if = { limit = { $VAR$ = flag:vampire } save_scope_value_as = { name = $NAME$ value = flag:vampire } }
+	else_if = { limit = { $VAR$ = flag:werewolf } save_scope_value_as = { name = $NAME$ value = flag:werewolf } }
+	else_if = { limit = { $VAR$ = flag:demon } save_scope_value_as = { name = $NAME$ value = flag:demon } }
+	else_if = { limit = { $VAR$ = flag:witch } save_scope_value_as = { name = $NAME$ value = flag:witch } }
+	else_if = { limit = { $VAR$ = flag:human } save_scope_value_as = { name = $NAME$ value = flag:human } }
+}
+
+# COUNTY scope. One incident by CULPRIT.
+spn_ledger_add_effect = {
+	$CULPRIT$ = { save_temporary_scope_as = spn_lg_new }
+	# 2.41 review: the marker that this trail has a ledger. spn_ledger_seed_legacy_effect seeds only a trail WITHOUT it, so
+	# a 2.41 trail whose slots have all decayed is never re-seeded from its old marks.
+	set_variable = { name = spn_menace_ledger value = yes years = 5 }
+	if = {
+		limit = { NOT = { has_variable = spn_menace_origin } }
+		set_variable = { name = spn_menace_origin value = scope:spn_lg_new years = 5 }
+		set_variable = { name = spn_menace_origin_kind value = $KIND$ years = 5 }
+	}
+	else = {
+		# The origin lives as long as the trail it started, so it is refreshed with every incident.
+		set_variable = { name = spn_menace_origin value = var:spn_menace_origin years = 5 }
+		if = {
+			limit = { has_variable = spn_menace_origin_kind }
+			set_variable = { name = spn_menace_origin_kind value = var:spn_menace_origin_kind years = 5 }
+		}
+	}
+	if = {
+		limit = { var:spn_mc1 ?= scope:spn_lg_new }
+		spn_ledger_bump_effect = { N = 1 KIND = $KIND$ SEVERITY = $SEVERITY$ }
+	}
+	else_if = {
+		limit = { var:spn_mc2 ?= scope:spn_lg_new }
+		spn_ledger_bump_effect = { N = 2 KIND = $KIND$ SEVERITY = $SEVERITY$ }
+	}
+	else_if = {
+		limit = { var:spn_mc3 ?= scope:spn_lg_new }
+		spn_ledger_bump_effect = { N = 3 KIND = $KIND$ SEVERITY = $SEVERITY$ }
+	}
+	else_if = {
+		limit = { NOT = { has_variable = spn_mc1 } }
+		spn_ledger_fill_effect = { N = 1 KIND = $KIND$ SEVERITY = $SEVERITY$ }
+	}
+	else_if = {
+		limit = { NOT = { has_variable = spn_mc2 } }
+		spn_ledger_fill_effect = { N = 2 KIND = $KIND$ SEVERITY = $SEVERITY$ }
+	}
+	else_if = {
+		limit = { NOT = { has_variable = spn_mc3 } }
+		spn_ledger_fill_effect = { N = 3 KIND = $KIND$ SEVERITY = $SEVERITY$ }
+	}
+	# All three taken by others: the county forgets the faintest of them. Every filled slot carries all four
+	# variables (fill writes them together), so the comparisons below never read a missing heat.
+	else_if = {
+		limit = {
+			var:spn_mh1 <= var:spn_mh2
+			var:spn_mh1 <= var:spn_mh3
+		}
+		spn_ledger_fill_effect = { N = 1 KIND = $KIND$ SEVERITY = $SEVERITY$ }
+	}
+	else_if = {
+		limit = { var:spn_mh2 <= var:spn_mh3 }
+		spn_ledger_fill_effect = { N = 2 KIND = $KIND$ SEVERITY = $SEVERITY$ }
+	}
+	else = {
+		spn_ledger_fill_effect = { N = 3 KIND = $KIND$ SEVERITY = $SEVERITY$ }
+	}
+}
+
+# COUNTY scope. A culprit taking slot N, new.
+spn_ledger_fill_effect = {
+	set_variable = { name = spn_mc$N$ value = scope:spn_lg_new years = 5 }
+	set_variable = { name = spn_mh$N$ value = spn_ledger_heat_$SEVERITY$_value years = 5 }
+	set_variable = { name = spn_mk$N$ value = $KIND$ years = 5 }
+	set_variable = { name = spn_mf$N$ value = yes days = 180 }
+}
+
+# COUNTY scope. The culprit already in slot N marks again.
+spn_ledger_bump_effect = {
+	change_variable = { name = spn_mh$N$ add = spn_ledger_heat_$SEVERITY$_value }
+	# change_variable keeps the old expiry; re-set all four so the slot lives five years from its LAST mark.
+	set_variable = { name = spn_mh$N$ value = var:spn_mh$N$ years = 5 }
+	set_variable = { name = spn_mc$N$ value = var:spn_mc$N$ years = 5 }
+	set_variable = { name = spn_mk$N$ value = $KIND$ years = 5 }
+	set_variable = { name = spn_mf$N$ value = yes days = 180 }
+}
+
+# COUNTY scope.
+spn_ledger_clear_slot_effect = {
+	if = { limit = { has_variable = spn_mc$N$ } remove_variable = spn_mc$N$ }
+	if = { limit = { has_variable = spn_mh$N$ } remove_variable = spn_mh$N$ }
+	if = { limit = { has_variable = spn_mk$N$ } remove_variable = spn_mk$N$ }
+	if = { limit = { has_variable = spn_mf$N$ } remove_variable = spn_mf$N$ }
+}
+
+# COUNTY scope. Removes the slot holding WHO, if any. Used on a death (WHO may still read as alive inside on_death) and
+# by the Trail Leads Home's "point him at someone else", which moves the player's heat off the ledger.
+spn_ledger_forget_culprit_effect = {
+	if = { limit = { var:spn_mc1 ?= $WHO$ } spn_ledger_clear_slot_effect = { N = 1 } }
+	if = { limit = { var:spn_mc2 ?= $WHO$ } spn_ledger_clear_slot_effect = { N = 2 } }
+	if = { limit = { var:spn_mc3 ?= $WHO$ } spn_ledger_clear_slot_effect = { N = 3 } }
+}
+
+# COUNTY scope. WHO's memory here fades by one kill's worth (going to ground, cleaning up after himself). Forgotten below
+# the floor, and the lead recomputed. Nobody else's slot is touched.
+spn_ledger_cool_culprit_effect = {
+	$WHO$ = { save_temporary_scope_as = spn_lg_cool }
+	spn_ledger_cool_slot_effect = { N = 1 }
+	spn_ledger_cool_slot_effect = { N = 2 }
+	spn_ledger_cool_slot_effect = { N = 3 }
+	spn_menace_recompute_lead_effect = yes
+}
+spn_ledger_cool_slot_effect = {
+	if = {
+		limit = {
+			var:spn_mc$N$ ?= scope:spn_lg_cool
+			has_variable = spn_mh$N$
+		}
+		change_variable = { name = spn_mh$N$ subtract = spn_ledger_heat_kill_value }
+		if = {
+			limit = { var:spn_mh$N$ < spn_ledger_forget_below_value }
+			spn_ledger_clear_slot_effect = { N = $N$ }
+		}
+	}
+}
+
+# COUNTY scope. Moves the heat FROM holds in this county onto TO (a frame, §2.3). TO takes FROM's slot with its heat,
+# freshness and kind as they stand; FROM leaves the ledger. If TO already holds a slot, the two heats are added into it.
+spn_ledger_move_heat_effect = {
+	save_temporary_scope_as = spn_lg_mv_county
+	$TO$ = { save_temporary_scope_as = spn_lg_to }
+	$FROM$ = { save_temporary_scope_as = spn_lg_from }
+	if = { limit = { var:spn_mc1 ?= scope:spn_lg_from } spn_ledger_move_slot_effect = { N = 1 } }
+	else_if = { limit = { var:spn_mc2 ?= scope:spn_lg_from } spn_ledger_move_slot_effect = { N = 2 } }
+	else_if = { limit = { var:spn_mc3 ?= scope:spn_lg_from } spn_ledger_move_slot_effect = { N = 3 } }
+	if = {
+		limit = { var:spn_menace_origin ?= scope:spn_lg_from }
+		set_variable = { name = spn_menace_origin value = scope:spn_lg_to years = 5 }
+	}
+	scope:spn_lg_to = { spn_my_trails_add_effect = { COUNTY = scope:spn_lg_mv_county } } # 2.41 boot 7
+	spn_menace_recompute_lead_effect = yes
+}
+
+# COUNTY scope, inside spn_ledger_move_heat_effect.
+spn_ledger_move_slot_effect = {
+	if = {
+		limit = { var:spn_mc1 ?= scope:spn_lg_to }
+		change_variable = { name = spn_mh1 add = var:spn_mh$N$ }
+		spn_ledger_clear_slot_effect = { N = $N$ }
+	}
+	else_if = {
+		limit = { var:spn_mc2 ?= scope:spn_lg_to }
+		change_variable = { name = spn_mh2 add = var:spn_mh$N$ }
+		spn_ledger_clear_slot_effect = { N = $N$ }
+	}
+	else_if = {
+		limit = { var:spn_mc3 ?= scope:spn_lg_to }
+		change_variable = { name = spn_mh3 add = var:spn_mh$N$ }
+		spn_ledger_clear_slot_effect = { N = $N$ }
+	}
+	else = {
+		# TO takes the slot as it stands; all four variables re-set together so they expire together.
+		set_variable = { name = spn_mc$N$ value = scope:spn_lg_to years = 5 }
+		if = { limit = { has_variable = spn_mh$N$ } set_variable = { name = spn_mh$N$ value = var:spn_mh$N$ years = 5 } }
+		if = { limit = { has_variable = spn_mk$N$ } set_variable = { name = spn_mk$N$ value = var:spn_mk$N$ years = 5 } }
+	}
+}
+
+# COUNTY scope. Drops every record of the ledger. Called by spn_menace_clear_county_effect, so every writer that clears
+# a trail (Powder, payment, expiry walk, a dead culprit with nobody left) clears its ledger with it.
+spn_ledger_clear_all_effect = {
+	spn_ledger_clear_slot_effect = { N = 1 }
+	spn_ledger_clear_slot_effect = { N = 2 }
+	spn_ledger_clear_slot_effect = { N = 3 }
+	if = { limit = { has_variable = spn_menace_origin } remove_variable = spn_menace_origin }
+	if = { limit = { has_variable = spn_menace_origin_kind } remove_variable = spn_menace_origin_kind }
+	if = { limit = { has_variable = spn_menace_mixed } remove_variable = spn_menace_mixed }
+	if = { limit = { has_variable = spn_menace_suspected } remove_variable = spn_menace_suspected }
+	if = { limit = { has_variable = spn_menace_ledger } remove_variable = spn_menace_ledger }
+}
+
+# COUNTY scope. Saves scope:spn_lg_s<N>: slot N's score, 0 for an empty or dead slot.
+spn_ledger_score_effect = {
+	save_temporary_scope_value_as = { name = spn_lg_s$N$ value = 0 }
+	if = {
+		limit = {
+			has_variable = spn_mh$N$
+			var:spn_mc$N$ ?= { is_alive = yes }
+		}
+		save_temporary_scope_value_as = { name = spn_lg_p value = spn_ledger_presence_far_value }
+		var:spn_mc$N$ = {
+			if = {
+				limit = { spn_ledger_is_here_trigger = { COUNTY = scope:spn_lg_county } }
+				save_temporary_scope_value_as = { name = spn_lg_p value = spn_ledger_presence_here_value }
+			}
+			else_if = {
+				limit = { spn_ledger_is_near_trigger = { COUNTY = scope:spn_lg_county } }
+				save_temporary_scope_value_as = { name = spn_lg_p value = spn_ledger_presence_near_value }
+			}
+		}
+		save_temporary_scope_value_as = { name = spn_lg_f value = spn_ledger_stale_value }
+		if = {
+			limit = { has_variable = spn_mf$N$ }
+			save_temporary_scope_value_as = { name = spn_lg_f value = 1 }
+		}
+		save_temporary_scope_value_as = {
+			name = spn_lg_s$N$
+			value = {
+				value = var:spn_mh$N$
+				multiply = scope:spn_lg_p
+				multiply = scope:spn_lg_f
+			}
+		}
+	}
+}
+
+# COUNTY scope. The ledger's verdict, written where every reader already looks.
+spn_ledger_take_lead_effect = {
+	set_variable = { name = spn_menace_culprit value = var:spn_mc$N$ years = 5 }
+	if = {
+		limit = { has_variable = spn_mk$N$ }
+		set_variable = { name = spn_menace_kind value = var:spn_mk$N$ years = 5 }
+	}
+	# A name on the ledger is evidence, not a guess.
+	if = { limit = { has_variable = spn_menace_suspected } remove_variable = spn_menace_suspected }
+}
+
+# COUNTY scope. Recomputes the lead. Cheap by construction: three slots, no iteration. Called on every mark, on a
+# culprit's death, by the yearly walk, and immediately before every read that decides something (the hunt's start, the
+# Trailsman's reports). A county with no slots (a trail opened before 2.41 that the yearly walk has not seeded yet)
+# keeps whatever culprit it had: until that January it behaves exactly as 2.40 did.
+spn_menace_recompute_lead_effect = {
+	save_temporary_scope_as = spn_lg_county
+	# 2.41 review: an old save's trail gets its ledger the first time anything reads it, not the next January, so a
+	# frame or a move on a legacy trail (The Trail Leads Home) has a slot to move. A no-op on any trail with a ledger.
+	spn_ledger_seed_legacy_effect = yes
+	# The dead are forgotten first.
+	# ?= : CK3 does not short-circuit AND siblings, so an unset var: read would fall back to the county (2.35c).
+	if = { limit = { var:spn_mc1 ?= { is_alive = no } } spn_ledger_clear_slot_effect = { N = 1 } }
+	if = { limit = { var:spn_mc2 ?= { is_alive = no } } spn_ledger_clear_slot_effect = { N = 2 } }
+	if = { limit = { var:spn_mc3 ?= { is_alive = no } } spn_ledger_clear_slot_effect = { N = 3 } }
+	spn_ledger_score_effect = { N = 1 }
+	spn_ledger_score_effect = { N = 2 }
+	spn_ledger_score_effect = { N = 3 }
+	if = {
+		limit = {
+			scope:spn_lg_s1 > 0
+			scope:spn_lg_s1 >= scope:spn_lg_s2
+			scope:spn_lg_s1 >= scope:spn_lg_s3
+		}
+		spn_ledger_take_lead_effect = { N = 1 }
+	}
+	else_if = {
+		limit = {
+			scope:spn_lg_s2 > 0
+			scope:spn_lg_s2 >= scope:spn_lg_s3
+		}
+		spn_ledger_take_lead_effect = { N = 2 }
+	}
+	else_if = {
+		limit = { scope:spn_lg_s3 > 0 }
+		spn_ledger_take_lead_effect = { N = 3 }
+	}
+	if = {
+		limit = { spn_ledger_mixed_trigger = yes }
+		set_variable = { name = spn_menace_mixed value = yes years = 5 }
+	}
+	else_if = {
+		limit = { has_variable = spn_menace_mixed }
+		remove_variable = spn_menace_mixed
+	}
+}
+
+# CHARACTER scope. Saves scope:spn_lg_kind: the kind a county would read this character's harm as. The same order the
+# on_death hook has always used: a demon, then a wolf (a hybrid only while shapeshifted), then any other creature as a
+# vampire, then a witch by trait or by secret, and otherwise a man.
+spn_ledger_kind_of_character_effect = {
+	if = {
+		limit = { is_a_demon_trigger = yes }
+		save_scope_value_as = { name = spn_lg_kind value = flag:demon }
+	}
+	else_if = {
+		limit = {
+			OR = {
+				has_trait = supernatural_werewolf
+				AND = {
+					has_trait = supernatural_hybrid
+					is_shapeshifted_trigger = yes
+				}
+			}
+		}
+		save_scope_value_as = { name = spn_lg_kind value = flag:werewolf }
+	}
+	else_if = {
+		limit = { spn_hunt_is_creature_trigger = yes }
+		save_scope_value_as = { name = spn_lg_kind value = flag:vampire }
+	}
+	else_if = {
+		limit = {
+			OR = {
+				has_trait = witch
+				any_secret = { secret_type = secret_witch }
+			}
+		}
+		save_scope_value_as = { name = spn_lg_kind value = flag:witch }
+	}
+	else = {
+		save_scope_value_as = { name = spn_lg_kind value = flag:human }
+	}
+}
+
+# COUNTY scope. The yearly walk (spn_menace_ledger_yearly, zz_spn_menace_on_actions.txt), once per listed county.
+# Running it twice in a row changes nothing the second time except halving the heat again, and the walk runs once a year.
+spn_ledger_yearly_effect = {
+	# An expired trail (no modifier) is left alone: spn_menace_world_census (same pulse, listed first) clears it the one
+	# way. Nothing is removed here, because this runs inside every_in_global_list over the list a clear would edit.
+	if = {
+		limit = { has_county_modifier = spn_menace_modifier }
+		# 1. Decay: memory fades a quarter a year (spn_ledger_decay_value); fresh slots do not. A slot below the floor is forgotten.
+		spn_ledger_decay_slot_effect = { N = 1 }
+		spn_ledger_decay_slot_effect = { N = 2 }
+		spn_ledger_decay_slot_effect = { N = 3 }
+		# 2. Seed a trail opened before 2.41 (spn_ledger_seed_legacy_effect).
+		spn_ledger_seed_legacy_effect = yes
+		# 3. The verdict, from what is left.
+		spn_menace_recompute_lead_effect = yes
+	}
+}
+
+# COUNTY scope. A trail opened before 2.41 has a culprit and no ledger. Its culprit, if he is a living character (the
+# pre-2.37 paste bug left counties in this variable; spn_menace_repair_culprits still removes those), takes slot 1 with
+# three heat per recorded incident, and becomes the origin. Never a suspected name: a guess does not become evidence by
+# waiting. Writes only into an empty ledger, so calling it twice does nothing the second time. Called by the yearly walk
+# and at the top of spn_open_menace_trail_effect, so a legacy culprit is weighed, not overwritten, by the next mark.
+spn_ledger_seed_legacy_effect = {
+	if = {
+		limit = {
+			NOT = { has_variable = spn_menace_ledger } # 2.41 review: only a trail that never had a ledger
+			NOT = { has_variable = spn_mc1 }
+			NOT = { has_variable = spn_mc2 }
+			NOT = { has_variable = spn_mc3 }
+			NOT = { has_variable = spn_menace_suspected }
+			has_county_modifier = spn_menace_modifier
+			exists = var:spn_menace_culprit
+			trigger_if = {
+				limit = { exists = var:spn_menace_culprit }
+				NOT = { is_target_in_global_variable_list = { name = spn_menace_counties target = var:spn_menace_culprit } }
+			}
+		}
+		if = {
+			limit = { var:spn_menace_culprit ?= { is_alive = yes } }
+			set_variable = { name = spn_menace_ledger value = yes years = 5 }
+			set_variable = { name = spn_mc1 value = var:spn_menace_culprit years = 5 }
+			set_variable = { name = spn_mh1 value = spn_ledger_seed_heat_value years = 5 }
+			if = {
+				limit = { has_variable = spn_menace_kind }
+				set_variable = { name = spn_mk1 value = var:spn_menace_kind years = 5 }
+			}
+			else = {
+				set_variable = { name = spn_mk1 value = flag:vampire years = 5 }
+			}
+			if = {
+				limit = { NOT = { has_variable = spn_menace_origin } }
+				set_variable = { name = spn_menace_origin value = var:spn_menace_culprit years = 5 }
+				set_variable = { name = spn_menace_origin_kind value = var:spn_mk1 years = 5 }
+			}
+		}
+	}
+}
+
+# COUNTY scope.
+# 2.41 boot 4 (4 Nov): a FRESH slot (marked in the last 180 days, spn_mf<N>) does not fade. Without this, a trail opened in
+# December lost its only name on 1 January (a prowl is heat 1, halved to 0.5, below the floor): the 987.1.1 autosave had
+# four trails, all with the ledger marker and not one slot left.
+spn_ledger_decay_slot_effect = {
+	if = {
+		limit = {
+			has_variable = spn_mh$N$
+			NOT = { has_variable = spn_mf$N$ }
+		}
+		change_variable = { name = spn_mh$N$ multiply = spn_ledger_decay_value }
+		if = {
+			limit = { var:spn_mh$N$ < spn_ledger_forget_below_value }
+			spn_ledger_clear_slot_effect = { N = $N$ }
+		}
+	}
+}
+
+# ==========================================================================================================
+# THE HUNT'S QUARRY (WORK-ORDER-2.41 §1.3 B5, §1.4, §1.6). COUNTY scope: the hunt's county. HOST = scope:host,
+# ACTIVITY = scope:activity. Saves scope:spn_lg_quarry (the character the hunt is after), scope:spn_lg_quarry_kind
+# and scope:spn_lg_pursuit (yes when this is a leg of the Cold Trail), or no quarry at all.
+#
+#   1. The Cold Trail: the host is following someone and this is the county the trail last pointed at.
+#   2. Otherwise the ledger, best score first -- never the host, never one of his own guests (B5: "it suggests I can
+#      hunt, imprison or execute myself"). With "Another Quarry" chosen, the lead is passed over.
+#   3. A trail opened before 2.41 with no ledger yet: its old culprit, under the same two exclusions.
+# ==========================================================================================================
+spn_ledger_pick_quarry_effect = {
+	save_temporary_scope_value_as = { name = spn_lg_pursuit value = no }
+	save_scope_value_as = { name = spn_lg_quarry_kind value = flag:vampire } # 2.41 audit: the helper below saves this name permanently; one kind of scope per name
+	spn_menace_recompute_lead_effect = yes
+	if = {
+		limit = {
+			$HOST$ = {
+				has_character_flag = spn_on_the_trail
+				var:spn_quarry_county ?= scope:spn_lg_county
+				var:spn_quarry ?= {
+					is_alive = yes
+					is_imprisoned = no
+				}
+			}
+		}
+		$HOST$.var:spn_quarry = { save_temporary_scope_as = spn_lg_quarry }
+		if = {
+			limit = { $HOST$ = { has_variable = spn_quarry_kind } }
+			spn_kind_to_scope_value_effect = { NAME = spn_lg_quarry_kind VAR = $HOST$.var:spn_quarry_kind }
+		}
+		save_temporary_scope_value_as = { name = spn_lg_pursuit value = yes }
+	}
+	else = {
+		spn_ledger_quarry_score_effect = { N = 1 HOST = $HOST$ ACTIVITY = $ACTIVITY$ }
+		spn_ledger_quarry_score_effect = { N = 2 HOST = $HOST$ ACTIVITY = $ACTIVITY$ }
+		spn_ledger_quarry_score_effect = { N = 3 HOST = $HOST$ ACTIVITY = $ACTIVITY$ }
+		if = {
+			limit = {
+				$ACTIVITY$ = { has_activity_option = { category = spn_hunt_quarry option = spn_hunt_quarry_other } }
+				OR = {
+					AND = { var:spn_mc1 ?= var:spn_menace_culprit  OR = { scope:spn_lg_q2 > 0  scope:spn_lg_q3 > 0 } }
+					AND = { var:spn_mc2 ?= var:spn_menace_culprit  OR = { scope:spn_lg_q1 > 0  scope:spn_lg_q3 > 0 } }
+					AND = { var:spn_mc3 ?= var:spn_menace_culprit  OR = { scope:spn_lg_q1 > 0  scope:spn_lg_q2 > 0 } }
+				}
+			}
+			# Another Quarry: the lead is passed over, but only when there IS another to ride for.
+			if = { limit = { var:spn_mc1 ?= var:spn_menace_culprit } save_temporary_scope_value_as = { name = spn_lg_q1 value = 0 } }
+			if = { limit = { var:spn_mc2 ?= var:spn_menace_culprit } save_temporary_scope_value_as = { name = spn_lg_q2 value = 0 } }
+			if = { limit = { var:spn_mc3 ?= var:spn_menace_culprit } save_temporary_scope_value_as = { name = spn_lg_q3 value = 0 } }
+		}
+		if = {
+			limit = {
+				scope:spn_lg_q1 > 0
+				scope:spn_lg_q1 >= scope:spn_lg_q2
+				scope:spn_lg_q1 >= scope:spn_lg_q3
+			}
+			spn_ledger_take_quarry_effect = { N = 1 }
+		}
+		else_if = {
+			limit = {
+				scope:spn_lg_q2 > 0
+				scope:spn_lg_q2 >= scope:spn_lg_q3
+			}
+			spn_ledger_take_quarry_effect = { N = 2 }
+		}
+		else_if = {
+			limit = { scope:spn_lg_q3 > 0 }
+			spn_ledger_take_quarry_effect = { N = 3 }
+		}
+		else_if = {
+			limit = {
+				NOT = { has_variable = spn_mc1 }
+				NOT = { has_variable = spn_mc2 }
+				NOT = { has_variable = spn_mc3 }
+				var:spn_menace_culprit ?= {
+					is_alive = yes
+					NOT = { this = $HOST$ }
+					NOT = { involved_activity ?= $ACTIVITY$ }
+				}
+				trigger_if = {
+					limit = { exists = var:spn_menace_culprit }
+					NOT = { is_target_in_global_variable_list = { name = spn_menace_counties target = var:spn_menace_culprit } }
+				}
+			}
+			var:spn_menace_culprit = { save_temporary_scope_as = spn_lg_quarry }
+			if = {
+				limit = { has_variable = spn_menace_kind }
+				spn_kind_to_scope_value_effect = { NAME = spn_lg_quarry_kind VAR = var:spn_menace_kind }
+			}
+		}
+	}
+}
+
+# COUNTY scope. Slot N's claim to be the quarry: its score, or 0 if it is empty, dead, jailed, the host or a guest.
+spn_ledger_quarry_score_effect = {
+	save_temporary_scope_value_as = { name = spn_lg_q$N$ value = 0 }
+	if = {
+		limit = {
+			var:spn_mc$N$ ?= {
+				is_alive = yes
+				is_imprisoned = no
+				NOT = { this = $HOST$ }
+				NOT = { involved_activity ?= $ACTIVITY$ }
+			}
+		}
+		save_temporary_scope_value_as = { name = spn_lg_q$N$ value = scope:spn_lg_s$N$ }
+	}
+}
+
+# COUNTY scope.
+spn_ledger_take_quarry_effect = {
+	var:spn_mc$N$ = { save_temporary_scope_as = spn_lg_quarry }
+	if = {
+		limit = { has_variable = spn_mk$N$ }
+		spn_kind_to_scope_value_effect = { NAME = spn_lg_quarry_kind VAR = var:spn_mk$N$ }
+	}
+}

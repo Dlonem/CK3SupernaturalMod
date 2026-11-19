@@ -6,7 +6,9 @@
 # Root = the character about to die. scope:killer is set by the engine when a killer is known (death.txt:1-2) --
 # every mod kill site passes `killer = root` or a saved hunter/creature scope.
 #
-# WHAT IS READ, AND WHAT IS NOT. The hook reads the KILLER, never the death reason: `death_reason` is a trigger
+# WHAT IS READ, AND WHAT IS NOT. (2.41: superseded -- the hook now also reads the death reason; see the 2.41 note in
+# spn_menace_on_death's trigger. Whether the reason is already set while root is "about to die" is boot item 5.)
+# Before 2.41 the hook read the KILLER, never the death reason: `death_reason` is a trigger
 # vanilla only ever evaluates on characters who are already dead (00_death_management_triggers.txt), and root here
 # is "just about to die". So a kill is a mark when the killer is a vampire, werewolf or hybrid; the KIND is the
 # killer's kind (a hybrid counts as a wolf while shapeshifted, a vampire otherwise). Kills BY hunters are not marks
@@ -26,6 +28,39 @@ on_death = {
 	on_actions = {
 		spn_menace_on_death
 		spn_menace_culprit_death
+		spn_menace_human_on_death # 2.41
+	}
+}
+
+# 2.41 (WORK-ORDER-2.41 §1.5), boot-fixed 3 Nov -- A MAN WHO KILLS. Only someone who is no creature, no demon and no witch
+# (those go through spn_menace_on_death), who was standing there, unstamped, and not in a public death. The REASON can
+# only be read once the victim is dead (vanilla reads death_reason on the dead: tgp_mandala_events.txt:150-165), so the
+# killer gets a hidden check a day later (spn_hunt.0720) that marks a human trail if it was a murder, a poisoning or an
+# assassination. The victim and the county are banked here, before the death.
+spn_menace_human_on_death = {
+	trigger = {
+		exists = scope:killer
+		scope:killer = {
+			is_alive = yes
+			NOT = { has_character_flag = spn_menace_marked_recently }
+			NOT = { has_character_flag = spn_creature_kill_pending }
+			NOT = { involved_activity ?= { has_activity_type = supernatural_hunt } }
+			spn_hunt_is_creature_trigger = no
+			is_a_demon_trigger = no
+			NOR = {
+				has_trait = witch
+				any_secret = { secret_type = secret_witch }
+			}
+		}
+		scope:killer.location ?= root.location
+		exists = location
+		location = { exists = county }
+		NOT = { spn_menace_death_is_public_trigger = yes }
+	}
+	effect = {
+		location.county = { save_scope_as = spn_hv_county }
+		save_scope_as = spn_hv_victim
+		scope:killer = { trigger_event = { id = spn_hunt.0720 days = 1 } }
 	}
 }
 
@@ -79,11 +114,8 @@ spn_menace_on_death = {
 			# spell and leave the county nothing to notice. Six of the ten kill sites in
 			# 00_magic_spells_effects.txt and four of the six in 00_variety_magic_effects.txt pass a killer,
 			# so there was real traffic arriving at a door that was only open to the openly damned.
-			OR = {
-				spn_hunt_is_creature_trigger = yes
-				has_trait = witch
-				any_secret = { secret_type = secret_witch }
-			}
+			# 2.41 (WORK-ORDER-2.41 §1.5) -- the creature/witch test that stood here moved to the OR at the bottom of
+			# this trigger: a MAN who murders now leaves a trail too, of his own kind (human).
 			NOT = { has_character_flag = spn_menace_marked_recently }
 			# 2.35h -- AND NOT WHILE HE IS ON A HUNT. Thomas, 9 Sep 2026, having killed a suspect during a
 			# Witch Hunt he was hosting and been handed What They Will Find for it: "I thought I was going
@@ -124,13 +156,45 @@ spn_menace_on_death = {
 		# NOT A COMPLETE FIX AND IT SHOULD NOT BE READ AS ONE: murdering a courtier who lives in your own hall
 		# is co-located and still marks. Closing that needs the mod's fifteen kill sites to stamp the killer
 		# positively -- they are enumerated at the top of this file -- and that is a release, not a hotfix.
-		scope:killer.location ?= root.location
+		# 2.41 (WORK-ORDER-2.41 §1.3 B3, §1.5) -- THE KILL SITE SAYS WHAT IT WAS.
+		#
+		# Every creature kill site in the mod already calls spn_creature_act_fulfillment_effect with ACT = kill just
+		# before its death (S27 mapped them, 2.36). That effect now stamps the killer with spn_creature_kill_pending for
+		# a day. A stamped kill is a creature's, wherever the victim was standing: that closes the hole where a feeding
+		# victim from a neighbouring court died away from the killer and left nothing (session 67 §10).
+		#
+		# Unstamped, the killer must have been there, the death must not be a public one by its reason (a duel, an
+		# execution, a battle, a fight -- `death_reason = X` is a character trigger, verified in vanilla's
+		# tgp_mandala_events.txt:78-133), and then EITHER the killer is a creature or witch, as before, OR the death
+		# reads as an ordinary murder -- a man who kills with his own hands, which is now a trail of its own.
+		#
+		# 2.41 boot (3 Nov): the death reason CANNOT be read here. The boot's error.log has "Trying to check death reason on
+		# living character" for every death -- root is not dead yet, exactly as the 2.35 header above said. So this hook
+		# never reads it. A MAN's murder is judged a day later, on the dead body, by spn_menace_human_on_death below.
+		OR = {
+			scope:killer = { has_character_flag = spn_creature_kill_pending }
+			AND = {
+				scope:killer.location ?= root.location
+				scope:killer = {
+					OR = {
+						spn_hunt_is_creature_trigger = yes
+						has_trait = witch
+						any_secret = { secret_type = secret_witch }
+					}
+				}
+			}
+		}
 	}
 	effect = {
 		# 2.35 PART TWO -- bank the ground first. Root is about to die and a dead man's location is not a
 		# thing to build a county lookup on afterwards (the standing ordering rule); it is also the scope
 		# that has to survive being handed into another character's block below.
 		location.county = { save_scope_as = spn_menace_here }
+		# 2.41 (§1.3 B3, §1.5) -- WHAT DID THE COUNTY FIND? A stamped kill is a creature's. An unstamped death that reads as
+		# an ordinary murder is a murder, whoever did it: a vampire who poisons a rival leaves the trail a human poisoner
+		# would, because that is what the county found (session 54: "the trail reads by what the kill looked like").
+		# 2.41 boot -- a man's murder is marked by spn_menace_human_on_death, a day later. Nothing reaching this effect is human.
+		save_temporary_scope_value_as = { name = spn_od_human value = no }
 
 		# ------------------------------------------------------------------------------------------------
 		# 2.35 PART TWO (§7) -- AND NOW THE PLAYER GETS TO ANSWER FOR IT.
@@ -148,6 +212,7 @@ spn_menace_on_death = {
 		# not need a thousand queued events to find that out. The front door stamps the incident-dedupe flag
 		# itself, so nothing double-marks.
 		# ------------------------------------------------------------------------------------------------
+		# 2.41 boot 2: if again (the human branch that stood above it moved to spn_menace_human_on_death).
 		if = {
 			limit = { scope:killer = { is_ai = no } }
 			scope:killer = { spn_body_after_the_kill_effect = { COUNTY = scope:spn_menace_here } }
@@ -184,6 +249,77 @@ spn_menace_on_death = {
 		# and nothing else, and the three branches ahead of this one have taken every creature.
 		else = {
 			spn_mark_menace_effect = { COUNTY = scope:spn_menace_here CULPRIT = scope:killer KIND = witch SEVERITY = kill }
+		}
+		# 2.41 -- the stamp is spent.
+		scope:killer = {
+			if = {
+				limit = { has_character_flag = spn_creature_kill_pending }
+				remove_character_flag = spn_creature_kill_pending
+			}
+		}
+	}
+}
+
+# 2.41 (WORK-ORDER-2.41 §1.3 B1, B6) -- THE LEDGER'S YEAR. Every listed county: memory halves, a trail opened before 2.41
+# is seeded, an expired trail's ledger is dropped, and the lead is recomputed. One walk over the list the trail writer
+# already keeps; no world scan.
+yearly_global_pulse = {
+	on_actions = {
+		spn_menace_world_census # 2.41 boot 6: first, so the ledger walk below sees a repaired list
+		spn_menace_ledger_yearly
+	}
+}
+
+# 2.41 boot 6 (4 Nov) -- THE WORLD CENSUS. Once a year, every county (vanilla's own every_county, 00_history_effects.txt)
+# with any trail state on it. The trail's truth is the county modifier; everything else is made to agree with it:
+#   - a county carrying the modifier and missing from spn_menace_counties is listed;
+#   - a county without the modifier but still holding trail variables (it expired, or a remover took only the modifier:
+#     zz_spn_consequence_effects.txt, zz_spn_exorcism_effects.txt) is cleared the one way, spn_menace_clear_county_effect.
+# Everything that reads the list -- the ledger year, the Trailsman, the hunters' reach, the Trails window, the Imperium --
+# then sees every trail. Cheap: one pass a year, a three-term limit per county.
+spn_menace_world_census = {
+	effect = {
+		spn_trail_census_before_effect = yes # 2.41 boot 7: expired entries of the master list, and the one-time seed
+		every_county = {
+			limit = {
+				OR = {
+					has_county_modifier = spn_menace_modifier
+					has_variable = spn_menace_culprit
+					has_variable = spn_menace_ledger
+				}
+			}
+			if = {
+				limit = { has_county_modifier = spn_menace_modifier }
+				if = {
+					limit = { NOT = { is_target_in_global_variable_list = { name = spn_menace_counties target = this } } }
+					add_to_global_variable_list = { name = spn_menace_counties target = this }
+				}
+			}
+			else = {
+				spn_menace_clear_county_effect = yes
+			}
+		}
+		spn_trail_census_after_effect = yes # 2.41 boot 7: prune each bearer's live list; the census line
+	}
+}
+
+# 2.41 (WORK-ORDER-2.41 §1.6) -- the Cold Trail ends when its quarry dies. The quarry's own list; no scan.
+on_death = {
+	on_actions = {
+		spn_cold_trail_quarry_death
+	}
+}
+
+spn_cold_trail_quarry_death = {
+	trigger = { has_variable_list = spn_my_pursuers }
+	effect = { spn_cold_trail_quarry_died_effect = yes }
+}
+
+spn_menace_ledger_yearly = {
+	effect = {
+		every_in_global_list = {
+			variable = spn_menace_counties
+			spn_ledger_yearly_effect = yes
 		}
 	}
 }

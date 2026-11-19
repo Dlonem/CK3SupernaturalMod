@@ -1,0 +1,113 @@
+﻿# Supernatural 2.41 -- GLITTERHOOF (WORK-ORDER-2.41 §3.4, §3.5, §3.8). Appends only; no vanilla on_action is replaced.
+# Buck's G1: his pulse listed no event, so his horse had appeared on nobody's save. This one rolls an effect.
+
+random_yearly_playable_pulse = {
+	on_actions = {
+		spn_glitterhoof_pulse
+		spn_glitterhoof_question_pulse
+	}
+}
+
+on_title_gain_inheritance = {
+	on_actions = { spn_glitterhoof_inherit }
+}
+
+on_death = {
+	on_actions = { spn_glitterhoof_on_death }
+}
+
+on_birth_child = {
+	on_actions = { spn_glitterhoof_on_birth }
+}
+
+# About 10% a year for an eligible player, 2.5% for an AI king or emperor (C5).
+spn_glitterhoof_pulse = {
+	trigger = {
+		basic_is_valid_for_yearly_events_trigger = yes
+		spn_glitterhoof_eligible_trigger = yes
+	}
+	effect = {
+		random = {
+			chance = spn_glitterhoof_chance_value
+			trigger_event = { id = spn_glitterhoof.0001 days = { 1 30 } }
+		}
+	}
+}
+
+# The Horse Question: a player only, once.
+spn_glitterhoof_question_pulse = {
+	trigger = {
+		is_ai = no
+		NOT = { has_character_flag = spn_gh_question_done }
+		spn_horse_count_value >= 6
+	}
+	effect = {
+		trigger_event = { id = spn_glitterhoof.0010 days = { 1 60 } }
+	}
+}
+
+# Root = the heir. The horse goes with the court; a sane heir is asked, a mad one simply keeps him.
+spn_glitterhoof_inherit = {
+	trigger = {
+		NOT = { has_character_flag = spn_gh_inherit_checked }
+		NOT = { exists = var:spn_glitterhoof }
+		exists = scope:previous_holder
+		# 2.41 audit -- THE HORSE IS FOUND IN THE HEIR'S COURT. This read var:spn_glitterhoof on the previous holder,
+		# who is dead by now, and the dead have no variables: the horse was never inherited and never got his funeral.
+		# The horse a ruler named carries a flag (spn_glitterhoof.0001); one named before 2.41 is known by the marriage
+		# gate only he was created with.
+		any_courtier = { spn_is_the_glitterhoof_trigger = yes }
+	}
+	effect = {
+		add_character_flag = { flag = spn_gh_inherit_checked days = 30 }
+		scope:previous_holder = { save_scope_as = spn_gh_previous }
+		random_courtier = {
+			limit = { spn_is_the_glitterhoof_trigger = yes }
+			save_scope_as = spn_gh_horse
+		}
+		if = {
+			limit = {
+				NOR = {
+					has_trait = lunatic
+					has_trait = possessed
+				}
+			}
+			trigger_event = { id = spn_glitterhoof.0003 days = 3 }
+		}
+		else = {
+			set_variable = { name = spn_glitterhoof value = scope:spn_gh_horse }
+		}
+	}
+}
+
+# Root = the dead. Only the horse a ruler named gets a funeral.
+spn_glitterhoof_on_death = {
+	trigger = {
+		has_trait = spn_horse
+		exists = employer
+		employer = { var:spn_glitterhoof ?= root }
+	}
+	effect = {
+		save_scope_as = spn_gh_dead
+		employer = { trigger_event = { id = spn_glitterhoof.0004 days = 2 } }
+	}
+}
+
+# A child with a horse parent is born a horse, and blessed (§3.8). Foals are born WITHOUT the can_not_marry variable:
+# after the player's one unlock, the bloodline is the AI's to spread.
+# Root = the newborn, as in spn_on_genetic_birth (the same on_action).
+spn_glitterhoof_on_birth = {
+	trigger = {
+		OR = {
+			scope:mother ?= { has_trait = spn_horse }
+			scope:real_father ?= { has_trait = spn_horse }
+		}
+	}
+	effect = {
+		if = {
+			limit = { NOT = { has_trait = spn_horse } }
+			add_trait = spn_horse
+		}
+		add_character_modifier = spn_blessed_by_the_stables_modifier
+	}
+}

@@ -1,0 +1,83 @@
+﻿# Supernatural 2.41 boot 8 (4 Nov 2026) -- WOLF BLOOD. Thomas: "two pure-blooded werewolves should probably be able to make
+# werewolves across the board ... maybe it shouldn't be guaranteed to be passed, but it's likely ... and then it depends
+# on your parents and your grandparents and great-grandparents."
+#
+# Until now any werewolf or hybrid parent made a werewolf child every time (spn_on_genetic_birth flags the child and
+# spn_initiate.9000 only picks the starting level). The 1109 observer save had 1,147 werewolves, 1,098 of them born.
+#
+# Now each parent has a BLOOD from 0 to 100, and the child's chance is the parents' average times 0.9:
+#   born werewolf 100, turned werewolf or a hide's chosen 75, hybrid 75, a carrier what they carry, anyone else 0.
+#     two born wolves                 90%      born wolf and a human     45%
+#     born wolf and a turned wolf     79%      turned wolf and a human   34%
+# A child who does not inherit CARRIES half the parents' average (spn_wolf_blood, set at birth, kept for life), so the
+# blood reaches the grandchildren and fades by the great-grandchildren:
+#     carrier of a wolf and a human: 25    their child with a human: 11% (else carries 12.5)    the next: 6% (carries 6)
+#     below 5 nothing is kept.
+# Characters born before this release carry nothing; only their children start the record.
+
+spn_wolf_blood_born_value = 100
+spn_wolf_blood_turned_value = 75
+spn_wolf_blood_hybrid_value = 75
+spn_wolf_birth_mult_value = 0.9
+spn_wolf_birth_max_value = 90
+spn_wolf_carrier_keep_value = 0.5
+spn_wolf_carrier_floor_value = 5
+
+# CHARACTER scope (a parent).
+spn_wolf_blood_value = {
+	value = 0
+	if = {
+		limit = { has_trait = supernatural_werewolf }
+		if = {
+			limit = {
+				OR = {
+					has_character_flag = spn_turned_werewolf
+					has_character_flag = spn_hide_chosen_werewolf
+				}
+			}
+			add = spn_wolf_blood_turned_value
+		}
+		else = {
+			add = spn_wolf_blood_born_value
+		}
+	}
+	else_if = {
+		limit = { has_trait = supernatural_hybrid }
+		add = spn_wolf_blood_hybrid_value
+	}
+	# Variables live only on the living ("This scope doesn't support variables" on a dead parent), so a carrier's blood
+	# is read only while he is alive. A dead parent's traits still count above.
+	else_if = {
+		limit = {
+			is_alive = yes
+			has_variable = spn_wolf_blood
+		}
+		add = var:spn_wolf_blood
+	}
+}
+
+# CHARACTER scope (the newborn; scope:mother and scope:real_father from on_birth_child). The parents' average blood.
+spn_wolf_parents_blood_value = {
+	value = 0
+	if = {
+		limit = { exists = scope:mother }
+		scope:mother = { add = { value = spn_wolf_blood_value multiply = 0.5 } }
+	}
+	if = {
+		limit = { exists = scope:real_father }
+		scope:real_father = { add = { value = spn_wolf_blood_value multiply = 0.5 } }
+	}
+}
+
+# CHARACTER scope (the newborn). The chance, in percent, that a child flagged spn_baby_werewolf is born a werewolf.
+spn_wolf_birth_chance_value = {
+	value = spn_wolf_parents_blood_value
+	multiply = spn_wolf_birth_mult_value
+	max = spn_wolf_birth_max_value
+}
+
+# CHARACTER scope (the newborn). What a child who did not inherit carries.
+spn_wolf_carrier_blood_value = {
+	value = spn_wolf_parents_blood_value
+	multiply = spn_wolf_carrier_keep_value
+}
