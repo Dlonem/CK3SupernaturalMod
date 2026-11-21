@@ -1,0 +1,197 @@
+﻿# Supernatural 2.42 -- the 2.42 creature moments (WORK-ORDER-2.42 v3, 7). Picked by spn_moment_pick_effect
+# (zz_spn_241_moment_effects.txt), which calls the start effects below. Each moment sets its own rest in its event's
+# immediate, so a moment that never arrives (the partner died in the meantime) does not burn its rest.
+
+# CHARACTER scope: a mortal being turned by an event option. SIRE = the vampire or hybrid who turns them.
+# The same steps, in the same order, as spn_turn_into_vampire's on_accept (10_spn_confer_interactions.txt): a hybrid
+# sire turns a mortal by that path too. scope:actor and scope:recipient are saved here because the events those steps
+# fire (spn_message.0001, spn_initiate.9001) read them, and an event option has neither.
+# The caller has checked spn_event_turn_ok_trigger, the gate the interaction shows itself by.
+spn_turn_by_sire_effect = {
+	$SIRE$ = { save_scope_as = actor }
+	save_scope_as = recipient
+	spn_assign_conferred_sire = { CHARACTER = scope:actor }
+	set_relation_mmaker = scope:actor
+	trigger_event = spn_initiate.0001
+	trigger_event = spn_message.0001
+	trigger_event = {
+		id = spn_initiate.9001
+		days = 1
+	}
+	trigger_event = {
+		id = spn_miscellaneous_events.0002
+	}
+	scope:actor = {
+		spn_assign_conferred_progeny = { CHARACTER = scope:recipient }
+	}
+}
+
+# Root = the creature. The partner for Fates Intertwined and for the hybrid's door into it: a soulmate first, then a
+# lover, then a spouse. Saved as scope:spn_mo_forever.
+spn_mo_fates_pick_partner_effect = {
+	random_relation = {
+		type = soulmate
+		limit = { spn_fates_partner_trigger = yes }
+		save_scope_as = spn_mo_forever
+	}
+	if = {
+		limit = { NOT = { exists = scope:spn_mo_forever } }
+		random_relation = {
+			type = lover
+			limit = { spn_fates_partner_trigger = yes }
+			save_scope_as = spn_mo_forever
+		}
+	}
+	if = {
+		limit = { NOT = { exists = scope:spn_mo_forever } }
+		random_spouse = {
+			limit = { spn_fates_partner_trigger = yes }
+			save_scope_as = spn_mo_forever
+		}
+	}
+}
+
+# FATES INTERTWINED. Root = the creature.
+spn_mo_fates_start_effect = {
+	spn_mo_fates_pick_partner_effect = yes
+	if = {
+		limit = { exists = scope:spn_mo_forever }
+		set_variable = { name = spn_last_moment value = flag:fates }
+		trigger_event = { id = spn_moment.0011 days = { 1 30 } }
+	}
+}
+
+# Root = the creature; scope:spn_mo_forever = her. What she wants, decided by who she is. Hidden: the player learns it
+# from what she says.
+spn_mo_fates_roll_wish_effect = {
+	scope:spn_mo_forever = {
+		random_list = {
+			40 = {
+				modifier = { add = 20 has_trait = lustful }
+				modifier = { add = 20 has_trait = ambitious }
+				modifier = { add = 10 has_trait = brave }
+				modifier = { add = 10 has_trait = arrogant }
+				modifier = { add = 30 has_relation_soulmate = root }
+				modifier = { add = 15 opinion = { target = root value >= 70 } }
+				modifier = { add = 15 age >= 40 }
+				modifier = { add = -30 has_trait = zealous }
+				modifier = { add = -20 has_trait = content }
+				set_variable = { name = spn_fates_wish value = flag:wants }
+			}
+			25 = {
+				modifier = { add = 25 has_trait = craven }
+				modifier = { add = 10 has_trait = humble }
+				set_variable = { name = spn_fates_wish value = flag:afraid }
+			}
+			20 = {
+				modifier = { add = 15 has_trait = patient }
+				modifier = { add = 20 any_child = { age < 8 } }
+				set_variable = { name = spn_fates_wish value = flag:time }
+			}
+			15 = {
+				modifier = { add = 40 has_trait = zealous }
+				modifier = { add = 15 has_trait = content }
+				modifier = { add = -15 has_relation_soulmate = root }
+				set_variable = { name = spn_fates_wish value = flag:none }
+			}
+		}
+	}
+}
+
+# Root = the creature; scope:spn_mo_forever = her. She is told what he is: his secret is hers now.
+spn_mo_fates_tell_effect = {
+	spn_give_knowledge_of_vampire_secret = { CHARACTER = scope:spn_mo_forever }
+	spn_give_knowledge_of_hybrid_secret = { CHARACTER = scope:spn_mo_forever }
+}
+
+# Root = the creature; scope:spn_mo_forever = her. She is given his blood and turned, by the mod's own path.
+spn_mo_fates_turn_effect = {
+	scope:spn_mo_forever = {
+		add_character_flag = { flag = spn_fates_rest years = 25 }
+		spn_give_vampire_blood_effect = { DONOR = root }
+		spn_turn_by_sire_effect = { SIRE = root }
+	}
+	# 2.42 s4: her first night as what she now is (spn_moment.0024).
+	trigger_event = { id = spn_moment.0024 days = { 20 45 } }
+}
+
+# THE NIGHT YOU DO NOT COME HOME. Root = a hybrid whose partner does not know. The hybrid's own door into Fates
+# Intertwined: the same partner, and the same rests, so the two never run side by side.
+spn_mo_moon_start_effect = {
+	spn_mo_fates_pick_partner_effect = yes
+	if = {
+		limit = {
+			exists = scope:spn_mo_forever
+			any_secret = {
+				secret_type = spn_secret_hybrid
+				NOT = { is_known_by = scope:spn_mo_forever }
+			}
+		}
+		set_variable = { name = spn_last_moment value = flag:moonhome }
+		trigger_event = { id = spn_moment.0025 days = { 1 30 } }
+	}
+}
+
+# THE ONE WHO FOLLOWED YOU HOME. Root = the creature. The stranger is made in the event's immediate.
+spn_mo_admirer_start_effect = {
+	set_variable = { name = spn_last_moment value = flag:admirer }
+	trigger_event = { id = spn_moment.0014 days = { 1 60 } }
+}
+
+# THE PORTRAIT.
+spn_mo_portrait_start_effect = {
+	set_variable = { name = spn_last_moment value = flag:portrait }
+	trigger_event = { id = spn_moment.0016 days = { 1 60 } }
+}
+
+# A HUNTER AT YOUR TABLE. A real hunter who eats at the creature's own table and does not know what he is.
+spn_mo_hunter_start_effect = {
+	random_courtier = {
+		limit = {
+			spn_real_hunter_candidate_trigger = yes
+			spn_mo_hunter_unaware_trigger = yes
+		}
+		save_scope_as = spn_mo_hunter
+	}
+	if = {
+		limit = { exists = scope:spn_mo_hunter }
+		set_variable = { name = spn_last_moment value = flag:hunter }
+		trigger_event = { id = spn_moment.0017 days = { 1 60 } }
+	}
+}
+
+# A GUEST FOR SUPPER. Root = the creature; scope:spn_mo_partner (the picker's mortal lover or spouse) has the nerve for it.
+spn_mo_guest_start_effect = {
+	set_variable = { name = spn_last_moment value = flag:guest }
+	trigger_event = { id = spn_moment.0020 days = { 1 60 } }
+}
+
+# WHAT YOUR SPOUSE KNOWS. Root = the creature: married, with a lover who is not the spouse.
+spn_mo_wife_start_effect = {
+	random_spouse = {
+		limit = {
+			is_alive = yes
+			is_ai = yes
+			age >= 18
+		}
+		save_scope_as = spn_mo_wife
+	}
+	random_relation = {
+		type = lover
+		limit = {
+			is_alive = yes
+			is_ai = yes
+			age >= 18
+			NOT = { is_consort_of = root }
+		}
+		save_scope_as = spn_mo_other
+	}
+	if = {
+		limit = {
+			exists = scope:spn_mo_wife
+			exists = scope:spn_mo_other
+		}
+		set_variable = { name = spn_last_moment value = flag:wife }
+		trigger_event = { id = spn_moment.0022 days = { 1 60 } }
+	}
+}

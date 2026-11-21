@@ -167,7 +167,10 @@ supernatural_hunt = {
 		# 2.35 PART TWO -- the world's hunt counter closes on EVERY exit, and the activity variable is what
 		# makes that idempotent: whichever of these three hooks fires first does the decrement and the
 		# others find nothing left to do.
-		scope:activity ?= { spn_hunt_running_close_effect = yes }
+		scope:activity ?= {
+			spn_hunt_census_aborted_effect = yes # 2.42: before the close, which is what it reads
+			spn_hunt_running_close_effect = yes
+		}
 		if = {
 			limit = { scope:host = { is_incapable = yes } }
 			scope:activity = {
@@ -183,6 +186,7 @@ supernatural_hunt = {
 
 	on_host_death = {
 		scope:activity = {
+			spn_hunt_census_aborted_effect = yes # 2.42
 			spn_hunt_running_close_effect = yes
 			set_variable = { name = activity_invalidated }
 		}
@@ -428,7 +432,10 @@ supernatural_hunt = {
 	# an AI hunter got roughly ONE look at any given trail in its whole lifetime, times ai_will_do -- which is
 	# why sixteen years of a live campaign produced three hunts in the entire world. 36 matches this activity's
 	# own three-year cooldown, gives about two looks per trail, and has vanilla precedent (monument_expedition).
-	ai_check_interval = 36
+	# 2.42 (21 Nov 2026) -- WAS 36. The 989 soak (100 years, 30 hunters, at most 5 able to host): 3 hunts. The two-year
+	# cooldown, the four-hunt world cap and ai_will_do (base 30, Thomas's 60/40) still bound it; this only stops a host
+	# sleeping through most of a trail's five years.
+	ai_check_interval = 12
 
 	# scope:score = the province_score below
 	ai_will_select_province = {

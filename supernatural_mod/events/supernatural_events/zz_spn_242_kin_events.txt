@@ -1,0 +1,410 @@
+﻿namespace = spn_bfb
+
+# Supernatural 2.42 -- BLOOD FOR BLOOD (WORK-ORDER-2.42 v3, 8). Loc: zz_spn_242_kin_l_english.yml.
+#   .0100  One of Ours                 the bereaved (a player) is told; the hunter is not named
+#   .0110  The Asking                  the search for the name; no odds are shown
+#   .0200  Someone Has Come for You    the hunter's own window: stand, or pay the blood price
+# Scopes carried from spn_bfb_record_effect: spn_bfb_dead, spn_bfb_slayer, spn_bfb_avenger.
+
+spn_bfb.0100 = {
+	type = character_event
+	title = spn_bfb.0100.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { spn_bfb_count_value >= 3 }
+				desc = spn_bfb.0100.desc_three
+			}
+			triggered_desc = {
+				trigger = { spn_bfb_count_value >= 2 }
+				desc = spn_bfb.0100.desc_two
+			}
+			desc = spn_bfb.0100.desc
+		}
+	}
+	theme = death
+	left_portrait = {
+		character = root
+		animation = grief
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_bfb_slayer
+		scope:spn_bfb_slayer = { is_alive = yes }
+	}
+	immediate = {
+		# 2.42 review: the dead are dead by now, so the game can show him the hand on each of them. Inside on_death it
+		# could not: the one dying had no killer yet.
+		if = {
+			limit = { is_target_in_variable_list = { name = spn_known_slayers target = scope:spn_bfb_slayer } }
+			spn_bfb_learn_name_effect = { SLAYER = scope:spn_bfb_slayer }
+		}
+	}
+	# I already know whose hand it was.
+	option = {
+		name = spn_bfb.0100.known
+		trigger = { is_target_in_variable_list = { name = spn_known_slayers target = scope:spn_bfb_slayer } }
+		custom_tooltip = spn_bfb.0100.known.tt
+		add_stress = minor_stress_impact_gain
+	}
+	# Find who did this.
+	option = {
+		name = spn_bfb.0100.a
+		trigger = { NOT = { is_target_in_variable_list = { name = spn_known_slayers target = scope:spn_bfb_slayer } } }
+		custom_tooltip = spn_bfb.0100.a.tt
+		if = { # 2.42 review: one search at a time
+			limit = { NOT = { has_character_flag = spn_bfb_asking } }
+			add_character_flag = { flag = spn_bfb_asking years = 3 }
+			trigger_event = { id = spn_bfb.0110 days = { 20 60 } }
+		}
+	}
+	# Whoever it was will wish it had been anyone else's kin.
+	option = {
+		name = spn_bfb.0100.b
+		trait = vengeful
+		trait = wrathful
+		trigger = {
+			NOT = { is_target_in_variable_list = { name = spn_known_slayers target = scope:spn_bfb_slayer } }
+			OR = {
+				has_trait = vengeful
+				has_trait = wrathful
+			}
+		}
+		custom_tooltip = spn_bfb.0100.a.tt
+		add_character_flag = { flag = spn_bfb_driven years = 5 }
+		add_stress = minor_stress_impact_loss
+		if = { # 2.42 review: one search at a time
+			limit = { NOT = { has_character_flag = spn_bfb_asking } }
+			add_character_flag = { flag = spn_bfb_asking years = 3 }
+			trigger_event = { id = spn_bfb.0110 days = { 10 30 } }
+		}
+	}
+	# I will grieve. That is all I can do tonight.
+	option = {
+		name = spn_bfb.0100.c
+		add_stress = minor_stress_impact_gain
+	}
+	# The dead are at rest. I will not send more after them.
+	option = {
+		name = spn_bfb.0100.d
+		trait = forgiving
+		trait = content
+		trigger = {
+			OR = {
+				has_trait = forgiving
+				has_trait = content
+			}
+		}
+		add_stress = medium_stress_impact_loss
+		add_piety = minor_piety_gain
+	}
+}
+
+# THE ASKING. Root = the bereaved. The ways open to him are shown; how likely each is to find the name is not.
+spn_bfb.0110 = {
+	type = character_event
+	title = spn_bfb.0110.t
+	desc = spn_bfb.0110.desc
+	theme = intrigue
+	left_portrait = {
+		character = root
+		animation = thinking
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_bfb_slayer
+		scope:spn_bfb_slayer = { is_alive = yes }
+		NOT = { is_target_in_variable_list = { name = spn_known_slayers target = scope:spn_bfb_slayer } }
+		NOT = { is_target_in_variable_list = { name = spn_struck_slayers target = scope:spn_bfb_slayer } } # 2.42 review: let lie, or settled
+	}
+	immediate = {
+		cp:councillor_spymaster ?= { save_scope_as = spn_bfb_spymaster }
+	}
+	# My spymaster has people in that county.
+	option = {
+		name = spn_bfb.0110.a
+		trigger = { exists = scope:spn_bfb_spymaster }
+		hidden_effect = {
+			random_list = {
+				55 = {
+					modifier = { add = 20 scope:spn_bfb_spymaster = { intrigue >= 14 } }
+					modifier = { add = 15 has_character_flag = spn_bfb_driven }
+					spn_bfb_learn_name_effect = { SLAYER = scope:spn_bfb_slayer }
+					send_interface_toast = {
+						type = event_toast_effect_good
+						title = spn_bfb_name_found_toast
+						left_icon = scope:spn_bfb_slayer
+					}
+				}
+				45 = {
+					send_interface_toast = {
+						type = event_toast_effect_bad
+						title = spn_bfb_name_not_found_toast
+					}
+					trigger_event = { id = spn_bfb.0110 years = { 1 2 } }
+				}
+			}
+		}
+	}
+	# Someone there saw it. They will tell me, whether they mean to or not.
+	option = {
+		name = spn_bfb.0110.b
+		trigger = {
+			OR = {
+				has_trait_xp = { trait = supernatural_vampire track = vampirism value >= 10 }
+				has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 10 }
+			}
+		}
+		spn_compel_pay_amount_effect = { AMOUNT = 10 }
+		hidden_effect = { spn_bfb_learn_name_effect = { SLAYER = scope:spn_bfb_slayer } }
+		custom_tooltip = spn_bfb.0110.b.tt
+	}
+	# I will go and ask myself.
+	option = {
+		name = spn_bfb.0110.c
+		hidden_effect = {
+			random_list = {
+				40 = {
+					modifier = { add = 15 intrigue >= 12 }
+					modifier = { add = 15 diplomacy >= 12 }
+					modifier = { add = 15 has_character_flag = spn_bfb_driven }
+					spn_bfb_learn_name_effect = { SLAYER = scope:spn_bfb_slayer }
+					send_interface_toast = {
+						type = event_toast_effect_good
+						title = spn_bfb_name_found_toast
+						left_icon = scope:spn_bfb_slayer
+					}
+				}
+				60 = {
+					send_interface_toast = {
+						type = event_toast_effect_bad
+						title = spn_bfb_name_not_found_toast
+					}
+					trigger_event = { id = spn_bfb.0110 years = { 1 2 } }
+				}
+			}
+		}
+	}
+	# Enough. Knowing would change nothing.
+	option = {
+		name = spn_bfb.0110.d
+		add_stress = minor_stress_impact_loss
+	}
+}
+
+# SOMEONE HAS COME FOR YOU. Root = the hunter. scope:spn_bfb_avenger = the one who came. Both sides are asked: the
+# avenger chose to come, and the hunter chooses here. A fight is vanilla single combat, so each has his own window.
+spn_bfb.0200 = {
+	type = character_event
+	title = spn_bfb.0200.t
+	desc = spn_bfb.0200.desc
+	theme = dread
+	left_portrait = {
+		character = root
+		animation = worry
+	}
+	right_portrait = {
+		character = scope:spn_bfb_avenger
+		animation = anger
+	}
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		exists = scope:spn_bfb_avenger
+		scope:spn_bfb_avenger = {
+			is_alive = yes
+			is_imprisoned = no
+		}
+		# 2.42 review: a player stands here only if he sent for it himself (the interaction saves spn_bfb_challenger). An
+		# AI avenger a human has inherited since is not marched into a duel he never chose.
+		OR = {
+			exists = scope:spn_bfb_challenger
+			scope:spn_bfb_avenger = { is_ai = yes }
+		}
+	}
+	immediate = {
+		save_scope_as = spn_bfb_slayer
+	}
+	# Then let it be settled.
+	option = {
+		name = spn_bfb.0200.a
+		scope:spn_bfb_avenger = {
+			if = {
+				limit = { spn_bfb_count_value >= 3 }
+				add_character_modifier = { modifier = spn_bfb_fury_modifier years = 1 }
+			}
+		}
+		configure_start_single_combat_effect = {
+			SC_INITIATOR = scope:spn_bfb_avenger
+			SC_ATTACKER = scope:spn_bfb_avenger
+			SC_DEFENDER = root
+			FATALITY = default
+			FIXED = no
+			LOCALE = throne_room
+			OUTPUT_EVENT = spn_bfb.0210 # 2.42 review: the duel settles something (vanilla's 1006 is an empty event)
+			INVALIDATION_EVENT = spn_bfb.0211 # fp1_tbc.0021 reads an interaction's scopes, which are not here
+		}
+		ai_chance = {
+			base = 50
+			modifier = { add = 40 has_trait = brave }
+			modifier = { add = 20 has_trait = wrathful }
+			modifier = { add = -40 has_trait = craven }
+		}
+	}
+	# A life has a price. I will pay it.
+	option = {
+		name = spn_bfb.0200.b
+		trigger = { gold >= scope:spn_bfb_avenger.spn_bfb_blood_price_value }
+		if = { # 2.42 review: a player is asked whether he takes it (spn_bfb.0220). Nobody settles it for him.
+			limit = { scope:spn_bfb_avenger = { is_ai = no } }
+			custom_tooltip = spn_bfb.0200.b.offer.tt
+			scope:spn_bfb_avenger = { trigger_event = spn_bfb.0220 }
+		}
+		else = {
+			pay_short_term_gold = {
+				gold = scope:spn_bfb_avenger.spn_bfb_blood_price_value
+				target = scope:spn_bfb_avenger
+			}
+			scope:spn_bfb_avenger = {
+				spn_bfb_strike_name_effect = { SLAYER = root }
+				add_opinion = { target = root modifier = pleased_opinion opinion = 15 }
+			}
+			custom_tooltip = spn_bfb.0200.b.tt
+		}
+		ai_chance = {
+			base = 30
+			modifier = { add = 40 has_trait = craven }
+			modifier = { add = 20 has_trait = content }
+			modifier = { add = -20 has_trait = greedy }
+		}
+	}
+	# 2.42 review: I bar the door. A player hunter always has this (nobody is made to fight for his life because his
+	# purse is light); an AI one only if he is a coward.
+	option = {
+		name = spn_bfb.0200.c
+		trigger = {
+			OR = {
+				is_ai = no
+				has_trait = craven
+			}
+		}
+		custom_tooltip = spn_bfb.0200.c.tt
+		add_prestige = medium_prestige_loss
+		scope:spn_bfb_avenger = {
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_bad
+					title = spn_bfb_refused_toast
+					left_icon = root
+				}
+			}
+		}
+		ai_chance = {
+			base = 0
+			modifier = { add = 40 has_trait = craven }
+		}
+	}
+}
+
+# AFTER THE DUEL (vanilla single combat's output event; root = the avenger, who began it). If he won, it is settled.
+spn_bfb.0210 = {
+	hidden = yes
+	immediate = {
+		if = {
+			limit = {
+				is_alive = yes
+				exists = scope:sc_victor
+				exists = scope:sc_loser
+				scope:sc_victor = root
+			}
+			spn_bfb_strike_name_effect = { SLAYER = scope:sc_loser }
+			add_prestige = medium_prestige_gain
+			if = {
+				limit = { is_ai = no }
+				send_interface_toast = {
+					type = event_toast_effect_good
+					title = spn_bfb_duel_won_toast
+					left_icon = scope:sc_loser
+				}
+			}
+		}
+	}
+}
+
+# THE DUEL COULD NOT BE HELD (vanilla single combat's invalidation event; root = the avenger).
+spn_bfb.0211 = {
+	hidden = yes
+	immediate = {
+		if = {
+			limit = {
+				is_alive = yes
+				is_ai = no
+			}
+			send_interface_toast = {
+				type = event_toast_effect_neutral
+				title = spn_bfb_duel_off_toast
+			}
+		}
+	}
+}
+
+# THE BLOOD PRICE. Root = a player who came for a hunter (scope:spn_bfb_slayer); the hunter has offered to pay.
+spn_bfb.0220 = {
+	type = character_event
+	title = spn_bfb.0220.t
+	desc = spn_bfb.0220.desc
+	theme = dread
+	left_portrait = {
+		character = root
+		animation = anger
+	}
+	right_portrait = {
+		character = scope:spn_bfb_slayer
+		animation = worry
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_bfb_slayer
+		scope:spn_bfb_slayer = { is_alive = yes }
+	}
+	# I take it.
+	option = {
+		name = spn_bfb.0220.a
+		custom_tooltip = spn_bfb.0220.a.tt
+		scope:spn_bfb_slayer = {
+			pay_short_term_gold = {
+				gold = root.spn_bfb_blood_price_value
+				target = root
+			}
+		}
+		spn_bfb_strike_name_effect = { SLAYER = scope:spn_bfb_slayer }
+		add_stress = minor_stress_impact_loss
+	}
+	# Pick it up. I did not come for gold. (Only against an AI hunter: a player hunter is never forced to fight.)
+	option = {
+		name = spn_bfb.0220.b
+		trigger = {
+			is_imprisoned = no
+			scope:spn_bfb_slayer = {
+				is_ai = yes
+				is_imprisoned = no
+			}
+		}
+		configure_start_single_combat_effect = {
+			SC_INITIATOR = root
+			SC_ATTACKER = root
+			SC_DEFENDER = scope:spn_bfb_slayer
+			FATALITY = default
+			FIXED = no
+			LOCALE = throne_room
+			OUTPUT_EVENT = spn_bfb.0210
+			INVALIDATION_EVENT = spn_bfb.0211
+		}
+	}
+	# Keep it. The name stays where it is.
+	option = {
+		name = spn_bfb.0220.c
+		add_stress = minor_stress_impact_gain
+	}
+}

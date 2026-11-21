@@ -1,0 +1,332 @@
+﻿# Supernatural 2.42 -- Merchants of the Night (WORK-ORDER-2.42 v3).
+
+# SETTLE IN SOULS. The demon's answer to a debtor who will not pay (the vampire's is Collect in Blood). The debt is
+# forgiven and the soul is owed instead, on the Cyrograph's own terms and its own timer: nothing here is a second pact.
+# The debtor decides. The demon pays the Cyrograph's usual price in power, and may settle one debt every five years.
+# Order (Thomas's standing rule: what cannot be undone comes last): bank the loan, pay, reward, end the loan, take the soul.
+spn_settle_in_souls_interaction = {
+	category = interaction_category_favorites
+	icon = icon_demon
+	interface_priority = 41
+	desc = spn_settle_in_souls_interaction_desc
+	greeting = negative
+	notification_text = SPN_SETTLE_IN_SOULS_PROPOSAL
+	popup_on_receive = yes
+	pause_on_receive = yes
+	cooldown = { years = 5 }
+
+	is_shown = {
+		has_gdp_dlc_trigger = yes
+		scope:actor = {
+			has_perk = deals_with_mortals_perk
+			is_target_in_variable_list = { name = owes_me_money target = scope:recipient }
+		}
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			is_adult = yes
+			is_imprisoned = no
+			is_incapable = no
+			NOT = { is_at_war_with = scope:recipient }
+			custom_description = {
+				text = power_needed_custom
+				can_spend_standard_ps_trigger = yes
+			}
+		}
+		scope:recipient = {
+			is_adult = yes
+			custom_tooltip = {
+				text = spn_collect_in_blood_refused_tt
+				spn_debtor_refused_me_trigger = { LENDER = scope:actor }
+			}
+			custom_description = {
+				text = must_be_mortal_custom
+				is_immortal = no
+			}
+			custom_description = {
+				text = has_no_soul_custom
+				NOT = { has_character_modifier = no_soul_modifier }
+			}
+			NOT = { is_a_demon_trigger = yes }
+			custom_description = {
+				text = has_magic_immunity
+				spn_is_valid_supernatural_target = yes
+			}
+		}
+	}
+
+	send_options_exclusive = yes
+	options_heading = cyro_proposal_interaction_title
+	send_option = { flag = magic_cyro_o1 localization = CYRO_OPTION1 }
+	send_option = { flag = magic_cyro_o2 localization = CYRO_OPTION2 }
+	send_option = { flag = magic_cyro_o3 localization = CYRO_OPTION3 }
+
+	on_accept = {
+		scope:recipient = {
+			ordered_owned_story = {
+				limit = {
+					story_type = story_cycle_loan
+					var:lender ?= scope:actor
+					exists = var:reminders
+					var:reminders >= 1
+				}
+				order_by = var:amount_owed
+				save_scope_as = spn_cib_loan
+			}
+		}
+		scope:actor = {
+			hidden_effect = {
+				# The term, as the Cyrograph records it (30 years needs no flag: it is start_magic_cyro_effect's default).
+				if = {
+					limit = { scope:magic_cyro_o2 = yes }
+					add_character_flag = { flag = magic_cyroo_o2_flag years = 1 }
+				}
+				else_if = {
+					limit = { scope:magic_cyro_o3 = yes }
+					add_character_flag = { flag = magic_cyroo_o3_flag years = 1 }
+				}
+			}
+			spend_standard_ps_effect = yes
+			# What vanilla gives a lender whose loan comes home (repay_and_end_loan_story_effect).
+			if = {
+				limit = {
+					is_landless_merchant = yes
+					exists = scope:spn_cib_loan
+				}
+				add_trait_xp = {
+					trait = lifestyle_merchant
+					track = creditor
+					value = lifestyle_merchant_xp_gain_minor_value
+				}
+				merchant_creditor_capstone_prestige_effect = yes
+				gdp_merchant_creditor_loan_acumen_effect = { GOLD = scope:spn_cib_loan.var:amount_owed }
+			}
+		}
+		if = { # 2.42 review: no debt left to forgive (repaid while the offer lay open), no soul taken
+			limit = { exists = scope:spn_cib_loan }
+			spn_silk_collect_end_loan_effect = yes
+			scope:recipient = {
+				show_as_tooltip = { remove_mortal_soul_effect = yes }
+				custom_tooltip = spn_settle_in_souls_taken_tt
+			}
+			start_magic_cyro_effect = yes
+		}
+	}
+
+	on_decline = {
+		scope:actor = { custom_tooltip = magic_cyro_ct3 }
+	}
+
+	ai_accept = {
+		base = -10
+		modifier = {
+			add = { value = scope:actor.diplomacy multiply = 0.5 }
+			desc = DS_DIPLOMACY_ACTOR
+		}
+		modifier = {
+			add = { value = scope:actor.intrigue multiply = 0.5 }
+			desc = DS_INTRIGUE_ACTOR
+		}
+		modifier = { # the debt itself: +10 for every 100 owed, to +40
+			add = {
+				value = 0
+				scope:recipient = {
+					every_owned_story = {
+						limit = {
+							story_type = story_cycle_loan
+							var:lender ?= scope:actor
+						}
+						add = {
+							value = var:amount_owed
+							divide = 10
+						}
+					}
+				}
+				max = 40
+			}
+			desc = SPN_SETTLE_DEBT_SIZE
+		}
+		modifier = {
+			add = 20
+			scope:recipient = { gold < 0 }
+			desc = SPN_SETTLE_CANNOT_PAY
+		}
+		modifier = {
+			add = 10
+			scope:actor.domicile ?= { has_domicile_building = spn_merchant_second_ledger_02 }
+			desc = SPN_SETTLE_SECOND_LEDGER
+		}
+		modifier = { add = -60 scope:magic_cyro_o3 = yes desc = DS_CYRO_IS_SHORT }
+		modifier = { add = -30 scope:magic_cyro_o2 = yes desc = DS_CYRO_IS_SHORT }
+		modifier = { add = 40 scope:recipient = { has_trait = ambitious } desc = DS_IS_AMBITIOUS }
+		modifier = { add = 40 scope:recipient = { has_trait = corrupted } desc = DS_IS_CORRUP }
+		modifier = { add = -500 scope:recipient = { has_trait = zealous } desc = DS_IS_ZEALOUS }
+		modifier = { add = -50 scope:recipient = { has_trait = paranoid } desc = DS_IS_PARANOID }
+	}
+
+	# An AI demon finds his debtors the way vanilla's Demand Repayment does: a loan leaves the lender a hook.
+	ai_targets = { ai_recipients = hooked_characters }
+	ai_frequency = 60
+	ai_potential = {
+		has_perk = deals_with_mortals_perk
+		government_has_flag = government_is_merchant
+	}
+	ai_will_do = {
+		base = 0
+		modifier = { # only a debtor who has refused twice
+			add = 25
+			scope:recipient = {
+				any_owned_story = {
+					story_type = story_cycle_loan
+					var:lender ?= scope:actor
+					exists = var:reminders
+					var:reminders >= 2
+				}
+			}
+		}
+	}
+	auto_accept = no
+}
+
+# CASH IN A SOUL. A demon merchant tears up a contract before it falls due and takes what it is worth today, in coin,
+# in name or in the company's standing. The mortal is whole again. (Witchcraft's own "sell this contract" leaves him
+# soulless with nobody holding the soul; this does not.)
+spn_cash_in_soul_interaction = {
+	category = interaction_category_favorites
+	icon = icon_demon
+	interface_priority = 40
+	desc = spn_cash_in_soul_interaction_desc
+	auto_accept = yes
+	cooldown = { years = 2 }
+
+	is_shown = {
+		has_gdp_dlc_trigger = yes
+		scope:actor = {
+			has_perk = deals_with_mortals_perk
+			government_has_flag = government_is_merchant
+		}
+		scope:recipient = {
+			has_character_modifier = no_soul_modifier
+			var:my_soul_owner ?= scope:actor
+		}
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			is_imprisoned = no
+			is_incapable = no
+		}
+		# 2.42 review: a contract fetched the most on the day it was signed, so signing and cashing in the same week was
+		# free money. It has to be five years old.
+		scope:recipient = {
+			custom_tooltip = {
+				text = spn_cash_in_soul_fresh_tt
+				NOT = { has_character_flag = spn_soul_fresh }
+			}
+		}
+	}
+
+	send_options_exclusive = yes
+	options_heading = spn_cash_in_soul_heading
+	send_option = { flag = spn_soul_for_gold localization = SPN_SOUL_FOR_GOLD }
+	send_option = { flag = spn_soul_for_name localization = SPN_SOUL_FOR_NAME }
+	send_option = { flag = spn_soul_for_standing localization = SPN_SOUL_FOR_STANDING }
+
+	on_accept = {
+		# The price is read while the contract still stands.
+		save_scope_value_as = { name = spn_soul_price value = scope:recipient.spn_soul_price_value }
+		scope:actor = {
+			if = {
+				limit = { scope:spn_soul_for_gold = yes }
+				add_gold = scope:spn_soul_price
+			}
+			else_if = {
+				limit = { scope:spn_soul_for_name = yes }
+				add_prestige = { value = scope:spn_soul_price multiply = 2 }
+			}
+			else = {
+				add_character_modifier = { modifier = spn_soul_spent_standing_modifier years = 5 }
+			}
+		}
+		scope:recipient = {
+			custom_tooltip = spn_cash_in_soul_freed_tt
+			hidden_effect = { spn_soul_release_effect = yes }
+		}
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# TELL ME WHAT YOU KNOW (a Compelled command). The compelled is a merchant who knows a trade better than the vampire
+# does; he says what he knows (vanilla share_market_insights_interaction's own effect, one way only).
+spn_compel_insights_interaction = {
+	category = interaction_category_diplomacy
+	icon = share_goods_expertise
+	interface_priority = 53
+	desc = spn_compel_insights_interaction_desc
+	auto_accept = yes
+
+	is_shown = {
+		has_gdp_dlc_trigger = yes
+		spn_compel_verb_shown_trigger = yes
+		scope:recipient = scope:actor
+		scope:actor = { gdp_has_trade_expertise_access_trigger = yes }
+		scope:puppet_or_actor = { gdp_has_trade_expertise_access_trigger = yes }
+	}
+
+	is_valid_showing_failures_only = {
+		scope:puppet_or_actor = {
+			custom_tooltip = {
+				text = spn_compel_insights_nothing_tt
+				gdp_company_has_higher_category_expertise_than_trigger = { OTHER = scope:actor }
+			}
+		}
+	}
+
+	on_accept = {
+		scope:actor = {
+			gdp_increase_expertise_lower_than_target_effect = { TARGET = scope:puppet_or_actor }
+		}
+		spn_compel_command_given_effect = { MASTER = scope:actor PUPPET = scope:puppet_or_actor }
+	}
+
+	ai_will_do = { base = 0 }
+}
+
+# LET MY GOODS PASS (a Compelled command). The compelled holds a market; the vampire's goods pass it untaxed for ten
+# years (what vanilla's grant_toll_exception_interaction grants, written out because that one is a player's map action).
+spn_compel_tolls_interaction = {
+	category = interaction_category_diplomacy
+	icon = toll_exception_interaction
+	interface_priority = 52
+	desc = spn_compel_tolls_interaction_desc
+	auto_accept = yes
+
+	is_shown = {
+		has_gdp_dlc_trigger = yes
+		spn_compel_verb_shown_trigger = yes
+		scope:recipient = scope:actor
+		scope:actor = { government_allows = profit_trade_routes }
+		scope:puppet_or_actor = {
+			any_held_trade_market = { NOT = { is_exempt_from_tolls = scope:actor } }
+		}
+	}
+
+	on_accept = {
+		scope:puppet_or_actor = {
+			every_held_trade_market = {
+				limit = { NOT = { is_exempt_from_tolls = scope:actor } }
+				add_toll_exception = {
+					target = scope:actor
+					toll_level = toll_level:toll_level_no_tolls
+					years = 10
+				}
+			}
+		}
+		scope:actor = { custom_tooltip = spn_compel_tolls_interaction_tt }
+		spn_compel_command_given_effect = { MASTER = scope:actor PUPPET = scope:puppet_or_actor }
+	}
+
+	ai_will_do = { base = 0 }
+}

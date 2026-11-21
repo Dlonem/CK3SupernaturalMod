@@ -1,0 +1,276 @@
+﻿namespace = spn_moment
+
+# Supernatural 2.42 -- the romance, further (Thomas, 20 Nov 2026: "more ways it can go"; "just keep going").
+# Loc: zz_spn_242_moments_l_english.yml.
+#   .0024  Fates Intertwined: The First Night   follows any turning in Before Dawn (spn_mo_fates_turn_effect)
+#   .0025  The Night You Do Not Come Home       a hybrid's partner follows him out; the hybrid's door into Fates
+# Root = a player vampire or hybrid. scope:spn_mo_forever is an adult AI partner. No odds are shown; what she does is
+# decided by who she is.
+
+# THE FIRST NIGHT. She was turned in Before Dawn and wakes hungry. If she was turned against her wish
+# (spn_fates_unwilling, set by Before Dawn's "you will thank me" option) the scene is a colder one, with a way back.
+spn_moment.0024 = {
+	type = character_event
+	title = spn_moment.0024.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_mo_forever = { has_character_flag = spn_fates_unwilling } }
+				desc = spn_moment.0024.desc_unwilling
+			}
+			desc = spn_moment.0024.desc
+		}
+	}
+	theme = seduction
+	override_background = { reference = bedchamber }
+	left_portrait = { character = root animation = interested }
+	right_portrait = {
+		character = scope:spn_mo_forever
+		triggered_animation = {
+			trigger = { scope:spn_mo_forever = { has_character_flag = spn_fates_unwilling } }
+			animation = sadness
+		}
+		animation = worry
+	}
+	trigger = {
+		spn_mo_root_ok_trigger = yes
+		is_imprisoned = no
+		exists = scope:spn_mo_forever
+		scope:spn_mo_forever = {
+			is_alive = yes
+			is_ai = yes
+			is_imprisoned = no
+			has_trait = supernatural_vampire
+		}
+	}
+	# 2.42: one more try in six months if the only thing in the way was a prison door.
+	on_trigger_fail = {
+		if = {
+			limit = {
+				spn_mo_root_ok_trigger = yes
+				exists = scope:spn_mo_forever
+				scope:spn_mo_forever = { is_alive = yes }
+				OR = {
+					is_imprisoned = yes
+					scope:spn_mo_forever = { is_imprisoned = yes }
+				}
+				NOT = { has_character_flag = spn_mo_fates_retry }
+			}
+			add_character_flag = { flag = spn_mo_fates_retry years = 2 }
+			trigger_event = { id = spn_moment.0024 months = 6 }
+		}
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+	}
+	# Slowly. A little, from the wrist, and they wake believing they dreamed you.
+	option = {
+		name = spn_moment.0024.a
+		scope:spn_mo_forever = {
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = 2 }
+			add_opinion = { target = root modifier = grateful_opinion opinion = 25 }
+		}
+		add_stress = minor_stress_impact_loss
+	}
+	# We hunt as a pair tonight. And when we have both had enough, the night will not be half over.
+	option = {
+		name = spn_moment.0024.b
+		trait = lustful
+		trigger = {
+			has_trait = lustful
+			scope:spn_mo_forever = { NOT = { has_character_flag = spn_fates_unwilling } }
+		}
+		spn_silk_feed_xp_effect = { MIN = 2 MAX = 4 }
+		scope:spn_mo_forever = {
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = 3 }
+			add_opinion = { target = root modifier = pleased_opinion opinion = 15 }
+		}
+		if = {
+			limit = {
+				NOT = { has_relation_lover = scope:spn_mo_forever }
+				NOT = { has_relation_soulmate = scope:spn_mo_forever }
+				spn_romance_ok_trigger = { CHARACTER = scope:spn_mo_forever }
+			}
+			set_relation_lover = scope:spn_mo_forever
+		}
+		add_stress = major_stress_impact_loss
+	}
+	# Nobody who has not offered. There are people in this house who would open a vein for you gladly.
+	option = {
+		name = spn_moment.0024.c
+		trait = compassionate
+		trait = just
+		trigger = {
+			OR = {
+				has_trait = compassionate
+				has_trait = just
+			}
+		}
+		scope:spn_mo_forever = {
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = 1 }
+			# It suits the gentle ones. The others find it tame, and say nothing.
+			if = {
+				limit = {
+					NOR = {
+						has_trait = sadistic
+						has_trait = callous
+						has_trait = wrathful
+					}
+				}
+				add_opinion = { target = root modifier = grateful_opinion opinion = 25 }
+			}
+		}
+		add_piety = minor_piety_gain
+	}
+	# Take whoever you like. I will see to what is left.
+	option = {
+		name = spn_moment.0024.d
+		trait = sadistic
+		trait = callous
+		trigger = {
+			OR = {
+				has_trait = sadistic
+				has_trait = callous
+			}
+		}
+		scope:spn_mo_forever = {
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = 5 }
+			# What she makes of the morning after is hers.
+			if = {
+				limit = {
+					OR = {
+						has_trait = compassionate
+						has_trait = just
+						has_trait = zealous
+						has_character_flag = spn_fates_unwilling
+					}
+				}
+				add_stress = medium_stress_impact_gain
+				add_opinion = { target = root modifier = disappointed_opinion opinion = -25 }
+			}
+			else = {
+				add_opinion = { target = root modifier = pleased_opinion opinion = 15 }
+			}
+		}
+		add_dread = 10
+	}
+	# This part is yours to learn. I will wait up with the lamp lit.
+	option = {
+		name = spn_moment.0024.e
+		scope:spn_mo_forever = {
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = 2 }
+			if = {
+				limit = { NOT = { has_character_flag = spn_fates_unwilling } }
+				add_opinion = { target = root modifier = pleased_opinion opinion = 15 }
+			}
+		}
+	}
+	# I did this to you, and I will not pretend otherwise. Tell me what you need from me.
+	option = {
+		name = spn_moment.0024.f
+		trigger = {
+			scope:spn_mo_forever = { has_character_flag = spn_fates_unwilling }
+		}
+		scope:spn_mo_forever = {
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = 1 }
+			# A vengeful heart keeps its count. Anyone else lets it go, in time.
+			if = {
+				limit = { NOT = { has_trait = vengeful } }
+				remove_character_flag = spn_fates_unwilling
+				remove_opinion = { target = root modifier = disappointed_opinion }
+				add_opinion = { target = root modifier = pleased_opinion opinion = 15 }
+			}
+		}
+		add_stress = minor_stress_impact_gain
+	}
+}
+
+# THE NIGHT YOU DO NOT COME HOME. Root = a hybrid; scope:spn_mo_forever does not hold his secret (the start effect
+# checked). She has followed him out and is waiting when he comes back. Telling her here goes on to Before Dawn; putting
+# it off goes to What Was Counted; a lie only buys time.
+spn_moment.0025 = {
+	type = character_event
+	title = spn_moment.0025.t
+	desc = spn_moment.0025.desc
+	theme = secret
+	override_background = { reference = garden }
+	left_portrait = { character = root animation = worry }
+	right_portrait = { character = scope:spn_mo_forever animation = disbelief }
+	trigger = {
+		is_alive = yes
+		is_imprisoned = no
+		has_trait = supernatural_hybrid
+		exists = scope:spn_mo_forever
+		scope:spn_mo_forever = { spn_fates_partner_trigger = yes }
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_mo_cd_moonhome years = 15 }
+		# The same rests The Coat sets: this is another way into the same story.
+		add_character_flag = { flag = spn_mo_cd_fates years = 10 }
+		scope:spn_mo_forever = { add_character_flag = { flag = spn_fates_rest years = 5 } }
+	}
+	# Come here. It has known your scent for years, and it has never once wanted to hurt you.
+	option = {
+		name = spn_moment.0025.a
+		spn_mo_fates_tell_effect = yes
+		custom_tooltip = spn_moment.0012.told.tt
+		hidden_effect = { spn_mo_fates_roll_wish_effect = yes }
+		scope:spn_mo_forever = {
+			# The timid do not sleep for a week. Everyone else is only glad it was not another bed.
+			if = {
+				limit = { has_trait = craven }
+				add_stress = medium_stress_impact_gain
+			}
+			else = {
+				add_opinion = { target = root modifier = grateful_opinion opinion = 25 }
+			}
+		}
+		add_stress = medium_stress_impact_loss
+		trigger_event = { id = spn_moment.0013 days = { 30 90 } }
+	}
+	# There was never anyone else. Feel how my heart is still going. Come inside, and I will tell you all of it after.
+	option = {
+		name = spn_moment.0025.b
+		trait = lustful
+		trigger = { has_trait = lustful }
+		spn_mo_fates_tell_effect = yes
+		custom_tooltip = spn_moment.0012.told.tt
+		hidden_effect = { spn_mo_fates_roll_wish_effect = yes }
+		if = {
+			limit = {
+				NOT = { has_relation_lover = scope:spn_mo_forever }
+				NOT = { has_relation_soulmate = scope:spn_mo_forever }
+				spn_romance_ok_trigger = { CHARACTER = scope:spn_mo_forever }
+			}
+			set_relation_lover = scope:spn_mo_forever
+		}
+		scope:spn_mo_forever = { add_opinion = { target = root modifier = pleased_opinion opinion = 15 } }
+		add_stress = major_stress_impact_loss
+		trigger_event = { id = spn_moment.0013 days = { 30 90 } }
+	}
+	# Not out here, and not like this. Ask me tonight, and I will answer.
+	option = {
+		name = spn_moment.0025.d
+		trigger_event = { id = spn_moment.0012 days = { 1 3 } }
+	}
+	# Poachers. I went after them, and they ran. Go back to bed.
+	option = {
+		name = spn_moment.0025.c
+		trait = deceitful
+		trigger = { has_trait = deceitful }
+		add_stress = minor_stress_impact_gain
+		# She believes it for a while.
+		trigger_event = { id = spn_moment.0012 years = { 1 2 } }
+	}
+	# Look at me. You slept the whole night through.
+	option = {
+		name = spn_moment.0025.e
+		trigger = {
+			has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 10 }
+		}
+		spn_compel_pay_amount_effect = { AMOUNT = 10 }
+		scope:spn_mo_forever = { add_character_flag = spn_fates_forgot }
+		custom_tooltip = spn_moment.0011.e.tt
+	}
+}

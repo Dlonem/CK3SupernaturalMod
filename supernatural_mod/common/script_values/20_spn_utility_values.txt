@@ -851,11 +851,21 @@ spn_body_hush_money_value = {
 #   exactly the reputation that brings the next hunter.
 spn_hunter_reputation_value = {
 	value = 0
-	if = { limit = { any_memory = { count >= 1 has_memory_type = spn_slew_the_beast_memory } } add = 1 }
-	if = { limit = { any_memory = { count >= 2 has_memory_type = spn_slew_the_beast_memory } } add = 1 }
-	if = { limit = { any_memory = { count >= 3 has_memory_type = spn_slew_the_beast_memory } } add = 1 }
-	if = { limit = { any_memory = { count >= 5 has_memory_type = spn_slew_the_beast_memory } } add = 1 }
-	if = { limit = { any_memory = { count >= 8 has_memory_type = spn_slew_the_beast_memory } } add = 1 }
+	# 2.42: counted from var:spn_hunter_kills (spn_hunt_perform_the_kill_effect). It used to count kill memories, but the
+	# memory is written for the first kill only (spn_write_slew_the_beast_memory_effect), so renown never passed 1 and
+	# the Beastbane nickname (3) could not be earned. A hunter from an older save with the memory and no count reads 1.
+	if = {
+		limit = { has_variable = spn_hunter_kills }
+		if = { limit = { var:spn_hunter_kills >= 1 } add = 1 }
+		if = { limit = { var:spn_hunter_kills >= 2 } add = 1 }
+		if = { limit = { var:spn_hunter_kills >= 3 } add = 1 }
+		if = { limit = { var:spn_hunter_kills >= 5 } add = 1 }
+		if = { limit = { var:spn_hunter_kills >= 8 } add = 1 }
+	}
+	else_if = {
+		limit = { any_memory = { has_memory_type = spn_slew_the_beast_memory } }
+		add = 1
+	}
 }
 
 # CHARACTER scope. The other side of it. A hunter walked away beaten, or did not walk away at all.

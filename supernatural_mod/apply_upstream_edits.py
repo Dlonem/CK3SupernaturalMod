@@ -1069,6 +1069,11 @@ E('common/scripted_triggers/magic_triggers.txt',
 				value > 19
 			}
 		}
+		AND = { # 2.42 (Supernatural): the Warlock's own pool
+			has_trait = warlock
+			NOT = { has_trait = archmage } # he pays from the Mage's pool (spend_*_ps_effect), so that is the one that counts
+			has_trait_xp = { trait = warlock track = power_saturation value > 19 }
+		}
 	}
 }""")
 
@@ -2399,8 +2404,8 @@ E('common/scripted_effects/00_summoning_magic_effects.txt',
 				has_character_flag = ms_met_moloch
 			}
 		}
+		add_character_flag = ms_met_moloch # 2.42: before the event, which can kill him the same instant (log, 20 Nov)
 		trigger_event = magic_ev3.66
-		add_character_flag = ms_met_moloch
 	}
 	else_if = {
 		limit = { is_alive = yes }
@@ -8129,6 +8134,13 @@ def apply_capstone_bridge():
             legacy = new.replace(block, "").replace("\n", nl); n = new.replace("\n", nl)
             if n not in s and s.count(legacy) == 1:
                 write(path, s.replace(legacy, n)); print("bridged", path)
+
+# ---- 2.42 (WORK-ORDER-2.42 v3): this release's entries live in upstream_edits_242.py, beside this file ----
+try:
+    import upstream_edits_242 as _u242
+    _u242.register(E)
+except ImportError:
+    print('upstream_edits_242.py not found: the 2.42 entries were not loaded')
 
 if __name__ == "__main__":
     here = os.path.dirname(os.path.abspath(__file__)); os.chdir(here)

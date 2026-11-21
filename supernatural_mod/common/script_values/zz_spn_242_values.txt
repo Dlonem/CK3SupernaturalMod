@@ -1,0 +1,36 @@
+﻿# Supernatural 2.42 -- Merchants of the Night.
+
+# CHARACTER scope: a mortal whose soul is held. What his contract fetches if it is cashed in today: more the longer it
+# still had to run. A contract signed before 2.42 has no due year and fetches a flat price.
+spn_soul_price_value = {
+	value = 150
+	if = {
+		limit = { has_variable = spn_soul_due_year }
+		value = var:spn_soul_due_year
+		subtract = current_year
+		min = 0
+		max = 30
+		multiply = 10
+		add = 50
+	}
+}
+
+# CHARACTER scope: one of the bereaved. How many of his dead scope:spn_bfb_slayer killed.
+spn_bfb_count_value = {
+	value = 0
+	every_in_list = {
+		variable = spn_kin_dead
+		limit = {
+			is_alive = no # 2.42: the one dying right now (on_death) has no killer yet
+			exists = killer
+			killer = scope:spn_bfb_slayer
+		}
+		add = 1
+	}
+}
+# What a hunter pays to end it: a hundred in gold for each of the dead.
+spn_bfb_blood_price_value = {
+	value = spn_bfb_count_value
+	min = 1
+	multiply = 100
+}

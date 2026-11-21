@@ -1,0 +1,58 @@
+﻿# Supernatural 2.42 -- Merchants of the Night (WORK-ORDER-2.42 v3). Effects.
+
+# CHARACTER scope: the mortal, inside start_magic_cyro_effect (the one place a soul is ever taken), while the demon
+# (scope:actor) still carries the term flag. Records the year the contract falls due, for Cash In a Soul.
+spn_soul_stamp_due_effect = {
+	set_variable = { name = spn_soul_due_year value = current_year }
+	add_character_flag = { flag = spn_soul_fresh years = 5 } # Cash In a Soul waits for this to pass
+	if = {
+		limit = { scope:actor ?= { has_character_flag = magic_cyroo_o3_flag } }
+		change_variable = { name = spn_soul_due_year add = 10 }
+	}
+	else_if = {
+		limit = { scope:actor ?= { has_character_flag = magic_cyroo_o2_flag } }
+		change_variable = { name = spn_soul_due_year add = 20 }
+	}
+	else = {
+		change_variable = { name = spn_soul_due_year add = 30 }
+	}
+}
+
+# CHARACTER scope: the mortal. The contract is torn up: he is whole again and nothing will come for him.
+# magic_ev8.18 checks my_soul_owner since 2.42, so the collection that was scheduled finds nothing to collect.
+spn_soul_release_effect = {
+	if = {
+		limit = { has_variable = my_soul_owner }
+		remove_variable = my_soul_owner
+	}
+	if = {
+		limit = { has_variable = spn_soul_due_year }
+		remove_variable = spn_soul_due_year
+	}
+	if = {
+		limit = { has_character_modifier = no_soul_modifier }
+		remove_character_modifier = no_soul_modifier
+	}
+	if = {
+		limit = { has_character_flag = cyro_is_still_not_over_flag }
+		remove_character_flag = cyro_is_still_not_over_flag
+	}
+}
+
+# CHARACTER scope: someone who has just brewed a potion (create_potion_decision). A mage who heads a merchant company
+# lifts the Medicaments trade of his home market for two years. Every merchant there gains, his rivals included.
+spn_potion_brewed_market_effect = {
+	if = {
+		limit = {
+			government_has_flag = government_is_merchant
+			exists = domicile
+		}
+		domicile.domicile_location.barony.trade_market ?= {
+			if = {
+				limit = { NOT = { has_trade_market_modifier = spn_potion_brewed_market_modifier } }
+				add_trade_market_modifier = { modifier = spn_potion_brewed_market_modifier years = 2 }
+				custom_tooltip = spn_potion_brewed_market_tt # 2.42 review: said only when it happens
+			}
+		}
+	}
+}

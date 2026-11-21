@@ -1,0 +1,94 @@
+﻿namespace = spn_silk
+
+# Supernatural 2.42 -- Merchants of the Night. Loc: zz_spn_242_l_english.yml.
+
+# THE SON INHERITS THE LEDGER. Root = the undying lender. scope:spn_ll_father = the debtor who died having refused him;
+# scope:spn_ll_heir = his heir, who now owes the debt. The heir's loan is found by its lender (never by original_debtor,
+# which is the first debtor of the whole chain); vanilla may have folded it into a loan the heir already had.
+spn_silk.0040 = {
+	type = character_event
+	title = spn_silk.0040.t
+	desc = spn_silk.0040.desc
+	theme = stewardship
+	override_background = { reference = study }
+	left_portrait = {
+		character = root
+		animation = scheme
+	}
+	right_portrait = {
+		character = scope:spn_ll_heir
+		animation = worry
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_ll_heir
+		scope:spn_ll_heir = {
+			is_alive = yes
+			any_owned_story = {
+				story_type = story_cycle_loan
+				var:lender ?= root
+			}
+		}
+	}
+	immediate = {
+		scope:spn_ll_heir = {
+			random_owned_story = {
+				limit = {
+					story_type = story_cycle_loan
+					var:lender ?= root
+				}
+				save_scope_as = spn_ll_loan
+			}
+		}
+	}
+	# Your father refused me. You will not have that chance.
+	option = {
+		name = spn_silk.0040.a
+		trigger = {
+			scope:spn_ll_loan = {
+				OR = {
+					NOT = { exists = var:reminders }
+					var:reminders < 1
+				}
+			}
+		}
+		custom_tooltip = spn_silk.0040.a.tt
+		hidden_effect = {
+			scope:spn_ll_loan = { set_variable = { name = reminders value = 1 } }
+		}
+	}
+	# A debt this old has earned its interest.
+	option = {
+		name = spn_silk.0040.b
+		trait = greedy
+		trigger = { has_trait = greedy }
+		custom_tooltip = spn_silk.0040.b.tt
+		hidden_effect = {
+			scope:spn_ll_loan = { change_variable = { name = amount_owed multiply = 1.1 } }
+		}
+		scope:spn_ll_heir = { add_opinion = { target = root modifier = annoyed_opinion opinion = -15 } }
+	}
+	# He was a boy when I lent it. Half will do.
+	option = {
+		name = spn_silk.0040.c
+		trait = compassionate
+		trigger = { has_trait = compassionate }
+		custom_tooltip = spn_silk.0040.c.tt
+		hidden_effect = {
+			scope:spn_ll_loan = { change_variable = { name = amount_owed multiply = 0.5 } }
+		}
+		scope:spn_ll_heir = { add_opinion = { target = root modifier = pleased_opinion opinion = 15 } }
+		add_stress = minor_stress_impact_loss
+	}
+	# The debt died with him.
+	option = {
+		name = spn_silk.0040.d
+		scope:spn_ll_loan = { end_loan_story_effect = yes }
+		scope:spn_ll_heir = { add_opinion = { target = root modifier = grateful_opinion opinion = 25 } }
+		add_prestige = minor_prestige_value
+	}
+	# The books can wait. They always have.
+	option = {
+		name = spn_silk.0040.e
+	}
+}

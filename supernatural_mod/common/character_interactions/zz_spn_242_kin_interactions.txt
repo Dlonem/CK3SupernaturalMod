@@ -1,0 +1,68 @@
+﻿# Supernatural 2.42 -- BLOOD FOR BLOOD. Shown only on a hunter whose name the actor has learned (spn_known_slayers).
+# Nothing here kills anyone by itself: "Face them" gives the hunter his own window (spn_bfb.0200), where he may stand,
+# pay the blood price, or (a player) decide for himself. Thomas's standing rule: nobody dies out of nowhere.
+spn_blood_for_blood_interaction = {
+	category = interaction_category_favorites
+	icon = icon_combat
+	interface_priority = 45
+	desc = spn_blood_for_blood_interaction_desc
+	auto_accept = yes
+	cooldown_against_recipient = { years = 3 }
+
+	is_shown = {
+		NOT = { scope:actor = scope:recipient }
+		scope:actor = {
+			is_target_in_variable_list = { name = spn_known_slayers target = scope:recipient }
+		}
+	}
+
+	is_valid_showing_failures_only = {
+		scope:actor = {
+			is_adult = yes
+			is_imprisoned = no
+			is_incapable = no
+		}
+		scope:recipient = { is_imprisoned = no }
+	}
+
+	send_options_exclusive = yes
+	options_heading = spn_bfb_heading
+	send_option = { flag = spn_bfb_face localization = SPN_BFB_FACE }
+	send_option = { flag = spn_bfb_ruin localization = SPN_BFB_RUIN }
+	send_option = { flag = spn_bfb_lie localization = SPN_BFB_LIE }
+
+	on_accept = {
+		scope:actor = { save_scope_as = spn_bfb_avenger }
+		scope:recipient = { save_scope_as = spn_bfb_slayer }
+		if = {
+			limit = { scope:spn_bfb_face = yes }
+			scope:actor = {
+				custom_tooltip = spn_bfb_face_tt
+				save_scope_as = spn_bfb_challenger # 2.42 review: spn_bfb.0200 reads it: he chose to come
+			}
+			scope:recipient = { trigger_event = { id = spn_bfb.0200 days = { 3 14 } } }
+		}
+		else_if = {
+			limit = { scope:spn_bfb_ruin = yes }
+			scope:actor = {
+				if = {
+					limit = {
+						NOT = { has_relation_rival = scope:recipient }
+						can_set_relation_rival_trigger = { CHARACTER = scope:recipient } # 2.42 review: vanilla's own gate
+					}
+					set_relation_rival = scope:recipient
+				}
+				add_character_modifier = { modifier = spn_bfb_vendetta_modifier years = 10 }
+			}
+		}
+		else = {
+			scope:actor = {
+				custom_tooltip = spn_bfb_lie_tt
+				spn_bfb_strike_name_effect = { SLAYER = scope:recipient }
+				add_stress = minor_stress_impact_loss
+			}
+		}
+	}
+
+	ai_will_do = { base = 0 }
+}

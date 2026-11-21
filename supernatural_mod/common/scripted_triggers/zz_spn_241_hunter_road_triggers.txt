@@ -3,16 +3,31 @@
 # CHARACTER scope. The governments that can host the Hunt (supernatural_hunt.txt is_shown and is_valid read this). One
 # place, so Silk & Silver's landless Merchant government (17 Nov) is one line here once its key is known.
 spn_hunt_host_government_trigger = {
+	spn_activity_host_government_trigger = yes
+}
+
+# 2.42 (21 Nov 2026) -- the key is known: government_has_flag = government_is_merchant, the line vanilla itself uses to
+# let a merchant host (can_host_feasts_trigger). A landless merchant has a seat (his domicile), a purse and a household.
+# One trigger for every creature activity a ruler hosts: the Hunt, the Feeding, the Gathering. Before this a vampire or
+# werewolf who headed a merchant company could host none of them.
+spn_activity_host_government_trigger = {
 	OR = {
 		is_landed_or_landless_administrative = yes
 		is_landless_adventurer = yes
+		government_has_flag = government_is_merchant
 	}
 }
 
-# CHARACTER scope (on random_yearly_everyone_pulse, so root is the hunter). Can this hunter leave where he is and
-# become a landless adventurer camp that hunts? 34 of the 38 hunters in the 1147 observer save were courtiers or
-# unemployed, and only landed rulers and camps can host the Hunt.
-spn_hunter_road_eligible_trigger = {
+# CHARACTER scope. Can this hunter run a Hunt at all? (The activity's own is_shown.)
+spn_hunt_can_host_trigger = {
+	spn_hunt_host_government_trigger = yes
+	is_playable_character = yes
+	is_adult = yes
+}
+
+# CHARACTER scope. A hunter who could leave where he lives and found a camp: an AI, nobody a player or a court depends
+# on. The personal half of spn_hunter_road_eligible_trigger, split out so a lord's summons can ask the same question.
+spn_hunter_can_leave_court_trigger = {
 	has_trait = supernatural_hunter
 	is_ai = yes
 	has_ep3_dlc_trigger = yes
@@ -33,12 +48,6 @@ spn_hunter_road_eligible_trigger = {
 			}
 		}
 	}
-	exists = location.county
-	# Relevant, not every man who once held a stake.
-	OR = {
-		has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 20 }
-		has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 20 }
-	}
 	# Someone else needs him where he is.
 	is_councillor = no
 	has_any_court_position = no
@@ -49,6 +58,19 @@ spn_hunter_road_eligible_trigger = {
 		NOT = { is_player_heir_of = liege }
 		# Never out of a player's court: the player chose to keep him.
 		liege = { is_ai = yes }
+	}
+}
+
+# CHARACTER scope (on random_yearly_everyone_pulse, so root is the hunter). Can this hunter leave where he is and
+# become a landless adventurer camp that hunts? 34 of the 38 hunters in the 1147 observer save were courtiers or
+# unemployed, and only landed rulers and camps can host the Hunt.
+spn_hunter_road_eligible_trigger = {
+	spn_hunter_can_leave_court_trigger = yes # 2.42: the personal conditions, unchanged, now shared with the summons
+	exists = location.county
+	# Relevant, not every man who once held a stake.
+	OR = {
+		has_trait_xp = { trait = supernatural_hunter track = monster_hunting value >= 20 }
+		has_trait_xp = { trait = supernatural_hunter track = witch_hunting value >= 20 }
 	}
 	# There is work, and room for him.
 	trigger_if = {

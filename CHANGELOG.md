@@ -8,6 +8,16 @@ Newest first. Notes for 2.29 and earlier are on the Workshop's
 
 ---
 
+## 2.42: Merchants of the Night
+
+Demon merchants can now settle a bad debt for the debtor's soul, sell a bargain for coin, and keep a Second Ledger in their mansion; mage merchants get an Alchemist's Still. Creature and hunter perks give real trade bonuses to merchants and republics and camp bonuses to adventurers, and a werewolf's or hybrid's own caravans ignore dangerous roads. A vampire, werewolf or hunter who heads a merchant company can now host the Feeding, the Gathering and the Hunt, and AI hunters answer a trail more often. Warlocks have their own pool of power. Blood for Blood: when a hunter kills one of yours you can find out who and answer it, and a hunter who keeps killing one family becomes hunted himself. Fifteen new events for vampires and hybrids, including Fates Intertwined. Fixes for the Black Grimoire, potions and aging traits, and Magic Triangulation.
+
+Needs CK3 1.21. Silk & Silver is not required: anything that needs it only appears if you own it. Back up running saves before updating. Russian translation by Adrian; the new lines are in English until he updates them.
+
+Questions about the mod? Read the wiki: [dlonem.com/mods/supernatural/wiki](https://dlonem.com/mods/supernatural/wiki/)
+
+---
+
 ## 2.41: Silk & Silver
 
 Updated for Crusader Kings III 1.21 and Silk & Silver. A creature's kills now frighten a county for a year and hurt its market, werewolves make the roads dangerous, and a hunter who ends the trail ends the fear. Vampire merchants get a Vault, can feed on the road as Traders, collect bad debts in blood, and have their patron grant them a charter or their Assembly vote their way. At a carnival, a vampire can feed behind a mask. Creature perks now change for adventurers and merchants, the way vanilla perks do. Also in this release: the Ledger, the Cold Trail, hunters on the road, True Witch and Necromancer tracks, and new creature moments with choices for your traits.
