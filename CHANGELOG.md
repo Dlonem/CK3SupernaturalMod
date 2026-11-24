@@ -8,6 +8,16 @@ Newest first. Notes for 2.29 and earlier are on the Workshop's
 
 ---
 
+## 2.43: The Voice in the Blood
+
+Hunters finally hunt: a hunter with a warm trail in reach now goes after it, the Hunt is free, and a lord's Trailsman can ride out after a trail. Vampires, werewolves and hybrids who run a merchant company start ahead in trade: an extra route for vampires, an extra good for werewolves, more capacity for all three. Werewolves get eight yearly moments of their own, and now and then the thirst speaks in Latin and the wolf in Old Norse. The strongest lone wolf can found a pack, and a man you save with your blood may come looking for you. Shorter options in the 2.42 events, slightly rarer romance moments, and fixes from a long co-op session. The loading screens are all new, in the vanilla art style.
+
+Needs CK3 1.21. Silk & Silver is not required: anything that needs it only appears if you own it. Back up running saves before updating. Russian translation by Adrian; the new lines are in English until he updates them.
+
+Questions about the mod? Read the wiki: [dlonem.com/mods/supernatural/wiki](https://dlonem.com/mods/supernatural/wiki/)
+
+---
+
 ## 2.42: Merchants of the Night
 
 Demon merchants can now settle a bad debt for the debtor's soul, sell a bargain for coin, and keep a Second Ledger in their mansion; mage merchants get an Alchemist's Still. Creature and hunter perks give real trade bonuses to merchants and republics and camp bonuses to adventurers, and a werewolf's or hybrid's own caravans ignore dangerous roads. A vampire, werewolf or hunter who heads a merchant company can now host the Feeding, the Gathering and the Hunt, and AI hunters answer a trail more often. Warlocks have their own pool of power. Blood for Blood: when a hunter kills one of yours you can find out who and answer it, and a hunter who keeps killing one family becomes hunted himself. Fifteen new events for vampires and hybrids, including Fates Intertwined. Fixes for the Black Grimoire, potions and aging traits, and Magic Triangulation.

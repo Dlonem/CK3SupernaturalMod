@@ -1,0 +1,130 @@
+﻿namespace = spn_cellar
+
+# Supernatural 2.43 -- THE MAN FROM THE CELLAR (zz_spn_243_cellar_on_actions.txt has the why). Root = the player who
+# saved him; scope:spn_cellar_man = the man, now a vampire, who has never met him.
+
+spn_cellar.0001 = {
+	type = character_event
+	title = spn_cellar.0001.t
+	desc = spn_cellar.0001.desc
+	theme = dread
+	override_background = { reference = corridor_night }
+	left_portrait = {
+		character = root
+		animation = thinking
+	}
+	right_portrait = {
+		character = scope:spn_cellar_man
+		animation = pain
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_cellar_man
+		scope:spn_cellar_man = {
+			is_alive = yes
+			is_imprisoned = no
+			has_trait = supernatural_vampire
+		}
+	}
+	immediate = { spn_flavor_mark_effect = yes }
+
+	# Take him in.
+	option = {
+		name = spn_cellar.0001.a
+		trigger = { scope:spn_cellar_man = { is_ruler = no } }
+		add_courtier = scope:spn_cellar_man
+		scope:spn_cellar_man = { add_opinion = { target = root modifier = grateful_opinion opinion = 25 } }
+		custom_tooltip = spn_cellar.0001.a.tt
+		trigger_event = { id = spn_cellar.0002 years = { 1 2 } }
+	}
+	# The same, and you say you are sorry.
+	option = {
+		name = spn_cellar.0001.b
+		trait = compassionate
+		trigger = {
+			has_trait = compassionate
+			scope:spn_cellar_man = { is_ruler = no }
+		}
+		add_courtier = scope:spn_cellar_man
+		add_stress = minor_stress_impact_loss
+		scope:spn_cellar_man = { add_opinion = { target = root modifier = grateful_opinion opinion = 40 } }
+		custom_tooltip = spn_cellar.0001.a.tt
+		trigger_event = { id = spn_cellar.0002 years = { 1 2 } }
+	}
+	# Send him away.
+	option = {
+		name = spn_cellar.0001.c
+		scope:spn_cellar_man = { add_opinion = { target = root modifier = disappointed_opinion opinion = -25 } }
+	}
+	# Be grateful you woke at all.
+	option = {
+		name = spn_cellar.0001.d
+		trait = callous
+		trait = sadistic
+		trigger = {
+			OR = {
+				has_trait = callous
+				has_trait = sadistic
+			}
+		}
+		add_dread = minor_dread_gain
+		scope:spn_cellar_man = { add_opinion = { target = root modifier = annoyed_opinion opinion = -15 } }
+	}
+}
+
+spn_cellar.0002 = {
+	type = character_event
+	title = spn_cellar.0002.t
+	desc = spn_cellar.0002.desc
+	theme = dread
+	override_background = { reference = study }
+	left_portrait = {
+		character = root
+		animation = thinking
+	}
+	right_portrait = {
+		character = scope:spn_cellar_man
+		animation = worry
+	}
+	trigger = {
+		is_alive = yes
+		exists = scope:spn_cellar_man
+		scope:spn_cellar_man = {
+			is_alive = yes
+			is_imprisoned = no
+			has_trait = supernatural_vampire
+			is_courtier_of = root
+		}
+	}
+	immediate = { spn_flavor_mark_effect = yes }
+
+	# Teach him.
+	option = {
+		name = spn_cellar.0002.a
+		spn_moment_xp_effect = { XP = 5 }
+		scope:spn_cellar_man = {
+			add_trait_xp = { trait = supernatural_vampire track = vampirism value = 10 }
+			add_opinion = { target = root modifier = pleased_opinion opinion = 15 }
+		}
+	}
+	# The honest answer.
+	option = {
+		name = spn_cellar.0002.b
+		trait = callous
+		trait = sadistic
+		trigger = {
+			OR = {
+				has_trait = callous
+				has_trait = sadistic
+			}
+		}
+		add_dread = minor_dread_gain
+		scope:spn_cellar_man = { add_trait_xp = { trait = supernatural_vampire track = vampirism value = 15 } }
+	}
+	# Let him learn it alone.
+	option = {
+		name = spn_cellar.0002.c
+		add_stress = minor_stress_impact_loss
+		scope:spn_cellar_man = { add_opinion = { target = root modifier = annoyed_opinion opinion = -15 } }
+	}
+}
