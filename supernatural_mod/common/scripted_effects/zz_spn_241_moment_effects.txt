@@ -54,13 +54,13 @@ spn_moment_pick_effect = {
 	}
 	random_relation = {
 		type = lover
-		limit = { is_alive = yes is_adult = yes is_ai = yes is_imprisoned = no spn_has_supernatural_trait = no }
+		limit = { is_alive = yes age >= 18 is_ai = yes is_imprisoned = no spn_has_supernatural_trait = no }
 		save_scope_as = spn_mo_partner
 	}
 	if = {
 		limit = { NOT = { exists = scope:spn_mo_partner } }
 		random_spouse = {
-			limit = { is_alive = yes is_adult = yes is_ai = yes is_imprisoned = no spn_has_supernatural_trait = no }
+			limit = { is_alive = yes age >= 18 is_ai = yes is_imprisoned = no spn_has_supernatural_trait = no }
 			save_scope_as = spn_mo_partner
 		}
 	}
@@ -164,6 +164,119 @@ spn_moment_pick_effect = {
 			set_variable = { name = spn_last_moment value = flag:grace }
 			add_character_flag = { flag = spn_mo_cd_grace years = 20 }
 			trigger_event = { id = spn_moment.0010 days = { 1 60 } }
+		}
+		# 2.42 (WORK-ORDER-2.42 v3, 7): four more, started by zz_spn_242_moment_effects.txt. Their rests are set by
+		# their own events when they arrive.
+		9 = { # Fates Intertwined (the romance; three events) -- 2.43: 10 to 9, the romance moments a tenth rarer (Thomas, 22 Nov)
+			trigger = {
+				age >= 30
+				NOT = { var:spn_last_moment ?= flag:fates }
+				NOT = { has_character_flag = spn_mo_cd_fates }
+				OR = {
+					any_relation = { type = soulmate spn_fates_partner_trigger = yes }
+					any_relation = { type = lover spn_fates_partner_trigger = yes }
+					any_spouse = { spn_fates_partner_trigger = yes }
+				}
+			}
+			spn_mo_fates_start_effect = yes
+		}
+		10 = { # 2.42 s4: The Night You Do Not Come Home (a hybrid whose partner does not know; leads into Fates)
+			trigger = {
+				has_trait = supernatural_hybrid
+				NOT = { has_trait = spn_known_hybrid }
+				NOT = { var:spn_last_moment ?= flag:moonhome }
+				NOT = { has_character_flag = spn_mo_cd_moonhome }
+				NOT = { has_character_flag = spn_mo_cd_fates }
+				OR = {
+					any_relation = { type = soulmate spn_fates_partner_trigger = yes }
+					any_relation = { type = lover spn_fates_partner_trigger = yes }
+					any_spouse = { spn_fates_partner_trigger = yes }
+				}
+			}
+			spn_mo_moon_start_effect = yes
+		}
+		9 = { # The One Who Followed You Home -- 2.43: 10 to 9, the romance moments a tenth rarer (Thomas, 22 Nov)
+			trigger = {
+				NOT = { var:spn_last_moment ?= flag:admirer }
+				NOT = { has_character_flag = spn_mo_cd_admirer }
+				OR = {
+					is_attracted_to_women = yes
+					is_attracted_to_men = yes
+				}
+				exists = location
+			}
+			spn_mo_admirer_start_effect = yes
+		}
+		10 = { # The Portrait
+			trigger = {
+				spn_mo_long_unaged_trigger = yes # 2.42 review: sixty, and forty years unchanged
+				NOT = { var:spn_last_moment ?= flag:portrait }
+				NOT = { has_character_flag = spn_mo_cd_portrait }
+			}
+			spn_mo_portrait_start_effect = yes
+		}
+		10 = { # A Hunter at Your Table
+			trigger = {
+				NOT = { var:spn_last_moment ?= flag:hunter }
+				NOT = { has_character_flag = spn_mo_cd_hunter }
+				NOR = {
+					has_trait = spn_known_vampire
+					has_trait = spn_known_hybrid
+				}
+				any_courtier = {
+					spn_real_hunter_candidate_trigger = yes
+					spn_mo_hunter_unaware_trigger = yes
+				}
+			}
+			spn_mo_hunter_start_effect = yes
+		}
+		9 = { # A Guest for Supper: a partner with the nerve for it brings someone home -- 2.43: 10 to 9, the romance moments a tenth rarer (Thomas, 22 Nov)
+			trigger = {
+				NOT = { var:spn_last_moment ?= flag:guest }
+				NOT = { has_character_flag = spn_mo_cd_guest }
+				NOT = { has_character_flag = spn_mo_household }
+				exists = location
+				exists = scope:spn_mo_partner
+				scope:spn_mo_partner = {
+					NOR = {
+						has_trait = chaste
+						has_trait = zealous
+						has_trait = shy
+					}
+					OR = {
+						has_trait = lustful
+						AND = {
+							has_trait = ambitious
+							opinion = { target = root value >= 40 }
+						}
+						opinion = { target = root value >= 80 }
+					}
+				}
+				OR = {
+					is_attracted_to_women = yes
+					is_attracted_to_men = yes
+				}
+			}
+			spn_mo_guest_start_effect = yes
+		}
+		9 = { # What Your Spouse Knows: married, with a lover who is not the spouse -- 2.43: 10 to 9, the romance moments a tenth rarer (Thomas, 22 Nov)
+			trigger = {
+				NOT = { var:spn_last_moment ?= flag:wife }
+				NOT = { has_character_flag = spn_mo_cd_wife }
+				any_spouse = {
+					is_alive = yes
+					is_ai = yes
+					age >= 18
+				}
+				any_relation = {
+					type = lover
+					is_alive = yes
+					is_ai = yes
+					age >= 18
+					NOT = { is_consort_of = root }
+				}
+			}
+			spn_mo_wife_start_effect = yes
 		}
 	}
 }

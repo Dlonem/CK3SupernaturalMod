@@ -243,5 +243,20 @@ spn_trail_census_after_effect = {
 	spn_tc_init_effect = { NAME = spn_tc_out_human_slain }
 	spn_tc_init_effect = { NAME = spn_tc_out_human_spared }
 	spn_tc_init_effect = { NAME = spn_tc_out_human_jailed }
+	spn_tc_init_effect = { NAME = spn_tc_out_aborted } # 2.42
+	spn_243_hunter_funnel_roll_effect = yes # 2.43: the hunter funnel (zz_spn_243_hunter_funnel_effects.txt)
 	debug_log = spn_trail_census_log
+}
+
+# ACTIVITY scope (the Hunt's on_invalidated and on_host_death, BEFORE spn_hunt_running_close_effect). 2.42, 21 Nov 2026:
+# a hunt that was called off, or whose host died on the way, set no outcome and so left no mark in the census (the 989
+# soak: three hunts, two endings). spn_hunt_counted is still here only on the first of the hooks to fire.
+spn_hunt_census_aborted_effect = {
+	if = {
+		limit = {
+			has_variable = spn_hunt_counted
+			NOT = { has_variable = spn_hunt_outcome }
+		}
+		spn_tc_bump_effect = { NAME = spn_tc_out_aborted }
+	}
 }

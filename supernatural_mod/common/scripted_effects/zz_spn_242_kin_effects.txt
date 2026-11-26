@@ -1,0 +1,199 @@
+﻿# Supernatural 2.42 -- BLOOD FOR BLOOD (WORK-ORDER-2.42 v3, 8). Thomas, 20 Nov 2026: "a way to find and avenge the
+# hunter who wiped out your witch family. I like that."
+#
+# A death reason cannot be read inside on_death (the 2.41 boot: "Trying to check death reason on living character"),
+# so the KILL SITE says what it was: every hunter kill stamps the dying for two days, and on_death reads the stamp and
+# vanilla's scope:killer. The hunter's name is not handed to the family (the four hunter death reasons are no longer
+# public knowledge): they are told one of theirs is dead, and may look for who did it.
+
+# CHARACTER scope: a creature or witch a hunter is about to kill. REASON = the death reason, HUNTER = the hunter.
+# The stamp and the count are set first; the death is the last line (the standing ordering rule).
+spn_hunter_kill_effect = {
+	add_character_flag = { flag = spn_slain_by_hunter days = 2 }
+	if = {
+		limit = { exists = $HUNTER$ }
+		$HUNTER$ = { spn_hunter_kill_count_effect = yes }
+		death = { death_reason = $REASON$ killer = $HUNTER$ }
+	}
+	else = {
+		death = { death_reason = $REASON$ }
+	}
+}
+
+# CHARACTER scope: a hunter. One more kill to his name (spn_hunter_reputation_value).
+spn_hunter_kill_count_effect = {
+	if = {
+		limit = { NOT = { has_variable = spn_hunter_kills } }
+		set_variable = { name = spn_hunter_kills value = 0 }
+	}
+	change_variable = { name = spn_hunter_kills add = 1 }
+}
+
+# CHARACTER scope: the dying (on_death; scope:killer = the hunter, alive). Writes the death into the lives of the people
+# it belongs to: blood family, spouse, and the creature's own kin (maker, progeny, the wolf who clawed them, the ones
+# they clawed, pack mates). Never the hunter himself and never another hunter. No world scan: relations only.
+spn_bfb_record_effect = {
+	save_scope_as = spn_bfb_dead
+	scope:killer = { save_scope_as = spn_bfb_slayer }
+	every_close_family_member = {
+		limit = { spn_bfb_can_mourn_trigger = yes }
+		add_to_list = spn_bfb_kin
+	}
+	every_spouse = {
+		limit = { spn_bfb_can_mourn_trigger = yes }
+		add_to_list = spn_bfb_kin
+	}
+	every_relation = {
+		type = mmaker
+		limit = { spn_bfb_can_mourn_trigger = yes }
+		add_to_list = spn_bfb_kin
+	}
+	every_relation = {
+		type = pprogeny
+		limit = { spn_bfb_can_mourn_trigger = yes }
+		add_to_list = spn_bfb_kin
+	}
+	every_relation = {
+		type = ww_clawed_by
+		limit = { spn_bfb_can_mourn_trigger = yes }
+		add_to_list = spn_bfb_kin
+	}
+	every_relation = {
+		type = ww_clawed
+		limit = { spn_bfb_can_mourn_trigger = yes }
+		add_to_list = spn_bfb_kin
+	}
+	every_relation = {
+		type = spn_pack_mate
+		limit = { spn_bfb_can_mourn_trigger = yes }
+		add_to_list = spn_bfb_kin
+	}
+	every_in_list = {
+		list = spn_bfb_kin
+		save_scope_as = spn_bfb_avenger
+		add_to_variable_list = { name = spn_kin_dead target = scope:spn_bfb_dead }
+		# 2.42 review: a name he had let lie is live again, because the same hand has taken another of his.
+		if = {
+			limit = { is_target_in_variable_list = { name = spn_struck_slayers target = scope:spn_bfb_slayer } }
+			remove_list_variable = { name = spn_struck_slayers target = scope:spn_bfb_slayer }
+		}
+		# A maker knows who took what he made: no search for him. Nor is there one when it was done in the open (a burning).
+		if = {
+			limit = {
+				scope:spn_bfb_dead = {
+					OR = {
+						has_relation_mmaker = scope:spn_bfb_avenger
+						has_relation_ww_clawed_by = scope:spn_bfb_avenger
+						has_character_flag = spn_slain_openly
+					}
+				}
+			}
+			spn_bfb_learn_name_effect = { SLAYER = scope:spn_bfb_slayer }
+		}
+		# The count reads the dead by their killer, and this one is not dead yet (on_death runs just before), so it
+		# counts the EARLIER ones: >= 1 here is the second death by the same hand, >= 2 the third.
+		# The second: they know they are being hunted, and are harder to corner for a year.
+		if = {
+			limit = { spn_bfb_count_value >= 1 }
+			add_character_flag = { flag = spn_forewarned years = 1 }
+		}
+		# The third: the hunter is a marked man.
+		if = {
+			limit = {
+				spn_bfb_count_value >= 2
+				scope:spn_bfb_slayer = { NOT = { has_character_modifier = spn_hunted_modifier } }
+			}
+			scope:spn_bfb_slayer = {
+				add_character_modifier = { modifier = spn_hunted_modifier years = 10 }
+				if = { # 2.42 review: a player hunter is told
+					limit = { is_ai = no }
+					send_interface_toast = {
+						type = event_toast_effect_bad
+						title = spn_bfb_hunted_toast
+						left_icon = scope:spn_bfb_dead
+					}
+				}
+			}
+		}
+		if = {
+			# 2.42 review: a player, or the heir a dying player is about to become (on_death runs before the succession, so
+			# he still reads as an AI here). Never a child: the death stays on his record for when he is grown.
+			limit = {
+				is_adult = yes
+				OR = {
+					is_ai = no
+					AND = {
+						scope:spn_bfb_dead = { is_ai = no }
+						scope:spn_bfb_dead.player_heir ?= this
+					}
+				}
+			}
+			trigger_event = { id = spn_bfb.0100 days = { 3 10 } }
+		}
+		# An AI with a reason and the temper for it may come for the hunter, who always gets his say (spn_bfb.0200).
+		# At most one such visit per hunter in five years.
+		else_if = {
+			limit = {
+				is_ai = yes
+				is_adult = yes
+				is_imprisoned = no
+				spn_has_supernatural_trait = yes
+				OR = {
+					has_trait = vengeful
+					has_trait = wrathful
+				}
+				spn_bfb_count_value >= 1
+				scope:spn_bfb_slayer = { NOT = { has_character_flag = spn_bfb_ai_cd } }
+			}
+			random = {
+				chance = 25
+				scope:spn_bfb_slayer = {
+					add_character_flag = { flag = spn_bfb_ai_cd years = 5 }
+					trigger_event = { id = spn_bfb.0200 years = { 1 3 } }
+				}
+			}
+		}
+	}
+}
+
+# CHARACTER scope: one of the bereaved. He now knows the hunter's name: the game shows him (and only him) the killer on
+# each of his dead (vanilla add_knows_of_killer), the hunter can be answered (Blood for Blood), and his pack is told.
+spn_bfb_learn_name_effect = {
+	save_scope_as = spn_bfb_me
+	$SLAYER$ = { save_scope_as = spn_bfb_named }
+	if = {
+		limit = { NOT = { is_target_in_variable_list = { name = spn_known_slayers target = scope:spn_bfb_named } } }
+		add_to_variable_list = { name = spn_known_slayers target = scope:spn_bfb_named }
+	}
+	every_in_list = {
+		variable = spn_kin_dead
+		limit = {
+			is_alive = no # 2.42: the one dying right now (on_death) has no killer yet
+			exists = killer
+			killer = scope:spn_bfb_named
+		}
+		add_knows_of_killer = scope:spn_bfb_me
+	}
+	every_relation = {
+		type = spn_pack_mate
+		limit = {
+			is_alive = yes
+			NOT = { is_target_in_variable_list = { name = spn_known_slayers target = scope:spn_bfb_named } }
+		}
+		add_to_variable_list = { name = spn_known_slayers target = scope:spn_bfb_named }
+	}
+}
+
+# CHARACTER scope: one of the bereaved. It is settled, or let go: the name is struck out.
+spn_bfb_strike_name_effect = {
+	if = {
+		limit = { is_target_in_variable_list = { name = spn_known_slayers target = $SLAYER$ } }
+		remove_list_variable = { name = spn_known_slayers target = $SLAYER$ }
+	}
+	# 2.42 review: and it stays struck. A search still running for that name ends (spn_bfb.0110), until the same hand
+	# takes another of his (spn_bfb_record_effect).
+	if = {
+		limit = { NOT = { is_target_in_variable_list = { name = spn_struck_slayers target = $SLAYER$ } } }
+		add_to_variable_list = { name = spn_struck_slayers target = $SLAYER$ }
+	}
+}

@@ -1,0 +1,102 @@
+﻿# Supernatural 2.42 -- Blood for Blood and the 2.42 moments. Triggers.
+
+# CHARACTER scope: someone close to the dead. scope:spn_bfb_slayer = the hunter.
+spn_bfb_can_mourn_trigger = {
+	is_alive = yes
+	NOT = { this = scope:spn_bfb_slayer }
+	spn_has_hunter_trait = no
+}
+
+# CHARACTER scope: a mortal who can be turned by an event option. The same gate the turning interaction shows itself
+# by (spn_turn_into_vampire is_shown), so an event can never start a turning the mod would refuse (a hunter in secret,
+# a golem, blood that will not take).
+spn_event_turn_ok_trigger = {
+	is_alive = yes
+	age >= 18
+	is_imprisoned = no
+	is_ai = yes # 2.42 review: a partner a human has inherited in the meantime is never turned by an event
+	spn_has_supernatural_trait = no
+	spn_has_hunter_trait = no
+	spn_can_become_creature_trigger = yes
+	spn_is_valid_supernatural_target = yes
+}
+
+# CHARACTER scope: a player vampire or hybrid's partner for Fates Intertwined. ROOT = the creature.
+spn_fates_partner_trigger = {
+	is_ai = yes
+	spn_event_turn_ok_trigger = yes
+	NOT = { has_character_flag = spn_fates_rest }
+	NOT = { has_character_flag = spn_fates_forgot }
+	OR = {
+		has_relation_soulmate = root
+		opinion = { target = root value >= 40 }
+	}
+}
+# ---- 2.42 review (20 Nov 2026): what a delayed moment re-checks when it arrives ----------------------------------
+
+# CHARACTER scope: the creature a 2.42 moment belongs to. Still alive, and still what the moment was written for (a
+# cured vampire is not asked to turn anyone).
+spn_mo_root_ok_trigger = {
+	is_alive = yes
+	OR = {
+		has_trait = supernatural_vampire
+		has_trait = supernatural_hybrid
+	}
+}
+
+# CHARACTER scope: his partner in a 2.42 moment. ROOT = the creature. Alive, an adult of 18 or more, not a player's
+# character, and still his (a lover, a soulmate, a spouse or concubine).
+spn_mo_still_mine_trigger = {
+	is_alive = yes
+	is_ai = yes
+	age >= 18
+	OR = {
+		has_relation_soulmate = root
+		has_relation_lover = root
+		is_consort_of = root
+	}
+}
+
+# CHARACTER scope (the creature): scope:spn_mo_forever does not know what he is. A compulsion can blur one evening;
+# it cannot take back what she has known for years.
+spn_mo_she_does_not_know_trigger = {
+	NOR = {
+		has_trait = spn_known_vampire
+		has_trait = spn_known_hybrid
+		any_secret = {
+			OR = {
+				secret_type = spn_secret_vampire
+				secret_type = spn_secret_hybrid
+			}
+			is_known_by = scope:spn_mo_forever
+		}
+	}
+}
+
+# CHARACTER scope: a creature who has plainly not aged for a generation (The Portrait: "forty years").
+spn_mo_long_unaged_trigger = {
+	age >= 60
+	trigger_if = {
+		limit = { has_variable = spn_age_aquired_immortality }
+		age >= {
+			value = var:spn_age_aquired_immortality
+			add = 40
+		}
+	}
+}
+
+# CHARACTER scope: a hunter at the creature's own table who has no idea what his host is. ROOT = the creature.
+spn_mo_hunter_unaware_trigger = {
+	is_alive = yes
+	is_ai = yes
+	is_courtier_of = root
+	NOT = {
+		any_known_secret = {
+			secret_owner = root
+			OR = {
+				secret_type = spn_secret_vampire
+				secret_type = spn_secret_hybrid
+			}
+		}
+	}
+}

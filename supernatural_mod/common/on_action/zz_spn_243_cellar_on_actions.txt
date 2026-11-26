@@ -1,0 +1,38 @@
+﻿# Supernatural 2.43 -- THE MAN FROM THE CELLAR (Thomas, 23 Nov 2026). The wounded man a player healed with his blood in
+# An Unexpected Dinner Guest (supernatural_ev1.08) died within the three years and rose a vampire, with the player as his
+# maker (spn_bind_blood_donor_as_maker_effect). He never knew who it was. Once, inside the yearly creature pulse, he goes
+# looking. Only when there was no contact: not family, court, friend, lover or spouse of the one who saved him.
+spn_yearly_creature_pulse = {
+	on_actions = { spn_243_cellar_check }
+}
+spn_243_cellar_check = {
+	trigger = {
+		is_ai = yes
+		is_adult = yes
+		is_imprisoned = no
+		has_trait = supernatural_vampire
+		has_variable = spn_cellar_saved_by
+		NOT = { has_character_flag = spn_cellar_sought }
+		var:spn_cellar_saved_by ?= {
+			is_alive = yes
+			is_ai = no
+			OR = {
+				has_trait = supernatural_vampire
+				has_trait = supernatural_hybrid
+			}
+		}
+		has_relation_mmaker = var:spn_cellar_saved_by
+		NOT = { is_courtier_of = var:spn_cellar_saved_by }
+		NOT = { is_close_or_extended_family_of = var:spn_cellar_saved_by }
+		NOT = { has_relation_friend = var:spn_cellar_saved_by }
+		NOT = { has_relation_lover = var:spn_cellar_saved_by }
+		NOT = { is_spouse_of = var:spn_cellar_saved_by }
+	}
+	effect = {
+		add_character_flag = spn_cellar_sought
+		save_scope_as = spn_cellar_man
+		var:spn_cellar_saved_by = {
+			trigger_event = { id = spn_cellar.0001 days = { 30 180 } }
+		}
+	}
+}

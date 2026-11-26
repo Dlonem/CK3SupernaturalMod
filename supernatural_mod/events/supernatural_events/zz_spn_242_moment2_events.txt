@@ -1,0 +1,600 @@
+﻿namespace = spn_moment
+
+# Supernatural 2.42 -- the romance, continued (Thomas, 20 Nov 2026: "the household it becomes", "give her side some
+# will of its own", "more ways it can go"). Loc: zz_spn_242_moments_l_english.yml.
+#   .0018  The Morning After            follows Three in the Dark when both stayed
+#   .0019  The Household It Becomes     years later, if it held; hands the partner to Fates Intertwined
+#   .0020  A Guest for Supper           SHE brings someone home
+#   .0021  The Door She Closed          follows Three in the Dark when she walked out
+#   .0022  What Your Spouse Knows       married, with a lover who is not the spouse
+#   .0023  Older Than You               the stranger who followed you home was never what they seemed
+# Root = a player vampire or hybrid in every one. Everyone else is an adult and an AI character. No odds are shown.
+# What the others do is decided by who they are (their traits and what they think of him), never by a coin.
+
+# THE MORNING AFTER. scope:spn_mo_partner = the one he already had; scope:spn_mo_admirer = the one who followed him home.
+spn_moment.0018 = {
+	type = character_event
+	title = spn_moment.0018.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = {
+					has_character_flag = spn_mo_shared_night # 2.42
+					scope:spn_mo_partner = {
+						OR = {
+							has_trait = wrathful
+							has_trait = arrogant
+							has_trait = ambitious
+						}
+					}
+				}
+				desc = spn_moment.0018.desc_edge
+			}
+			desc = spn_moment.0018.desc
+		}
+	}
+	theme = love
+	override_background = { reference = sitting_room }
+	left_portrait = { character = scope:spn_mo_partner animation = flirtation_left }
+	right_portrait = { character = scope:spn_mo_admirer animation = happiness }
+	trigger = {
+		spn_mo_root_ok_trigger = yes
+		exists = scope:spn_mo_partner
+		exists = scope:spn_mo_admirer
+		scope:spn_mo_partner = {
+			spn_mo_still_mine_trigger = yes
+			is_imprisoned = no
+		}
+		scope:spn_mo_admirer = {
+			is_alive = yes
+			is_ai = yes
+			has_relation_lover = root
+		}
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+	}
+	# Then nobody is going anywhere. Lay a third place at my table, and leave it laid.
+	option = {
+		name = spn_moment.0018.a
+		trait = lustful
+		trait = gregarious
+		scope:spn_mo_partner = { add_opinion = { target = root modifier = pleased_opinion opinion = 15 } }
+		scope:spn_mo_admirer = { add_opinion = { target = root modifier = pleased_opinion opinion = 15 } }
+		add_stress = medium_stress_impact_loss
+		add_character_flag = { flag = spn_mo_household years = 8 }
+		trigger_event = { id = spn_moment.0019 years = { 3 5 } }
+	}
+	# There will be an order to this. I will not have it settled by who reaches my door first.
+	option = {
+		name = spn_moment.0018.b
+		trait = just
+		trait = diligent
+		trigger = {
+			OR = {
+				has_trait = just
+				has_trait = diligent
+			}
+		}
+		scope:spn_mo_partner = { add_opinion = { target = root modifier = grateful_opinion opinion = 25 } }
+		add_stress = minor_stress_impact_gain
+		add_character_flag = { flag = spn_mo_household years = 8 }
+		trigger_event = { id = spn_moment.0019 years = { 3 5 } }
+	}
+	# I leave them to find their own arrangement, and take whatever comes of it.
+	option = {
+		name = spn_moment.0018.c
+		trait = lazy
+		trait = content
+		# A proud partner does not find an arrangement. She keeps a tally.
+		if = {
+			limit = {
+				scope:spn_mo_partner = {
+					OR = {
+						has_trait = wrathful
+						has_trait = arrogant
+					}
+				}
+			}
+			scope:spn_mo_partner = { add_opinion = { target = root modifier = annoyed_opinion opinion = -15 } }
+		}
+		add_stress = minor_stress_impact_loss
+		add_character_flag = { flag = spn_mo_household years = 8 }
+		trigger_event = { id = spn_moment.0019 years = { 3 5 } }
+	}
+	# It was one night, and a good one. It will not be a habit.
+	option = {
+		name = spn_moment.0018.d
+		trait = temperate
+		trait = chaste
+		remove_relation_lover = scope:spn_mo_admirer
+		scope:spn_mo_admirer = { add_opinion = { target = root modifier = disappointed_opinion opinion = -25 } }
+		scope:spn_mo_partner = { add_opinion = { target = root modifier = pleased_opinion opinion = 15 } }
+	}
+}
+
+# THE HOUSEHOLD IT BECOMES. Years on, and it has held. They have talked, and come to him together.
+spn_moment.0019 = {
+	type = character_event
+	title = spn_moment.0019.t
+	desc = spn_moment.0019.desc
+	theme = love
+	override_background = { reference = bedchamber }
+	left_portrait = { character = scope:spn_mo_partner animation = love }
+	right_portrait = { character = scope:spn_mo_admirer animation = admiration }
+	trigger = {
+		spn_mo_root_ok_trigger = yes
+		is_imprisoned = no
+		exists = scope:spn_mo_partner
+		exists = scope:spn_mo_admirer
+		# Both are still his, and both still mortal: the text has one asking to stay as she is and one asking for what he is.
+		scope:spn_mo_partner = {
+			spn_mo_still_mine_trigger = yes
+			is_imprisoned = no
+			spn_has_supernatural_trait = no
+		}
+		scope:spn_mo_admirer = {
+			is_alive = yes
+			is_ai = yes
+			is_imprisoned = no
+			has_relation_lover = root
+			spn_has_supernatural_trait = no
+		}
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+	}
+	# As you have agreed between you. One of you beside me in the dark, one of you to keep my days.
+	option = {
+		name = spn_moment.0019.a
+		trigger = { scope:spn_mo_admirer = { spn_event_turn_ok_trigger = yes } }
+		custom_tooltip = spn_moment.0019.a.tt
+		scope:spn_mo_admirer = {
+			spn_give_vampire_blood_effect = { DONOR = root }
+			spn_turn_by_sire_effect = { SIRE = root }
+		}
+		scope:spn_mo_partner = { add_opinion = { target = root modifier = grateful_opinion opinion = 25 } }
+		add_stress = medium_stress_impact_loss
+	}
+	# Why should either of you grow old? Both of you. Tonight.
+	option = {
+		name = spn_moment.0019.b
+		trait = lustful
+		trait = arrogant
+		trigger = {
+			OR = {
+				has_trait = lustful
+				has_trait = arrogant
+			}
+			scope:spn_mo_admirer = { spn_event_turn_ok_trigger = yes }
+			scope:spn_mo_partner = { spn_event_turn_ok_trigger = yes }
+		}
+		custom_tooltip = spn_moment.0019.b.tt
+		scope:spn_mo_admirer = {
+			spn_give_vampire_blood_effect = { DONOR = root }
+			spn_turn_by_sire_effect = { SIRE = root }
+		}
+		scope:spn_mo_partner = {
+			add_character_flag = { flag = spn_turning_was_forced days = 30 } # 2.42 review: she asked to stay as she is; her memory says so
+			spn_give_vampire_blood_effect = { DONOR = root }
+			spn_turn_by_sire_effect = { SIRE = root }
+			# She asked to stay as she is. Whether she forgives it depends on her.
+			if = {
+				limit = {
+					NOR = {
+						has_trait = ambitious
+						has_trait = lustful
+					}
+				}
+				add_opinion = { target = root modifier = disappointed_opinion opinion = -25 }
+			}
+		}
+		add_stress = major_stress_impact_loss
+	}
+	# I want to hear it from each of you, alone, before I answer.
+	option = {
+		name = spn_moment.0019.c
+		trigger = { scope:spn_mo_partner = { spn_fates_partner_trigger = yes } }
+		custom_tooltip = spn_moment.0019.c.tt
+		# Her own answer is Fates Intertwined's second event: what she wants is decided there, by who she is.
+		scope:spn_mo_partner = { save_scope_as = spn_mo_forever }
+		# 2.42 review: the same rests The Coat sets, so a second telling of the same story cannot start beside this one.
+		add_character_flag = { flag = spn_mo_cd_fates years = 10 }
+		scope:spn_mo_partner = { add_character_flag = { flag = spn_fates_rest years = 5 } }
+		trigger_event = { id = spn_moment.0012 days = { 3 10 } }
+	}
+	# We are happy as we are. Let that be enough for all three of us.
+	option = {
+		name = spn_moment.0019.d
+		scope:spn_mo_admirer = {
+			if = {
+				limit = { has_trait = ambitious }
+				add_opinion = { target = root modifier = disappointed_opinion opinion = -25 }
+			}
+		}
+		scope:spn_mo_partner = { add_opinion = { target = root modifier = pleased_opinion opinion = 15 } }
+		add_stress = minor_stress_impact_loss
+	}
+}
+
+# A GUEST FOR SUPPER. scope:spn_mo_partner = his mortal lover or spouse, who has ideas of her own;
+# scope:spn_mo_guest = someone she has brought home (made here: an adult stranger of the sex he is drawn to).
+spn_moment.0020 = {
+	type = character_event
+	title = spn_moment.0020.t
+	desc = spn_moment.0020.desc
+	theme = seduction
+	override_background = { reference = bedchamber }
+	left_portrait = { character = scope:spn_mo_partner animation = flirtation_left }
+	right_portrait = { character = scope:spn_mo_guest animation = flirtation }
+	trigger = {
+		spn_mo_root_ok_trigger = yes
+		is_imprisoned = no
+		exists = location
+		exists = scope:spn_mo_partner
+		scope:spn_mo_partner = {
+			spn_mo_still_mine_trigger = yes
+			is_imprisoned = no
+		}
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_mo_cd_guest years = 20 }
+		create_character = {
+			template = alluring_suitor_character
+			location = root.location
+			gender_female_chance = root_attraction_based_female_chance
+			save_scope_as = spn_mo_guest
+		}
+		scope:spn_mo_guest ?= { # 2.43: guarded; 2.42 review: she chose someone who would say yes (see spn_moment.0014)
+			if = {
+				limit = { NOT = { is_attracted_to_gender_of = root } }
+				set_sexuality = bisexual
+			}
+		}
+	}
+	# You know me better than I know myself. Close the door, both of you.
+	option = {
+		name = spn_moment.0020.a
+		trait = lustful
+		trigger = { has_trait = lustful }
+		add_courtier = scope:spn_mo_guest
+		if = {
+			limit = { spn_romance_ok_trigger = { CHARACTER = scope:spn_mo_guest } }
+			set_relation_lover = scope:spn_mo_guest
+		}
+		scope:spn_mo_partner = { add_opinion = { target = root modifier = grateful_opinion opinion = 25 } }
+		add_stress = major_stress_impact_loss
+		hidden_effect = {
+			scope:spn_mo_guest = { save_scope_as = spn_mo_admirer }
+			add_character_flag = { flag = spn_mo_shared_night days = 90 }
+			trigger_event = { id = spn_moment.0018 days = { 20 40 } }
+		}
+	}
+	# I would like that. Slowly, and only if you are certain.
+	option = {
+		name = spn_moment.0020.b
+		trigger = { NOT = { has_trait = chaste } }
+		add_courtier = scope:spn_mo_guest
+		if = {
+			limit = { spn_romance_ok_trigger = { CHARACTER = scope:spn_mo_guest } }
+			set_relation_lover = scope:spn_mo_guest
+		}
+		scope:spn_mo_partner = { add_opinion = { target = root modifier = pleased_opinion opinion = 15 } }
+		add_stress = medium_stress_impact_loss
+		hidden_effect = {
+			scope:spn_mo_guest = { save_scope_as = spn_mo_admirer }
+			add_character_flag = { flag = spn_mo_shared_night days = 90 }
+			trigger_event = { id = spn_moment.0018 days = { 20 40 } }
+		}
+	}
+	# Send your friend home with my thanks. Tonight I only want you.
+	option = {
+		name = spn_moment.0020.c
+		trait = shy
+		trait = compassionate
+		scope:spn_mo_partner = {
+			if = {
+				limit = { has_trait = lustful }
+				add_opinion = { target = root modifier = annoyed_opinion opinion = -15 }
+			}
+			else = {
+				add_opinion = { target = root modifier = grateful_opinion opinion = 25 }
+			}
+		}
+		add_stress = minor_stress_impact_loss
+	}
+	# And how long have the two of you been planning this behind my back?
+	option = {
+		name = spn_moment.0020.suspect # was .0020.d: that key's hash collides with vanilla MOD_OWNED_LEGEND_SPREAD_ADD (boot log, 21 Nov)
+		trait = paranoid
+		trait = wrathful
+		trigger = {
+			OR = {
+				has_trait = paranoid
+				has_trait = wrathful
+			}
+		}
+		scope:spn_mo_partner = { add_opinion = { target = root modifier = disappointed_opinion opinion = -25 } }
+		add_stress = minor_stress_impact_gain
+	}
+	# This is not who I am, and I will not pretend it is to please you.
+	option = {
+		name = spn_moment.0020.e
+		trait = chaste
+		trait = zealous
+		trigger = {
+			OR = {
+				has_trait = chaste
+				has_trait = zealous
+				has_trait = temperate
+			}
+		}
+		add_piety = minor_piety_gain
+		scope:spn_mo_partner = { add_opinion = { target = root modifier = annoyed_opinion opinion = -15 } }
+	}
+}
+
+# THE DOOR SHE CLOSED. She walked out of Three in the Dark, and has not come back to his bed.
+spn_moment.0021 = {
+	type = character_event
+	title = spn_moment.0021.t
+	desc = spn_moment.0021.desc
+	theme = love
+	override_background = { reference = corridor_night }
+	left_portrait = { character = root animation = worry }
+	right_portrait = { character = scope:spn_mo_partner animation = dismissal }
+	trigger = {
+		spn_mo_root_ok_trigger = yes
+		exists = scope:spn_mo_partner
+		scope:spn_mo_partner = { spn_mo_still_mine_trigger = yes }
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+	}
+	# I go to her door and I do not leave it until she opens. The other one is gone by morning.
+	option = {
+		name = spn_moment.0021.a
+		if = {
+			limit = {
+				exists = scope:spn_mo_admirer
+				has_relation_lover = scope:spn_mo_admirer
+			}
+			remove_relation_lover = scope:spn_mo_admirer
+		}
+		scope:spn_mo_partner = { add_opinion = { target = root modifier = grateful_opinion opinion = 25 } }
+		add_stress = minor_stress_impact_gain
+	}
+	# I write to her. Everything, plainly, and nothing to excuse it.
+	option = {
+		name = spn_moment.0021.b
+		trait = honest
+		trait = humble
+		trigger = {
+			OR = {
+				has_trait = honest
+				has_trait = humble
+			}
+		}
+		scope:spn_mo_partner = { add_opinion = { target = root modifier = pleased_opinion opinion = 15 } }
+	}
+	# She will come round, or she will not. I do not beg.
+	option = {
+		name = spn_moment.0021.c
+		trait = arrogant
+		trait = stubborn
+		scope:spn_mo_partner = { add_opinion = { target = root modifier = annoyed_opinion opinion = -15 } }
+		add_stress = minor_stress_impact_loss
+	}
+	# Look at me. That night never happened.
+	option = {
+		name = spn_moment.0021.d
+		trait = callous
+		trigger = {
+			OR = {
+				has_trait_xp = { trait = supernatural_vampire track = vampirism value >= 10 }
+				has_trait_xp = { trait = supernatural_hybrid track = hybrid_vampirism value >= 10 }
+			}
+		}
+		spn_compel_pay_amount_effect = { AMOUNT = 10 }
+		scope:spn_mo_partner = {
+			remove_opinion = { target = root modifier = disappointed_opinion } # 2.42 review: what she no longer remembers, she does not hold against him
+			add_opinion = { target = root modifier = pleased_opinion opinion = 15 }
+		}
+		custom_tooltip = spn_moment.0021.d.tt
+	}
+}
+
+# WHAT YOUR SPOUSE KNOWS. scope:spn_mo_wife = his spouse; scope:spn_mo_other = a lover who is not his spouse.
+# What she does about it is hers: a zealous spouse prays loudly, a proud one makes terms, a lustful one has her own idea.
+spn_moment.0022 = {
+	type = character_event
+	title = spn_moment.0022.t
+	desc = {
+		first_valid = {
+			triggered_desc = {
+				trigger = { scope:spn_mo_wife = { has_trait = lustful } }
+				desc = spn_moment.0022.desc_lustful
+			}
+			triggered_desc = {
+				trigger = { scope:spn_mo_wife = { has_trait = zealous } }
+				desc = spn_moment.0022.desc_zealous
+			}
+			desc = spn_moment.0022.desc
+		}
+	}
+	theme = family
+	override_background = { reference = sitting_room }
+	left_portrait = { character = root animation = worry }
+	right_portrait = { character = scope:spn_mo_wife animation = disapproval }
+	trigger = {
+		spn_mo_root_ok_trigger = yes
+		exists = scope:spn_mo_wife
+		exists = scope:spn_mo_other
+		scope:spn_mo_wife = {
+			is_alive = yes
+			is_ai = yes
+			age >= 18
+			is_spouse_of = root
+		}
+		scope:spn_mo_other = {
+			is_alive = yes
+			is_ai = yes
+			age >= 18
+			has_relation_lover = root
+			NOT = { is_consort_of = root } # 2.42: not a concubine either
+		}
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+		add_character_flag = { flag = spn_mo_cd_wife years = 25 }
+	}
+	# It is true. I will not insult you by denying it.
+	option = {
+		name = spn_moment.0022.a
+		trait = honest
+		scope:spn_mo_wife = {
+			if = {
+				limit = {
+					OR = {
+						has_trait = forgiving
+						has_trait = content
+					}
+				}
+				add_opinion = { target = root modifier = pleased_opinion opinion = 15 }
+			}
+			else = {
+				add_opinion = { target = root modifier = disappointed_opinion opinion = -25 }
+			}
+		}
+		add_stress = minor_stress_impact_loss
+	}
+	# You have been listening to servants. There is nothing to know.
+	option = {
+		name = spn_moment.0022.b
+		trait = deceitful
+		trigger = { has_trait = deceitful }
+		scope:spn_mo_wife = {
+			if = {
+				limit = {
+					OR = {
+						has_trait = trusting
+						has_trait = content
+					}
+				}
+				add_opinion = { target = root modifier = pleased_opinion opinion = 15 }
+			}
+			else = {
+				add_opinion = { target = root modifier = annoyed_opinion opinion = -15 }
+			}
+		}
+	}
+	# Then come and meet [spn_mo_other]. I think you will like each other more than either of you expects.
+	option = {
+		name = spn_moment.0022.c
+		trait = lustful
+		trigger = { has_trait = lustful }
+		custom_tooltip = spn_moment.0022.c.tt
+		if = {
+			limit = {
+				scope:spn_mo_wife = {
+					has_trait = lustful
+					NOT = { has_trait = zealous }
+				}
+			}
+			hidden_effect = {
+				scope:spn_mo_wife = { add_opinion = { target = root modifier = grateful_opinion opinion = 25 } }
+				add_stress = major_stress_impact_loss
+				send_interface_toast = {
+					type = event_toast_effect_good
+					title = spn_moment.0022.c.yes
+					left_icon = scope:spn_mo_wife
+					right_icon = scope:spn_mo_other
+				}
+			}
+		}
+		else = {
+			hidden_effect = {
+				scope:spn_mo_wife = { add_opinion = { target = root modifier = disappointed_opinion opinion = -25 } }
+				send_interface_toast = {
+					type = event_toast_effect_bad
+					title = spn_moment.0022.c.no
+					left_icon = scope:spn_mo_wife
+				}
+			}
+		}
+	}
+	# Name your terms. You are my wife in the eyes of everyone, and that will not change.
+	option = {
+		name = spn_moment.0022.d
+		trigger = { gold >= 50 } # 2.42 review: terms he can pay
+		scope:spn_mo_wife = { add_opinion = { target = root modifier = pleased_opinion opinion = 15 } }
+		remove_short_term_gold = 50
+		custom_tooltip = spn_moment.0022.d.tt
+	}
+	# It ends today. You have my word.
+	option = {
+		name = spn_moment.0022.e
+		remove_relation_lover = scope:spn_mo_other
+		scope:spn_mo_other = { add_opinion = { target = root modifier = disappointed_opinion opinion = -25 } }
+		scope:spn_mo_wife = { add_opinion = { target = root modifier = grateful_opinion opinion = 25 } }
+		add_stress = minor_stress_impact_gain
+	}
+}
+
+# OLDER THAN YOU. The stranger who followed him home (scope:spn_mo_admirer) was a vampire long before he was.
+spn_moment.0023 = {
+	type = character_event
+	title = spn_moment.0023.t
+	desc = spn_moment.0023.desc
+	theme = seduction
+	override_background = { reference = bedchamber }
+	left_portrait = { character = root animation = shock }
+	right_portrait = { character = scope:spn_mo_admirer animation = schadenfreude }
+	trigger = {
+		spn_mo_root_ok_trigger = yes
+		exists = scope:spn_mo_admirer
+		scope:spn_mo_admirer = {
+			is_alive = yes
+			is_ai = yes
+			has_character_flag = spn_mo_elder
+			has_relation_lover = root
+		}
+	}
+	immediate = {
+		spn_flavor_mark_effect = yes
+	}
+	# Then teach me. I have been making it up as I go for longer than I care to say.
+	option = {
+		name = spn_moment.0023.a
+		trait = humble
+		spn_moment_xp_effect = { XP = 15 }
+		scope:spn_mo_admirer = { add_opinion = { target = root modifier = pleased_opinion opinion = 15 } }
+	}
+	# You watched me for a month to see whether I was worth it. Come and find out.
+	option = {
+		name = spn_moment.0023.b
+		trait = lustful
+		trigger = { has_trait = lustful }
+		spn_moment_xp_effect = { XP = 10 }
+		scope:spn_mo_admirer = { add_opinion = { target = root modifier = grateful_opinion opinion = 25 } }
+		add_stress = major_stress_impact_loss
+	}
+	# You lied your way into my house. Whatever else you are, you are that.
+	option = {
+		name = spn_moment.0023.c
+		trait = wrathful
+		trait = paranoid
+		if = {
+			limit = { has_relation_lover = scope:spn_mo_admirer }
+			remove_relation_lover = scope:spn_mo_admirer
+		}
+		scope:spn_mo_admirer = { add_opinion = { target = root modifier = annoyed_opinion opinion = -15 } }
+		add_character_flag = { flag = spn_forewarned years = 1 }
+	}
+	# I say nothing at all. Two can keep a secret this old.
+	option = {
+		name = spn_moment.0023.d
+		spn_moment_xp_effect = { XP = 5 }
+	}
+}

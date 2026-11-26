@@ -1,4 +1,4 @@
-version="2.41"
+version="2.43"
 picture="thumbnail.png"
 tags={
 	"Alternative History"
@@ -7,5 +7,5 @@ tags={
 	"Character Interactions"
 }
 name="Supernatural"
-supported_version="1.21.0"
+supported_version="1.21.0.3"
 remote_file_id="2856525601"

@@ -40,6 +40,11 @@ can_spend_standard_ps_trigger = {
 				value > 9
 			}
 		}
+		AND = { # 2.42 (Supernatural): the Warlock's own pool
+			has_trait = warlock
+			NOT = { has_trait = archmage } # he pays from the Mage's pool (spend_*_ps_effect), so that is the one that counts
+			has_trait_xp = { trait = warlock track = power_saturation value > 9 }
+		}
 	}
 }
 can_spend_huge_ps_trigger = {
@@ -52,6 +57,11 @@ can_spend_huge_ps_trigger = {
 				track = power_saturation
 				value > 19
 			}
+		}
+		AND = { # 2.42 (Supernatural): the Warlock's own pool
+			has_trait = warlock
+			NOT = { has_trait = archmage } # he pays from the Mage's pool (spend_*_ps_effect), so that is the one that counts
+			has_trait_xp = { trait = warlock track = power_saturation value > 19 }
 		}
 	}
 }
@@ -66,8 +76,14 @@ can_be_power_saturated_trigger = {
 				value < 100
 			}
 		}
+		AND = { # 2.42 (Supernatural): a Warlock can take more until his own pool is full
+			has_trait = warlock
+			NOT = { has_trait = archmage }
+			has_trait_xp = { trait = warlock track = power_saturation value < 100 }
+		}
 		NOR = {
 			has_trait = archmage
+			has_trait = warlock # 2.42 (Supernatural): judged by his pool above, never by the one charge
 			has_character_modifier = power_saturated1
 			has_character_modifier = power_saturated2
 		}
@@ -1283,6 +1299,7 @@ mc_gold_global_avaiable_trigger = {
 }
 has_access_to_magic_triangulation_trigger = {
 	OR = {
+		has_perk = magic_triangulation_p5_perk # 2.42 (Supernatural): the perk that says it enables this now does (jonlevir, 21 Sep 2026)
 		has_perk = mage_p4_perk
 		has_perk = warlock_perk
 	}

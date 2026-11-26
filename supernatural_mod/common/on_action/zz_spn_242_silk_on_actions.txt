@@ -1,0 +1,49 @@
+﻿# Supernatural 2.42 -- Merchants of the Night. Appended through on_actions lists only.
+
+# THE LONG LEDGER. Vanilla passes a dead man's debt to his heir (story_cycle_loan on_owner_death -> transfer_loan_effect),
+# and the heir's loan starts with no refusals on it. An undying lender is the one who sees that happen. Root = the dying
+# debtor (not dead yet): everything is banked here, and the lender is asked a week later, when vanilla has moved the debt.
+# Vanilla's own conditions are mirrored (an heir, who is not the lender, and a living lender) so nothing is asked about a
+# debt vanilla wiped. Players only, and at most once in ten years per lender.
+on_death = {
+	on_actions = { spn_long_ledger_on_death }
+}
+spn_long_ledger_on_death = {
+	trigger = {
+		exists = primary_heir
+		any_owned_story = {
+			story_type = story_cycle_loan
+			exists = var:reminders
+			var:reminders >= 1
+			var:lender ?= {
+				is_alive = yes
+				is_ai = no
+				spn_undying_lender_trigger = yes
+				NOT = { this = root.primary_heir }
+				NOT = { has_character_flag = spn_long_ledger_cd }
+			}
+		}
+	}
+	effect = {
+		save_scope_as = spn_ll_father
+		primary_heir = { save_scope_as = spn_ll_heir }
+		random_owned_story = {
+			limit = {
+				story_type = story_cycle_loan
+				exists = var:reminders
+				var:reminders >= 1
+				var:lender ?= {
+					is_alive = yes
+					is_ai = no
+					spn_undying_lender_trigger = yes
+					NOT = { this = root.primary_heir }
+					NOT = { has_character_flag = spn_long_ledger_cd }
+				}
+			}
+			var:lender = {
+				add_character_flag = { flag = spn_long_ledger_cd years = 10 }
+				trigger_event = { id = spn_silk.0040 days = 7 }
+			}
+		}
+	}
+}
